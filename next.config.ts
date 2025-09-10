@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Temporarily disable static export for chat feature development
-  // ...(process.env.NODE_ENV === 'production' && {
-  //   output: 'export',
-  //   distDir: 'out'
-  // }),
+  // Enable static export for Capacitor mobile app
+  ...(process.env.NODE_ENV === 'production' && {
+    output: 'export',
+    distDir: 'out'
+  }),
   trailingSlash: true,
   images: {
     unoptimized: true

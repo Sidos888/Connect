@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
+import { useAuth } from "@/lib/authContext";
 import BusinessSwitcher from "./BusinessSwitcher";
 import MenuItem from "./MenuItem";
 import { usePathname } from "next/navigation";
@@ -89,6 +90,7 @@ function QuickAccountSwitcher({ onShowAll, onAccountSwitch }: {
 
 export default function ProfileMenu() {
   const { context, setAccountSwitching, personalProfile } = useAppStore();
+  const { signOut } = useAuth();
   const currentBusiness = useCurrentBusiness();
   const [open, setOpen] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
@@ -197,11 +199,16 @@ export default function ProfileMenu() {
                     label="Add account" 
                     href="/create-business" 
                   />
-                  <MenuItem 
-                    icon={<LogOut size={20} />} 
-                    label="Log out" 
-                    href="/api/auth/logout" 
-                  />
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      signOut();
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <LogOut size={20} />
+                    <span>Log out</span>
+                  </button>
                 </div>
               </div>
             </>

@@ -172,8 +172,8 @@ export default function Page() {
                 <button
                   key={item.title}
                   className="
-                    rounded-2xl bg-white p-4 lg:p-6 shadow-sm
-                    hover:shadow-md transition-shadow duration-200
+                    rounded-2xl border border-neutral-200 bg-white p-4 lg:p-6 shadow-sm
+                    hover:shadow-md hover:bg-neutral-50 transition-shadow duration-200
                     focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1
                     h-28 lg:h-36 xl:h-40
                   "

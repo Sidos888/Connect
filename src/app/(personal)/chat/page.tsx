@@ -91,13 +91,13 @@ export default function MessagesPage() {
   const { unreadCount: mobileUnreadCount, dmCount: mobileDmCount, groupCount: mobileGroupCount } = getMobileCategoryCounts();
 
   const mobileCategoriesTop = [
-    { id: "all", label: "All Chats", count: conversations.length },
+    { id: "all", label: "All Chats", count: null },
     { id: "unread", label: "Unread", count: mobileUnreadCount },
   ];
 
   const mobileCategoriesBottom = [
-    { id: "dm", label: "Direct Messages", count: mobileDmCount },
-    { id: "group", label: "Group Chats", count: mobileGroupCount },
+    { id: "dm", label: "DM", count: mobileDmCount },
+    { id: "group", label: "Groups", count: mobileGroupCount },
   ];
 
   return (
@@ -120,7 +120,7 @@ export default function MessagesPage() {
               value={mobileSearchQuery}
               onChange={(e) => setMobileSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,45 +129,28 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Mobile Category Filter Cards */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {mobileCategoriesTop.map((category) => (
+          {/* Mobile Category Filter Cards - Horizontal Scroll */}
+          <div className="flex gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar">
+            {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
               <button
                 key={category.id}
                 onClick={() => setMobileActiveCategory(category.id)}
-                className={`p-4 rounded-xl border transition-all duration-200 ${
+                className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap ${
                   mobileActiveCategory === category.id
-                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-neutral-200 text-neutral-800'
+                    : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
                 }`}
               >
-                <div className="text-sm font-medium">{category.label}</div>
-                <div className={`text-xs ${
-                  mobileActiveCategory === category.id ? 'text-blue-500' : 'text-gray-500'
-                }`}>
-                  {category.count} chats
-                </div>
-              </button>
-            ))}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {mobileCategoriesBottom.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setMobileActiveCategory(category.id)}
-                className={`p-4 rounded-xl border transition-all duration-200 ${
-                  mobileActiveCategory === category.id
-                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <div className="text-sm font-medium">{category.label}</div>
-                <div className={`text-xs ${
-                  mobileActiveCategory === category.id ? 'text-blue-500' : 'text-gray-500'
-                }`}>
-                  {category.count} chats
-                </div>
+                <span className="text-sm font-medium">{category.label}</span>
+                {category.count !== null && (
+                  <span className={`ml-1 text-xs ${
+                    mobileActiveCategory === category.id 
+                      ? 'text-white text-opacity-70' 
+                      : 'text-neutral-500'
+                  }`}>
+                    {category.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>

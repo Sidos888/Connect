@@ -89,9 +89,9 @@ export default function ChatLayout() {
   };
 
   const categories = [
-    { id: "all", label: "All", count: conversations.length },
+    { id: "all", label: "All", count: null },
     { id: "unread", label: "Unread", count: unreadCount },
-    { id: "dm", label: "Direct", count: dmCount },
+    { id: "dm", label: "DM", count: dmCount },
     { id: "group", label: "Groups", count: groupCount },
   ];
 
@@ -110,7 +110,7 @@ export default function ChatLayout() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,24 +119,28 @@ export default function ChatLayout() {
             </div>
           </div>
 
-          {/* Category Filter Cards */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Category Filter Cards - Horizontal */}
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.id)}
-                className={`p-3 rounded-lg border transition-all duration-200 ${
+                className={`flex-shrink-0 px-3 py-2 rounded-full transition-all duration-200 whitespace-nowrap ${
                   activeCategory === category.id
-                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-neutral-200 text-neutral-800'
+                    : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
                 }`}
               >
-                <div className="text-sm font-medium">{category.label}</div>
-                <div className={`text-xs ${
-                  activeCategory === category.id ? 'text-blue-500' : 'text-gray-500'
-                }`}>
-                  {category.count} chats
-                </div>
+                <span className="text-sm font-medium">{category.label}</span>
+                {category.count !== null && (
+                  <span className={`ml-1 text-xs ${
+                    activeCategory === category.id 
+                      ? 'text-white text-opacity-70' 
+                      : 'text-neutral-500'
+                  }`}>
+                    {category.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>

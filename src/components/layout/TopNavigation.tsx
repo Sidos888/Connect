@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Calendar, MessageCircle, Building } from "lucide-react";
+import { Search, Calendar, MessageCircle, Building, Menu } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useAppStore } from "@/lib/store";
+import { useAuth } from "@/lib/authContext";
+import { useState, useEffect, useRef } from "react";
+import LoginModal from "@/components/auth/LoginModal";
+import SignUpModal from "@/components/auth/SignUpModal";
 
 const ProfileMenu = dynamic(() => import("@/components/menu/ProfileMenu"), { ssr: false });
 const NotificationMenu = dynamic(() => import("@/components/menu/NotificationMenu"), { ssr: false });
@@ -13,6 +17,11 @@ const NotificationMenu = dynamic(() => import("@/components/menu/NotificationMen
 export default function TopNavigation() {
   const pathname = usePathname();
   const { context } = useAppStore();
+  const { user } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navigationItems = [
     { href: "/", label: "Explore", icon: Search },
@@ -30,6 +39,20 @@ export default function TopNavigation() {
     }
     return pathname === href || (href !== "/" && pathname.startsWith(href));
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setAuthOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
@@ -101,18 +124,87 @@ export default function TopNavigation() {
             </div>
           </nav>
 
-          {/* Right Side - Notifications & Profile Menu */}
+          {/* Right Side - Auth or Profile Menu */}
           <div className="flex items-center gap-2">
-            {/* Notifications Dropdown - Hidden on mobile */}
-            <div className="hidden lg:block">
-              <NotificationMenu />
-            </div>
+            {user ? (
+              <>
+                {/* Notifications Dropdown - Hidden on mobile */}
+                <div className="hidden lg:block">
+                  <NotificationMenu />
+                </div>
 
-            {/* Profile Menu */}
-            <ProfileMenu />
+                {/* Profile Menu */}
+                <ProfileMenu />
+              </>
+            ) : (
+              <>
+                {/* Notifications Dropdown - Hidden on mobile */}
+                <div className="hidden lg:block">
+                  <NotificationMenu />
+                </div>
+
+                {/* Auth Dropdown Menu */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setAuthOpen(!authOpen)}
+                    className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-3 py-2 hover:shadow-md transition-shadow focus:outline-none"
+                  >
+                    <Menu size={16} className="text-gray-700" />
+                    <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">U</span>
+                    </div>
+                  </button>
+
+                  {authOpen && (
+                    <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg p-2">
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setAuthOpen(false);
+                            // Add about page navigation here
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          About Connect
+                        </button>
+                        <div className="my-1 border-t border-gray-200" />
+                        <button
+                          onClick={() => {
+                            setAuthOpen(false);
+                            setShowLogin(true);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          Sign in
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Auth Modals */}
+      <LoginModal
+        isOpen={showLogin}
+        onClose={() => setShowLogin(false)}
+        onSwitchToSignUp={() => {
+          setShowLogin(false);
+          setShowSignUp(true);
+        }}
+      />
+
+      <SignUpModal
+        isOpen={showSignUp}
+        onClose={() => setShowSignUp(false)}
+        onSwitchToLogin={() => {
+          setShowSignUp(false);
+          setShowLogin(true);
+        }}
+      />
     </header>
   );
 }

@@ -82,25 +82,47 @@ export default function ChatPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
           />
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-          {(["all", "unread", "dms"] as Filter[]).map((filterType) => (
-            <button
-              key={filterType}
-              onClick={() => setFilter(filterType)}
-              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                filter === filterType
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {filterType === "all" ? "All" : filterType === "unread" ? "Unread" : "Direct Messages"}
-            </button>
-          ))}
+        {/* Filter Tabs - Horizontal Pills */}
+        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+          {(["all", "unread", "dms"] as Filter[]).map((filterType) => {
+            const getCount = () => {
+              switch (filterType) {
+                case "all": return null;
+                case "unread": return conversations.filter(c => c.unreadCount > 0).length;
+                case "dms": return conversations.filter(c => !c.isGroup).length;
+                default: return 0;
+              }
+            };
+            
+            return (
+              <button
+                key={filterType}
+                onClick={() => setFilter(filterType)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap ${
+                  filter === filterType
+                    ? 'bg-neutral-200 text-neutral-800'
+                    : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
+                }`}
+              >
+                <span className="text-sm font-medium">
+                  {filterType === "all" ? "All" : filterType === "unread" ? "Unread" : "DM"}
+                </span>
+                {getCount() !== null && (
+                  <span className={`ml-1 text-xs ${
+                    filter === filterType 
+                      ? 'text-white text-opacity-70' 
+                      : 'text-neutral-500'
+                  }`}>
+                    {getCount()}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Debug Button */}
