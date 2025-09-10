@@ -10,6 +10,7 @@ import MobileTitle from "@/components/MobileTitle";
 import { useAppStore } from "@/lib/store";
 import Button from "@/components/Button";
 import { CalendarIcon, PlusIcon } from "@/components/icons";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function Page() {
   const { personalProfile, context } = useAppStore();
@@ -101,60 +102,66 @@ export default function Page() {
 
   // Personal account content (existing)
   return (
-    <div>
-      <MobileTitle title="My Life" />
-      
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div className="mb-6 lg:mb-8">
-          <div className="max-w-lg mx-auto lg:max-w-xl">
-            <ProfileStrip name={personalProfile?.name ?? "Your Name"} avatarUrl={personalProfile?.avatarUrl ?? undefined} />
+    <ProtectedRoute
+      title="My Life"
+      description="Log in / sign up to view your personal events and activities"
+      buttonText="Log in"
+    >
+      <div>
+        <MobileTitle title="My Life" />
+        
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="mb-6 lg:mb-8">
+            <div className="max-w-lg mx-auto lg:max-w-xl">
+              <ProfileStrip name={personalProfile?.name ?? "Your Name"} avatarUrl={personalProfile?.avatarUrl ?? undefined} />
+            </div>
+          </div>
+
+        <div className="space-y-8">
+          <QuickActions />
+
+          <Section title="Upcoming" count={upcoming.length} viewAllHref="/my-life/upcoming">
+          {upcoming.length === 0 ? (
+            <div className="text-sm text-neutral-500">No upcoming events.</div>
+          ) : (
+            <Carousel>
+              {upcoming.map((e, i) => (
+                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} href="/my-life/upcoming" />
+              ))}
+            </Carousel>
+          )}
+        </Section>
+
+        {hosting.length > 0 && (
+          <Section title="Hosting" count={hosting.length} viewAllHref="/my-life/hosting">
+            <Carousel>
+              {hosting.map((e, i) => (
+                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} chip={e.chip} href="/my-life/hosting" />
+              ))}
+            </Carousel>
+          </Section>
+        )}
+
+        <Section title="Ongoing" count={ongoing.length} viewAllHref="/my-life/ongoing">
+          {ongoing.length === 0 ? (
+            <div className="text-sm text-neutral-500">No ongoing events.</div>
+          ) : (
+            <Carousel>
+              {ongoing.map((e, i) => (
+                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} href="/my-life/ongoing" />
+              ))}
+            </Carousel>
+          )}
+        </Section>
+
+          <div className="grid grid-cols-2 gap-3">
+            <StatTile title="Drafts" value="2 Drafts" />
+            <StatTile title="History" value="11 Previous" />
           </div>
         </div>
-
-      <div className="space-y-8">
-        <QuickActions />
-
-        <Section title="Upcoming" count={upcoming.length} viewAllHref="/my-life/upcoming">
-        {upcoming.length === 0 ? (
-          <div className="text-sm text-neutral-500">No upcoming events.</div>
-        ) : (
-          <Carousel>
-            {upcoming.map((e, i) => (
-              <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} href="/my-life/upcoming" />
-            ))}
-          </Carousel>
-        )}
-      </Section>
-
-      {hosting.length > 0 && (
-        <Section title="Hosting" count={hosting.length} viewAllHref="/my-life/hosting">
-          <Carousel>
-            {hosting.map((e, i) => (
-              <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} chip={e.chip} href="/my-life/hosting" />
-            ))}
-          </Carousel>
-        </Section>
-      )}
-
-      <Section title="Ongoing" count={ongoing.length} viewAllHref="/my-life/ongoing">
-        {ongoing.length === 0 ? (
-          <div className="text-sm text-neutral-500">No ongoing events.</div>
-        ) : (
-          <Carousel>
-            {ongoing.map((e, i) => (
-              <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} href="/my-life/ongoing" />
-            ))}
-          </Carousel>
-        )}
-      </Section>
-
-        <div className="grid grid-cols-2 gap-3">
-          <StatTile title="Drafts" value="2 Drafts" />
-          <StatTile title="History" value="11 Previous" />
         </div>
       </div>
-      </div>
-    </div>
+    </ProtectedRoute>
   );
 }
 

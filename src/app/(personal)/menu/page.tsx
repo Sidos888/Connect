@@ -8,6 +8,7 @@ import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, BellIcon } from "@/components/icons";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function Page() {
   const router = useRouter();
@@ -38,7 +39,12 @@ export default function Page() {
   };
 
   return (
-    <div className="bg-white">
+    <ProtectedRoute
+      title="Menu"
+      description="Log in / sign up to access your account settings and preferences"
+      buttonText="Log in"
+    >
+      <div className="bg-white">
       <MobileTitle 
         title="Menu" 
         showDivider={false}
@@ -198,6 +204,7 @@ export default function Page() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
 

@@ -16,14 +16,19 @@ type Props = {
 
 export default function TabBar({ items }: Props) {
   const pathname = usePathname();
+  
+  const isActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/";
+    }
+    return pathname === href || pathname.startsWith(href + "/");
+  };
+  
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white z-50 shadow-none border-none">
       <ul className="grid grid-cols-4 px-2 py-1">
         {items.map((item) => {
-          const isHomePage = item.href === "/";
-          const active = isHomePage 
-            ? pathname === "/" 
-            : pathname === item.href || pathname?.startsWith(item.href + "/");
+          const active = isActive(item.href);
           return (
             <li key={item.href} className="text-center">
               <Link href={item.href} className={`block py-2 px-1 text-xs ${active ? "text-brand" : "text-neutral-500"}`}>
@@ -32,9 +37,6 @@ export default function TabBar({ items }: Props) {
                     {item.icon}
                   </span>
                   <span className={`${active ? "font-semibold" : ""}`}>{item.label}</span>
-                  {active && (
-                    <div className="w-1 h-1 bg-brand rounded-full mt-0.5"></div>
-                  )}
                 </div>
               </Link>
             </li>

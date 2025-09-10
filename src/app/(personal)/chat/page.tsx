@@ -7,6 +7,7 @@ import BearEmoji from "@/components/BearEmoji";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import ChatLayout from "./ChatLayout";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function MessagesPage() {
   const { conversations, seedConversations, clearAll } = useAppStore();
@@ -101,7 +102,11 @@ export default function MessagesPage() {
   ];
 
   return (
-    <>
+    <ProtectedRoute
+      title="Chats"
+      description="Log in / sign up to view chats"
+      buttonText="Log in"
+    >
       {/* Desktop Layout */}
       <div className="hidden lg:block">
         <ChatLayout />
@@ -233,7 +238,7 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
-    </>
+    </ProtectedRoute>
   );
 }
 
