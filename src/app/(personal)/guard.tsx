@@ -11,7 +11,7 @@ export default function Guard({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!isHydrated) return;
-    if (!personalProfile && pathname !== "/onboarding") {
+    if (!personalProfile && pathname !== "/onboarding" && pathname !== "/") {
       router.replace("/onboarding");
     }
   }, [personalProfile, isHydrated, pathname, router]);
