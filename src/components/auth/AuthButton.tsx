@@ -17,7 +17,10 @@ export default function AuthButton({ onClick, children, className = "" }: AuthBu
         paddingTop: '0.625rem',
         paddingBottom: '0.625rem',
         paddingLeft: '1.5rem',
-        paddingRight: '1.5rem'
+        paddingRight: '1.5rem',
+        minHeight: '2.75rem',
+        fontSize: '1rem',
+        lineHeight: '1.5rem'
       }}
     >
       {children}
