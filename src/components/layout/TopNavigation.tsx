@@ -150,6 +150,7 @@ export default function TopNavigation() {
                     className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-3 py-2 hover:shadow-md transition-shadow focus:outline-none"
                   >
                     <Menu size={16} className="text-gray-700" />
+                    {/* Hollow dotted profile picture when not signed in */}
                     <div className="w-6 h-6 border-2 border-dashed border-gray-400 rounded-full bg-transparent">
                     </div>
                   </button>
