@@ -13,7 +13,7 @@ export default function Avatar({ src, name = "?", size = 32, className }: Props)
   const initial = name?.trim()?.charAt(0)?.toUpperCase() || "?";
   return (
     <div
-      className={`rounded-full overflow-hidden ${src ? 'bg-neutral-200 text-neutral-700' : 'border-2 border-gray-400 bg-transparent text-gray-400'} flex items-center justify-center ${className ?? ""}`}
+      className={`rounded-full overflow-hidden ${src ? 'bg-neutral-200 text-neutral-700' : 'border-2 border-dashed border-gray-400 bg-transparent text-gray-400'} flex items-center justify-center ${className ?? ""}`}
       style={{ width: size, height: size }}
       aria-label={name}
     >

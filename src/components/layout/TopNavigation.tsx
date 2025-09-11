@@ -150,7 +150,7 @@ export default function TopNavigation() {
                     className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-3 py-2 hover:shadow-md transition-shadow focus:outline-none"
                   >
                     <Menu size={16} className="text-gray-700" />
-                    <div className="w-6 h-6 border-2 border-gray-400 rounded-full flex items-center justify-center bg-transparent">
+                    <div className="w-6 h-6 border-2 border-dashed border-gray-400 rounded-full flex items-center justify-center bg-transparent">
                       <span className="text-gray-400 text-xs font-medium">U</span>
                     </div>
                   </button>
