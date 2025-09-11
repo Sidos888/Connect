@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { XMarkIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, CheckIcon } from '@heroicons/react/24/outline';
+import AuthButton from './AuthButton';
 
 interface SignUpModalProps {
   isOpen: boolean;
@@ -195,7 +196,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-brand text-white py-3 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full bg-brand text-white py-2.5 px-6 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading ? 'Creating account...' : 'Continue'}
                 </button>
@@ -228,7 +229,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
               </p>
               <button
                 onClick={() => setStep('profile')}
-                className="w-full bg-brand text-white py-3 px-4 rounded-lg font-medium hover:bg-brand/90 transition-colors"
+                className="w-full bg-brand text-white py-2.5 px-6 rounded-lg font-medium hover:bg-brand/90 transition-colors"
               >
                 I&apos;ve verified my email
               </button>

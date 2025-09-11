@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/authContext';
 import { usePathname } from 'next/navigation';
 import LoginModal from './LoginModal';
 import SignUpModal from './SignUpModal';
+import AuthButton from './AuthButton';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -97,12 +98,9 @@ export default function ProtectedRoute({ children, fallback, title, description,
               {displayDescription}
             </p>
             <div className="mt-6">
-              <button
-                onClick={() => setShowLogin(true)}
-                className="w-full bg-brand text-white py-2.5 px-6 rounded-lg font-medium hover:bg-brand/90 transition-colors"
-              >
+              <AuthButton onClick={() => setShowLogin(true)}>
                 Continue
-              </button>
+              </AuthButton>
             </div>
           </div>
         </div>
