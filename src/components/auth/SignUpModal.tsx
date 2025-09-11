@@ -181,9 +181,9 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
           {step === 'input' && (
             <div className="space-y-4">
               {/* Mobile Input */}
-              <div className="flex">
+              <div className="flex focus-within:ring-2 focus-within:ring-black focus-within:border-black border border-gray-300 rounded-lg">
                 {/* Country Code Card */}
-                <div className="flex items-center px-4 py-4 border border-gray-300 rounded-l-lg bg-gray-50 text-gray-700 font-medium">
+                <div className="flex items-center px-4 py-4 border-r border-gray-300 rounded-l-lg bg-gray-50 text-gray-700 font-medium">
                   +61
                 </div>
                 {/* Phone Number Input */}
@@ -193,7 +193,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                     type="tel"
                     value={phoneNumber}
                     onChange={handlePhoneChange}
-                    className="w-full px-4 py-4 border border-gray-300 border-l-0 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                    className="w-full px-4 py-4 border-0 rounded-r-lg focus:outline-none text-base"
                     placeholder="4XX XXX XXX"
                     maxLength={11}
                   />
