@@ -86,14 +86,16 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50">
       {/* Dark backdrop overlay */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
       
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl md:max-w-lg">
+      {/* Modal */}
+      <div className="fixed inset-x-0 bottom-0 md:relative md:inset-auto md:flex md:items-center md:justify-center md:p-4">
+        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl shadow-2xl md:max-w-lg md:w-full">
         {/* Header */}
         <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -307,6 +309,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
               </form>
             </>
           )}
+        </div>
         </div>
       </div>
     </div>
