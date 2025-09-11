@@ -14,7 +14,9 @@ def capacitor_pods
 
 end
 
-target 'Connect ' do
+project 'Connect.xcodeproj'
+
+target 'Connect' do
   capacitor_pods
   # Add your Pods here
 end
