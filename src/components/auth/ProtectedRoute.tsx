@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { usePathname } from 'next/navigation';
-import LoginModal from './LoginModal';
-import SignUpModal from './SignUpModal';
 import AuthButton from './AuthButton';
+import { useModal } from '@/lib/modalContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,8 +16,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, fallback, title, description, buttonText }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
-  const [showSignUp, setShowSignUp] = useState(false);
+  const { showLogin } = useModal();
   const pathname = usePathname();
 
   // Get custom messages based on the current path if props are not provided
@@ -100,30 +98,13 @@ export default function ProtectedRoute({ children, fallback, title, description,
               </p>
             </div>
             <div className="mt-6 w-full flex justify-center">
-              <AuthButton onClick={() => setShowLogin(true)}>
+              <AuthButton onClick={() => showLogin()}>
                 Continue
               </AuthButton>
             </div>
           </div>
         </div>
 
-        <LoginModal
-          isOpen={showLogin}
-          onClose={() => setShowLogin(false)}
-          onSwitchToSignUp={() => {
-            setShowLogin(false);
-            setShowSignUp(true);
-          }}
-        />
-
-        <SignUpModal
-          isOpen={showSignUp}
-          onClose={() => setShowSignUp(false)}
-          onSwitchToLogin={() => {
-            setShowSignUp(false);
-            setShowLogin(true);
-          }}
-        />
       </>
     );
   }

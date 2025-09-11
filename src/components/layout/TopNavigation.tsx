@@ -8,8 +8,7 @@ import Image from "next/image";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useState, useEffect, useRef } from "react";
-import LoginModal from "@/components/auth/LoginModal";
-import SignUpModal from "@/components/auth/SignUpModal";
+import { useModal } from "@/lib/modalContext";
 
 const ProfileMenu = dynamic(() => import("@/components/menu/ProfileMenu"), { ssr: false });
 const NotificationMenu = dynamic(() => import("@/components/menu/NotificationMenu"), { ssr: false });
@@ -18,8 +17,7 @@ export default function TopNavigation() {
   const pathname = usePathname();
   const { context } = useAppStore();
   const { user } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
-  const [showSignUp, setShowSignUp] = useState(false);
+  const { showLogin, showSignUp } = useModal();
   const [authOpen, setAuthOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -171,7 +169,7 @@ export default function TopNavigation() {
                         <button
                           onClick={() => {
                             setAuthOpen(false);
-                            setShowLogin(true);
+                            showLogin();
                           }}
                           className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                         >
@@ -187,24 +185,6 @@ export default function TopNavigation() {
         </div>
       </div>
 
-      {/* Auth Modals */}
-      <LoginModal
-        isOpen={showLogin}
-        onClose={() => setShowLogin(false)}
-        onSwitchToSignUp={() => {
-          setShowLogin(false);
-          setShowSignUp(true);
-        }}
-      />
-
-      <SignUpModal
-        isOpen={showSignUp}
-        onClose={() => setShowSignUp(false)}
-        onSwitchToLogin={() => {
-          setShowSignUp(false);
-          setShowLogin(true);
-        }}
-      />
     </header>
   );
 }

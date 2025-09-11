@@ -4,6 +4,7 @@ import "./globals.css";
 import AppShellWrapper from "@/components/layout/AppShellWrapper";
 import AccountSwitchingOverlay from "@/components/AccountSwitchingOverlay";
 import { AuthProvider } from "@/lib/authContext";
+import { ModalProvider } from "@/lib/modalContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,10 +39,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <AppShellWrapper>
-            {children}
-          </AppShellWrapper>
-          <AccountSwitchingOverlay />
+          <ModalProvider>
+            <AppShellWrapper>
+              {children}
+            </AppShellWrapper>
+            <AccountSwitchingOverlay />
+          </ModalProvider>
         </AuthProvider>
       </body>
     </html>

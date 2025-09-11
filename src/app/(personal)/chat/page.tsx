@@ -9,8 +9,7 @@ import { useRouter } from "next/navigation";
 import ChatLayout from "./ChatLayout";
 import { useAuth } from "@/lib/authContext";
 import AuthButton from "@/components/auth/AuthButton";
-import LoginModal from "@/components/auth/LoginModal";
-import SignUpModal from "@/components/auth/SignUpModal";
+import { useModal } from "@/lib/modalContext";
 
 export default function MessagesPage() {
   const { conversations, seedConversations, clearAll } = useAppStore();
@@ -22,8 +21,7 @@ export default function MessagesPage() {
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
   
   // Modal state
-  const [showLogin, setShowLogin] = useState(false);
-  const [showSignUp, setShowSignUp] = useState(false);
+  const { showLogin } = useModal();
 
   useEffect(() => {
     console.log('Seeding conversations...');
@@ -133,30 +131,13 @@ export default function MessagesPage() {
               </p>
             </div>
             <div className="mt-6 w-full flex justify-center">
-              <AuthButton onClick={() => setShowLogin(true)}>
+              <AuthButton onClick={() => showLogin()}>
                 Continue
               </AuthButton>
             </div>
           </div>
         </div>
 
-        <LoginModal
-          isOpen={showLogin}
-          onClose={() => setShowLogin(false)}
-          onSwitchToSignUp={() => {
-            setShowLogin(false);
-            setShowSignUp(true);
-          }}
-        />
-
-        <SignUpModal
-          isOpen={showSignUp}
-          onClose={() => setShowSignUp(false)}
-          onSwitchToLogin={() => {
-            setShowSignUp(false);
-            setShowLogin(true);
-          }}
-        />
       </>
     );
   }
