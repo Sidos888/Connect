@@ -115,7 +115,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
       
       {/* Modal */}
       <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4 z-50" style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
-        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-full md:h-auto pt-12 md:pt-0" style={{ height: '100vh', minHeight: '100vh' }}>
+        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-md md:overflow-y-auto h-full md:h-auto pt-12 md:pt-0" style={{ height: '100vh', minHeight: '100vh' }}>
         {/* Header */}
         <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">Log in or sign up</h2>
