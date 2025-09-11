@@ -26,12 +26,12 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
     const phoneNumberLength = phoneNumber.length;
     if (phoneNumberLength < 2) return phoneNumber;
     if (phoneNumberLength < 5) {
-      return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2)}`;
+      return `${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2)}`;
     }
     if (phoneNumberLength < 9) {
-      return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5)}`;
+      return `${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5)}`;
     }
-    return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5, 9)}`;
+    return `${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5, 9)}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,16 +131,21 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
           {step === 'input' ? (
             <div className="space-y-4">
               {/* Mobile Input */}
-              <div>
-                <div className="relative">
+              <div className="flex">
+                {/* Country Code Card */}
+                <div className="flex items-center px-4 py-4 border border-gray-300 rounded-l-lg bg-gray-50 text-gray-700 font-medium">
+                  +61
+                </div>
+                {/* Phone Number Input */}
+                <div className="relative flex-1">
                   <input
                     id="phone"
                     type="tel"
                     value={phoneNumber}
                     onChange={handlePhoneChange}
-                    className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
-                    placeholder="+61 4XX XXX XXX"
-                    maxLength={16}
+                    className="w-full px-4 py-4 border border-gray-300 border-l-0 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
+                    placeholder="4XX XXX XXX"
+                    maxLength={12}
                   />
                   <DevicePhoneMobileIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
