@@ -152,17 +152,17 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50" style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
+    <div className="fixed inset-0 z-50" style={{ height: '100dvh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
       {/* Dark backdrop overlay */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
-        style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}
+        style={{ height: '100dvh', width: '100vw', position: 'fixed', top: 0, left: 0 }}
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4 z-50" style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
-        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-screen md:h-auto" style={{ height: '100vh', minHeight: '100vh' }}>
+      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4 z-50" style={{ height: '100dvh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
+        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-full md:h-auto" style={{ height: '100dvh', minHeight: '100dvh' }}>
         {/* Header */}
         <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">
