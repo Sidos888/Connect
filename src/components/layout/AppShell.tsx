@@ -18,7 +18,8 @@ export default function AppShell({ children }: AppShellProps) {
   
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore'];
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const normalizedPath = pathname.replace(/\/$/, '') || '/';
+  const isPublicRoute = publicRoutes.includes(normalizedPath);
 
   // Debug logging for Vercel troubleshooting
   console.log('AppShell Debug:', {
