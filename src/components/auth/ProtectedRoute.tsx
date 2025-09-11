@@ -97,7 +97,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
             <p className="text-gray-600 mb-8">
               {displayDescription}
             </p>
-            <div className="mt-6 w-full">
+            <div className="mt-6 w-full flex justify-center">
               <AuthButton onClick={() => setShowLogin(true)}>
                 Continue
               </AuthButton>

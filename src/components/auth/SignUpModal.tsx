@@ -193,13 +193,15 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                 )}
 
                 {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-brand text-white py-2.5 px-6 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading ? 'Creating account...' : 'Continue'}
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-1/2 bg-brand text-white py-1.5 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loading ? 'Creating account...' : 'Continue'}
+                  </button>
+                </div>
               </form>
 
               {/* Switch to Login */}
@@ -227,12 +229,14 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                 We&apos;ve sent a verification link to <strong>{email}</strong>. 
                 Click the link to verify your account, then come back here to complete your profile.
               </p>
-              <button
-                onClick={() => setStep('profile')}
-                className="w-full bg-brand text-white py-2.5 px-6 rounded-lg font-medium hover:bg-brand/90 transition-colors"
-              >
-                I&apos;ve verified my email
-              </button>
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setStep('profile')}
+                  className="w-1/2 bg-brand text-white py-1.5 px-4 rounded-lg font-medium hover:bg-brand/90 transition-colors"
+                >
+                  I&apos;ve verified my email
+                </button>
+              </div>
             </div>
           )}
 
