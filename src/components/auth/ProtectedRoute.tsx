@@ -94,9 +94,11 @@ export default function ProtectedRoute({ children, fallback, title, description,
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
               {displayTitle}
             </h1>
-            <p className="text-gray-600 mb-8">
-              {displayDescription}
-            </p>
+            <div className="text-gray-600 mb-8 h-12 flex items-center justify-center">
+              <p className="text-center">
+                {displayDescription}
+              </p>
+            </div>
             <div className="mt-6 w-full flex justify-center">
               <AuthButton onClick={() => setShowLogin(true)}>
                 Continue

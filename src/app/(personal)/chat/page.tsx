@@ -127,9 +127,11 @@ export default function MessagesPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
               Chats
             </h1>
-            <p className="text-gray-600 mb-8">
-              Log in / sign up to view chats
-            </p>
+            <div className="text-gray-600 mb-8 h-12 flex items-center justify-center">
+              <p className="text-center">
+                Log in / sign up to view chats
+              </p>
+            </div>
             <div className="mt-6 w-full flex justify-center">
               <AuthButton onClick={() => setShowLogin(true)}>
                 Continue
