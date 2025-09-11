@@ -23,18 +23,18 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
   const [avatarUrl, setAvatarUrl] = useState('');
   const { signUp, updateProfile } = useAuth();
 
-  // Format phone number as user types (Australia +61)
+  // Format phone number as user types (Australia +61) - 3-3-3 format
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/\D/g, '');
     const phoneNumberLength = phoneNumber.length;
-    if (phoneNumberLength < 2) return phoneNumber;
-    if (phoneNumberLength < 5) {
-      return `${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2)}`;
+    if (phoneNumberLength < 3) return phoneNumber;
+    if (phoneNumberLength < 6) {
+      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3)}`;
     }
     if (phoneNumberLength < 9) {
-      return `${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5)}`;
+      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
     }
-    return `${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5, 9)}`;
+    return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6, 9)}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,16 +152,17 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50" style={{ height: '100vh', width: '100vw' }}>
       {/* Dark backdrop overlay */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
+        style={{ height: '100vh', width: '100vw' }}
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4">
-        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-full md:h-auto">
+      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4 z-50">
+        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-screen md:h-auto">
         {/* Header */}
         <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -194,7 +195,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                     onChange={handlePhoneChange}
                     className="w-full px-4 py-4 border border-gray-300 border-l-0 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
                     placeholder="4XX XXX XXX"
-                    maxLength={12}
+                    maxLength={11}
                   />
                   <DevicePhoneMobileIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
