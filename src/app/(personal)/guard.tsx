@@ -11,6 +11,7 @@ export default function Guard({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!isHydrated) return;
+    // Allow root path (/) to be accessible without personalProfile for explore page
     if (!personalProfile && pathname !== "/onboarding" && pathname !== "/") {
       router.replace("/onboarding");
     }
