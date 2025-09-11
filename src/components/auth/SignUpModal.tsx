@@ -94,8 +94,8 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 flex flex-col justify-end md:relative md:inset-auto md:flex md:items-center md:justify-center md:p-4">
-        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:h-auto md:overflow-y-auto h-[90vh]">
+      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4">
+        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-[90vh] md:h-auto">
         {/* Header */}
         <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">
