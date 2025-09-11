@@ -197,7 +197,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-1/2 bg-brand text-white py-1.5 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-1/2 bg-brand text-white py-2.5 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {loading ? 'Creating account...' : 'Continue'}
                   </button>
@@ -232,7 +232,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
               <div className="flex justify-center">
                 <button
                   onClick={() => setStep('profile')}
-                  className="w-1/2 bg-brand text-white py-1.5 px-4 rounded-lg font-medium hover:bg-brand/90 transition-colors"
+                  className="w-1/2 bg-brand text-white py-2.5 px-4 rounded-lg font-medium hover:bg-brand/90 transition-colors"
                 >
                   I&apos;ve verified my email
                 </button>
