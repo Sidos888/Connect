@@ -13,15 +13,25 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const { } = useAuth();
+  const { user, loading } = useAuth();
   const isChatPage = pathname.startsWith('/chat');
   
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore'];
   const isPublicRoute = publicRoutes.includes(pathname);
 
+  // Debug logging for Vercel troubleshooting
+  console.log('AppShell Debug:', {
+    pathname,
+    isPublicRoute,
+    publicRoutes,
+    user: user ? 'SIGNED IN' : 'NOT SIGNED IN',
+    loading
+  });
+
   // If it's a public route, show without protection
   if (isPublicRoute) {
+    console.log('Rendering public route without protection');
     if (isChatPage) {
       // Full height layout for chat pages
       return (
@@ -62,6 +72,7 @@ export default function AppShell({ children }: AppShellProps) {
   }
 
   // All other routes require authentication
+  console.log('Rendering protected route with authentication required');
   if (isChatPage) {
     // Full height layout for chat pages
     return (
