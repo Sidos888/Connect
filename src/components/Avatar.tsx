@@ -20,9 +20,7 @@ export default function Avatar({ src, name = "?", size = 32, className }: Props)
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={name} className="w-full h-full object-cover rounded-full" />
-      ) : (
-        <span className="text-sm font-medium">{initial}</span>
-      )}
+      ) : null}
     </div>
   );
 }
