@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/authContext';
-import { XMarkIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon, CheckIcon } from '@heroicons/react/24/outline';
-import AuthButton from './AuthButton';
+import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 
 interface SignUpModalProps {
   isOpen: boolean;
@@ -12,17 +11,82 @@ interface SignUpModalProps {
 }
 
 export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUpModalProps) {
-  const [step, setStep] = useState<'email' | 'verify' | 'profile'>('email');
+  const [step, setStep] = useState<'input' | 'verify' | 'profile'>('input');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const { signUp, updateProfile } = useAuth();
+
+  // Format phone number as user types (Australia +61)
+  const formatPhoneNumber = (value: string) => {
+    const phoneNumber = value.replace(/\D/g, '');
+    const phoneNumberLength = phoneNumber.length;
+    if (phoneNumberLength < 2) return phoneNumber;
+    if (phoneNumberLength < 5) {
+      return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2)}`;
+    }
+    if (phoneNumberLength < 9) {
+      return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5)}`;
+    }
+    return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5, 9)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhoneNumber(formatted);
+  };
+
+  const handleSendCode = async () => {
+    if (!phoneNumber) {
+      setError('Please enter your phone number');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // TODO: Implement actual SMS sending
+      console.log('Sending verification code to:', phoneNumber);
+      // For now, just simulate sending
+      setTimeout(() => {
+        setStep('verify');
+        setLoading(false);
+      }, 1000);
+    } catch (err) {
+      setError('Failed to send verification code');
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode) {
+      setError('Please enter the verification code');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // TODO: Implement actual verification and account creation
+      console.log('Verifying code:', verificationCode, 'for phone:', phoneNumber);
+      // For now, just simulate verification
+      setTimeout(() => {
+        setStep('profile');
+        setLoading(false);
+      }, 1000);
+    } catch (err) {
+      setError('Invalid verification code');
+      setLoading(false);
+    }
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,10 +133,12 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
   };
 
   const resetForm = () => {
-    setStep('email');
+    setStep('input');
+    setPhoneNumber('');
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setVerificationCode('');
     setName('');
     setAvatarUrl('');
     setError('');
@@ -99,7 +165,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
         {/* Header */}
         <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">
-            {step === 'email' ? 'Sign up' : step === 'verify' ? 'Check your email' : 'Create your profile'}
+            {step === 'input' ? 'Sign up' : step === 'verify' ? 'Enter verification code' : 'Create your profile'}
           </h2>
           <button
             onClick={handleClose}
@@ -111,94 +177,95 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
 
         {/* Content */}
         <div className="p-6 pb-12">
-          {step === 'email' && (
+          {step === 'input' && (
+            <div className="space-y-4">
+              {/* Mobile Input */}
+              <div>
+                <div className="relative">
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={handlePhoneChange}
+                    className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
+                    placeholder="+61 4XX XXX XXX"
+                    maxLength={16}
+                  />
+                  <DevicePhoneMobileIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              {/* Send Code Button */}
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={loading}
+                className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base"
+              >
+                {loading ? 'Sending code...' : 'Send verification code'}
+              </button>
+            </div>
+          )}
+
+          {step === 'verify' && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Enter verification code</h3>
+                <p className="text-sm text-gray-600">
+                  We sent a 6-digit code to {phoneNumber}
+                </p>
+              </div>
+
+              <div>
+                <input
+                  id="verificationCode"
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base text-center text-2xl tracking-widest"
+                  placeholder="000000"
+                  maxLength={6}
+                />
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              {/* Verify Button */}
+              <button
+                type="button"
+                onClick={handleVerifyCode}
+                disabled={loading || verificationCode.length !== 6}
+                className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base"
+              >
+                {loading ? 'Verifying...' : 'Verify code'}
+              </button>
+
+              {/* Resend Code */}
+              <button
+                type="button"
+                onClick={() => setStep('input')}
+                className="w-full text-sm text-gray-600 hover:text-gray-900 py-2"
+              >
+                Change phone number
+              </button>
+            </div>
+          )}
+
+          {/* Sign Up Options - Only show on input step */}
+          {step === 'input' && (
             <>
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                {/* Email Input */}
-                <div>
-                  <div className="relative">
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
-                      placeholder="Email"
-                      required
-                    />
-                    <EnvelopeIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-
-                {/* Password Input */}
-                <div>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent pr-12 text-base"
-                      placeholder="Password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Confirm Password Input */}
-                <div>
-                  <div className="relative">
-                    <input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent pr-12 text-base"
-                      placeholder="Confirm Password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                    {error}
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base"
-                >
-                  {loading ? 'Creating account...' : 'Continue'}
-                </button>
-              </form>
-
               {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
@@ -209,8 +276,27 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                 </div>
               </div>
 
-              {/* Social Login Buttons */}
+              {/* Sign Up Options */}
               <div className="space-y-3">
+                <button 
+                  onClick={() => {
+                    // Handle email signup
+                    const emailInput = prompt('Enter your email:');
+                    if (emailInput) {
+                      setEmail(emailInput);
+                      const passwordInput = prompt('Enter your password:');
+                      if (passwordInput) {
+                        setPassword(passwordInput);
+                        handleEmailSubmit({ preventDefault: () => {} } as React.FormEvent);
+                      }
+                    }
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-base"
+                >
+                  <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
+                  Sign up with Email
+                </button>
+
                 <button className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-base">
                   <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -244,24 +330,6 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
             </>
           )}
 
-          {step === 'verify' && (
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <CheckIcon className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Check your email</h3>
-              <p className="text-sm text-gray-600 mb-6">
-                We&apos;ve sent a verification link to <strong>{email}</strong>. 
-                Click the link to verify your account, then come back here to complete your profile.
-              </p>
-              <button
-                onClick={() => setStep('profile')}
-                className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 transition-colors text-base"
-              >
-                I&apos;ve verified my email
-              </button>
-            </div>
-          )}
 
           {step === 'profile' && (
             <>

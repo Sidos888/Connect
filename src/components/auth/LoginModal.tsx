@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/authContext';
-import { XMarkIcon, DevicePhoneMobileIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, DevicePhoneMobileIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -11,26 +11,27 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginModalProps) {
-  const [authMethod, setAuthMethod] = useState<'mobile' | 'email'>('mobile');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<'input' | 'verify'>('input');
   const { signIn } = useAuth();
 
-  // Format phone number as user types
+  // Format phone number as user types (Australia +61)
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/\D/g, '');
     const phoneNumberLength = phoneNumber.length;
-    if (phoneNumberLength < 4) return phoneNumber;
-    if (phoneNumberLength < 7) {
-      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    if (phoneNumberLength < 2) return phoneNumber;
+    if (phoneNumberLength < 5) {
+      return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2)}`;
     }
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    if (phoneNumberLength < 9) {
+      return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5)}`;
+    }
+    return `+61 ${phoneNumber.slice(0, 2)} ${phoneNumber.slice(2, 5)} ${phoneNumber.slice(5, 9)}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,93 +128,23 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
 
         {/* Content */}
         <div className="p-6 pb-12">
-          {/* Auth Method Toggle */}
-          <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setAuthMethod('mobile')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                authMethod === 'mobile'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Mobile
-            </button>
-            <button
-              type="button"
-              onClick={() => setAuthMethod('email')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                authMethod === 'email'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Email
-            </button>
-          </div>
-
           {step === 'input' ? (
             <div className="space-y-4">
-              {authMethod === 'mobile' ? (
-                // Mobile Input
-                <div>
-                  <div className="relative">
-                    <input
-                      id="phone"
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={handlePhoneChange}
-                      className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
-                      placeholder="(555) 123-4567"
-                      maxLength={14}
-                    />
-                    <DevicePhoneMobileIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  </div>
+              {/* Mobile Input */}
+              <div>
+                <div className="relative">
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={handlePhoneChange}
+                    className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
+                    placeholder="+61 4XX XXX XXX"
+                    maxLength={16}
+                  />
+                  <DevicePhoneMobileIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
-              ) : (
-                // Email Input
-                <div>
-                  <div className="relative">
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
-                      placeholder="Email"
-                    />
-                    <EnvelopeIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              )}
-
-              {authMethod === 'email' && (
-                // Password Input (only for email)
-                <div>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent pr-12 text-base"
-                      placeholder="Password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
 
               {/* Error Message */}
               {error && (
@@ -222,17 +153,14 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
                 </div>
               )}
 
-              {/* Submit Button */}
+              {/* Send Code Button */}
               <button
                 type="button"
-                onClick={authMethod === 'mobile' ? handleSendCode : handleSubmit}
+                onClick={handleSendCode}
                 disabled={loading}
                 className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base"
               >
-                {loading 
-                  ? (authMethod === 'mobile' ? 'Sending code...' : 'Signing in...') 
-                  : (authMethod === 'mobile' ? 'Send verification code' : 'Continue')
-                }
+                {loading ? 'Sending code...' : 'Send verification code'}
               </button>
             </div>
           ) : (
@@ -285,7 +213,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
             </div>
           )}
 
-          {/* Social Login and Sign Up - Only show on input step */}
+          {/* Login Options - Only show on input step */}
           {step === 'input' && (
             <>
               {/* Divider */}
@@ -298,8 +226,28 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
                 </div>
               </div>
 
-              {/* Social Login Buttons */}
+              {/* Login Options */}
               <div className="space-y-3">
+                <button 
+                  onClick={() => {
+                    // Handle email login
+                    const emailInput = prompt('Enter your email:');
+                    if (emailInput) {
+                      setEmail(emailInput);
+                      // For now, just show password input
+                      const passwordInput = prompt('Enter your password:');
+                      if (passwordInput) {
+                        setPassword(passwordInput);
+                        handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+                      }
+                    }
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-base"
+                >
+                  <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
+                  Continue with Email
+                </button>
+
                 <button className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-base">
                   <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
