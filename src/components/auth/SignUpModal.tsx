@@ -95,13 +95,13 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
       
       <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl md:max-w-lg">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">
             {step === 'email' ? 'Sign up' : step === 'verify' ? 'Check your email' : 'Create your profile'}
           </h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="absolute right-6 p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <XMarkIcon className="h-5 w-5 text-gray-500" />
           </button>
@@ -111,14 +111,9 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
         <div className="p-6">
           {step === 'email' && (
             <>
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">Welcome to Connect</h1>
-              
               <form onSubmit={handleEmailSubmit} className="space-y-4">
                 {/* Email Input */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
                   <div className="relative">
                     <input
                       id="email"
@@ -126,7 +121,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-                      placeholder="Enter your email"
+                      placeholder="Email"
                       required
                     />
                     <EnvelopeIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -135,9 +130,6 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
 
                 {/* Password Input */}
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                    Password
-                  </label>
                   <div className="relative">
                     <input
                       id="password"
@@ -145,7 +137,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent pr-10"
-                      placeholder="Create a password"
+                      placeholder="Password"
                       required
                     />
                     <button
@@ -164,9 +156,6 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
 
                 {/* Confirm Password Input */}
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm Password
-                  </label>
                   <div className="relative">
                     <input
                       id="confirmPassword"
@@ -174,7 +163,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent pr-10"
-                      placeholder="Confirm your password"
+                      placeholder="Confirm Password"
                       required
                     />
                     <button
@@ -248,37 +237,29 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
 
           {step === 'profile' && (
             <>
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">Create your profile</h1>
-              
               <form onSubmit={handleProfileSubmit} className="space-y-4">
                 {/* Name Input */}
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
-                  </label>
                   <input
                     id="name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-                    placeholder="Enter your full name"
+                    placeholder="Full Name"
                     required
                   />
                 </div>
 
                 {/* Avatar URL Input */}
                 <div>
-                  <label htmlFor="avatarUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                    Profile Photo URL (optional)
-                  </label>
                   <input
                     id="avatarUrl"
                     type="url"
                     value={avatarUrl}
                     onChange={(e) => setAvatarUrl(e.target.value)}
                     className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-                    placeholder="https://example.com/photo.jpg"
+                    placeholder="Profile Photo URL (optional)"
                   />
                 </div>
 

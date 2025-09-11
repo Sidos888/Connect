@@ -47,11 +47,11 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
       {/* Mobile: Slide up modal */}
       <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl md:max-w-lg">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">Log in or sign up</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="absolute right-6 p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <XMarkIcon className="h-5 w-5 text-gray-500" />
           </button>
@@ -59,14 +59,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
 
         {/* Content */}
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Welcome to Connect</h1>
-          
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
               <div className="relative">
                 <input
                   id="email"
@@ -74,7 +69,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-                  placeholder="Enter your email"
+                  placeholder="Email"
                   required
                 />
                 <EnvelopeIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -83,9 +78,6 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
 
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
               <div className="relative">
                 <input
                   id="password"
@@ -93,7 +85,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent pr-10"
-                  placeholder="Enter your password"
+                  placeholder="Password"
                   required
                 />
                 <button
