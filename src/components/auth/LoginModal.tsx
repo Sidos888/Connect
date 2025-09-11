@@ -105,17 +105,17 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50" style={{ height: '100vh', width: '100vw' }}>
+    <div className="fixed inset-0 z-50" style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
       {/* Dark backdrop overlay */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
-        style={{ height: '100vh', width: '100vw' }}
+        style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4 z-50">
-        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-screen md:h-auto">
+      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4 z-50" style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
+        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-lg md:overflow-y-auto h-screen md:h-auto" style={{ height: '100vh', minHeight: '100vh' }}>
         {/* Header */}
         <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
           <h2 className="text-xl font-semibold text-gray-900">Log in or sign up</h2>
@@ -144,7 +144,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
                     type="tel"
                     value={phoneNumber}
                     onChange={handlePhoneChange}
-                    className="w-full px-4 py-4 border border-gray-300 border-l-0 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base"
+                    className="w-full px-4 py-4 border border-gray-300 border-l-0 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
                     placeholder="4XX XXX XXX"
                     maxLength={11}
                   />
