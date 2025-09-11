@@ -99,7 +99,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
             <div className="mt-8">
               <button
                 onClick={() => setShowLogin(true)}
-                className="w-full bg-brand text-white py-3 px-6 rounded-lg font-medium hover:bg-brand/90 transition-colors"
+                className="w-full bg-brand text-white py-4 px-8 rounded-lg font-medium hover:bg-brand/90 transition-colors text-lg"
               >
                 Continue
               </button>
