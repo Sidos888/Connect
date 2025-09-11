@@ -7,8 +7,10 @@ import BearEmoji from "@/components/BearEmoji";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import ChatLayout from "./ChatLayout";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
+import AuthButton from "@/components/auth/AuthButton";
+import LoginModal from "@/components/auth/LoginModal";
+import SignUpModal from "@/components/auth/SignUpModal";
 
 export default function MessagesPage() {
   const { conversations, seedConversations, clearAll } = useAppStore();
@@ -18,6 +20,10 @@ export default function MessagesPage() {
   // Mobile-specific state
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
+  
+  // Modal state
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
 
   useEffect(() => {
     console.log('Seeding conversations...');
@@ -115,13 +121,41 @@ export default function MessagesPage() {
   // Show login prompt if not authenticated
   if (!user) {
     return (
-      <ProtectedRoute
-        title="Chats"
-        description="Log in / sign up to view chats"
-        buttonText="Log in"
-      >
-        <></>
-      </ProtectedRoute>
+      <>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+          <div className="text-center w-full max-w-sm">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Chats
+            </h1>
+            <p className="text-gray-600 mb-8">
+              Log in / sign up to view chats
+            </p>
+            <div className="mt-6 w-full flex justify-center">
+              <AuthButton onClick={() => setShowLogin(true)}>
+                Continue
+              </AuthButton>
+            </div>
+          </div>
+        </div>
+
+        <LoginModal
+          isOpen={showLogin}
+          onClose={() => setShowLogin(false)}
+          onSwitchToSignUp={() => {
+            setShowLogin(false);
+            setShowSignUp(true);
+          }}
+        />
+
+        <SignUpModal
+          isOpen={showSignUp}
+          onClose={() => setShowSignUp(false)}
+          onSwitchToLogin={() => {
+            setShowSignUp(false);
+            setShowLogin(true);
+          }}
+        />
+      </>
     );
   }
 
