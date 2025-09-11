@@ -12,7 +12,7 @@ export default function AuthButton({ onClick, children, className = "" }: AuthBu
   return (
     <button
       onClick={onClick}
-      className={`w-1/2 bg-brand text-white py-2.5 px-4 rounded-lg font-medium hover:bg-brand/90 transition-colors ${className}`}
+      className={`w-48 sm:w-1/2 bg-brand text-white py-2.5 px-4 rounded-lg font-medium hover:bg-brand/90 transition-colors ${className}`}
       style={{
         paddingTop: '0.625rem',
         paddingBottom: '0.625rem',
