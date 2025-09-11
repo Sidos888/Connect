@@ -8,10 +8,12 @@ import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import ChatLayout from "./ChatLayout";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { useAuth } from "@/lib/authContext";
 
 export default function MessagesPage() {
   const { conversations, seedConversations, clearAll } = useAppStore();
   const router = useRouter();
+  const { user, loading } = useAuth();
   
   // Mobile-specific state
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
@@ -101,12 +103,31 @@ export default function MessagesPage() {
     { id: "group", label: "Groups", count: mobileGroupCount },
   ];
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+      </div>
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (!user) {
+    return (
+      <ProtectedRoute
+        title="Chats"
+        description="Log in / sign up to view chats"
+        buttonText="Log in"
+      >
+        <></>
+      </ProtectedRoute>
+    );
+  }
+
+  // Show chat content if authenticated
   return (
-    <ProtectedRoute
-      title="Chats"
-      description="Log in / sign up to view chats"
-      buttonText="Log in"
-    >
+    <>
       {/* Desktop Layout */}
       <div className="hidden lg:block">
         <ChatLayout />
@@ -238,7 +259,7 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   );
 }
 
