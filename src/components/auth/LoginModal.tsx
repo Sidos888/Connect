@@ -162,7 +162,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[100vh] md:h-auto md:max-h-[90vh] overflow-hidden">
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[85vh] md:h-auto md:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div className="w-10" /> {/* Spacer */}
@@ -178,7 +178,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
         </div>
 
         {/* Content */}
-        <div className="p-6 pb-8">
+        <div className="p-6 pb-0">
           {step === 'phone' && (
             <form onSubmit={handlePhoneSubmit} className="space-y-6">
               {/* Country/Region Dropdown */}
