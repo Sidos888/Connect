@@ -200,6 +200,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                 type="submit"
                 disabled={loading || !phoneNumber}
                 className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#FF6600' }}
               >
                 {loading ? 'Sending...' : 'Continue'}
               </button>
@@ -246,6 +247,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                 type="submit"
                 disabled={loading || !email}
                 className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#FF6600' }}
               >
                 {loading ? 'Sending...' : 'Continue'}
               </button>
@@ -307,6 +309,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                 type="submit"
                 disabled={loading || verificationCode.length !== 6}
                 className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#FF6600' }}
               >
                 {loading ? 'Verifying...' : 'Verify'}
               </button>
@@ -350,6 +353,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                   handleClose();
                 }}
                 className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors"
+                style={{ backgroundColor: '#FF6600' }}
               >
                 Sign In
               </button>
