@@ -35,7 +35,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
       digits = value.replace(/\+61\s?/g, '').replace(/\D/g, '');
     }
     
-    // Format as: +61 3 5355 4545
+    // Format as: +61 X XXXX XXXX (with space after +61)
     if (digits.length === 0) return '';
     if (digits.length <= 1) return `+61 ${digits}`;
     if (digits.length <= 5) return `+61 ${digits.slice(0, 1)} ${digits.slice(1)}`;
@@ -50,6 +50,16 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
     // Extract just the digits after +61 for backend
     const digits = value.replace(/\+61\s?/g, '').replace(/\D/g, '');
     setPhoneNumber(digits);
+  };
+
+  const handlePhoneFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setPhoneFocused(true);
+    // Position cursor at the first X (after "+61 ")
+    setTimeout(() => {
+      const input = e.target;
+      const cursorPosition = 4; // Position after "+61 "
+      input.setSelectionRange(cursorPosition, cursorPosition);
+    }, 0);
   };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
@@ -236,7 +246,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
                   type="tel"
                   value={formattedPhoneNumber}
                   onChange={handlePhoneChange}
-                  onFocus={() => setPhoneFocused(true)}
+                  onFocus={handlePhoneFocus}
                   onBlur={() => setPhoneFocused(false)}
                   placeholder={phoneFocused ? "+61 X XXXX XXXX" : "Phone number"}
                   className="w-full h-12 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
