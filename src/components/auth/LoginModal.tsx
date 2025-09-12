@@ -15,6 +15,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
   
   const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-found'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationMethod, setVerificationMethod] = useState<'phone' | 'email'>('phone');
@@ -23,6 +24,24 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [countryFocused, setCountryFocused] = useState(false);
+
+  // Format phone number with spaces
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as: 3 5355 4545
+    if (digits.length <= 1) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 1)} ${digits.slice(1)}`;
+    return `${digits.slice(0, 1)} ${digits.slice(1, 5)} ${digits.slice(5, 9)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formatted = formatPhoneNumber(value);
+    setFormattedPhoneNumber(formatted);
+    setPhoneNumber(value.replace(/\D/g, '')); // Store only digits
+  };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,17 +223,20 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
 
               {/* Phone Number Input */}
               <div className="relative">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-700 pointer-events-none z-10">
+                  +61
+                </div>
                 <input
                   type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  value={formattedPhoneNumber}
+                  onChange={handlePhoneChange}
                   onFocus={() => setPhoneFocused(true)}
                   onBlur={() => setPhoneFocused(false)}
-                  placeholder={phoneFocused ? "+61 X XXXX XXXX" : "Phone number"}
-                  className="w-full h-12 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                  placeholder={phoneFocused ? "X XXXX XXXX" : "Phone number"}
+                  className="w-full h-12 pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
                   required
                 />
-                {(phoneFocused || phoneNumber) && (
+                {(phoneFocused || formattedPhoneNumber) && (
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                     Phone number
                   </label>
