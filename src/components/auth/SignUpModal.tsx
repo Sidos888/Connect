@@ -20,6 +20,9 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
   const [verificationMethod, setVerificationMethod] = useState<'phone' | 'email'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [countryFocused, setCountryFocused] = useState(false);
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,26 +185,40 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
           {step === 'phone' && (
             <form onSubmit={handlePhoneSubmit} className="space-y-6">
               {/* Country/Region Dropdown */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Country / Region</label>
+              <div className="relative">
                 <div className="relative">
-                        <select className="w-full h-14 pl-4 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white">
+                  <select 
+                    className="w-full h-14 pl-4 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                    onFocus={() => setCountryFocused(true)}
+                    onBlur={() => setCountryFocused(false)}
+                  >
                     <option value="+61">Australia (+61)</option>
                   </select>
+                  {(countryFocused || true) && (
+                    <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                      Country / Region
+                    </label>
+                  )}
                 </div>
               </div>
 
               {/* Phone Number Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Phone number</label>
-                      <input
-                        type="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="Phone number"
-                        className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
-                        required
-                      />
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onFocus={() => setPhoneFocused(true)}
+                  onBlur={() => setPhoneFocused(false)}
+                  placeholder={phoneFocused ? "" : "Phone number"}
+                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                  required
+                />
+                {(phoneFocused || phoneNumber) && (
+                  <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                    Phone number
+                  </label>
+                )}
               </div>
 
               {/* SMS Instruction */}
@@ -244,22 +261,28 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
           {step === 'email' && (
             <form onSubmit={handleEmailSubmit} className="space-y-6">
               {/* Email Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Email</label>
+              <div className="relative">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                  placeholder={emailFocused ? "" : "Email"}
                   className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
                   required
                 />
-                
-                {/* Email Instruction */}
-                <p className="text-xs text-gray-500">
-                  You will get a code by Email to continue.
-                </p>
+                {(emailFocused || email) && (
+                  <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                    Email
+                  </label>
+                )}
               </div>
+              
+              {/* Email Instruction */}
+              <p className="text-xs text-gray-500">
+                You will get a code by Email to continue.
+              </p>
 
               {/* Continue Button */}
               <button
