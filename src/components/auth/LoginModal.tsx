@@ -165,27 +165,27 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
       <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[85vh] md:h-auto md:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div className="w-10" /> {/* Spacer */}
+          <h2 className="text-xl font-semibold text-gray-900">
+            {step === 'account-found' ? 'Account Found' : 'Log in or sign up'}
+          </h2>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <XMarkIcon className="h-6 w-6 text-gray-600" />
           </button>
-          <h2 className="text-xl font-semibold text-gray-900">
-            {step === 'account-found' ? 'Account Found' : 'Log in or sign up'}
-          </h2>
-          <div className="w-10" /> {/* Spacer for centering */}
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 pb-8">
           {step === 'phone' && (
             <form onSubmit={handlePhoneSubmit} className="space-y-6">
               {/* Country/Region Dropdown */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Country / Region</label>
                 <div className="relative">
-                  <select className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors">
+                  <select className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors">
                     <option value="+61">Australia (+61)</option>
                   </select>
                 </div>
@@ -199,7 +199,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="Phone number"
-                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
                   required
                 />
               </div>
@@ -251,7 +251,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
                   required
                 />
               </div>
@@ -312,7 +312,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                   placeholder="Enter 6-digit code"
-                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-center text-lg tracking-widest"
+                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-center text-lg tracking-widest"
                   maxLength={6}
                   required
                 />
