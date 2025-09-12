@@ -204,11 +204,6 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                       />
               </div>
 
-              {/* Privacy Notice */}
-              <p className="text-sm text-gray-600">
-                We&apos;ll call or text to confirm your number. Standard message and data rates apply.
-              </p>
-              
               {/* SMS Instruction */}
               <p className="text-xs text-gray-500">
                 You will get a code by SMS to continue.
