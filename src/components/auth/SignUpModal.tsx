@@ -204,14 +204,17 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
 
               {/* Phone Number Input */}
               <div className="relative">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-700 pointer-events-none z-10">
+                  +61
+                </div>
                 <input
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   onFocus={() => setPhoneFocused(true)}
                   onBlur={() => setPhoneFocused(false)}
-                  placeholder={phoneFocused ? "+61 X XXXX XXXX" : "Phone number"}
-                  className="w-full h-12 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                  placeholder={phoneFocused ? "X XXXX XXXX" : "Phone number"}
+                  className="w-full h-12 pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
                   required
                 />
                 {(phoneFocused || phoneNumber) && (
