@@ -203,20 +203,22 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
               </div>
 
               {/* Phone Number Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Phone number</label>
-                <div className="relative">
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    onFocus={() => setPhoneFocused(true)}
-                    onBlur={() => setPhoneFocused(false)}
-                    placeholder={phoneFocused ? "+61 XXXX" : ""}
-                    className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
-                    required
-                  />
-                </div>
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onFocus={() => setPhoneFocused(true)}
+                  onBlur={() => setPhoneFocused(false)}
+                  placeholder={phoneFocused ? "+61 X XXXX XXXX" : "Phone number"}
+                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                  required
+                />
+                {(phoneFocused || phoneNumber) && (
+                  <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                    Phone number
+                  </label>
+                )}
               </div>
 
               {/* SMS Instruction */}
