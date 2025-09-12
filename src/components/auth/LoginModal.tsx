@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/authContext';
+import VerificationModal from './VerificationModal';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -15,51 +16,61 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
   
   const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-found'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
+  const [phoneFocused, setPhoneFocused] = useState(false);
   const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [verificationMethod, setVerificationMethod] = useState<'phone' | 'email'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [phoneFocused, setPhoneFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [countryFocused, setCountryFocused] = useState(false);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
 
-  // Format phone number with +61 prefix and spaces
-  const formatPhoneNumber = (value: string) => {
-    // Remove all non-digits and +61 if present
-    let digits = value.replace(/\D/g, '');
-    
-    // If user typed +61, remove it from digits
-    if (value.startsWith('+61')) {
-      digits = value.replace(/\+61\s?/g, '').replace(/\D/g, '');
-    }
-    
-    // Format as: +61 X XXXX XXXX (with space after +61)
-    if (digits.length === 0) return '';
-    if (digits.length <= 1) return `+61 ${digits}`;
-    if (digits.length <= 5) return `+61 ${digits.slice(0, 1)} ${digits.slice(1)}`;
-    return `+61 ${digits.slice(0, 1)} ${digits.slice(1, 5)} ${digits.slice(5, 9)}`;
-  };
-
+  // Airbnb phone input system - 3 steps
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const formatted = formatPhoneNumber(value);
-    setFormattedPhoneNumber(formatted);
+    // Remove all non-digits and spaces, then remove spaces
+    const digits = value.replace(/[^\d]/g, '');
+    // Limit to 9 digits
+    const limitedDigits = digits.slice(0, 9);
+    setPhoneNumber(limitedDigits);
     
-    // Extract just the digits after +61 for backend
-    const digits = value.replace(/\+61\s?/g, '').replace(/\D/g, '');
-    setPhoneNumber(digits);
+    // Position cursor correctly after input - account for spaces in formatted display
+    setTimeout(() => {
+      if (phoneInputRef.current) {
+        const formatted = formatPhoneNumber(limitedDigits);
+        const cursorPos = formatted.length;
+        phoneInputRef.current.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 0);
   };
 
-  const handlePhoneFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+  // Format phone number with 3-3-3 spacing
+  const formatPhoneNumber = (phone: string) => {
+    if (phone.length <= 3) return phone;
+    if (phone.length <= 6) return `${phone.slice(0, 3)} ${phone.slice(3)}`;
+    return `${phone.slice(0, 3)} ${phone.slice(3, 6)} ${phone.slice(6)}`;
+  };
+
+  const handlePhoneFocus = () => {
     setPhoneFocused(true);
-    // Position cursor at the first X (after "+61 ")
+    // Position cursor at the end of existing text, or at the first X if no text
     setTimeout(() => {
-      const input = e.target;
-      const cursorPosition = 4; // Position after "+61 "
-      input.setSelectionRange(cursorPosition, cursorPosition);
-    }, 0);
+      if (phoneInputRef.current) {
+        if (phoneNumber) {
+          // If there's existing text, position cursor at the end
+          const formatted = formatPhoneNumber(phoneNumber);
+          const cursorPos = formatted.length;
+          phoneInputRef.current.setSelectionRange(cursorPos, cursorPos);
+        } else {
+          // If no text, position cursor at the first X
+          phoneInputRef.current.setSelectionRange(0, 0);
+        }
+      }
+    }, 10);
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneFocused(false);
   };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
@@ -115,13 +126,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
     }
   };
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verificationCode) {
-      setError('Please enter the verification code');
-      return;
-    }
-    
+  const handleVerifyCode = async (code: string) => {
     setLoading(true);
     setError('');
     
@@ -129,10 +134,10 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
       let error;
       if (verificationMethod === 'phone') {
         const fullPhoneNumber = `+61${phoneNumber.replace(/\s/g, '')}`;
-        const result = await verifyPhoneCode(fullPhoneNumber, verificationCode);
+        const result = await verifyPhoneCode(fullPhoneNumber, code);
         error = result.error;
       } else {
-        const result = await verifyEmailCode(email, verificationCode);
+        const result = await verifyEmailCode(email, code);
         error = result.error;
       }
       
@@ -156,6 +161,23 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
       }
     } catch {
       setError('Invalid verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      if (verificationMethod === 'phone') {
+        await sendPhoneVerification(phoneNumber);
+      } else {
+        await sendEmailVerification(email);
+      }
+    } catch {
+      setError('Failed to resend verification code');
     } finally {
       setLoading(false);
     }
@@ -187,7 +209,6 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
     setStep('phone');
     setPhoneNumber('');
     setEmail('');
-    setVerificationCode('');
     setError('');
     onClose();
   };
@@ -195,43 +216,63 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[85vh] md:h-auto md:max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div className="w-10" /> {/* Spacer */}
-          <h2 className="text-xl font-semibold text-gray-900">
-            {step === 'account-found' ? 'Account Found' : 'Log in or sign up'}
-          </h2>
-          <button
+    <>
+      {step === 'verify' ? (
+        <VerificationModal
+          isOpen={isOpen}
+          onClose={onClose}
+          onVerify={handleVerifyCode}
+          onResend={handleResendCode}
+          onBack={handleBack}
+          verificationMethod={verificationMethod}
+          phoneOrEmail={verificationMethod === 'phone' ? phoneNumber : email}
+          loading={loading}
+          error={error}
+        />
+      ) : (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <XMarkIcon className="h-6 w-6 text-gray-600" />
-          </button>
-        </div>
+          />
+          
+          {/* Modal */}
+          <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div className="w-10" /> {/* Spacer */}
+              <h2 className="text-xl font-semibold text-gray-900">
+                {step === 'account-found' ? 'Account Found' : 'Log in or sign up'}
+              </h2>
+              <button
+                onClick={handleClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6 text-gray-600" />
+              </button>
+            </div>
 
-        {/* Content */}
-        <div className="p-6 pb-0">
+            {/* Content */}
+            <div className="p-6">
           {step === 'phone' && (
-            <form onSubmit={handlePhoneSubmit} className="space-y-4">
+            <form onSubmit={handlePhoneSubmit} className="space-y-3">
               {/* Country/Region Dropdown */}
               <div className="relative">
                 <div className="relative">
                   <select 
-                    className="w-full h-12 pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                    className="w-full h-14 pl-4 pr-12 pt-5 pb-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
                     onFocus={() => setCountryFocused(true)}
                     onBlur={() => setCountryFocused(false)}
                   >
                     <option value="+61">Australia (+61)</option>
                   </select>
+                  {/* Custom dropdown arrow */}
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                   {(countryFocused || true) && (
                     <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                       Country / Region
@@ -240,22 +281,65 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                 </div>
               </div>
 
-              {/* Phone Number Input */}
+              {/* Phone Number Input - Airbnb Style */}
               <div className="relative">
                 <input
+                  ref={phoneInputRef}
                   type="tel"
-                  value={formattedPhoneNumber}
+                  value={phoneFocused || phoneNumber ? formatPhoneNumber(phoneNumber) : ''}
                   onChange={handlePhoneChange}
                   onFocus={handlePhoneFocus}
-                  onBlur={() => setPhoneFocused(false)}
-                  placeholder={phoneFocused ? "+61 X XXXX XXXX" : "Phone number"}
-                  className="w-full h-12 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                  onBlur={handlePhoneBlur}
+                  placeholder=""
+                  className={`w-full h-14 pl-16 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                  style={{ 
+                    caretColor: 'black',
+                    fontSize: '16px',
+                    lineHeight: '1.2',
+                    fontFamily: 'inherit'
+                  }}
                   required
                 />
-                {(phoneFocused || formattedPhoneNumber) && (
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                
+                {/* Step 1: Initial state - only "Phone number" label */}
+                {!phoneFocused && !phoneNumber && (
+                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                     Phone number
                   </label>
+                )}
+                
+                {/* Step 2: Focused state - label moves up, +61 and XXX XXX XXX appear */}
+                {phoneFocused && !phoneNumber && (
+                  <>
+                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                      Phone number
+                    </label>
+                    {/* +61 prefix */}
+                    <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                      +61
+                    </div>
+                    {/* XXX XXX XXX to the right of +61 */}
+                    <div className="absolute left-16 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                      XXX XXX XXX
+                    </div>
+                  </>
+                )}
+                
+                {/* Step 3: Typing state - digits replace X's */}
+                {phoneNumber && (
+                  <>
+                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                      Phone number
+                    </label>
+                    {/* +61 prefix */}
+                    <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                      +61
+                    </div>
+                    {/* Digits to the right of +61 */}
+                    <div className="absolute left-16 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                      {formatPhoneNumber(phoneNumber)}
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -268,7 +352,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <button
                 type="submit"
                 disabled={loading || !phoneNumber}
-                className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#FF6600' }}
               >
                 {loading ? 'Sending...' : 'Continue'}
@@ -288,7 +372,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <button
                 type="button"
                 onClick={() => setStep('email')}
-                className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
                 Continue with email
@@ -297,7 +381,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
           )}
 
           {step === 'email' && (
-            <form onSubmit={handleEmailSubmit} className="space-y-6">
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
               {/* Email Input */}
               <div className="relative">
                 <input
@@ -307,18 +391,18 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                   onFocus={() => setEmailFocused(true)}
                   onBlur={() => setEmailFocused(false)}
                   placeholder={emailFocused ? "" : "Email"}
-                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
                   required
                 />
                 {(emailFocused || email) && (
-                  <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                     Email
                   </label>
                 )}
               </div>
               
               {/* Email Instruction */}
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 mt-2">
                 You will get a code by Email to continue.
               </p>
 
@@ -326,7 +410,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <button
                 type="submit"
                 disabled={loading || !email}
-                className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#FF6600' }}
               >
                 {loading ? 'Sending...' : 'Continue'}
@@ -346,7 +430,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <DevicePhoneMobileIcon className="w-5 h-5 mr-3 text-gray-600" />
                 Continue with phone
@@ -354,64 +438,6 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
             </form>
           )}
 
-          {step === 'verify' && (
-            <form onSubmit={handleVerifyCode} className="space-y-6">
-              {/* Back Button */}
-              <button
-                type="button"
-                onClick={handleBack}
-                className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back
-              </button>
-
-              {/* Verification Code Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Enter verification code
-                </label>
-                <input
-                  type="text"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  placeholder="Enter 6-digit code"
-                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors text-center text-lg tracking-widest bg-white"
-                  maxLength={6}
-                  required
-                />
-              </div>
-
-              {/* Verify Button */}
-              <button
-                type="submit"
-                disabled={loading || verificationCode.length !== 6}
-                className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#FF6600' }}
-              >
-                {loading ? 'Verifying...' : 'Verify'}
-              </button>
-
-              {/* Resend Code */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (verificationMethod === 'phone') {
-                    const form = document.createElement('form');
-                    handlePhoneSubmit({ preventDefault: () => {} } as React.FormEvent);
-                  } else {
-                    const form = document.createElement('form');
-                    handleEmailSubmit({ preventDefault: () => {} } as React.FormEvent);
-                  }
-                }}
-                className="w-full text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                Resend code
-              </button>
-            </form>
-          )}
 
           {step === 'account-found' && (
             <div className="space-y-6">
@@ -447,14 +473,16 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
             </div>
           )}
 
-          {/* Error Message */}
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+              {/* Error Message */}
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }

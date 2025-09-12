@@ -41,8 +41,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
         onClose={() => setIsLoginOpen(false)}
         onProfileSetup={() => {
           setIsLoginOpen(false);
-          // Handle profile setup - you can add logic here
-          console.log('Profile setup needed');
+          window.location.href = '/onboarding';
         }}
       />
 
@@ -51,8 +50,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
         onClose={() => setIsSignUpOpen(false)}
         onProfileSetup={() => {
           setIsSignUpOpen(false);
-          // Handle profile setup - you can add logic here
-          console.log('Profile setup needed');
+          window.location.href = '/onboarding';
         }}
       />
     </ModalContext.Provider>

@@ -10,8 +10,14 @@ import { useAuth } from "@/lib/authContext";
 import { useState, useEffect, useRef } from "react";
 import { useModal } from "@/lib/modalContext";
 
-const ProfileMenu = dynamic(() => import("@/components/menu/ProfileMenu"), { ssr: false });
-const NotificationMenu = dynamic(() => import("@/components/menu/NotificationMenu"), { ssr: false });
+const ProfileMenu = dynamic(() => import("@/components/menu/ProfileMenu"), { 
+  ssr: false,
+  loading: () => <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+});
+const NotificationMenu = dynamic(() => import("@/components/menu/NotificationMenu"), { 
+  ssr: false,
+  loading: () => <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+});
 
 export default function TopNavigation() {
   const pathname = usePathname();

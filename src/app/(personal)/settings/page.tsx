@@ -35,6 +35,24 @@ export default function SettingsPage() {
         >
           Sign out (clear local)
         </Button>
+        
+        <Button
+          variant="destructive"
+          className="w-full"
+          onClick={() => {
+            if (confirm('Are you sure you want to delete your account? This will remove all data and cannot be undone.')) {
+              // Clear all local data
+              clearAll();
+              // Clear any stored auth data
+              localStorage.clear();
+              sessionStorage.clear();
+              // Redirect to home
+              router.replace("/");
+            }
+          }}
+        >
+          Delete Account
+        </Button>
       </section>
     </div>
   );
