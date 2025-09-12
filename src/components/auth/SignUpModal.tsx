@@ -11,7 +11,7 @@ interface SignUpModalProps {
 }
 
 export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUpModalProps) {
-  const [step, setStep] = useState<'input' | 'verify' | 'profile'>('input');
+  const [step, setStep] = useState<'input' | 'verify' | 'account-found' | 'profile'>('input');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +21,10 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
   const [error, setError] = useState('');
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const { signUp, updateProfile } = useAuth();
+  const [verificationMethod, setVerificationMethod] = useState<'phone' | 'email'>('phone');
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const { signUp, updateProfile, sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, checkUserExists } = useAuth();
 
   // Format phone number as user types (Australia +61) - 3-3-3 format
   const formatPhoneNumber = (value: string) => {
@@ -52,13 +55,20 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
     setError('');
     
     try {
-      // TODO: Implement actual SMS sending
-      console.log('Sending verification code to:', phoneNumber);
-      // For now, just simulate sending
-      setTimeout(() => {
-        setStep('verify');
+      const fullPhoneNumber = `+61${phoneNumber.replace(/\s/g, '')}`;
+      console.log('Original phoneNumber:', phoneNumber);
+      console.log('Formatted fullPhoneNumber:', fullPhoneNumber);
+      
+      const { error } = await sendPhoneVerification(fullPhoneNumber);
+      
+      if (error) {
+        setError(error.message);
         setLoading(false);
-      }, 1000);
+      } else {
+        setStep('verify');
+        setVerificationMethod('phone');
+        setLoading(false);
+      }
     } catch (err) {
       setError('Failed to send verification code');
       setLoading(false);
@@ -75,13 +85,41 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
     setError('');
     
     try {
-      // TODO: Implement actual verification and account creation
-      console.log('Verifying code:', verificationCode, 'for phone:', phoneNumber);
-      // For now, just simulate verification
-      setTimeout(() => {
-        setStep('profile');
+      console.log('Verifying code:', verificationCode, 'for method:', verificationMethod);
+      
+      let error;
+      if (verificationMethod === 'phone') {
+        const fullPhoneNumber = `+61${phoneNumber.replace(/\s/g, '')}`;
+        const result = await verifyPhoneCode(fullPhoneNumber, verificationCode);
+        error = result.error;
+      } else {
+        const result = await verifyEmailCode(email, verificationCode);
+        error = result.error;
+      }
+      
+      if (error) {
+        setError(error.message);
         setLoading(false);
-      }, 1000);
+        return;
+      }
+      
+      // Check if user already exists
+      const phoneOrEmail = verificationMethod === 'phone' ? phoneNumber : email;
+      const { exists } = await checkUserExists(
+        verificationMethod === 'phone' ? phoneOrEmail : undefined,
+        verificationMethod === 'email' ? phoneOrEmail : undefined
+      );
+      
+      console.log('User exists check result:', exists);
+      
+      if (exists) {
+        setStep('account-found');
+      } else {
+        setIsNewUser(true);
+        setShowProfileSetup(true);
+      }
+      
+      setLoading(false);
     } catch (err) {
       setError('Invalid verification code');
       setLoading(false);
@@ -93,24 +131,13 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
     setLoading(true);
     setError('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      setLoading(false);
-      return;
-    }
-
-    const { error } = await signUp(email, password);
+    const { error } = await sendEmailVerification(email);
     
     if (error) {
       setError(error.message);
     } else {
       setStep('verify');
+      setVerificationMethod('email');
     }
     
     setLoading(false);
@@ -225,7 +252,7 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Enter verification code</h3>
                 <p className="text-sm text-gray-600">
-                  We sent a 6-digit code to {phoneNumber}
+                  We sent a 6-digit code to {verificationMethod === 'phone' ? phoneNumber : email}
                 </p>
               </div>
 
@@ -264,7 +291,32 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
                 onClick={() => setStep('input')}
                 className="w-full text-sm text-gray-600 hover:text-gray-900 py-2"
               >
-                Change phone number
+                Change {verificationMethod === 'phone' ? 'phone number' : 'email'}
+              </button>
+            </div>
+          )}
+
+          {step === 'account-found' && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Account Found</h3>
+                <p className="text-sm text-gray-600">
+                  We found an existing account with this {verificationMethod === 'phone' ? 'phone number' : 'email'}
+                </p>
+              </div>
+
+              <button
+                onClick={onSwitchToLogin}
+                className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 transition-colors text-base"
+              >
+                Sign In
+              </button>
+
+              <button
+                onClick={() => setStep('input')}
+                className="w-full text-sm text-gray-600 hover:text-gray-900 py-2"
+              >
+                Use different {verificationMethod === 'phone' ? 'phone number' : 'email'}
               </button>
             </div>
           )}
@@ -286,15 +338,11 @@ export default function SignUpModal({ isOpen, onClose, onSwitchToLogin }: SignUp
               <div>
                 <button 
                   onClick={() => {
-                    // Handle email signup
+                    // Handle email verification
                     const emailInput = prompt('Enter your email:');
                     if (emailInput) {
                       setEmail(emailInput);
-                      const passwordInput = prompt('Enter your password:');
-                      if (passwordInput) {
-                        setPassword(passwordInput);
-                        handleEmailSubmit({ preventDefault: () => {} } as React.FormEvent);
-                      }
+                      handleEmailSubmit({ preventDefault: () => {} } as React.FormEvent);
                     }
                   }}
                   className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-base"
