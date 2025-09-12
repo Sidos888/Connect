@@ -183,19 +183,19 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
         {/* Content */}
         <div className="p-6 pb-0">
           {step === 'phone' && (
-            <form onSubmit={handlePhoneSubmit} className="space-y-6">
+            <form onSubmit={handlePhoneSubmit} className="space-y-4">
               {/* Country/Region Dropdown */}
               <div className="relative">
                 <div className="relative">
                   <select 
-                    className="w-full h-14 pl-4 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                    className="w-full h-12 pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
                     onFocus={() => setCountryFocused(true)}
                     onBlur={() => setCountryFocused(false)}
                   >
                     <option value="+61">Australia (+61)</option>
                   </select>
                   {(countryFocused || true) && (
-                    <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                       Country / Region
                     </label>
                   )}
@@ -211,18 +211,18 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
                   onFocus={() => setPhoneFocused(true)}
                   onBlur={() => setPhoneFocused(false)}
                   placeholder={phoneFocused ? "+61 X XXXX XXXX" : "Phone number"}
-                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
+                  className="w-full h-12 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
                   required
                 />
                 {(phoneFocused || phoneNumber) && (
-                  <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                     Phone number
                   </label>
                 )}
               </div>
 
               {/* SMS Instruction */}
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 mt-3">
                 You will get a code by SMS to continue.
               </p>
 
