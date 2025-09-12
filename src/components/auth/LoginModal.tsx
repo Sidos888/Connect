@@ -154,7 +154,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center pb-8 md:pb-0 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
