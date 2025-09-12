@@ -39,18 +39,20 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
-        onSwitchToSignUp={() => {
+        onProfileSetup={() => {
           setIsLoginOpen(false);
-          setIsSignUpOpen(true);
+          // Handle profile setup - you can add logic here
+          console.log('Profile setup needed');
         }}
       />
 
       <SignUpModal
         isOpen={isSignUpOpen}
         onClose={() => setIsSignUpOpen(false)}
-        onSwitchToLogin={() => {
+        onProfileSetup={() => {
           setIsSignUpOpen(false);
-          setIsLoginOpen(true);
+          // Handle profile setup - you can add logic here
+          console.log('Profile setup needed');
         }}
       />
     </ModalContext.Provider>

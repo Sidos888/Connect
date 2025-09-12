@@ -1,45 +1,28 @@
-"use client";
+'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/authContext';
-import { XMarkIcon, DevicePhoneMobileIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSwitchToSignUp: () => void;
+  onProfileSetup: () => void;
 }
 
-export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginModalProps) {
+  const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, checkUserExists } = useAuth();
+  
+  const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-found'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [verificationMethod, setVerificationMethod] = useState<'phone' | 'email'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<'input' | 'verify'>('input');
-  const { signIn } = useAuth();
 
-  // Format phone number as user types (Australia +61) - 3-3-3 format
-  const formatPhoneNumber = (value: string) => {
-    const phoneNumber = value.replace(/\D/g, '');
-    const phoneNumberLength = phoneNumber.length;
-    if (phoneNumberLength < 3) return phoneNumber;
-    if (phoneNumberLength < 6) {
-      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3)}`;
-    }
-    if (phoneNumberLength < 9) {
-      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
-    }
-    return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6, 9)}`;
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setPhoneNumber(formatted);
-  };
-
-  const handleSendCode = async () => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!phoneNumber) {
       setError('Please enter your phone number');
       return;
@@ -49,20 +32,50 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
     setError('');
     
     try {
-      // TODO: Implement actual SMS sending
-      console.log('Sending verification code to:', phoneNumber);
-      // For now, just simulate sending
-      setTimeout(() => {
+      const fullPhoneNumber = `+61${phoneNumber.replace(/\s/g, '')}`;
+      const { error } = await sendPhoneVerification(fullPhoneNumber);
+      
+      if (error) {
+        setError(error.message);
+      } else {
         setStep('verify');
-        setLoading(false);
-      }, 1000);
-    } catch (err) {
+        setVerificationMethod('phone');
+      }
+    } catch {
       setError('Failed to send verification code');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyCode = async () => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your email');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      const { error } = await sendEmailVerification(email);
+      
+      if (error) {
+        setError(error.message);
+      } else {
+        setStep('verify');
+        setVerificationMethod('email');
+      }
+    } catch {
+      setError('Failed to send verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!verificationCode) {
       setError('Please enter the verification code');
       return;
@@ -72,159 +85,127 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
     setError('');
     
     try {
-      // TODO: Implement actual verification and account lookup
-      console.log('Verifying code:', verificationCode, 'for phone:', phoneNumber);
-      // For now, just simulate verification
-      setTimeout(() => {
-        // TODO: Check if account exists, if not redirect to signup
-        onClose();
+      let error;
+      if (verificationMethod === 'phone') {
+        const fullPhoneNumber = `+61${phoneNumber.replace(/\s/g, '')}`;
+        const result = await verifyPhoneCode(fullPhoneNumber, verificationCode);
+        error = result.error;
+      } else {
+        const result = await verifyEmailCode(email, verificationCode);
+        error = result.error;
+      }
+      
+      if (error) {
+        setError(error.message);
         setLoading(false);
-      }, 1000);
-    } catch (err) {
+        return;
+      }
+      
+      // Check if user exists
+      const phoneOrEmail = verificationMethod === 'phone' ? phoneNumber : email;
+      const { exists } = await checkUserExists(
+        verificationMethod === 'phone' ? phoneOrEmail : undefined,
+        verificationMethod === 'email' ? phoneOrEmail : undefined
+      );
+      
+      if (exists) {
+        setStep('account-found');
+      } else {
+        onProfileSetup();
+      }
+    } catch {
       setError('Invalid verification code');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message);
-    } else {
-      onClose();
+  const handleBack = () => {
+    if (step === 'verify') {
+      setStep(verificationMethod === 'phone' ? 'phone' : 'email');
+    } else if (step === 'account-found') {
+      setStep('verify');
     }
-    
-    setLoading(false);
+  };
+
+  const handleClose = () => {
+    setStep('phone');
+    setPhoneNumber('');
+    setEmail('');
+    setVerificationCode('');
+    setError('');
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50" style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
-      {/* Dark backdrop overlay */}
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+      {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-        style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleClose}
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 flex flex-col justify-end md:flex md:items-center md:justify-center md:p-4 z-50" style={{ height: '100vh', width: '100vw', position: 'fixed', top: 0, left: 0 }}>
-        <div className="w-full bg-white rounded-t-3xl md:rounded-2xl md:shadow-2xl md:max-w-md md:overflow-y-auto h-full md:h-auto pt-12 md:pt-0" style={{ height: '100vh', minHeight: '100vh' }}>
-          <div className="md:max-h-[60vh] md:overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out">
         {/* Header */}
-        <div className="flex items-center justify-center p-6 border-b border-gray-200 relative">
-          <h2 className="text-xl font-semibold text-gray-900">Log in or sign up</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <button
-            onClick={onClose}
-            className="absolute right-6 p-2 hover:bg-gray-100 rounded-full transition-colors"
+            onClick={handleClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <XMarkIcon className="h-5 w-5 text-gray-500" />
+            <XMarkIcon className="h-6 w-6 text-gray-600" />
           </button>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {step === 'account-found' ? 'Account Found' : 'Log in or sign up'}
+          </h2>
+          <div className="w-10" /> {/* Spacer for centering */}
         </div>
 
         {/* Content */}
-        <div className="p-6 pb-12">
-          {step === 'input' ? (
-            <div className="space-y-4">
-              {/* Mobile Input */}
-              <div className="flex focus-within:ring-2 focus-within:ring-black focus-within:border-black border border-gray-300 rounded-lg">
-                {/* Country Code Card */}
-                <div className="flex items-center px-4 py-4 border-r border-gray-300 rounded-l-lg bg-gray-50 text-gray-700 font-medium">
-                  +61
-                </div>
-                {/* Phone Number Input */}
-                <div className="relative flex-1">
-                  <input
-                    id="phone"
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={handlePhoneChange}
-                    className="w-full px-4 py-4 border-0 rounded-r-lg focus:outline-none text-base"
-                    placeholder="4XX XXX XXX"
-                    maxLength={11}
-                  />
-                  <DevicePhoneMobileIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <div className="p-6">
+          {step === 'phone' && (
+            <form onSubmit={handlePhoneSubmit} className="space-y-6">
+              {/* Country/Region Dropdown */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Country / Region</label>
+                <div className="relative">
+                  <select className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors">
+                    <option value="+61">Australia (+61)</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                  {error}
-                </div>
-              )}
-
-              {/* Send Code Button */}
-              <button
-                type="button"
-                onClick={handleSendCode}
-                disabled={loading}
-                className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base"
-              >
-                {loading ? 'Sending code...' : 'Send verification code'}
-              </button>
-            </div>
-          ) : (
-            // Verification Code Step
-            <div className="space-y-4">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Enter verification code</h3>
-                <p className="text-sm text-gray-600">
-                  We sent a 6-digit code to {phoneNumber}
-                </p>
-              </div>
-
-              <div>
+              {/* Phone Number Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Phone number</label>
                 <input
-                  id="verificationCode"
-                  type="text"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-base text-center text-2xl tracking-widest"
-                  placeholder="000000"
-                  maxLength={6}
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="Phone number"
+                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  required
                 />
               </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                  {error}
-                </div>
-              )}
+              {/* Privacy Notice */}
+              <p className="text-sm text-gray-600">
+                We&apos;ll call or text to confirm your number. Standard message and data rates apply.
+              </p>
 
-              {/* Verify Button */}
+              {/* Continue Button */}
               <button
-                type="button"
-                onClick={handleVerifyCode}
-                disabled={loading || verificationCode.length !== 6}
-                className="w-full bg-brand text-white py-4 px-4 rounded-lg font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base"
+                type="submit"
+                disabled={loading || !phoneNumber}
+                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Verifying...' : 'Verify code'}
+                {loading ? 'Sending...' : 'Continue'}
               </button>
 
-              {/* Resend Code */}
-              <button
-                type="button"
-                onClick={() => setStep('input')}
-                className="w-full text-sm text-gray-600 hover:text-gray-900 py-2"
-              >
-                Change phone number
-              </button>
-            </div>
-          )}
-
-          {/* Login Options - Only show on input step */}
-          {step === 'input' && (
-            <>
               {/* Divider */}
-              <div className="relative my-6">
+              <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300" />
                 </div>
@@ -233,45 +214,161 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignUp }: LoginM
                 </div>
               </div>
 
-              {/* Login Options */}
-              <div>
-                <button 
-                  onClick={() => {
-                    // Handle email login
-                    const emailInput = prompt('Enter your email:');
-                    if (emailInput) {
-                      setEmail(emailInput);
-                      // For now, just show password input
-                      const passwordInput = prompt('Enter your password:');
-                      if (passwordInput) {
-                        setPassword(passwordInput);
-                        handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-                      }
-                    }
-                  }}
-                  className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-base"
-                >
-                  <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
-                  Continue with Email
-                </button>
+              {/* Email Button */}
+              <button
+                type="button"
+                onClick={() => setStep('email')}
+                className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
+                Continue with email
+              </button>
+            </form>
+          )}
+
+          {step === 'email' && (
+            <form onSubmit={handleEmailSubmit} className="space-y-6">
+              {/* Email Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  required
+                />
               </div>
 
-              {/* Switch to Sign Up */}
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Don&apos;t have an account?{' '}
-                  <button
-                    onClick={onSwitchToSignUp}
-                    className="text-brand hover:text-brand/80 font-medium"
-                  >
-                    Sign up
-                  </button>
+              {/* Continue Button */}
+              <button
+                type="submit"
+                disabled={loading || !email}
+                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Sending...' : 'Continue'}
+              </button>
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or</span>
+                </div>
+              </div>
+
+              {/* Phone Button */}
+              <button
+                type="button"
+                onClick={() => setStep('phone')}
+                className="w-full flex items-center justify-center px-4 py-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <DevicePhoneMobileIcon className="w-5 h-5 mr-3 text-gray-600" />
+                Continue with phone
+              </button>
+            </form>
+          )}
+
+          {step === 'verify' && (
+            <form onSubmit={handleVerifyCode} className="space-y-6">
+              {/* Back Button */}
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+
+              {/* Verification Code Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Enter verification code
+                </label>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-center text-lg tracking-widest"
+                  maxLength={6}
+                  required
+                />
+              </div>
+
+              {/* Verify Button */}
+              <button
+                type="submit"
+                disabled={loading || verificationCode.length !== 6}
+                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Verifying...' : 'Verify'}
+              </button>
+
+              {/* Resend Code */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (verificationMethod === 'phone') {
+                    const form = document.createElement('form');
+                    handlePhoneSubmit({ preventDefault: () => {} } as React.FormEvent);
+                  } else {
+                    const form = document.createElement('form');
+                    handleEmailSubmit({ preventDefault: () => {} } as React.FormEvent);
+                  }
+                }}
+                className="w-full text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Resend code
+              </button>
+            </form>
+          )}
+
+          {step === 'account-found' && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Account Found</h3>
+                <p className="text-gray-600">
+                  We found an account with this {verificationMethod === 'phone' ? 'phone number' : 'email'}.
                 </p>
               </div>
-            </>
+
+              <button
+                onClick={() => {
+                  // Handle sign in logic here
+                  handleClose();
+                }}
+                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+              >
+                Sign In
+              </button>
+
+              <button
+                onClick={handleBack}
+                className="w-full text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Use different {verificationMethod === 'phone' ? 'phone number' : 'email'}
+              </button>
+            </div>
           )}
-        </div>
-          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
