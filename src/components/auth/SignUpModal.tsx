@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/authContext';
 
@@ -128,6 +128,20 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
     }
   };
 
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   const handleClose = () => {
     setStep('phone');
     setPhoneNumber('');
@@ -140,7 +154,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center pb-8 md:pb-0">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center pb-8 md:pb-0 overflow-hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -148,7 +162,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out max-h-[60vh] md:max-h-none">
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[85vh] md:h-auto md:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <button
