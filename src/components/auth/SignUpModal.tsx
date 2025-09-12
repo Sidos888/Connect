@@ -185,7 +185,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Country / Region</label>
                 <div className="relative">
-                  <select className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors">
+                        <select className="w-full h-14 p-4 border border-gray-200 rounded-lg focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white">
                     <option value="+61">Australia (+61)</option>
                   </select>
                 </div>
@@ -194,14 +194,14 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
               {/* Phone Number Input */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Phone number</label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="Phone number"
-                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
-                  required
-                />
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        placeholder="Phone number"
+                        className="w-full h-14 p-4 border border-gray-200 rounded-lg focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white"
+                        required
+                      />
               </div>
 
               {/* Privacy Notice */}
@@ -251,7 +251,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  className="w-full h-14 p-4 border border-gray-200 rounded-lg focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white"
                   required
                 />
               </div>
@@ -312,7 +312,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                   placeholder="Enter 6-digit code"
-                  className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-center text-lg tracking-widest"
+                  className="w-full h-14 p-4 border border-gray-200 rounded-lg focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors text-center text-lg tracking-widest bg-gray-50 focus:bg-white"
                   maxLength={6}
                   required
                 />
