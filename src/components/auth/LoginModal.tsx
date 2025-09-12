@@ -199,7 +199,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <button
                 type="submit"
                 disabled={loading || !phoneNumber}
-                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-orange-500 text-white py-4 rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Sending...' : 'Continue'}
               </button>
@@ -245,7 +245,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <button
                 type="submit"
                 disabled={loading || !email}
-                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-orange-500 text-white py-4 rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Sending...' : 'Continue'}
               </button>
@@ -306,7 +306,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <button
                 type="submit"
                 disabled={loading || verificationCode.length !== 6}
-                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-orange-500 text-white py-4 rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Verifying...' : 'Verify'}
               </button>
@@ -349,7 +349,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
                   // Handle sign in logic here
                   handleClose();
                 }}
-                className="w-full bg-black text-white py-4 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+                className="w-full bg-orange-500 text-white py-4 rounded-lg font-medium hover:bg-orange-600 transition-colors"
               >
                 Sign In
               </button>
