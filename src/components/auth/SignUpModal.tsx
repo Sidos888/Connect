@@ -210,7 +210,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   onFocus={() => setPhoneFocused(true)}
                   onBlur={() => setPhoneFocused(false)}
-                  placeholder={phoneFocused ? "" : "Phone number"}
+                  placeholder={phoneFocused || phoneNumber ? "" : "+61 XXX XXX XXX"}
                   className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white"
                   required
                 />
