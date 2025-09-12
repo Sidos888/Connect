@@ -185,7 +185,7 @@ export default function LoginModal({ isOpen, onClose, onProfileSetup }: LoginMod
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Country / Region</label>
                 <div className="relative">
-                        <select className="w-full h-14 p-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white">
+                        <select className="w-full h-14 pl-4 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white">
                     <option value="+61">Australia (+61)</option>
                   </select>
                 </div>
