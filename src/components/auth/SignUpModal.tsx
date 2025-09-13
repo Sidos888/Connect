@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/authContext';
 import VerificationModal from './VerificationModal';
+import AccountCheckModal from './AccountCheckModal';
 
 interface SignUpModalProps {
   isOpen: boolean;
@@ -11,18 +12,19 @@ interface SignUpModalProps {
   onProfileSetup: () => void;
 }
 
-export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpModalProps) {
-  const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, checkUserExists } = useAuth();
+export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
+  const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode } = useAuth();
   
-  const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-found'>('phone');
+  const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-check'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [email, setEmail] = useState('');
-  const [verificationMethod, setVerificationMethod] = useState<'phone' | 'email'>('phone');
+  const [verificationMethod, setVerificationMethod] = useState<'phone' | 'email'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [emailFocused, setEmailFocused] = useState(false);
   const [countryFocused, setCountryFocused] = useState(false);
+  const [verificationValue, setVerificationValue] = useState('');
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -149,18 +151,9 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
         return;
       }
       
-      // Check if user exists
-      const phoneOrEmail = verificationMethod === 'phone' ? phoneNumber : email;
-      const { exists } = await checkUserExists(
-        verificationMethod === 'phone' ? phoneOrEmail : undefined,
-        verificationMethod === 'email' ? phoneOrEmail : undefined
-      );
-      
-      if (exists) {
-        setStep('account-found');
-      } else {
-        onProfileSetup();
-      }
+      // Show account check modal
+      setVerificationValue(verificationMethod === 'phone' ? phoneNumber : email);
+      setStep('account-check');
     } catch {
       setError('Invalid verification code');
     } finally {
@@ -188,8 +181,6 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
   const handleBack = () => {
     if (step === 'verify') {
       setStep(verificationMethod === 'phone' ? 'phone' : 'email');
-    } else if (step === 'account-found') {
-      setStep('verify');
     }
   };
 
@@ -231,6 +222,16 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
           loading={loading}
           error={error}
         />
+      ) : step === 'account-check' ? (
+        <AccountCheckModal
+          isOpen={isOpen}
+          onClose={() => {
+            setStep('phone');
+            onClose();
+          }}
+          verificationMethod={verificationMethod}
+          verificationValue={verificationValue}
+        />
       ) : (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
           {/* Backdrop */}
@@ -245,7 +246,7 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="w-10" /> {/* Spacer */}
               <h2 className="text-xl font-semibold text-gray-900">
-                {step === 'account-found' ? 'Account Found' : 'Log in or sign up'}
+                Log in or sign up
               </h2>
               <button
                 onClick={handleClose}
@@ -441,39 +442,6 @@ export default function SignUpModal({ isOpen, onClose, onProfileSetup }: SignUpM
           )}
 
 
-          {step === 'account-found' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Account Found</h3>
-                <p className="text-gray-600">
-                  We found an account with this {verificationMethod === 'phone' ? 'phone number' : 'email'}.
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  // Handle sign in logic here
-                  handleClose();
-                }}
-                className="w-full bg-brand text-white py-4 rounded-lg font-medium hover:opacity-90 transition-colors"
-                style={{ backgroundColor: '#FF6600' }}
-              >
-                Sign In
-              </button>
-
-              <button
-                onClick={handleBack}
-                className="w-full text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                Use different {verificationMethod === 'phone' ? 'phone number' : 'email'}
-              </button>
-            </div>
-          )}
 
               {/* Error Message */}
               {error && (

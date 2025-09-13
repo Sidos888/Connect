@@ -38,6 +38,8 @@ export default function VerificationModal({
   }, [isOpen]);
 
   const handleInputChange = (index: number, value: string) => {
+    console.log('VerificationModal: Input change', { index, value, currentCode: code });
+    
     // Only allow single digit
     if (value.length > 1) return;
     
@@ -47,20 +49,26 @@ export default function VerificationModal({
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
+    console.log('VerificationModal: Updated code', newCode);
 
     // Auto-focus next input
     if (value && index < 5) {
-      setActiveIndex(index + 1);
-      inputRefs.current[index + 1]?.focus();
+      setTimeout(() => {
+        setActiveIndex(index + 1);
+        inputRefs.current[index + 1]?.focus();
+      }, 0);
     }
 
     // Auto-verify when all digits are entered
     if (newCode.every(digit => digit !== '') && newCode.length === 6) {
+      console.log('VerificationModal: All digits entered, auto-verifying');
       onVerify(newCode.join(''));
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    console.log('VerificationModal: Key down', { key: e.key, index });
+    
     if (e.key === 'Backspace') {
       if (code[index]) {
         // If current input has value, clear it
@@ -78,6 +86,10 @@ export default function VerificationModal({
     } else if (e.key === 'ArrowRight' && index < 5) {
       setActiveIndex(index + 1);
       inputRefs.current[index + 1]?.focus();
+    } else if (/^\d$/.test(e.key)) {
+      // Handle direct number key press
+      e.preventDefault();
+      handleInputChange(index, e.key);
     }
   };
 

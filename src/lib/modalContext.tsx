@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import LoginModal from '@/components/auth/LoginModal';
 import SignUpModal from '@/components/auth/SignUpModal';
 
@@ -8,6 +9,7 @@ interface ModalContextType {
   showLogin: () => void;
   showSignUp: () => void;
   hideModals: () => void;
+  isAnyModalOpen: boolean;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -15,6 +17,7 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+  const router = useRouter();
 
   const showLogin = () => {
     setIsLoginOpen(true);
@@ -32,7 +35,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ModalContext.Provider value={{ showLogin, showSignUp, hideModals }}>
+    <ModalContext.Provider value={{ showLogin, showSignUp, hideModals, isAnyModalOpen: isLoginOpen || isSignUpOpen }}>
       {children}
       
       {/* Render modals at root level */}
@@ -41,7 +44,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
         onClose={() => setIsLoginOpen(false)}
         onProfileSetup={() => {
           setIsLoginOpen(false);
-          window.location.href = '/onboarding';
+          router.push('/onboarding');
         }}
       />
 
@@ -50,7 +53,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
         onClose={() => setIsSignUpOpen(false)}
         onProfileSetup={() => {
           setIsSignUpOpen(false);
-          window.location.href = '/onboarding';
+          router.push('/onboarding');
         }}
       />
     </ModalContext.Provider>

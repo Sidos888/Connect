@@ -10,18 +10,43 @@ import * as React from "react";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { setPersonalProfile } = useAppStore();
+  const { setPersonalProfile, isHydrated } = useAppStore();
   const [name, setName] = React.useState("");
   const [bio, setBio] = React.useState("");
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
+  // Wait for store to hydrate before rendering
+  if (!isHydrated) {
+    return (
+      <div className="mx-auto max-w-screen-sm px-4 py-6">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setPersonalProfile({ name, bio, avatarUrl });
-    // TODO: replace with Supabase profile upsert
-    router.replace("/");
+    try {
+      setPersonalProfile({ 
+        id: 'temp-id', 
+        name, 
+        bio, 
+        avatarUrl, 
+        email: '', 
+        phone: '', 
+        dateOfBirth: '', 
+        connectId: 'TEMP', 
+        createdAt: new Date().toISOString(), 
+        updatedAt: new Date().toISOString() 
+      });
+      // TODO: replace with Supabase profile upsert
+      router.replace("/");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      setSaving(false);
+    }
   }
 
   return (

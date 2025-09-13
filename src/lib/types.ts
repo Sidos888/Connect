@@ -1,9 +1,16 @@
 export type UUID = string;
 
 export type PersonalProfile = {
+  id: string;
   name: string;
   bio: string;
   avatarUrl?: string | null;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  connectId: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Business = {

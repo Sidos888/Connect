@@ -23,7 +23,7 @@ export default function TopNavigation() {
   const pathname = usePathname();
   const { context } = useAppStore();
   const { user } = useAuth();
-  const { showLogin, showSignUp } = useModal();
+  const { showLogin } = useModal();
   const [authOpen, setAuthOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

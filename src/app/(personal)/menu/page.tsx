@@ -7,14 +7,18 @@ import MobileTitle from "@/components/MobileTitle";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { ChevronDownIcon, BellIcon } from "@/components/icons";
+import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
+import { LogOut, Trash2 } from "lucide-react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { useAuth } from "@/lib/authContext";
 
 export default function Page() {
   const router = useRouter();
   const { personalProfile, businesses, context, switchToBusiness, switchToPersonal, setAccountSwitching } = useAppStore();
+  const { signOut, deleteAccount } = useAuth();
   const currentBusiness = useCurrentBusiness();
   const [showSwitcher, setShowSwitcher] = React.useState(false);
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings'>('menu');
 
   // Get current account info
   const currentAccount = context.type === "business" && currentBusiness 
@@ -38,33 +42,117 @@ export default function Page() {
     setAccountSwitching(false);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      const { error } = await deleteAccount();
+      if (error) {
+        alert('Error deleting account: ' + error.message);
+      } else {
+        router.push('/');
+      }
+    }
+  };
+
+  // Settings Component
+  const SettingsView = () => (
+    <div className="space-y-6">
+      {/* Settings Header */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => setCurrentView('menu')}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 ring-brand"
+          aria-label="Back to menu"
+        >
+          <ChevronLeftIcon size={20} className="text-gray-700" />
+        </button>
+        <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+      </div>
+
+      {/* Settings Content */}
+      <div className="space-y-4">
+        {/* Account Section */}
+        <div className="rounded-2xl bg-white shadow-sm border border-neutral-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-medium text-gray-900">Account</h2>
+          </div>
+          <div className="p-6 space-y-4">
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Sign out (clear local)</span>
+            </button>
+            
+            <button
+              onClick={handleDeleteAccount}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span>Delete Account</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Profile Info */}
+        <div className="rounded-2xl bg-white shadow-sm border border-neutral-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-medium text-gray-900">Profile</h2>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center gap-4">
+              <Avatar src={currentAccount?.avatarUrl ?? undefined} name={currentAccount?.name} size={48} />
+              <div>
+                <h3 className="font-medium text-gray-900">{currentAccount?.name ?? "Your Name"}</h3>
+                <p className="text-sm text-gray-500">{currentAccount?.bio || "No bio yet."}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <ProtectedRoute
-      title="Menu"
+      title={currentView === 'menu' ? "Menu" : "Settings"}
       description="Log in / sign up to access your account settings and preferences"
       buttonText="Log in"
     >
       <div className="bg-white">
-      <MobileTitle 
-        title="Menu" 
-        showDivider={false}
-        action={
-          <button
-            className="p-2 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 ring-brand"
-            aria-label="Notifications"
-            onClick={() => router.push("/notifications")}
-          >
-            <BellIcon className="h-5 w-5 text-gray-700" />
-          </button>
-        }
-      />
-      
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4">
-        <div className="mb-4 lg:mb-8">
-          <h1 className="hidden lg:block text-3xl font-bold text-gray-900">Menu</h1>
-        </div>
+      {/* Only show on mobile - hide on desktop */}
+      <div className="lg:hidden">
+        <MobileTitle 
+          title={currentView === 'menu' ? "Menu" : "Settings"} 
+          showDivider={false}
+          action={
+            currentView === 'menu' ? (
+              <button
+                className="p-2 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 ring-brand"
+                aria-label="Notifications"
+                onClick={() => router.push("/notifications")}
+              >
+                <BellIcon className="h-5 w-5 text-gray-700" />
+              </button>
+            ) : null
+          }
+        />
+        
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4">
+          {currentView === 'settings' ? (
+            <SettingsView />
+          ) : (
+            <>
+              <div className="mb-4 lg:mb-8">
+                <h1 className="hidden lg:block text-3xl font-bold text-gray-900">Menu</h1>
+              </div>
 
-        <div className="space-y-6">
+              <div className="space-y-6">
 
           {/* Profile Card */}
           <div className="rounded-2xl bg-white shadow-sm overflow-hidden">
@@ -163,7 +251,7 @@ export default function Page() {
                   { title: "Bookings", icon: "📅", href: "/business/bookings" },
                   { title: "Financials", icon: "💰", href: "/business/financials" },
                   { title: "Connections", icon: "👥", href: "/business/connections" },
-                  { title: "Settings", icon: "⚙️", href: "/settings", settings: true },
+                  { title: "Settings", icon: "⚙️", onClick: () => setCurrentView('settings') },
                 ] :
                 // Personal account menu items
                 [
@@ -172,7 +260,7 @@ export default function Page() {
                   { title: "My Bookings", icon: "📅", href: "/my-life" },
                   { title: "Connections", icon: "👥", href: "/connections" },
                   { title: "Saved", icon: "🔖", href: "/saved" },
-                  { title: "Settings", icon: "⚙️", href: "/settings", settings: true },
+                  { title: "Settings", icon: "⚙️", onClick: () => setCurrentView('settings') },
                 ]
               ).map((item) => (
                 <button
@@ -184,7 +272,9 @@ export default function Page() {
                     h-28 lg:h-36 xl:h-40
                   "
                   onClick={() => {
-                    if (item.href) {
+                    if (item.onClick) {
+                      item.onClick();
+                    } else if (item.href) {
                       router.push(item.href);
                     }
                   }}
@@ -201,6 +291,17 @@ export default function Page() {
               ))}
             </div>
           </div>
+        </div>
+          </>
+        )}
+        </div>
+      </div>
+      
+      {/* Desktop message */}
+      <div className="hidden lg:flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Menu</h1>
+          <p className="text-gray-600">Use the profile menu in the top right to access settings and account options.</p>
         </div>
       </div>
     </div>

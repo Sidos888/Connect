@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '@/lib/authContext';
 import { usePathname } from 'next/navigation';
 import AuthButton from './AuthButton';

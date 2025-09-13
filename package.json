@@ -15,8 +15,11 @@
     "@capacitor/ios": "^6.2.1",
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.56.1",
+    "@types/qrcode": "^1.5.5",
+    "dotenv": "^17.2.2",
     "lucide-react": "^0.542.0",
     "next": "15.5.2",
+    "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zustand": "5.0.8"
