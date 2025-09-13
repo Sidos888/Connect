@@ -3,9 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus } from "lucide-react";
+import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
+import Input from "@/components/Input";
+import TextArea from "@/components/TextArea";
+import ImagePicker from "@/components/ImagePicker";
 
 // Simple, clean card component that can be easily replicated
 function SimpleCard({
@@ -34,13 +37,16 @@ function MenuView({
   onShare: () => void; 
   onSignOut: () => void; 
   onViewProfile: () => void;
-  currentAccount: { name?: string; avatarUrl?: string } | null; 
+  currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null; 
 }) {
   return (
     <SimpleCard>
       <div className="space-y-4">
-        {/* Profile Card - Compact and aesthetic */}
-        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-4">
+        {/* Profile Card - Clickable */}
+        <button
+          onClick={onViewProfile}
+          className="w-full rounded-lg border border-neutral-200 bg-white shadow-sm p-4 hover:shadow-md transition-shadow text-left"
+        >
           <div className="flex items-center gap-3">
             <Avatar
               src={currentAccount?.avatarUrl ?? undefined}
@@ -51,42 +57,130 @@ function MenuView({
               <h3 className="text-base font-semibold text-gray-900">{currentAccount?.name ?? "Your Name"}</h3>
               <p className="text-xs text-gray-500">Personal Account</p>
             </div>
-            <button
-              onClick={onViewProfile}
-              className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-            >
+            <div className="text-xs text-gray-500">
               View
-            </button>
+            </div>
           </div>
-        </div>
+        </button>
 
         {/* Menu items */}
-        <div className="space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-            <Camera size={20} className="text-gray-600" />
-            <span className="font-medium">My Gallery</span>
+        <div className="space-y-2">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+            <Bell size={20} className="text-gray-600" />
+            <span className="font-medium">Notifications</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-            <Trophy size={20} className="text-gray-600" />
-            <span className="font-medium">Achievements</span>
-          </button>
-
-          <button className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-            <Calendar size={20} className="text-gray-600" />
-            <span className="font-medium">My Bookings</span>
-          </button>
-
-          <button className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
             <Users size={20} className="text-gray-600" />
             <span className="font-medium">My Connections</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+            <Camera size={20} className="text-gray-600" />
+            <span className="font-medium">Gallery</span>
+          </button>
+
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+            <Trophy size={20} className="text-gray-600" />
+            <span className="font-medium">Achievements</span>
+          </button>
+
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
             <Bookmark size={20} className="text-gray-600" />
             <span className="font-medium">Saved</span>
           </button>
 
+          <button
+            onClick={onSettings}
+            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <Settings size={20} className="text-gray-600" />
+            <span className="font-medium">Settings</span>
+          </button>
+
+          <button
+            onClick={onSignOut}
+            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <LogOut size={20} className="text-gray-600" />
+            <span className="font-medium">Log out</span>
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-200 my-6"></div>
+
+        {/* Add business section */}
+      <div className="space-y-2">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+            <Plus size={20} className="text-gray-600" />
+            <span className="font-medium">Add business</span>
+          </button>
+        </div>
+      </div>
+    </SimpleCard>
+  );
+}
+
+// Simple profile view
+function ProfileView({ 
+  onBack, 
+  onEditProfile,
+  onShare,
+  currentAccount 
+}: { 
+  onBack: () => void; 
+  onEditProfile: () => void;
+  onShare: () => void;
+  currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null;
+}) {
+  return (
+    <SimpleCard>
+      <div className="space-y-4">
+        {/* Header with back button */}
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Back to menu"
+          >
+            <ChevronLeft size={20} className="text-gray-700" />
+          </button>
+          <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
+            </div>
+
+        {/* Profile Card */}
+        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-6 relative">
+          {/* Edit Profile link in top right */}
+          <button
+            onClick={onEditProfile}
+            className="absolute top-4 right-4 text-sm font-medium text-gray-900 hover:text-gray-700 underline transition-colors"
+          >
+            Edit Profile
+          </button>
+          
+          <div className="flex flex-col items-center text-center space-y-4">
+            <Avatar
+              src={currentAccount?.avatarUrl ?? undefined}
+              name={currentAccount?.name ?? "User"}
+              size={80}
+            />
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                {currentAccount?.name ?? "Your Name"}
+              </h3>
+              <p className="text-sm text-gray-500 mb-3">Personal Account</p>
+              {currentAccount?.bio && (
+                <p className="text-sm text-gray-600 max-w-xs">
+                  {currentAccount.bio}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Profile actions */}
+        <div className="space-y-1">
           <button
             onClick={onShare}
             className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
@@ -94,32 +188,159 @@ function MenuView({
             <Share2 size={20} className="text-gray-600" />
             <span className="font-medium">Share Profile</span>
           </button>
+        </div>
+      </div>
+    </SimpleCard>
+  );
+}
 
+// Edit profile view
+function EditProfileView({ 
+  onBack, 
+  onSave,
+  currentAccount 
+}: { 
+  onBack: () => void; 
+  onSave: (data: { name: string; bio: string; profilePicture?: File }) => Promise<void>;
+  currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null;
+}) {
+  const [formData, setFormData] = useState({
+    name: currentAccount?.name || '',
+    bio: currentAccount?.bio || '',
+    profilePicture: null as File | null,
+    profilePicturePreview: currentAccount?.avatarUrl || ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleImageChange = (file: File | null, dataUrl: string | null) => {
+    setFormData(prev => ({
+      ...prev,
+      profilePicture: file,
+      profilePicturePreview: dataUrl || prev.profilePicturePreview
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      setError('Name is required');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await onSave({
+        name: formData.name.trim(),
+        bio: formData.bio.trim(),
+        profilePicture: formData.profilePicture || undefined
+      });
+    } catch (err) {
+      setError('Failed to save profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SimpleCard>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
           <button
-            onClick={onSettings}
-            className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Back to profile"
           >
-            <Settings size={20} className="text-gray-600" />
-            <span className="font-medium">Settings</span>
+            <ChevronLeft size={18} className="text-gray-600" />
+          </button>
+          <h2 className="text-lg font-semibold text-gray-900">Edit Profile</h2>
+        </div>
+
+        {/* Profile Picture Section */}
+        <div className="flex flex-col items-center justify-center py-2">
+          <div className="flex justify-center">
+            <ImagePicker
+              onChange={handleImageChange}
+              initialPreviewUrl={formData.profilePicturePreview}
+              shape="circle"
+              size={120}
+            />
+          </div>
+          <button
+            onClick={() => {
+              // Trigger the image picker
+              const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+              if (fileInput) fileInput.click();
+            }}
+            className="mt-2 text-sm font-medium text-gray-600 hover:text-gray-800 underline transition-colors"
+          >
+            Edit Image
           </button>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-gray-200 my-4"></div>
+        {/* Form Fields */}
+        <div className="space-y-4">
+          {/* Name Field */}
+          <div>
+            <Input
+              type="text"
+              placeholder="Full name"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              className="w-full text-base border-gray-200 focus:border-gray-400 focus:ring-gray-400"
+              required
+            />
+          </div>
 
-        {/* Action items */}
-        <div className="space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-            <Plus size={20} className="text-gray-600" />
-            <span className="font-medium">Add account</span>
-          </button>
+          {/* Bio Field */}
+          <div>
+            <TextArea
+              placeholder="Tell us about yourself..."
+              value={formData.bio}
+              onChange={(e) => handleInputChange('bio', e.target.value)}
+              className="w-full text-base border-gray-200 focus:border-gray-400 focus:ring-gray-400 resize-none"
+              rows={3}
+            />
+          </div>
+        </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="text-center space-y-4 pt-8">
           <button
-            onClick={onSignOut}
-            className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            onClick={handleSave}
+            disabled={loading || !formData.name.trim()}
+            className="w-48 px-6 py-3 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
           >
-            <LogOut size={20} className="text-gray-600" />
-            <span className="font-medium">Log out</span>
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </button>
+          <button
+            onClick={onBack}
+            className="text-sm font-medium text-gray-600 hover:text-gray-800 underline transition-colors"
+          >
+            Cancel
           </button>
         </div>
       </div>
@@ -132,7 +353,6 @@ function SettingsView({
   onBack, 
   onSignOut, 
   onDeleteAccount, 
-  currentAccount,
   showDeleteConfirm,
   onConfirmDelete,
   onCancelDelete
@@ -140,14 +360,13 @@ function SettingsView({
   onBack: () => void; 
   onSignOut: () => void; 
   onDeleteAccount: () => void; 
-  currentAccount: { name?: string; avatarUrl?: string } | null;
   showDeleteConfirm: boolean;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
 }) {
   return (
     <SimpleCard>
-      <div className="flex flex-col h-full">
+      <div className="space-y-4">
         {/* Header with back button */}
         <div className="flex items-center gap-4 mb-6">
           <button
@@ -159,36 +378,15 @@ function SettingsView({
           </button>
           <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
         </div>
-
-        {/* Profile info */}
-        <div className="flex items-center gap-3 mb-6 p-3 bg-gray-50 rounded-lg">
-          <Avatar 
-            src={currentAccount?.avatarUrl ?? undefined} 
-            name={currentAccount?.name ?? "User"} 
-            size={48} 
-          />
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">{currentAccount?.name ?? "Your Name"}</h3>
-            <p className="text-xs text-gray-500">Personal account</p>
-          </div>
-        </div>
-
-        {/* Spacer to push buttons to bottom */}
-        <div className="flex-1"></div>
-
+        
         {/* Settings actions */}
-        <div className="space-y-4">
+        <div className="space-y-1">
           <button
             onClick={onSignOut}
-            className="w-full flex items-center gap-4 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100"
+            className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           >
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <LogOut size={24} className="text-gray-600" />
-            </div>
-            <div>
-              <div className="font-medium">Sign out</div>
-              <div className="text-sm text-gray-500">Sign out of your account</div>
-            </div>
+            <LogOut size={20} className="text-gray-600" />
+            <span className="font-medium">Sign out</span>
           </button>
           
           {showDeleteConfirm ? (
@@ -218,28 +416,25 @@ function SettingsView({
           ) : (
             <button
               onClick={onDeleteAccount}
-              className="w-full flex items-center gap-4 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 hover:border-red-300"
+              className="w-full flex items-center gap-3 px-3 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Trash2 size={24} className="text-red-600" />
-              </div>
-              <div>
-                <div className="font-medium">Delete Account</div>
-                <div className="text-sm text-gray-500">Permanently delete your account and data</div>
-              </div>
-            </button>
-          )}
-        </div>
+              <Trash2 size={20} className="text-red-600" />
+              <span className="font-medium">Delete Account</span>
+          </button>
+        )}
       </div>
+    </div>
     </SimpleCard>
   );
 }
 
 export default function ProfileMenu() {
-  const { personalProfile, clearAll } = useAppStore();
-  const { signOut, deleteAccount } = useAuth();
+  const { personalProfile, clearAll, setPersonalProfile } = useAppStore();
+  const { signOut, deleteAccount, updateProfile, uploadAvatar } = useAuth();
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -249,13 +444,16 @@ export default function ProfileMenu() {
   // Get current account info for avatar
   const currentAccount = { 
     name: personalProfile?.name, 
-    avatarUrl: personalProfile?.avatarUrl 
+    avatarUrl: personalProfile?.avatarUrl,
+    bio: personalProfile?.bio
   };
 
   // Close menu when navigating
   useEffect(() => {
     setOpen(false);
     setShowSettings(false);
+    setShowProfile(false);
+    setShowEditProfile(false);
   }, [pathname]);
 
   // Close menu when clicking outside
@@ -264,6 +462,8 @@ export default function ProfileMenu() {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
         setShowSettings(false);
+        setShowProfile(false);
+        setShowEditProfile(false);
         setShowDeleteConfirm(false);
       }
     };
@@ -271,6 +471,8 @@ export default function ProfileMenu() {
       if (e.key === "Escape") {
         setOpen(false);
         setShowSettings(false);
+        setShowProfile(false);
+        setShowEditProfile(false);
         setShowDeleteConfirm(false);
       }
     };
@@ -285,6 +487,8 @@ export default function ProfileMenu() {
   const handleSignOut = async () => {
     await signOut();
     setOpen(false);
+    setShowSettings(false);
+    setShowProfile(false);
   };
 
   const handleDeleteAccount = async () => {
@@ -376,12 +580,75 @@ export default function ProfileMenu() {
   };
 
   const handleViewProfile = () => {
-    if (personalProfile?.connectId) {
-      router.push(`/p/${personalProfile.connectId}`);
-    } else {
-      router.push('/onboarding');
+    setShowProfile(true);
+  };
+
+  const handleEditProfile = () => {
+    setShowEditProfile(true);
+  };
+
+  const handleSaveProfile = async (data: { name: string; bio: string; profilePicture?: File }) => {
+    console.log('handleSaveProfile: Starting profile save with data:', {
+      name: data.name,
+      bio: data.bio,
+      hasProfilePicture: !!data.profilePicture,
+      profilePictureType: data.profilePicture?.type,
+      profilePictureSize: data.profilePicture?.size
+    });
+
+    try {
+      let avatarUrl = personalProfile?.avatarUrl;
+      console.log('handleSaveProfile: Current avatar URL:', avatarUrl);
+
+      // Upload new profile picture if one was selected
+      if (data.profilePicture) {
+        console.log('handleSaveProfile: Uploading new profile picture...');
+        const uploadResult = await uploadAvatar(data.profilePicture);
+        console.log('handleSaveProfile: Upload result:', uploadResult);
+        
+        if (uploadResult.url) {
+          avatarUrl = uploadResult.url;
+          console.log('handleSaveProfile: Using new avatar URL:', avatarUrl);
+        } else {
+          console.error('handleSaveProfile: Failed to upload avatar, keeping existing URL. Error:', uploadResult.error);
+        }
+      } else {
+        console.log('handleSaveProfile: No new profile picture selected, keeping existing URL');
+      }
+
+      // Update profile data
+      const updatedProfile = {
+        ...personalProfile,
+        name: data.name,
+        bio: data.bio,
+        avatarUrl: avatarUrl,
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('handleSaveProfile: Updating profile with data:', updatedProfile);
+
+      // Update in Supabase
+      const { error } = await updateProfile(updatedProfile);
+      
+      if (error) {
+        console.error('handleSaveProfile: Error updating profile in Supabase:', error);
+        throw new Error(`Failed to update profile: ${error.message}`);
+      }
+
+      console.log('handleSaveProfile: Profile updated successfully in Supabase');
+
+      // Update local state
+      setPersonalProfile(updatedProfile);
+      console.log('handleSaveProfile: Local state updated');
+      
+      // Go back to profile view
+      setShowEditProfile(false);
+      console.log('handleSaveProfile: Edit profile view closed');
+      
+    } catch (err) {
+      console.error('handleSaveProfile: Error updating profile:', err);
+      throw err;
     }
-    setOpen(false);
   };
 
   return (
@@ -410,16 +677,31 @@ export default function ProfileMenu() {
               onBack={() => setShowSettings(false)}
               onSignOut={handleSignOut}
               onDeleteAccount={handleDeleteAccount}
-              currentAccount={currentAccount}
               showDeleteConfirm={showDeleteConfirm}
               onConfirmDelete={confirmDeleteAccount}
               onCancelDelete={cancelDeleteAccount}
+            />
+          ) : showEditProfile ? (
+            <EditProfileView
+              onBack={() => setShowEditProfile(false)}
+              onSave={handleSaveProfile}
+              currentAccount={currentAccount}
+            />
+          ) : showProfile ? (
+            <ProfileView
+              onBack={() => setShowProfile(false)}
+              onEditProfile={handleEditProfile}
+              onShare={() => {
+                setOpen(false);
+                setShowShareModal(true);
+              }}
+              currentAccount={currentAccount}
             />
           ) : (
             <MenuView
               onSettings={() => setShowSettings(true)}
               onShare={() => {
-                setOpen(false);
+                      setOpen(false);
                 setShowShareModal(true);
               }}
               onSignOut={handleSignOut}

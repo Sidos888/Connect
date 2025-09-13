@@ -11,7 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  updateProfile: (name: string, avatarUrl?: string) => Promise<{ error: Error | null }>;
+  updateProfile: (profile: any) => Promise<{ error: Error | null }>;
   sendPhoneVerification: (phone: string) => Promise<{ error: Error | null }>;
   sendEmailVerification: (email: string) => Promise<{ error: Error | null }>;
   verifyPhoneCode: (phone: string, code: string) => Promise<{ error: Error | null }>;
@@ -20,6 +20,8 @@ interface AuthContextType {
   loadUserProfile: () => Promise<{ profile: any | null; error: Error | null }>;
   deleteAccount: () => Promise<{ error: Error | null }>;
   uploadAvatar: (file: File) => Promise<{ url: string | null; error: Error | null }>;
+  linkPhoneToAccount: (phone: string) => Promise<{ error: Error | null }>;
+  linkEmailToAccount: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,14 +72,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const updateProfile = async (name: string, avatarUrl?: string) => {
-    const { error } = await supabase.auth.updateUser({
-      data: { 
-        full_name: name,
-        avatar_url: avatarUrl 
+  const updateProfile = async (profile: any) => {
+    if (!user?.id) {
+      return { error: new Error('No user logged in') };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profile.name,
+          avatar_url: profile.avatarUrl,
+          bio: profile.bio,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        return { error };
       }
-    });
-    return { error };
+
+      return { error: null };
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      return { error: err as Error };
+    }
   };
 
   const sendPhoneVerification = async (phone: string) => {
@@ -94,14 +114,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendEmailVerification = async (email: string) => {
     try {
       console.log('Sending email verification for:', email);
+      console.log('Email provider:', email.split('@')[1]);
       const { data, error } = await supabase.auth.signInWithOtp({
         email: email,
         options: { 
           emailRedirectTo: undefined, // prevents magic link
-          shouldCreateUser: true // allows new user creation
+          shouldCreateUser: true, // allows new user creation
+          data: {
+            // Force OTP method
+            method: 'otp'
+          }
         }
       });
       console.log('Email verification response:', { data, error });
+      console.log('OTP method used:', data?.user ? 'OTP code' : 'Magic link');
       return { error };
     } catch (error) {
       console.error('Email verification error:', error);
@@ -156,8 +182,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('checkUserExists: Checking for existing account', { phone, email });
       
+      if (!phone && !email) {
+        console.log('checkUserExists: No phone or email provided');
+        return { exists: false, error: new Error('No phone or email provided') };
+      }
+
+      // Check for existing account with either phone OR email
       let query = supabase.from('profiles').select('*');
-      if (phone) {
+      
+      if (phone && email) {
+        // If both phone and email provided, check for account with either
+        const normalizedPhone = phone.replace(/\s/g, '');
+        query = query.or(`phone.eq.${normalizedPhone},email.eq.${email}`);
+      } else if (phone) {
         // Normalize phone number - remove spaces and ensure consistent format
         const normalizedPhone = phone.replace(/\s/g, '');
         console.log('checkUserExists: Normalized phone:', normalizedPhone);
@@ -165,9 +202,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (email) {
         console.log('checkUserExists: Checking email:', email);
         query = query.eq('email', email);
-      } else {
-        console.log('checkUserExists: No phone or email provided');
-        return { exists: false, error: new Error('No phone or email provided') };
       }
       
       const { data, error } = await query.limit(1);
@@ -255,14 +289,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const linkPhoneToAccount = async (phone: string) => {
+    try {
+      if (!user?.id) {
+        return { error: new Error('No user logged in') };
+      }
+
+      const normalizedPhone = phone.replace(/\s/g, '');
+      console.log('Linking phone to account:', normalizedPhone);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ phone: normalizedPhone })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error linking phone:', error);
+        return { error };
+      }
+
+      console.log('Phone linked successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('Error linking phone:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const linkEmailToAccount = async (email: string) => {
+    try {
+      if (!user?.id) {
+        return { error: new Error('No user logged in') };
+      }
+
+      console.log('Linking email to account:', email);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email: email })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error linking email:', error);
+        return { error };
+      }
+
+      console.log('Email linked successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('Error linking email:', error);
+      return { error: error as Error };
+    }
+  };
+
   const deleteAccount = async () => {
     try {
       console.log('AuthContext: Starting account deletion...');
       
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Delete operation timeout')), 5000)
-        );
+        // Simplified deletion approach
       
       const deletePromise = (async () => {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -273,70 +357,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('AuthContext: User found for deletion:', user.id);
 
-        // Try to use the API route first (if service role key is configured)
-        try {
-          console.log('AuthContext: Attempting API route deletion...');
-          const response = await fetch('/api/delete-account', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id }),
-          });
+        // Try API route deletion with service role key
+        console.log('AuthContext: Attempting API route deletion...');
+        const response = await fetch('/api/delete-account/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        });
+        
+        console.log('AuthContext: API response status:', response.status);
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('AuthContext: API route deletion successful:', result);
           
-          if (response.ok) {
-            console.log('AuthContext: API route deletion successful');
-            await supabase.auth.signOut();
-            return { error: null };
-          } else {
-            const errorData = await response.json();
-            console.log('AuthContext: API route failed with status:', response.status, 'Error:', errorData);
-          }
-        } catch (apiError) {
-          console.log('AuthContext: API route failed, falling back to client-side deletion:', apiError);
-        }
-
-        // Fallback: Client-side deletion (delete profile only)
-        console.log('AuthContext: Attempting client-side profile deletion...');
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', user.id);
-
-        if (profileError) {
-          console.error('AuthContext: Profile deletion failed:', profileError);
-          console.log('AuthContext: This is likely due to RLS policy. Proceeding with local cleanup...');
-          
-          // Even if Supabase deletion fails, we should clear local data and sign out
-          // This ensures the user can't access their data locally
-          console.log('AuthContext: Clearing local data and signing out...');
+          // Sign out and clear local data
           await supabase.auth.signOut();
           
-          // Clear any remaining local state
-          console.log('AuthContext: Clearing local storage in fallback...');
           if (typeof window !== 'undefined') {
             localStorage.removeItem('connect.app.v1');
             localStorage.clear();
+            sessionStorage.clear();
           }
           
-          return { error: null }; // Don't return error, just clear local data
+          console.log('AuthContext: User completely removed from Supabase');
+          return { error: null };
+        } else {
+          const errorData = await response.json();
+          console.error('AuthContext: API route failed:', response.status, errorData);
+          throw new Error(`API deletion failed: ${errorData.error || 'Unknown error'}`);
         }
 
-        console.log('AuthContext: Profile deleted successfully, signing out...');
-        await supabase.auth.signOut();
-        
-        // Clear any remaining local state
-        console.log('AuthContext: Clearing local storage...');
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('connect.app.v1');
-          localStorage.clear();
-        }
-        
-        console.log('AuthContext: Account deletion completed successfully');
-        return { error: null };
+        // If we reach here, API deletion failed
+        throw new Error('API deletion failed');
       })();
       
-      // Race between delete operation and timeout
-      const result = await Promise.race([deletePromise, timeoutPromise]);
-      return result;
+      return await deletePromise;
       
     } catch (error) {
       console.error('AuthContext: Unexpected error during account deletion:', error);
@@ -351,6 +407,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('connect.app.v1');
           localStorage.clear();
+          // Force reload to clear all state
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1000);
         }
       } catch (signOutError) {
         console.error('AuthContext: Failed to sign out:', signOutError);
@@ -383,6 +443,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUserProfile,
     deleteAccount,
     uploadAvatar,
+    linkPhoneToAccount,
+    linkEmailToAccount,
   };
 
   return (

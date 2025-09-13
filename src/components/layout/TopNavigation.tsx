@@ -14,10 +14,6 @@ const ProfileMenu = dynamic(() => import("@/components/menu/ProfileMenu"), {
   ssr: false,
   loading: () => <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
 });
-const NotificationMenu = dynamic(() => import("@/components/menu/NotificationMenu"), { 
-  ssr: false,
-  loading: () => <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-});
 
 export default function TopNavigation() {
   const pathname = usePathname();
@@ -132,21 +128,11 @@ export default function TopNavigation() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                {/* Notifications Dropdown - Hidden on mobile */}
-                <div className="hidden lg:block">
-                  <NotificationMenu />
-                </div>
-
                 {/* Profile Menu */}
                 <ProfileMenu />
               </>
             ) : (
               <>
-                {/* Notifications Dropdown - Hidden on mobile */}
-                <div className="hidden lg:block">
-                  <NotificationMenu />
-                </div>
-
                 {/* Auth Dropdown Menu */}
                 <div className="relative" ref={dropdownRef}>
                   <button
@@ -179,7 +165,7 @@ export default function TopNavigation() {
                           }}
                           className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                         >
-                          Sign in
+                          Log in or sign up
                         </button>
                       </div>
                     </div>

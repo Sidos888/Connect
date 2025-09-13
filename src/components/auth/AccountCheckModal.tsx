@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, ArrowLeft, User } from 'lucide-react';
+import { X, ArrowLeft, User, ChevronLeft } from 'lucide-react';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import TextArea from '@/components/TextArea';
@@ -16,15 +16,17 @@ interface AccountCheckModalProps {
   onClose: () => void;
   verificationMethod: 'email' | 'phone';
   verificationValue: string;
+  onResetToInitialLogin?: () => void;
 }
 
 export default function AccountCheckModal({ 
   isOpen, 
   onClose, 
   verificationMethod, 
-  verificationValue 
+  verificationValue,
+  onResetToInitialLogin
 }: AccountCheckModalProps) {
-  const { user, checkUserExists, supabase, uploadAvatar } = useAuth();
+  const { user, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount } = useAuth();
   const { setPersonalProfile } = useAppStore();
   
   // Debug authentication state
@@ -58,6 +60,9 @@ export default function AccountCheckModal({
   const [userExists, setUserExists] = useState<boolean | null>(null);
   const [existingUser, setExistingUser] = useState<{ id: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; bio?: string; date_of_birth?: string; created_at: string; updated_at: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
   const [formData, setFormData] = useState({
     fullName: '',
     dateOfBirth: '',
@@ -66,6 +71,16 @@ export default function AccountCheckModal({
     bio: '',
     profilePicture: null as File | null
   });
+
+  // Pre-populate the verified contact method
+  useEffect(() => {
+    if (verificationValue) {
+      setFormData(prev => ({
+        ...prev,
+        [verificationMethod === 'email' ? 'email' : 'phone']: verificationValue
+      }));
+    }
+  }, [verificationValue, verificationMethod]);
 
   const checkAccountExists = async () => {
     console.log('AccountCheckModal: Starting account check', { verificationMethod, verificationValue, user: user?.id });
@@ -136,14 +151,23 @@ export default function AccountCheckModal({
       console.log('AccountCheckModal: User signing in with existing account', existingUser);
       
       if (existingUser) {
+        // Link the missing phone/email to the existing account
+        if (verificationMethod === 'phone' && !existingUser.phone) {
+          console.log('AccountCheckModal: Linking phone to existing account');
+          await linkPhoneToAccount(verificationValue);
+        } else if (verificationMethod === 'email' && !existingUser.email) {
+          console.log('AccountCheckModal: Linking email to existing account');
+          await linkEmailToAccount(verificationValue);
+        }
+        
         // Load the existing user's profile into local state
         const profile = {
           id: existingUser.id,
           name: existingUser.full_name || '',
           bio: existingUser.bio || '',
           avatarUrl: existingUser.avatar_url,
-          email: existingUser.email || '',
-          phone: existingUser.phone || '',
+          email: existingUser.email || verificationValue,
+          phone: existingUser.phone || verificationValue,
           dateOfBirth: existingUser.date_of_birth || '',
           connectId: existingUser.connect_id || '',
           createdAt: existingUser.created_at,
@@ -161,6 +185,30 @@ export default function AccountCheckModal({
       window.location.href = '/';
     } catch (error) {
       console.error('AccountCheckModal: Error signing in:', error);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!verificationValue) {
+      setResetMessage('No email address found to reset password.');
+      return;
+    }
+
+    try {
+      setResetMessage('Sending reset email...');
+      const { error } = await supabase.auth.resetPasswordForEmail(verificationValue, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error('Reset password error:', error);
+        setResetMessage('Failed to send reset email. Please try again.');
+      } else {
+        setResetMessage('Password reset email sent! Check your inbox.');
+      }
+    } catch (error) {
+      console.error('Reset password error:', error);
+      setResetMessage('Failed to send reset email. Please try again.');
     }
   };
 
@@ -417,6 +465,28 @@ export default function AccountCheckModal({
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
+          ) : userExists === true ? (
+            <button
+              onClick={async () => {
+                // Sign out the user first to ensure they're unsigned in
+                try {
+                  await supabase.auth.signOut();
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                }
+                
+                // Clear local state
+                setPersonalProfile(null);
+                
+                // Close modal and redirect to explore page
+                onClose();
+                window.location.href = '/';
+              }}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Close and go to unsigned-in explore page"
+            >
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
           ) : (
             <div className="w-9" />
           )}
@@ -432,43 +502,76 @@ export default function AccountCheckModal({
         <div className="p-6">
           {userExists === true ? (
             // Existing Account Card
-            <div className="text-center">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
-                {existingUser?.avatar_url ? (
-                  <img
-                    src={existingUser.avatar_url}
-                    alt={existingUser.full_name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-orange-600" />
+            <div className="space-y-4">
+              {/* Profile Card */}
+              <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                    {existingUser?.avatar_url ? (
+                      <img
+                        src={existingUser.avatar_url}
+                        alt={existingUser.full_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-orange-600" />
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="flex-1 text-center">
+                    <h3 className="text-base font-semibold text-gray-900">
+                      {existingUser?.full_name || 'User'}
+                    </h3>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Is this your account?
-              </h3>
-              <p className="text-gray-600 mb-4 text-sm">
-                Welcome back, {existingUser?.full_name || 'there'}!
-              </p>
-              {existingUser?.bio && (
-                <p className="text-gray-500 mb-4 text-sm">
-                  {existingUser.bio}
-                </p>
-              )}
-              <p className="text-gray-500 mb-6 text-sm">
-                {verificationMethod === 'email' 
-                  ? `Looks like this email already has an account. Sign in or reset password.`
-                  : `Looks like this phone number already has an account. Continue to sign in.`
-                }
-              </p>
+
+              {/* Sign In Button */}
               <Button
                 onClick={handleSignIn}
                 className="w-full"
               >
-                Continue
+                Sign In
               </Button>
+
+              {/* Text below with create new account option */}
+              <div className="text-center">
+                {resetMessage ? (
+                  <p className={`text-sm ${resetMessage.includes('sent') ? 'text-green-600' : 'text-red-600'}`}>
+                    {resetMessage}
+                  </p>
+                ) : (
+                  <p className="text-gray-500 text-sm">
+                    Not my account?{' '}
+                    <button
+                      onClick={async () => {
+                        // Sign out the user first to ensure they're unsigned in
+                        try {
+                          await supabase.auth.signOut();
+                        } catch (error) {
+                          console.error('Error signing out:', error);
+                        }
+
+                        // Clear local state
+                        setPersonalProfile(null);
+
+                        // Reset to initial login state if callback provided
+                        if (onResetToInitialLogin) {
+                          onResetToInitialLogin();
+                        } else {
+                          // Fallback: close modal and redirect
+                          onClose();
+                          window.location.href = '/';
+                        }
+                      }}
+                      className="text-blue-600 underline hover:text-blue-800 transition-colors"
+                    >
+                      Create new one
+                    </button>
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             // Create Account Flow
@@ -520,7 +623,7 @@ export default function AccountCheckModal({
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
+                      Email {verificationMethod === 'email' && <span className="text-green-600">✓</span>}
                     </label>
                     <Input
                       type="email"
@@ -528,12 +631,16 @@ export default function AccountCheckModal({
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       className="w-full"
+                      disabled={verificationMethod === 'email'}
                     />
+                    {verificationMethod === 'email' && (
+                      <p className="text-xs text-green-600 mt-1">✓ Verified via email</p>
+                    )}
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
+                      Phone Number {verificationMethod === 'phone' && <span className="text-green-600">✓</span>}
                     </label>
                     <Input
                       type="tel"
@@ -541,7 +648,18 @@ export default function AccountCheckModal({
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
                       className="w-full"
+                      disabled={verificationMethod === 'phone'}
                     />
+                    {verificationMethod === 'phone' && (
+                      <p className="text-xs text-green-600 mt-1">✓ Verified via SMS</p>
+                    )}
+                  </div>
+                  
+                  {/* 2FA Explanation */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>🔒 Enhanced Security:</strong> We need both your email and phone number to provide you with the best security and account recovery options.
+                    </p>
                   </div>
                   
                   <Button
@@ -554,17 +672,6 @@ export default function AccountCheckModal({
                   >
                     Continue
                   </Button>
-                  
-                  {/* Debug info */}
-                  <div className="text-xs text-gray-500 mt-2">
-                    Debug: {JSON.stringify({
-                      fullName: formData.fullName?.trim() || 'empty',
-                      dateOfBirth: formData.dateOfBirth?.trim() || 'empty',
-                      email: formData.email?.trim() || 'empty',
-                      phone: formData.phone?.trim() || 'empty',
-                      buttonDisabled: !formData.fullName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim()
-                    })}
-                  </div>
                 </div>
               ) : (
                 // Page 2: Profile Pic + Bio

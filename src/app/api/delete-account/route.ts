@@ -8,6 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json();
     
+    console.log('Delete API: Received deletion request for user:', userId);
+    console.log('Delete API: Service role key available:', !!supabaseServiceKey);
+    
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
@@ -17,7 +20,8 @@ export async function POST(request: NextRequest) {
       console.log('Delete API: Using service role key for admin deletion');
       const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
       
-      // Delete from profiles table
+      // Delete from profiles table first
+      console.log('Delete API: Deleting from profiles table...');
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .delete()
@@ -27,6 +31,8 @@ export async function POST(request: NextRequest) {
         console.error('Delete API: Profile deletion failed:', profileError);
         return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 });
       }
+      
+      console.log('Delete API: Profile deleted successfully, now deleting auth user...');
       
       // Delete from auth.users table
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
@@ -39,7 +45,8 @@ export async function POST(request: NextRequest) {
       console.log('Delete API: Account deleted successfully with service role');
       return NextResponse.json({ success: true });
     } else {
-      console.log('Delete API: No service role key, falling back to client-side deletion');
+      console.log('Delete API: No service role key available');
+      console.log('Delete API: Service role key env var:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Missing');
       return NextResponse.json({ error: 'Service role key not configured' }, { status: 500 });
     }
   } catch (error) {

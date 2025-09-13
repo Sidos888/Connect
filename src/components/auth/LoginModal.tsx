@@ -250,6 +250,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           }}
           verificationMethod={verificationMethod}
           verificationValue={verificationValue}
+          onResetToInitialLogin={() => {
+            // Reset to initial phone step and clear form data
+            setStep('phone');
+            setPhoneNumber('');
+            setEmail('');
+            setError('');
+            setVerificationValue('');
+          }}
         />
       ) : (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
