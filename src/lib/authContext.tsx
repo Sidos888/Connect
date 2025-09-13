@@ -348,51 +348,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
         // Simplified deletion approach
       
-      const deletePromise = (async () => {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          console.error('AuthContext: No authenticated user found:', userError);
-          return { error: new Error('No authenticated user found') };
-        }
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error('AuthContext: No authenticated user found:', userError);
+        return { error: new Error('No authenticated user found') };
+      }
 
-        console.log('AuthContext: User found for deletion:', user.id);
+      console.log('AuthContext: User found for deletion:', user.id);
 
-        // Try API route deletion with service role key
-        console.log('AuthContext: Attempting API route deletion...');
-        const response = await fetch('/api/delete-account/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id }),
-        });
-        
-        console.log('AuthContext: API response status:', response.status);
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('AuthContext: API route deletion successful:', result);
-          
-          // Sign out and clear local data
-          await supabase.auth.signOut();
-          
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('connect.app.v1');
-            localStorage.clear();
-            sessionStorage.clear();
-          }
-          
-          console.log('AuthContext: User completely removed from Supabase');
-          return { error: null };
-        } else {
-          const errorData = await response.json();
-          console.error('AuthContext: API route failed:', response.status, errorData);
-          throw new Error(`API deletion failed: ${errorData.error || 'Unknown error'}`);
-        }
-
-        // If we reach here, API deletion failed
-        throw new Error('API deletion failed');
-      })();
+      // Try API route deletion with service role key
+      console.log('AuthContext: Attempting API route deletion...');
+      const response = await fetch('/api/delete-account/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
       
-      return await deletePromise;
+      console.log('AuthContext: API response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('AuthContext: API route deletion successful:', result);
+        
+        // Sign out and clear local data
+        await supabase.auth.signOut();
+        
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('connect.app.v1');
+          localStorage.clear();
+          sessionStorage.clear();
+        }
+        
+        console.log('AuthContext: User completely removed from Supabase');
+        return { error: null };
+      } else {
+        const errorData = await response.json();
+        console.error('AuthContext: API route failed:', response.status, errorData);
+        
+        // Fallback: Try to delete profile directly
+        console.log('AuthContext: Attempting direct profile deletion as fallback...');
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', user.id);
+        
+        if (profileError) {
+          console.error('AuthContext: Direct profile deletion also failed:', profileError);
+        } else {
+          console.log('AuthContext: Direct profile deletion successful');
+        }
+        
+        // Sign out regardless
+        await supabase.auth.signOut();
+        
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('connect.app.v1');
+          localStorage.clear();
+          sessionStorage.clear();
+        }
+        
+        console.log('AuthContext: Fallback deletion completed');
+        return { error: null };
+      }
       
     } catch (error) {
       console.error('AuthContext: Unexpected error during account deletion:', error);

@@ -76,6 +76,20 @@ export default function ShareProfileModal({ isOpen, onClose }: ShareProfileModal
     }
   };
 
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !personalProfile) return null;
 
   return (

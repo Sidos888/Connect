@@ -15,6 +15,16 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Prevent body scrolling on reset password page
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   useEffect(() => {
     // Check if we have the necessary tokens in the URL
     const accessToken = searchParams.get('access_token');

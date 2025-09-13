@@ -9,7 +9,8 @@ export default function TextArea({ label, className, ...rest }: Props) {
     <label className="block space-y-1">
       {label && <span className="text-sm text-neutral-600">{label}</span>}
       <textarea
-        className={`w-full rounded-md border border-neutral-200 px-3 py-2 text-base shadow-sm focus:ring-2 ring-brand focus:outline-none ${className ?? ""}`}
+        className={`w-full rounded-md border border-neutral-200 px-3 py-2 text-base shadow-sm focus:border-gray-500 focus:outline-none resize-none ${className ?? ""}`}
+        style={{ resize: 'none' }}
         {...rest}
       />
     </label>

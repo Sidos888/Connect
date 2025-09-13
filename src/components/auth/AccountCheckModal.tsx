@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, User, ChevronLeft } from 'lucide-react';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -72,6 +72,21 @@ export default function AccountCheckModal({
     profilePicture: null as File | null
   });
 
+  // Airbnb phone input system states
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const [countryFocused, setCountryFocused] = useState(false);
+  const [countryCode, setCountryCode] = useState('+61');
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+
+  // Floating label states
+  const [fullNameFocused, setFullNameFocused] = useState(false);
+  const [dateOfBirthFocused, setDateOfBirthFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const fullNameRef = useRef<HTMLInputElement>(null);
+  const dateOfBirthRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+
   // Pre-populate the verified contact method
   useEffect(() => {
     if (verificationValue) {
@@ -79,6 +94,14 @@ export default function AccountCheckModal({
         ...prev,
         [verificationMethod === 'email' ? 'email' : 'phone']: verificationValue
       }));
+      
+      // If phone verification, extract the phone number digits for the Airbnb input
+      if (verificationMethod === 'phone') {
+        const phoneDigits = verificationValue.replace(/[^\d]/g, '');
+        // Remove country code (61) from the beginning if present
+        const localDigits = phoneDigits.startsWith('61') ? phoneDigits.slice(2) : phoneDigits;
+        setPhoneNumber(localDigits);
+      }
     }
   }, [verificationValue, verificationMethod]);
 
@@ -121,7 +144,7 @@ export default function AccountCheckModal({
         setExistingUser(null);
         return;
       }
-
+      
       setUserExists(exists);
       setExistingUser(userData || null);
     } catch (error) {
@@ -221,6 +244,83 @@ export default function AccountCheckModal({
     });
   };
 
+  // Airbnb phone input system functions
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Remove all non-digits and spaces, then remove spaces
+    const digits = value.replace(/[^\d]/g, '');
+    // Limit to 9 digits
+    const limitedDigits = digits.slice(0, 9);
+    setPhoneNumber(limitedDigits);
+    
+    // Update formData with the full phone number including country code
+    const fullPhone = countryCode + limitedDigits;
+    setFormData(prev => ({ ...prev, phone: fullPhone }));
+    
+    // Position cursor correctly after input - account for spaces in formatted display
+    setTimeout(() => {
+      if (phoneInputRef.current) {
+        const formatted = formatPhoneNumber(limitedDigits);
+        const cursorPos = formatted.length;
+        phoneInputRef.current.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 0);
+  };
+
+  // Format phone number with 3-3-3 spacing
+  const formatPhoneNumber = (phone: string) => {
+    if (phone.length <= 3) return phone;
+    if (phone.length <= 6) return `${phone.slice(0, 3)} ${phone.slice(3)}`;
+    return `${phone.slice(0, 3)} ${phone.slice(3, 6)} ${phone.slice(6)}`;
+  };
+
+  const handlePhoneFocus = () => {
+    setPhoneFocused(true);
+    // Position cursor at the end of existing text, or at the first X if no text
+    setTimeout(() => {
+      if (phoneInputRef.current) {
+        if (phoneNumber) {
+          // If there's existing text, position cursor at the end
+          const formatted = formatPhoneNumber(phoneNumber);
+          const cursorPos = formatted.length;
+          phoneInputRef.current.setSelectionRange(cursorPos, cursorPos);
+        } else {
+          // If no text, position cursor at the first X
+          phoneInputRef.current.setSelectionRange(0, 0);
+        }
+      }
+    }, 10);
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneFocused(false);
+  };
+
+  // Floating label handlers
+  const handleFullNameFocus = () => {
+    setFullNameFocused(true);
+  };
+
+  const handleFullNameBlur = () => {
+    setFullNameFocused(false);
+  };
+
+  const handleDateOfBirthFocus = () => {
+    setDateOfBirthFocused(true);
+  };
+
+  const handleDateOfBirthBlur = () => {
+    setDateOfBirthFocused(false);
+  };
+
+  const handleEmailFocus = () => {
+    setEmailFocused(true);
+  };
+
+  const handleEmailBlur = () => {
+    setEmailFocused(false);
+  };
+
   const handleImageChange = (file: File | null) => {
     setFormData(prev => ({ ...prev, profilePicture: file }));
   };
@@ -312,15 +412,15 @@ export default function AccountCheckModal({
       
       const profileData = {
         id: user.id,
-        full_name: formData.fullName,
+          full_name: formData.fullName,
         date_of_birth: convertDateFormat(formData.dateOfBirth),
         email: formData.email,
         phone: formData.phone,
-        bio: formData.bio,
+          bio: formData.bio,
         avatar_url: avatarUrl,
         connect_id: connectId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
       };
       
       console.log('AccountCheckModal: Profile data to insert:', profileData);
@@ -444,6 +544,20 @@ export default function AccountCheckModal({
     setCurrentPage(1);
   };
 
+  // Prevent body scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -453,7 +567,20 @@ export default function AccountCheckModal({
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           {currentPage === 1 && userExists === false ? (
             <button
-              onClick={onClose}
+              onClick={async () => {
+                // Sign out the user to clean up partial authentication
+                try {
+                  await supabase.auth.signOut();
+                } catch (error) {
+                  console.error('Error signing out during exit:', error);
+                }
+                
+                // Clear local state
+                setPersonalProfile(null);
+                
+                // Close modal
+                onClose();
+              }}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
               <X className="w-5 h-5 text-gray-600" />
@@ -580,87 +707,446 @@ export default function AccountCheckModal({
                 // Page 1: Full Name + DOB
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
+                    <div className="relative">
+                      <input
+                        ref={fullNameRef}
+                        type="text"
+                        value={formData.fullName}
+                        onChange={(e) => handleInputChange('fullName', e.target.value)}
+                        onFocus={handleFullNameFocus}
+                        onBlur={handleFullNameBlur}
+                        placeholder=""
+                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(fullNameFocused || formData.fullName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                        style={{ 
+                          caretColor: 'black',
+                          fontSize: '16px',
+                          lineHeight: '1.2',
+                          fontFamily: 'inherit'
+                        }}
+                        required
+                      />
+                      
+                      {/* Step 1: Initial state - only "Name" label */}
+                      {!fullNameFocused && !formData.fullName && (
+                        <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                          Name
+                        </label>
+                      )}
+                      
+                      {/* Step 2: Focused state - label moves up, placeholder appears */}
+                      {fullNameFocused && !formData.fullName && (
+                        <>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Name
+                          </label>
+                          {/* First and last name placeholder */}
+                          <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                            First and last name
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Step 3: Typing state - actual name replaces placeholder */}
+                      {formData.fullName && (
+                        <>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Name
                     </label>
-                    <Input
+                          {/* Actual name content */}
+                          <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                            {formData.fullName}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="relative">
+                      <input
+                        ref={dateOfBirthRef}
                       type="text"
-                      placeholder="Enter your full name"
-                      value={formData.fullName}
-                      onChange={(e) => handleInputChange('fullName', e.target.value)}
-                      className="w-full"
-                    />
+                        value={formData.dateOfBirth}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          // Only allow numbers and forward slashes
+                          value = value.replace(/[^0-9/]/g, '');
+                          
+                          // Handle deletion - if user is deleting, don't auto-add slashes
+                          const currentValue = formData.dateOfBirth;
+                          const isDeleting = value.length < currentValue.length;
+                          
+                          if (!isDeleting) {
+                            // Auto-format as user types (only when adding characters)
+                            if (value.length === 2 && !value.includes('/')) {
+                              value = value + '/';
+                            } else if (value.length === 5 && value.split('/').length === 2) {
+                              value = value + '/';
+                            }
+                          }
+                          
+                          // Limit to DD/MM/YYYY format
+                          if (value.length > 10) {
+                            value = value.substring(0, 10);
+                          }
+                          handleInputChange('dateOfBirth', value);
+                        }}
+                        onFocus={handleDateOfBirthFocus}
+                        onBlur={handleDateOfBirthBlur}
+                        placeholder=""
+                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(dateOfBirthFocused || formData.dateOfBirth) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                        style={{ 
+                          caretColor: 'black',
+                          fontSize: '16px',
+                          lineHeight: '1.2',
+                          fontFamily: 'inherit'
+                        }}
+                        required
+                      />
+                      
+                      {/* Step 1: Initial state - only "Date of birth" label */}
+                      {!dateOfBirthFocused && !formData.dateOfBirth && (
+                        <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                          Date of birth
+                        </label>
+                      )}
+                      
+                      {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
+                      {dateOfBirthFocused && !formData.dateOfBirth && (
+                        <>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Date of birth
+                          </label>
+                          {/* DD/MM/YYYY placeholder */}
+                          <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                            DD/MM/YYYY
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Step 3: Typing state - actual date replaces placeholder */}
+                      {formData.dateOfBirth && (
+                        <>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Date of birth
+                          </label>
+                          {/* Actual date content */}
+                          <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                            {formData.dateOfBirth}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date of Birth
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="DD/MM/YYYY"
-                      value={formData.dateOfBirth}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                        // Only allow numbers and forward slashes
-                        value = value.replace(/[^0-9/]/g, '');
-                        // Auto-format as user types
-                        if (value.length === 2 && !value.includes('/')) {
-                          value = value + '/';
-                        } else if (value.length === 5 && value.split('/').length === 2) {
-                          value = value + '/';
-                        }
-                        // Limit to DD/MM/YYYY format
-                        if (value.length > 10) {
-                          value = value.substring(0, 10);
-                        }
-                        handleInputChange('dateOfBirth', value);
-                      }}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Format: DD/MM/YYYY (e.g., 12/08/2004)</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email {verificationMethod === 'email' && <span className="text-green-600">✓</span>}
-                    </label>
-                    <Input
-                      type="email"
-                      placeholder="Enter your email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="w-full"
-                      disabled={verificationMethod === 'email'}
-                    />
-                    {verificationMethod === 'email' && (
-                      <p className="text-xs text-green-600 mt-1">✓ Verified via email</p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number {verificationMethod === 'phone' && <span className="text-green-600">✓</span>}
-                    </label>
-                    <Input
-                      type="tel"
-                      placeholder="Enter your phone number"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full"
-                      disabled={verificationMethod === 'phone'}
-                    />
-                    {verificationMethod === 'phone' && (
-                      <p className="text-xs text-green-600 mt-1">✓ Verified via SMS</p>
-                    )}
-                  </div>
-                  
-                  {/* 2FA Explanation */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-800">
-                      <strong>🔒 Enhanced Security:</strong> We need both your email and phone number to provide you with the best security and account recovery options.
-                    </p>
-                  </div>
+                  {/* Render fields based on verification method - verified method at bottom */}
+                  {verificationMethod === 'email' ? (
+                    // Email verified - show phone first, then email
+                    <>
+                      <div>
+                        {/* Connected Phone Input - Airbnb Style */}
+                        <div className="relative border border-gray-300 rounded-lg overflow-hidden">
+                          {/* Country/Region Section */}
+                          <div className="relative border-b border-gray-200">
+                            <select 
+                              value={countryCode}
+                              onChange={(e) => setCountryCode(e.target.value)}
+                              className="w-full h-14 pl-4 pr-12 pt-5 pb-3 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
+                              onFocus={() => setCountryFocused(true)}
+                              onBlur={() => setCountryFocused(false)}
+                              disabled={verificationMethod === 'phone'}
+                            >
+                              <option value="+61">Australia (+61)</option>
+                            </select>
+                            {/* Custom dropdown arrow */}
+                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                            {(countryFocused || countryCode) && (
+                              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                Country / Region
+                              </label>
+                            )}
+                          </div>
+
+                          {/* Phone Number Section */}
+                          <div className="relative">
+                            <input
+                              ref={phoneInputRef}
+                              type="tel"
+                              value={phoneFocused || phoneNumber ? formatPhoneNumber(phoneNumber) : ''}
+                              onChange={handlePhoneChange}
+                              onFocus={handlePhoneFocus}
+                              onBlur={handlePhoneBlur}
+                              placeholder=""
+                              className={`w-full h-14 pl-16 pr-4 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                              style={{ 
+                                caretColor: 'black',
+                                fontSize: '16px',
+                                lineHeight: '1.2',
+                                fontFamily: 'inherit'
+                              }}
+                              disabled={verificationMethod === 'phone'}
+                              required
+                            />
+                            
+                            {/* Step 1: Initial state - only "Phone number" label */}
+                            {!phoneFocused && !phoneNumber && (
+                              <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                                Phone number
+                              </label>
+                            )}
+                            
+                            {/* Step 2: Focused state - label moves up, +61 and XXX XXX XXX appear */}
+                            {phoneFocused && !phoneNumber && (
+                              <>
+                                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                  Phone number
+                                </label>
+                                {/* +61 prefix */}
+                                <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  +61
+                                </div>
+                                {/* XXX XXX XXX to the right of +61 */}
+                                <div className="absolute left-16 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  XXX XXX XXX
+                                </div>
+                              </>
+                            )}
+                            
+                            {/* Step 3: Typing state - digits replace X's */}
+                            {phoneNumber && (
+                              <>
+                                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                  Phone number
+                                </label>
+                                {/* +61 prefix */}
+                                <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  +61
+                                </div>
+                                {/* Digits to the right of +61 */}
+                                <div className="absolute left-16 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  {formatPhoneNumber(phoneNumber)}
+                                </div>
+                                {/* Verification status */}
+                                {verificationMethod === 'phone' && (
+                                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                                    <span>✓</span>
+                                    <span>Verified</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="relative">
+                          <input
+                            ref={emailRef}
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            onFocus={handleEmailFocus}
+                            onBlur={handleEmailBlur}
+                            placeholder=""
+                            className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(emailFocused || formData.email) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                            style={{ 
+                              caretColor: 'black',
+                              fontSize: '16px',
+                              lineHeight: '1.2',
+                              fontFamily: 'inherit'
+                            }}
+                            disabled={verificationMethod === 'email'}
+                            required
+                          />
+                          
+                          {/* Step 1: Initial state - only "Email" label */}
+                          {!emailFocused && !formData.email && (
+                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                              Email
+                            </label>
+                          )}
+                          
+                          {/* Step 2: Focused state - label moves up */}
+                          {(emailFocused || formData.email) && (
+                            <>
+                              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                Email
+                              </label>
+                              {/* Text content */}
+                              <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                {formData.email}
+                              </div>
+                              {/* Verification status */}
+                              {formData.email && verificationMethod === 'email' && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                                  <span>✓</span>
+                                  <span>Verified</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    // Phone verified - show email first, then phone
+                    <>
+                      <div>
+                        <div className="relative">
+                          <input
+                            ref={emailRef}
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            onFocus={handleEmailFocus}
+                            onBlur={handleEmailBlur}
+                            placeholder=""
+                            className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(emailFocused || formData.email) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                            style={{ 
+                              caretColor: 'black',
+                              fontSize: '16px',
+                              lineHeight: '1.2',
+                              fontFamily: 'inherit'
+                            }}
+                            disabled={verificationMethod === 'email'}
+                            required
+                          />
+                          
+                          {/* Step 1: Initial state - only "Email" label */}
+                          {!emailFocused && !formData.email && (
+                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                              Email
+                            </label>
+                          )}
+                          
+                          {/* Step 2: Focused state - label moves up */}
+                          {(emailFocused || formData.email) && (
+                            <>
+                              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                Email
+                              </label>
+                              {/* Text content */}
+                              <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                {formData.email}
+                              </div>
+                              {/* Verification status */}
+                              {formData.email && verificationMethod === 'email' && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                                  <span>✓</span>
+                                  <span>Verified</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        {/* Connected Phone Input - Airbnb Style */}
+                        <div className="relative border border-gray-300 rounded-lg overflow-hidden">
+                          {/* Country/Region Section */}
+                          <div className="relative border-b border-gray-200">
+                            <select 
+                              value={countryCode}
+                              onChange={(e) => setCountryCode(e.target.value)}
+                              className="w-full h-14 pl-4 pr-12 pt-5 pb-3 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
+                              onFocus={() => setCountryFocused(true)}
+                              onBlur={() => setCountryFocused(false)}
+                              disabled={verificationMethod === 'phone'}
+                            >
+                              <option value="+61">Australia (+61)</option>
+                            </select>
+                            {/* Custom dropdown arrow */}
+                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                            {(countryFocused || countryCode) && (
+                              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                Country / Region
+                              </label>
+                            )}
+                          </div>
+
+                          {/* Phone Number Section */}
+                          <div className="relative">
+                            <input
+                              ref={phoneInputRef}
+                              type="tel"
+                              value={phoneFocused || phoneNumber ? formatPhoneNumber(phoneNumber) : ''}
+                              onChange={handlePhoneChange}
+                              onFocus={handlePhoneFocus}
+                              onBlur={handlePhoneBlur}
+                              placeholder=""
+                              className={`w-full h-14 pl-16 pr-4 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                              style={{ 
+                                caretColor: 'black',
+                                fontSize: '16px',
+                                lineHeight: '1.2',
+                                fontFamily: 'inherit'
+                              }}
+                              disabled={verificationMethod === 'phone'}
+                              required
+                            />
+                            
+                            {/* Step 1: Initial state - only "Phone number" label */}
+                            {!phoneFocused && !phoneNumber && (
+                              <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                                Phone number
+                              </label>
+                            )}
+                            
+                            {/* Step 2: Focused state - label moves up, +61 and XXX XXX XXX appear */}
+                            {phoneFocused && !phoneNumber && (
+                              <>
+                                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                  Phone number
+                                </label>
+                                {/* +61 prefix */}
+                                <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  +61
+                                </div>
+                                {/* XXX XXX XXX to the right of +61 */}
+                                <div className="absolute left-16 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  XXX XXX XXX
+                                </div>
+                              </>
+                            )}
+                            
+                            {/* Step 3: Typing state - digits replace X's */}
+                            {phoneNumber && (
+                              <>
+                                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                                  Phone number
+                                </label>
+                                {/* +61 prefix */}
+                                <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  +61
+                                </div>
+                                {/* Digits to the right of +61 */}
+                                <div className="absolute left-16 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                  {formatPhoneNumber(phoneNumber)}
+                                </div>
+                                {/* Verification status */}
+                                {verificationMethod === 'phone' && (
+                                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                                    <span>✓</span>
+                                    <span>Verified</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   
                   <Button
                     onClick={() => {
@@ -677,9 +1163,11 @@ export default function AccountCheckModal({
                 // Page 2: Profile Pic + Bio
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Profile Picture
-                    </label>
+                    <div className="flex justify-center mb-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Profile Picture
+                      </label>
+                    </div>
                     <ImagePicker
                       onChange={handleImageChange}
                       initialPreviewUrl={formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : null}
@@ -692,13 +1180,27 @@ export default function AccountCheckModal({
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Bio
                     </label>
+                    <div className="relative">
                     <TextArea
                       placeholder="Tell us a bit about yourself..."
                       value={formData.bio}
-                      onChange={(e) => handleInputChange('bio', e.target.value)}
-                      rows={3}
-                      className="w-full"
-                    />
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 150) {
+                          handleInputChange('bio', value);
+                        }
+                      }}
+                      rows={4}
+                      className="w-full pr-16"
+                      maxLength={150}
+                      />
+                      {/* Character counter inside the textarea */}
+                      <div className="absolute bottom-2 right-2 pointer-events-none">
+                        <span className={`text-xs font-medium ${formData.bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
+                          {formData.bio.length}/150
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   
                   <Button

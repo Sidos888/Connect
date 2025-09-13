@@ -16,6 +16,16 @@ export default function CreateBusinessPage() {
   const [logoUrl, setLogoUrl] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
+  // Prevent body scrolling on create business page
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   React.useEffect(() => {
     if (!isHydrated) return;
     if (!personalProfile) router.replace("/onboarding");
@@ -52,7 +62,29 @@ export default function CreateBusinessPage() {
           onChange={(_, url) => setLogoUrl(url)}
         />
         <Input label="Business Name" value={name} onChange={(e) => setName(e.target.value)} required />
-        <TextArea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={4} />
+        <div>
+          <div className="relative">
+            <TextArea 
+              label="Bio" 
+              value={bio} 
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 150) {
+                  setBio(value);
+                }
+              }} 
+              rows={4} 
+              maxLength={150}
+              className="pr-16"
+            />
+            {/* Character counter inside the textarea */}
+            <div className="absolute bottom-2 right-2 pointer-events-none">
+              <span className={`text-xs font-medium ${bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
+                {bio.length}/150
+              </span>
+            </div>
+          </div>
+        </div>
         <Button type="submit" disabled={saving || !name} className="w-full">
           {saving ? "Creating…" : "Create"}
         </Button>

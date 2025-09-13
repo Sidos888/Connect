@@ -13,7 +13,7 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, user } = useAuth();
+  const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, user, signOut } = useAuth();
   
   const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-check'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -24,6 +24,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [error, setError] = useState('');
   const [emailFocused, setEmailFocused] = useState(false);
   const [countryFocused, setCountryFocused] = useState(false);
+  const [countryCode, setCountryCode] = useState('+61');
   const [verificationValue, setVerificationValue] = useState('');
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,7 +107,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError('');
     
     try {
-      const fullPhoneNumber = `+61${phoneNumber.replace(/\s/g, '')}`;
+      const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\s/g, '')}`;
       const { error } = await sendPhoneVerification(fullPhoneNumber);
       
       if (error) {
@@ -155,7 +156,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     try {
       let error;
       if (verificationMethod === 'phone') {
-        const fullPhoneNumber = `+61${phoneNumber.replace(/\s/g, '')}`;
+        const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\s/g, '')}`;
         const result = await verifyPhoneCode(fullPhoneNumber, code);
         error = result.error;
       } else {
@@ -244,13 +245,27 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       ) : step === 'account-check' ? (
         <AccountCheckModal
           isOpen={isOpen}
-          onClose={() => {
+          onClose={async () => {
+            // Sign out from Supabase to clean up partial authentication
+            try {
+              await signOut();
+            } catch (error) {
+              console.error('Error signing out during modal close:', error);
+            }
+            
             setStep('phone');
             onClose();
           }}
           verificationMethod={verificationMethod}
           verificationValue={verificationValue}
-          onResetToInitialLogin={() => {
+          onResetToInitialLogin={async () => {
+            // Sign out from Supabase to clean up partial authentication
+            try {
+              await signOut();
+            } catch (error) {
+              console.error('Error signing out during reset:', error);
+            }
+            
             // Reset to initial phone step and clear form data
             setStep('phone');
             setPhoneNumber('');
@@ -291,6 +306,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               <div className="relative">
                 <div className="relative">
                   <select 
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
                     className="w-full h-14 pl-4 pr-12 pt-5 pb-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
                     onFocus={() => setCountryFocused(true)}
                     onBlur={() => setCountryFocused(false)}
@@ -303,7 +320,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
-                  {(countryFocused || true) && (
+                  {(countryFocused || countryCode) && (
                     <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                       Country / Region
                     </label>

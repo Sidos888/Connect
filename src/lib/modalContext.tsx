@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LoginModal from '@/components/auth/LoginModal';
 import SignUpModal from '@/components/auth/SignUpModal';
+import { useAuth } from './authContext';
 
 interface ModalContextType {
   showLogin: () => void;
@@ -18,6 +19,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const router = useRouter();
+  const { signOut } = useAuth();
 
   const showLogin = () => {
     setIsLoginOpen(true);
@@ -41,7 +43,15 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       {/* Render modals at root level */}
       <LoginModal
         isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
+        onClose={async () => {
+          // Sign out to clean up any partial authentication
+          try {
+            await signOut();
+          } catch (error) {
+            console.error('Error signing out during modal close:', error);
+          }
+          setIsLoginOpen(false);
+        }}
         onProfileSetup={() => {
           setIsLoginOpen(false);
           router.push('/onboarding');
@@ -50,7 +60,15 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
 
       <SignUpModal
         isOpen={isSignUpOpen}
-        onClose={() => setIsSignUpOpen(false)}
+        onClose={async () => {
+          // Sign out to clean up any partial authentication
+          try {
+            await signOut();
+          } catch (error) {
+            console.error('Error signing out during modal close:', error);
+          }
+          setIsSignUpOpen(false);
+        }}
         onProfileSetup={() => {
           setIsSignUpOpen(false);
           router.push('/onboarding');

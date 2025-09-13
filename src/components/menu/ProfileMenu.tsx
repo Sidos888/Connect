@@ -25,17 +25,35 @@ function SimpleCard({
   );
 }
 
+// Loading overlay component
+function LoadingOverlay({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+      <div className="flex flex-col items-center space-y-6">
+        {/* Animated circle */}
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-gray-100 rounded-full"></div>
+          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-orange-600 rounded-full animate-spin"></div>
+        </div>
+        
+        {/* Loading message */}
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">{message}</h3>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Simple menu view
 function MenuView({ 
   onSettings, 
   onShare, 
-  onSignOut, 
   onViewProfile,
   currentAccount 
 }: { 
   onSettings: () => void; 
   onShare: () => void; 
-  onSignOut: () => void; 
   onViewProfile: () => void;
   currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null; 
 }) {
@@ -64,46 +82,38 @@ function MenuView({
         </button>
 
         {/* Menu items */}
-        <div className="space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+        <div className="space-y-3">
+          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
             <Bell size={20} className="text-gray-600" />
             <span className="font-medium">Notifications</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
             <Users size={20} className="text-gray-600" />
             <span className="font-medium">My Connections</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
             <Camera size={20} className="text-gray-600" />
             <span className="font-medium">Gallery</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
             <Trophy size={20} className="text-gray-600" />
             <span className="font-medium">Achievements</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
             <Bookmark size={20} className="text-gray-600" />
             <span className="font-medium">Saved</span>
           </button>
 
           <button
             onClick={onSettings}
-            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <Settings size={20} className="text-gray-600" />
             <span className="font-medium">Settings</span>
-          </button>
-
-          <button
-            onClick={onSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <LogOut size={20} className="text-gray-600" />
-            <span className="font-medium">Log out</span>
           </button>
         </div>
 
@@ -303,13 +313,27 @@ function EditProfileView({
 
           {/* Bio Field */}
           <div>
-            <TextArea
-              placeholder="Tell us about yourself..."
-              value={formData.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
-              className="w-full text-base border-gray-200 focus:border-gray-400 focus:ring-gray-400 resize-none"
-              rows={3}
-            />
+            <div className="relative">
+              <TextArea
+                placeholder="Tell us about yourself..."
+                value={formData.bio}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length <= 150) {
+                    handleInputChange('bio', value);
+                  }
+                }}
+                className="w-full text-base border-gray-200 focus:border-gray-400 focus:ring-gray-400 resize-none pr-16"
+                rows={4}
+                maxLength={150}
+              />
+              {/* Character counter inside the textarea */}
+              <div className="absolute bottom-2 right-2 pointer-events-none">
+                <span className={`text-xs font-medium ${formData.bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
+                  {formData.bio.length}/150
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -366,7 +390,7 @@ function SettingsView({
 }) {
   return (
     <SimpleCard>
-      <div className="space-y-4">
+      <div className="flex flex-col h-full">
         {/* Header with back button */}
         <div className="flex items-center gap-4 mb-6">
           <button
@@ -379,11 +403,15 @@ function SettingsView({
           <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
         </div>
         
-        {/* Settings actions */}
-        <div className="space-y-1">
+        {/* Settings content - empty space for future settings */}
+        <div className="flex-1">
+        </div>
+        
+        {/* Account actions at bottom */}
+        <div className="space-y-3 pt-6 border-t border-gray-200">
           <button
             onClick={onSignOut}
-            className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <LogOut size={20} className="text-gray-600" />
             <span className="font-medium">Sign out</span>
@@ -416,14 +444,14 @@ function SettingsView({
           ) : (
             <button
               onClick={onDeleteAccount}
-              className="w-full flex items-center gap-3 px-3 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
               <Trash2 size={20} className="text-red-600" />
               <span className="font-medium">Delete Account</span>
-          </button>
-        )}
+            </button>
+          )}
+        </div>
       </div>
-    </div>
     </SimpleCard>
   );
 }
@@ -437,6 +465,8 @@ export default function ProfileMenu() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -485,10 +515,20 @@ export default function ProfileMenu() {
   }, []);
 
   const handleSignOut = async () => {
-    await signOut();
+    setIsLoading(true);
+    setLoadingMessage('Signing out...');
     setOpen(false);
     setShowSettings(false);
     setShowProfile(false);
+    
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -496,6 +536,12 @@ export default function ProfileMenu() {
   };
 
   const confirmDeleteAccount = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Deleting account...');
+    setOpen(false);
+    setShowSettings(false);
+    setShowDeleteConfirm(false);
+    
     console.log('ProfileMenu: Starting account deletion...');
     console.log('ProfileMenu: Current state before deletion:', {
       showDeleteConfirm, 
@@ -503,26 +549,10 @@ export default function ProfileMenu() {
       showSettings 
     });
     
-    // Immediately clear local state to prevent Guard from redirecting
-    console.log('ProfileMenu: Immediately clearing local state...');
-    clearAll();
-    localStorage.removeItem('connect.app.v1');
-    localStorage.clear();
-    
-    // Set up a fallback timeout to clear local data if delete hangs
-    const fallbackTimeout = setTimeout(() => {
-      console.log('ProfileMenu: Delete operation timed out, forcing redirect...');
-      // Force a hard reload to clear all state
-      window.location.href = '/';
-    }, 2000); // 2 second fallback (reduced from 5 seconds)
-    
     try {
       console.log('ProfileMenu: Calling deleteAccount()...');
       const { error } = await deleteAccount();
       console.log('ProfileMenu: deleteAccount() completed, error:', error);
-      
-      // Clear the fallback timeout since we completed
-      clearTimeout(fallbackTimeout);
       
       if (error) {
         console.error('ProfileMenu: Delete account error:', error);
@@ -539,12 +569,7 @@ export default function ProfileMenu() {
         console.log('ProfileMenu: Account deleted successfully');
       }
       
-      // Always close modals and redirect
-      console.log('ProfileMenu: Closing modals...');
-      setOpen(false);
-      setShowSettings(false);
-      setShowDeleteConfirm(false);
-      
+      // Only clear local state AFTER successful deletion
       console.log('ProfileMenu: Clearing all local data and redirecting...');
       // Clear Zustand store
       clearAll();
@@ -552,13 +577,14 @@ export default function ProfileMenu() {
       localStorage.removeItem('connect.app.v1');
       localStorage.clear();
       
-      // Force a hard reload to clear all state and show explore page
-      window.location.href = '/';
+      // Show loading for 3 seconds before redirect
+      setTimeout(() => {
+        // Force a hard reload to clear all state and show explore page
+        window.location.href = '/';
+      }, 3000);
       
     } catch (err) {
       console.error('ProfileMenu: Unexpected error during deletion:', err);
-      // Clear the fallback timeout
-      clearTimeout(fallbackTimeout);
       
       // Even on error, clear local data and redirect
       console.log('ProfileMenu: Clearing local data due to error...');
@@ -566,12 +592,20 @@ export default function ProfileMenu() {
       localStorage.removeItem('connect.app.v1');
       localStorage.clear();
       console.log('ProfileMenu: Local data cleared due to error, redirecting...');
-      // Force a hard reload to clear all state
-      window.location.href = '/';
+      
+      // Show loading for 3 seconds before redirect
+      setTimeout(() => {
+        // Force a hard reload to clear all state
+        window.location.href = '/';
+      }, 3000);
+    } finally {
+      // Don't hide loading immediately - let it show for 3 seconds
+      setTimeout(() => {
+        setIsLoading(false);
+        setLoadingMessage('');
+      }, 3000);
     }
     
-    console.log('ProfileMenu: Setting showDeleteConfirm to false...');
-    setShowDeleteConfirm(false);
     console.log('ProfileMenu: Delete process completed');
   };
 
@@ -652,71 +686,75 @@ export default function ProfileMenu() {
   };
 
   return (
-    <div className="relative" ref={ref}>
-      {/* Profile button */}
-      <button
-        aria-label="Open menu"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-2 py-1 hover:shadow-md transition-shadow focus:outline-none"
-      >
-        <Menu size={14} className="text-gray-700" />
-        <Avatar 
-          src={currentAccount?.avatarUrl ?? undefined} 
-          name={currentAccount?.name ?? "User"} 
-          size={32} 
-        />
-      </button>
-
-      {/* Dropdown menu */}
-      {open && (
-        <div role="menu" className="absolute right-0 z-50 mt-2">
-          {showSettings ? (
-            <SettingsView
-              onBack={() => setShowSettings(false)}
-              onSignOut={handleSignOut}
-              onDeleteAccount={handleDeleteAccount}
-              showDeleteConfirm={showDeleteConfirm}
-              onConfirmDelete={confirmDeleteAccount}
-              onCancelDelete={cancelDeleteAccount}
-            />
-          ) : showEditProfile ? (
-            <EditProfileView
-              onBack={() => setShowEditProfile(false)}
-              onSave={handleSaveProfile}
-              currentAccount={currentAccount}
-            />
-          ) : showProfile ? (
-            <ProfileView
-              onBack={() => setShowProfile(false)}
-              onEditProfile={handleEditProfile}
-              onShare={() => {
-                setOpen(false);
-                setShowShareModal(true);
-              }}
-              currentAccount={currentAccount}
-            />
-          ) : (
-            <MenuView
-              onSettings={() => setShowSettings(true)}
-              onShare={() => {
-                      setOpen(false);
-                setShowShareModal(true);
-              }}
-              onSignOut={handleSignOut}
-              onViewProfile={handleViewProfile}
-              currentAccount={currentAccount}
-            />
-          )}
-        </div>
-      )}
+    <>
+      {/* Loading overlay */}
+      {isLoading && <LoadingOverlay message={loadingMessage} />}
       
-      {/* Share Profile Modal */}
-      <ShareProfileModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-      />
-    </div>
+      <div className="relative" ref={ref}>
+        {/* Profile button */}
+        <button
+          aria-label="Open menu"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen(v => !v)}
+          className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-2 py-1 hover:shadow-md transition-shadow focus:outline-none"
+        >
+          <Menu size={14} className="text-gray-700" />
+          <Avatar 
+            src={currentAccount?.avatarUrl ?? undefined} 
+            name={currentAccount?.name ?? "User"} 
+            size={32} 
+          />
+        </button>
+
+        {/* Dropdown menu */}
+        {open && (
+          <div role="menu" className="absolute right-0 z-50 mt-2">
+            {showSettings ? (
+              <SettingsView
+                onBack={() => setShowSettings(false)}
+                onSignOut={handleSignOut}
+                onDeleteAccount={handleDeleteAccount}
+                showDeleteConfirm={showDeleteConfirm}
+                onConfirmDelete={confirmDeleteAccount}
+                onCancelDelete={cancelDeleteAccount}
+              />
+            ) : showEditProfile ? (
+              <EditProfileView
+                onBack={() => setShowEditProfile(false)}
+                onSave={handleSaveProfile}
+                currentAccount={currentAccount}
+              />
+            ) : showProfile ? (
+              <ProfileView
+                onBack={() => setShowProfile(false)}
+                onEditProfile={handleEditProfile}
+                onShare={() => {
+                  setOpen(false);
+                  setShowShareModal(true);
+                }}
+                currentAccount={currentAccount}
+              />
+            ) : (
+              <MenuView
+                onSettings={() => setShowSettings(true)}
+                onShare={() => {
+                        setOpen(false);
+                  setShowShareModal(true);
+                }}
+                onViewProfile={handleViewProfile}
+                currentAccount={currentAccount}
+              />
+            )}
+          </div>
+        )}
+        
+        {/* Share Profile Modal */}
+        <ShareProfileModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      </div>
+    </>
   );
 }
