@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
+import { useAppStore } from "@/lib/store";
 
 export type TabItem = {
   href: string;
@@ -16,12 +17,23 @@ type Props = {
 
 export default function TabBar({ items }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { resetMenuState } = useAppStore();
   
   const isActive = (href: string) => {
     if (href === "/") {
       return pathname === "/";
     }
     return pathname === href || pathname.startsWith(href + "/");
+  };
+
+  const handleMenuClick = (e: React.MouseEvent, href: string) => {
+    if (href === "/menu") {
+      e.preventDefault();
+      resetMenuState();
+      router.push("/menu");
+    }
+    // For other tabs, let the Link component handle navigation normally
   };
   
   return (
@@ -31,7 +43,11 @@ export default function TabBar({ items }: Props) {
           const active = isActive(item.href);
           return (
             <li key={item.href} className="text-center">
-              <Link href={item.href} className={`block py-2 px-1 text-xs ${active ? "text-brand" : "text-black"}`}>
+              <Link 
+                href={item.href} 
+                className={`block py-2 px-1 text-xs ${active ? "text-brand" : "text-black"}`}
+                onClick={item.href === "/menu" ? (e) => handleMenuClick(e, item.href) : undefined}
+              >
                 <div className="flex flex-col items-center gap-0.5">
                   <span aria-hidden className="h-6 w-6">
                     {item.icon}

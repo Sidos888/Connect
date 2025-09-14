@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function ExplorePage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function ExplorePage() {
   // Show loading while redirecting
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+      <LoadingSpinner />
     </div>
   );
 }

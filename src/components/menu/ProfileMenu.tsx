@@ -9,6 +9,7 @@ import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 // Simple, clean card component that can be easily replicated
 function SimpleCard({
@@ -30,11 +31,8 @@ function LoadingOverlay({ message }: { message: string }) {
   return (
     <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
       <div className="flex flex-col items-center space-y-6">
-        {/* Animated circle */}
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-gray-100 rounded-full"></div>
-          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-orange-600 rounded-full animate-spin"></div>
-        </div>
+        {/* Loading spinner */}
+        <LoadingSpinner size="lg" />
         
         {/* Loading message */}
         <div className="text-center">
@@ -283,16 +281,6 @@ function EditProfileView({
               size={120}
             />
           </div>
-          <button
-            onClick={() => {
-              // Trigger the image picker
-              const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-              if (fileInput) fileInput.click();
-            }}
-            className="mt-2 text-sm font-medium text-gray-600 hover:text-gray-800 underline transition-colors"
-          >
-            Edit Image
-          </button>
         </div>
 
         {/* Form Fields */}
@@ -376,79 +364,164 @@ function SettingsView({
   onSignOut, 
   onDeleteAccount, 
   showDeleteConfirm,
+  showFinalConfirm,
   onConfirmDelete,
-  onCancelDelete
+  onCancelDelete,
+  onProceedToFinalConfirm,
+  onBackToFirstConfirm,
+  onBackToMenu,
+  isDeletingAccount,
+  personalProfile
 }: { 
   onBack: () => void; 
   onSignOut: () => void; 
   onDeleteAccount: () => void; 
   showDeleteConfirm: boolean;
+  showFinalConfirm: boolean;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
+  onProceedToFinalConfirm: () => void;
+  onBackToFirstConfirm: () => void;
+  onBackToMenu: () => void;
+  isDeletingAccount: boolean;
+  personalProfile: any;
 }) {
   return (
     <SimpleCard>
       <div className="flex flex-col h-full">
-        {/* Header with back button */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="Back to menu"
-          >
-            <ChevronLeft size={20} className="text-gray-700" />
-          </button>
-          <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
-        </div>
-        
-        {/* Settings content - empty space for future settings */}
-        <div className="flex-1">
-        </div>
-        
-        {/* Account actions at bottom */}
-        <div className="space-y-3 pt-6 border-t border-gray-200">
-          <button
-            onClick={onSignOut}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <LogOut size={20} className="text-gray-600" />
-            <span className="font-medium">Sign out</span>
-          </button>
-          
-          {showDeleteConfirm ? (
-            <div className="w-full p-6 text-center bg-red-50 rounded-lg border border-red-200">
-              <div className="mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Trash2 size={24} className="text-red-600" />
+        {showDeleteConfirm ? (
+          <div className="w-full h-full flex flex-col">
+            {isDeletingAccount ? (
+              <div className="flex-1 flex flex-col justify-center items-center space-y-6">
+                {/* Loading animation */}
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-gray-100 rounded-full"></div>
+                  <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-red-500 rounded-full animate-spin"></div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Account</h3>
-                <p className="text-sm text-gray-700">Are you sure you want to delete your account? This action cannot be undone.</p>
+                
+                {/* Loading message */}
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-900">Deleting Account</h3>
+                  <p className="text-gray-600 mt-2">Please wait while we remove your data...</p>
+                </div>
               </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={onCancelDelete}
-                  className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg transition-colors border border-gray-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirmDelete}
-                  className="flex-1 px-4 py-3 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                >
-                  Delete Account
-                </button>
+            ) : showFinalConfirm ? (
+              <div className="flex flex-col h-full px-4 py-6">
+                {/* Subtext at the top */}
+                <div className="text-center mb-6">
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    This action cannot be undone and all your data will be permanently removed.
+                  </p>
+                </div>
+                
+                {/* Profile card in the middle */}
+                <div className="flex-1 flex items-center justify-center mb-6">
+                  <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-3 w-full max-w-sm">
+                    <div className="flex items-center space-x-3">
+                      <Avatar
+                        src={personalProfile?.avatarUrl ?? undefined}
+                        name={personalProfile?.name ?? "User"}
+                        size={48}
+                      />
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold text-gray-900">
+                          {personalProfile?.name ?? "Your Name"}
+                        </h3>
+                        <p className="text-xs text-gray-500">Personal Account</p>
+                      </div>
+                      <div className="text-red-500 text-xs font-medium">
+                        Delete
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Action buttons at the bottom */}
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={onConfirmDelete}
+                    className="w-full px-6 py-4 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                  >
+                    Delete Account
+                  </button>
+                        <button
+                          onClick={onBackToMenu}
+                          className="w-full py-3 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors underline"
+                        >
+                          Cancel
+                        </button>
+                </div>
               </div>
+            ) : (
+              <div className="flex flex-col h-full px-4 py-6">
+                {/* Title at the top */}
+                <div className="text-center mb-3">
+                  <h1 className="text-2xl font-semibold text-gray-900">Delete Account</h1>
+                </div>
+                
+                {/* Subtext in the middle - takes up remaining space */}
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-sm text-gray-600 leading-relaxed text-center max-w-sm">
+                    Are you sure you want to delete your account?
+                  </p>
+                </div>
+                
+                {/* Action buttons at the bottom */}
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={onCancelDelete}
+                    className="flex-1 px-6 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onProceedToFinalConfirm}
+                    className="flex-1 px-6 py-3 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Header with back button */}
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                onClick={onBack}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Back to menu"
+              >
+                <ChevronLeft size={20} className="text-gray-700" />
+              </button>
+              <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
             </div>
-          ) : (
-            <button
-              onClick={onDeleteAccount}
-              className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <Trash2 size={20} className="text-red-600" />
-              <span className="font-medium">Delete Account</span>
-            </button>
-          )}
-        </div>
+            
+            {/* Settings content - empty space for future settings */}
+            <div className="flex-1">
+            </div>
+            
+            {/* Account actions at bottom */}
+            <div className="space-y-3 pt-6 border-t border-gray-200">
+              <button
+                onClick={onSignOut}
+                className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <LogOut size={20} className="text-gray-600" />
+                <span className="font-medium">Log out</span>
+              </button>
+              
+              <button
+                onClick={onDeleteAccount}
+                className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 size={20} className="text-red-500" />
+                <span className="font-medium">Delete Account</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </SimpleCard>
   );
@@ -458,13 +531,16 @@ export default function ProfileMenu() {
   const { personalProfile, clearAll, setPersonalProfile } = useAppStore();
   const { signOut, deleteAccount, updateProfile, uploadAvatar } = useAuth();
   const [open, setOpen] = useState(false);
+  const [showDim, setShowDim] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -476,32 +552,107 @@ export default function ProfileMenu() {
     bio: personalProfile?.bio
   };
 
-  // Close menu when navigating
+
+  // Close menu when navigating - immediate hide
   useEffect(() => {
     setOpen(false);
+    setShowMenu(false); // Immediately hide menu on navigation
     setShowSettings(false);
     setShowProfile(false);
     setShowEditProfile(false);
+    setShowDeleteConfirm(false);
+    setShowFinalConfirm(false);
   }, [pathname]);
+
+  // Prevent scroll when menu is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [open]);
+
+  // Handle dimming transition
+  useEffect(() => {
+    if (open) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setShowDim(true);
+      }, 10);
+      return () => clearTimeout(timer);
+    } else {
+      // Start undim transition immediately, but keep overlay visible during transition
+      setShowDim(false);
+    }
+  }, [open]);
+
+  // Keep overlay visible during undim transition
+  const [showOverlay, setShowOverlay] = useState(false);
+  
+  useEffect(() => {
+    if (open) {
+      setShowOverlay(true);
+    } else {
+      // Keep overlay visible during undim transition
+      const timer = setTimeout(() => {
+        setShowOverlay(false);
+      }, 500); // Match the transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
+  // Handle menu visibility - completely independent of transitions
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Update resetAllStates to immediately hide menu
+  const resetAllStates = () => {
+    setOpen(false);
+    setShowMenu(false); // Immediately hide menu
+    // Also directly hide menu via ref for instant response
+    if (menuRef.current) {
+      menuRef.current.style.display = 'none';
+    }
+    setShowSettings(false);
+    setShowProfile(false);
+    setShowEditProfile(false);
+    setShowDeleteConfirm(false);
+    setShowFinalConfirm(false);
+  };
+
+  // Handle ESC key to close menu
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && open) {
+        resetAllStates();
+      }
+    };
+
+    if (open) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
   // Close menu when clicking outside
   useEffect(() => {
     const onClickAway = (e: MouseEvent) => { 
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setShowSettings(false);
-        setShowProfile(false);
-        setShowEditProfile(false);
-        setShowDeleteConfirm(false);
+        resetAllStates();
       }
     };
     const onEsc = (e: KeyboardEvent) => { 
       if (e.key === "Escape") {
-        setOpen(false);
-        setShowSettings(false);
-        setShowProfile(false);
-        setShowEditProfile(false);
-        setShowDeleteConfirm(false);
+        resetAllStates();
       }
     };
     document.addEventListener("mousedown", onClickAway);
@@ -533,19 +684,13 @@ export default function ProfileMenu() {
     setShowDeleteConfirm(true);
   };
 
+  const proceedToFinalConfirm = () => {
+    setShowFinalConfirm(true);
+  };
+
   const confirmDeleteAccount = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Deleting account...');
-    setOpen(false);
-    setShowSettings(false);
-    setShowDeleteConfirm(false);
-    
     console.log('ProfileMenu: Starting account deletion...');
-    console.log('ProfileMenu: Current state before deletion:', {
-      showDeleteConfirm, 
-      open, 
-      showSettings 
-    });
+    setIsDeletingAccount(true);
     
     try {
       console.log('ProfileMenu: Calling deleteAccount()...');
@@ -554,55 +699,51 @@ export default function ProfileMenu() {
       
       if (error) {
         console.error('ProfileMenu: Delete account error:', error);
-        // Show error to user - don't clear data on error
         alert('Error deleting account: ' + error.message);
-        return; // Don't proceed with logout
-      } else {
-        console.log('ProfileMenu: Account deleted successfully');
+        setIsDeletingAccount(false);
+        return;
       }
       
-      // Only clear local state AFTER successful deletion
-      console.log('ProfileMenu: Clearing all local data and redirecting...');
-      // Clear Zustand store
-      clearAll();
-      // Clear localStorage
-      localStorage.removeItem('connect.app.v1');
-      localStorage.clear();
+      console.log('ProfileMenu: Account deleted successfully, waiting 2 seconds...');
       
-      // Show loading for 3 seconds before redirect
-      setTimeout(() => {
-        // Force a hard reload to clear all state and show explore page
-        window.location.href = '/';
-      }, 3000);
+      // Wait 2 seconds for the loading animation
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-    } catch (err) {
-      console.error('ProfileMenu: Unexpected error during deletion:', err);
-      
-      // Even on error, clear local data and redirect
-      console.log('ProfileMenu: Clearing local data due to error...');
+      // Clear all local data
+      console.log('ProfileMenu: Clearing all local data...');
       clearAll();
       localStorage.removeItem('connect.app.v1');
       localStorage.clear();
-      console.log('ProfileMenu: Local data cleared due to error, redirecting...');
       
-      // Show loading for 3 seconds before redirect
-      setTimeout(() => {
-        // Force a hard reload to clear all state
-        window.location.href = '/';
-      }, 3000);
-    } finally {
-      // Don't hide loading immediately - let it show for 3 seconds
-      setTimeout(() => {
-        setIsLoading(false);
-        setLoadingMessage('');
-      }, 3000);
+      // Close modal and redirect to explore page (not signed in)
+      console.log('ProfileMenu: Closing modal and redirecting to explore...');
+      setOpen(false);
+      setShowSettings(false);
+      setShowDeleteConfirm(false);
+      setShowFinalConfirm(false);
+      router.push('/explore');
+      
+    } catch (error) {
+      console.error('ProfileMenu: Unexpected error during account deletion:', error);
+      alert('An unexpected error occurred while deleting your account');
+      setIsDeletingAccount(false);
     }
-    
-    console.log('ProfileMenu: Delete process completed');
   };
 
   const cancelDeleteAccount = () => {
     setShowDeleteConfirm(false);
+    setShowFinalConfirm(false);
+  };
+
+  const backToFirstConfirm = () => {
+    setShowFinalConfirm(false);
+  };
+
+  const backToMenu = () => {
+    setShowDeleteConfirm(false);
+    setShowFinalConfirm(false);
+    setShowSettings(false);
+    // Keep the menu open - don't set setOpen(false)
   };
 
   const handleViewProfile = () => {
@@ -653,8 +794,12 @@ export default function ProfileMenu() {
 
       console.log('handleSaveProfile: Updating profile with data:', updatedProfile);
 
-      // Update in Supabase
-      const { error } = await updateProfile(updatedProfile);
+      // Update in Supabase - pass the correct format expected by updateProfile
+      const { error } = await updateProfile({
+        name: data.name,
+        bio: data.bio,
+        avatarUrl: avatarUrl
+      });
       
       if (error) {
         console.error('handleSaveProfile: Error updating profile in Supabase:', error);
@@ -688,8 +833,18 @@ export default function ProfileMenu() {
           aria-label="Open menu"
           aria-haspopup="menu"
           aria-expanded={open}
-          onClick={() => setOpen(v => !v)}
-          className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-2 py-1 hover:shadow-md transition-shadow focus:outline-none"
+          onClick={() => {
+            const newOpen = !open;
+            setOpen(newOpen);
+            setShowMenu(newOpen);
+            // Also directly show/hide menu via ref for instant response
+            if (menuRef.current) {
+              menuRef.current.style.display = newOpen ? 'block' : 'none';
+            }
+          }}
+          className={`flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-2 py-1 hover:shadow-md transition-all duration-700 ease-in-out focus:outline-none relative z-50 ${
+            open ? 'opacity-60' : 'opacity-100'
+          }`}
         >
           <Menu size={14} className="text-gray-700" />
           <Avatar 
@@ -699,17 +854,35 @@ export default function ProfileMenu() {
           />
         </button>
 
+        {/* Full page dimming overlay */}
+        {showOverlay && (
+          <div 
+            className="fixed inset-0 z-40 transition-opacity duration-500 ease-in-out"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              opacity: showDim ? 1 : 0
+            }}
+            onClick={resetAllStates}
+          />
+        )}
+
         {/* Dropdown menu */}
-        {open && (
-          <div role="menu" className="absolute right-0 z-50 mt-2">
+        {showMenu && (
+          <div ref={menuRef} role="menu" className="profile-menu-card absolute right-0 z-50 mt-2">
             {showSettings ? (
               <SettingsView
                 onBack={() => setShowSettings(false)}
                 onSignOut={handleSignOut}
                 onDeleteAccount={handleDeleteAccount}
                 showDeleteConfirm={showDeleteConfirm}
+                showFinalConfirm={showFinalConfirm}
                 onConfirmDelete={confirmDeleteAccount}
                 onCancelDelete={cancelDeleteAccount}
+                onProceedToFinalConfirm={proceedToFinalConfirm}
+                onBackToFirstConfirm={backToFirstConfirm}
+                onBackToMenu={backToMenu}
+                isDeletingAccount={isDeletingAccount}
+                personalProfile={personalProfile}
               />
             ) : showEditProfile ? (
               <EditProfileView
@@ -738,7 +911,7 @@ export default function ProfileMenu() {
                 currentAccount={currentAccount}
               />
             )}
-          </div>
+            </div>
         )}
         
         {/* Share Profile Modal */}

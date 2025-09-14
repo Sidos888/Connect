@@ -15,6 +15,7 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const isChatPage = pathname.startsWith('/chat');
+  const isSettingsPage = pathname === '/settings';
   
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore'];
@@ -45,9 +46,11 @@ export default function AppShell({ children }: AppShellProps) {
             {children}
           </div>
           {/* Mobile: Bottom Navigation */}
-          <div className="lg:hidden">
-            <MobileBottomNavigation />
-          </div>
+          {!isSettingsPage && (
+            <div className="lg:hidden">
+              <MobileBottomNavigation />
+            </div>
+          )}
         </div>
       );
     }
@@ -65,9 +68,11 @@ export default function AppShell({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        <div className="lg:hidden">
-          <MobileBottomNavigation />
-        </div>
+        {!isSettingsPage && (
+          <div className="lg:hidden">
+            <MobileBottomNavigation />
+          </div>
+        )}
       </div>
     );
   }
@@ -88,9 +93,11 @@ export default function AppShell({ children }: AppShellProps) {
           </ProtectedRoute>
         </div>
         {/* Mobile: Bottom Navigation */}
-        <div className="lg:hidden">
-          <MobileBottomNavigation />
-        </div>
+        {!isSettingsPage && (
+          <div className="lg:hidden">
+            <MobileBottomNavigation />
+          </div>
+        )}
       </div>
     );
   }
@@ -110,9 +117,11 @@ export default function AppShell({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      <div className="lg:hidden">
-        <MobileBottomNavigation />
-      </div>
+      {!isSettingsPage && (
+        <div className="lg:hidden">
+          <MobileBottomNavigation />
+        </div>
+      )}
     </div>
   );
 }

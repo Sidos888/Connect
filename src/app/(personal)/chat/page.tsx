@@ -10,6 +10,7 @@ import ChatLayout from "./ChatLayout";
 import { useAuth } from "@/lib/authContext";
 import AuthButton from "@/components/auth/AuthButton";
 import { useModal } from "@/lib/modalContext";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function MessagesPage() {
   const { conversations, seedConversations, clearAll } = useAppStore();
@@ -111,7 +112,7 @@ export default function MessagesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+        <LoadingSpinner />
       </div>
     );
   }

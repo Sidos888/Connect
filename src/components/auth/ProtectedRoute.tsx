@@ -1,11 +1,12 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { usePathname } from 'next/navigation';
 import AuthButton from './AuthButton';
 import { useModal } from '@/lib/modalContext';
 import { useAppStore } from '@/lib/store';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,10 +17,13 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, fallback, title, description, buttonText }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
-  const { personalProfile, isHydrated } = useAppStore();
+  const { user, loading, loadUserProfile, createProfileIfNeeded, clearProfileCache } = useAuth();
+  const { personalProfile, isHydrated, setPersonalProfile } = useAppStore();
   const { showLogin } = useModal();
   const pathname = usePathname();
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [profileLoadTimeout, setProfileLoadTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [forceStopLoading, setForceStopLoading] = useState(false);
 
   // Get custom messages based on the current path if props are not provided
   const getCustomMessages = () => {
@@ -61,28 +65,92 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   const { title: displayTitle, description: displayDescription, buttonText: displayButtonText } = getCustomMessages();
 
-  // Debug logging to see what's happening
-  console.log('ProtectedRoute Debug:', {
-    user: user ? 'SIGNED IN' : 'NOT SIGNED IN',
-    userId: user?.id,
-    loading,
-    isHydrated,
-    personalProfile: personalProfile ? 'EXISTS' : 'NULL',
-    personalProfileId: personalProfile?.id,
-    pathname,
-    title,
-    description,
-    buttonText,
-    displayTitle,
-    displayDescription,
-    displayButtonText
-  });
+  // Load profile when user signs in - always fetch fresh data from Supabase
+  useEffect(() => {
+    const loadProfileIfNeeded = async () => {
+      if (user && !isLoadingProfile && isHydrated) {
+        console.log('ProtectedRoute: User authenticated, fetching fresh profile from Supabase...');
+        
+        setIsLoadingProfile(true);
+        
+        // Set a timeout to prevent infinite loading
+        const timeout = setTimeout(() => {
+          console.warn('ProtectedRoute: Profile loading timeout, forcing stop');
+          setForceStopLoading(true);
+          setIsLoadingProfile(false);
+        }, 5000); // 5 second timeout
+        
+        setProfileLoadTimeout(timeout);
+        
+        try {
+          // Clear any cached profile data to ensure we get fresh data
+          clearProfileCache();
+          
+          const { profile, error } = await loadUserProfile();
+          if (error) {
+            console.error('ProtectedRoute: Error loading profile:', error);
+            // Don't block the UI if profile loading fails - user can still use the app
+          } else if (profile) {
+            console.log('ProtectedRoute: Fresh profile loaded from Supabase:', profile);
+            setPersonalProfile(profile);
+          } else {
+            console.log('ProtectedRoute: No profile found for user - attempting to create one...');
+            // Try to create a basic profile if none exists
+            const { error: createError } = await createProfileIfNeeded();
+            if (createError) {
+              console.error('ProtectedRoute: Error creating profile:', createError);
+            } else {
+              console.log('ProtectedRoute: Profile created, reloading...');
+              // Try to load the profile again after creating it
+              const { profile: newProfile, error: reloadError } = await loadUserProfile();
+              if (!reloadError && newProfile) {
+                console.log('ProtectedRoute: New profile loaded successfully:', newProfile);
+                setPersonalProfile(newProfile);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('ProtectedRoute: Unexpected error loading profile:', error);
+        } finally {
+          // Clear timeout and stop loading
+          if (profileLoadTimeout) {
+            clearTimeout(profileLoadTimeout);
+            setProfileLoadTimeout(null);
+          }
+          setIsLoadingProfile(false);
+        }
+      }
+    };
+
+    loadProfileIfNeeded();
+  }, [user, isHydrated]); // Removed isLoadingProfile from dependencies to prevent loops
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (profileLoadTimeout) {
+        clearTimeout(profileLoadTimeout);
+      }
+    };
+  }, [profileLoadTimeout]);
+
+  // Debug logging to see what's happening (reduced to prevent spam)
+  if (user && !personalProfile) {
+    console.log('ProtectedRoute Debug:', {
+      user: 'SIGNED IN',
+      userId: user?.id,
+      userEmail: user?.email,
+      personalProfile: 'NULL',
+      isLoadingProfile,
+      pathname
+    });
+  }
 
   // Wait for store to hydrate
   if (!isHydrated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+        <LoadingSpinner />
       </div>
     );
   }
@@ -90,7 +158,19 @@ export default function ProtectedRoute({ children, fallback, title, description,
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  // Show loading for profile only for a limited time, then show content anyway
+  if (isLoadingProfile && !forceStopLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <LoadingSpinner className="mx-auto mb-4" />
+          <p className="text-sm text-gray-600">Loading profile...</p>
+        </div>
       </div>
     );
   }
@@ -124,17 +204,12 @@ export default function ProtectedRoute({ children, fallback, title, description,
     );
   }
 
-  // User is authenticated but no profile - this shouldn't happen if guard is working
-  if (user && !personalProfile) {
-    console.log('ProtectedRoute: User authenticated but no profile - redirecting to onboarding');
-    // Redirect to onboarding to complete profile
-    window.location.href = '/onboarding';
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
-      </div>
-    );
+  // User is authenticated - show content (profile is optional)
+  if (user) {
+    console.log('ProtectedRoute: User authenticated, showing content');
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  // This should never be reached due to the !user check above
+  return null;
 }

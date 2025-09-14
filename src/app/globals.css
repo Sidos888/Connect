@@ -45,6 +45,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+
+
 /* Utilities */
 .safe-area {
   padding-top: env(safe-area-inset-top);
@@ -83,4 +85,9 @@ body {
 nav:not(.tabbar-nav) {
   border: none !important;
   box-shadow: none !important;
+}
+
+/* Hide bottom navigation when modal is open */
+body:has(.modal-open) .tabbar-nav {
+  display: none !important;
 }

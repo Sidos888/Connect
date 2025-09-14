@@ -1,17 +1,196 @@
 "use client";
 
+import { useState } from "react";
 import Button from "@/components/Button";
 import { useAppStore } from "@/lib/store";
+import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
 import { ChevronLeftIcon } from "@/components/icons";
+import { LogOut, Trash2 } from "lucide-react";
+import Avatar from "@/components/Avatar";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { clearAll } = useAppStore();
+  const { clearAll, personalProfile } = useAppStore();
+  const { signOut, deleteAccount } = useAuth();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showFinalConfirm, setShowFinalConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      clearAll();
+      router.replace("/onboarding");
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Fallback to local clear
+      clearAll();
+      router.replace("/onboarding");
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const proceedToFinalConfirm = () => {
+    setShowFinalConfirm(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    console.log('Settings: Starting account deletion...');
+    setIsDeletingAccount(true);
+    
+    try {
+      console.log('Settings: Calling deleteAccount()...');
+      const { error } = await deleteAccount();
+      console.log('Settings: deleteAccount() completed, error:', error);
+      
+      if (error) {
+        console.error('Settings: Delete account error:', error);
+        alert('Error deleting account: ' + error.message);
+        setIsDeletingAccount(false);
+        return;
+      }
+      
+      console.log('Settings: Account deleted successfully, waiting 2 seconds...');
+      
+      // Wait 2 seconds to show the loading state
+      setTimeout(() => {
+        console.log('Settings: Clearing local data and redirecting...');
+        clearAll();
+        localStorage.clear();
+        sessionStorage.clear();
+        router.replace("/");
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Settings: Unexpected error during account deletion:', error);
+      alert('An unexpected error occurred. Please try again.');
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const cancelDeleteAccount = () => {
+    setShowDeleteConfirm(false);
+    setShowFinalConfirm(false);
+  };
+
+  const backToFirstConfirm = () => {
+    setShowFinalConfirm(false);
+  };
+
+  if (showDeleteConfirm) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-4 p-4 border-b border-gray-200">
+          <button
+            onClick={cancelDeleteAccount}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Back to settings"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+          <h1 className="text-xl font-semibold">Delete Account</h1>
+        </div>
+
+        <div className="flex-1 flex flex-col px-4 py-6">
+          {isDeletingAccount ? (
+            <div className="flex-1 flex flex-col justify-center items-center space-y-6">
+              {/* Loading animation */}
+              <LoadingSpinner size="lg" />
+              
+              {/* Loading message */}
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-gray-900">Deleting Account</h3>
+                <p className="text-gray-600 mt-2">Please wait while we remove your data...</p>
+              </div>
+            </div>
+          ) : showFinalConfirm ? (
+            <div className="flex flex-col h-full">
+              {/* Subtext at the top */}
+              <div className="text-center mb-6">
+                <p className="text-base text-gray-600 leading-relaxed">
+                  This action cannot be undone and all your data will be permanently removed.
+                </p>
+              </div>
+              
+              {/* Profile card in the middle */}
+              <div className="flex-1 flex items-center justify-center mb-6">
+                <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-3 w-full max-w-sm">
+                  <div className="flex items-center space-x-3">
+                    <Avatar
+                      src={personalProfile?.avatarUrl ?? undefined}
+                      name={personalProfile?.name ?? "User"}
+                      size={48}
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-gray-900">
+                        {personalProfile?.name ?? "Your Name"}
+                      </h3>
+                      <p className="text-xs text-gray-500">Personal Account</p>
+                    </div>
+                    <div className="text-red-500 text-xs font-medium">
+                      Delete
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action buttons at the bottom */}
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={confirmDeleteAccount}
+                  className="w-full px-6 py-4 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                >
+                  Delete Account
+                </button>
+                <button
+                  onClick={cancelDeleteAccount}
+                  className="w-full py-3 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col h-full">
+              {/* Subtext in the middle - takes up remaining space */}
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-sm text-gray-600 leading-relaxed text-center max-w-sm">
+                  Are you sure you want to delete your account?
+                </p>
+              </div>
+              
+              {/* Action buttons at the bottom */}
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={cancelDeleteAccount}
+                  className="flex-1 px-6 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={proceedToFinalConfirm}
+                  className="flex-1 px-6 py-3 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
+    <div className="lg:hidden min-h-screen bg-white flex flex-col -mx-4 -my-6">
+      {/* Header */}
+      <div className="flex items-center gap-4 p-4 border-b border-gray-200">
         <button
           type="button"
           onClick={() => router.back()}
@@ -20,40 +199,30 @@ export default function SettingsPage() {
         >
           <ChevronLeftIcon className="h-5 w-5" />
         </button>
-        <h1 className="text-2xl font-semibold">Settings</h1>
       </div>
 
-      <section className="space-y-3">
-        <div className="text-sm text-neutral-600">Account</div>
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => {
-            clearAll();
-            router.replace("/onboarding");
-          }}
+      {/* Settings content - empty space for future settings */}
+      <div className="flex-1">
+      </div>
+      
+      {/* Account actions at bottom */}
+      <div className="space-y-3 p-4 pt-6 border-t border-gray-200">
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
         >
-          Sign out (clear local)
-        </Button>
+          <LogOut size={20} className="text-gray-600" />
+          <span className="font-medium">Log out</span>
+        </button>
         
-        <Button
-          variant="destructive"
-          className="w-full"
-          onClick={() => {
-            if (confirm('Are you sure you want to delete your account? This will remove all data and cannot be undone.')) {
-              // Clear all local data
-              clearAll();
-              // Clear any stored auth data
-              localStorage.clear();
-              sessionStorage.clear();
-              // Redirect to home
-              router.replace("/");
-            }
-          }}
+        <button
+          onClick={handleDeleteAccount}
+          className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
-          Delete Account
-        </Button>
-      </section>
+          <Trash2 size={20} className="text-red-500" />
+          <span className="font-medium">Delete Account</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/authContext';
+import { supabase } from '@/lib/supabaseClient';
 import VerificationModal from './VerificationModal';
 import AccountCheckModal from './AccountCheckModal';
 
@@ -173,7 +174,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       // Show account check modal
       console.log('LoginModal: Verification successful, showing AccountCheckModal');
       setVerificationValue(verificationMethod === 'phone' ? phoneNumber : email);
-      setStep('account-check');
+      
+      // Small delay to ensure user state is updated in AuthContext
+      setTimeout(() => {
+        console.log('LoginModal: Setting step to account-check after verification');
+        setStep('account-check');
+      }, 100);
     } catch {
       setError('Invalid verification code');
     } finally {
@@ -246,11 +252,24 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         <AccountCheckModal
           isOpen={isOpen}
           onClose={async () => {
-            // Sign out from Supabase to clean up partial authentication
-            try {
-              await signOut();
-            } catch (error) {
-              console.error('Error signing out during modal close:', error);
+            console.log('LoginModal: onClose called');
+            // Check session directly instead of user state to avoid timing issues
+            const { data: { session } } = await supabase.auth.getSession();
+            console.log('LoginModal: Session check in onClose:', { 
+              hasSession: !!session, 
+              userId: session?.user?.id,
+              userEmail: session?.user?.email 
+            });
+            
+            if (!session) {
+              console.log('LoginModal: No session found, signing out');
+              try {
+                await signOut();
+              } catch (error) {
+                console.error('Error signing out during modal close:', error);
+              }
+            } else {
+              console.log('LoginModal: Session found, NOT signing out');
             }
             
             setStep('phone');

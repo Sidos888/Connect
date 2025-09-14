@@ -11,8 +11,15 @@ export function getSupabaseClient(): SupabaseClient | null {
     console.error('Missing Supabase environment variables');
     return null;
   }
-  client = createClient(url, anon);
-  console.log('Supabase client created successfully');
+  client = createClient(url, anon, {
+    auth: {
+      persistSession: true,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+  console.log('Supabase client created successfully with persistence');
   return client;
 }
 

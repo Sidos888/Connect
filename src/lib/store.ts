@@ -100,6 +100,15 @@ export const useAppStore = create<FullStore>((set, get) => ({
     saveToLocalStorage({ personalProfile: null, businesses: [], context: { type: "personal" }, conversations: [] });
   },
 
+  resetMenuState: () => {
+    // This will be used to reset menu state when navigating to menu
+    // The actual state reset will be handled in the menu component
+    // We'll use a custom event to notify the menu component
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent('resetMenuState'));
+    }
+  },
+
   seedConversations: () => {
     console.log('seedConversations called, current length:', get().conversations.length);
     if (get().conversations.length) {

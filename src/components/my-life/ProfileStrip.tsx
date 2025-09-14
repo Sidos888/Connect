@@ -10,6 +10,8 @@ type Props = {
 };
 
 export default function ProfileStrip({ name, avatarUrl, action }: Props) {
+  console.log('ProfileStrip component:', { name, avatarUrl });
+  
   return (
     <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-4 grid grid-cols-[40px_1fr_40px] items-center">
       <div className="flex items-center"><Avatar src={avatarUrl ?? undefined} name={name} size={36} /></div>

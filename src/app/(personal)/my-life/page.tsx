@@ -14,16 +14,19 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function Page() {
   const { personalProfile, context } = useAppStore();
+  
+  console.log('My Life page - personalProfile:', personalProfile);
+  console.log('My Life page - avatarUrl:', personalProfile?.avatarUrl);
 
   const upcoming = [
-    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am" },
-    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am" },
-    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am" },
+    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am", thumbnail: "⛵" },
+    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am", thumbnail: "⛵" },
+    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am", thumbnail: "⛵" },
   ];
-  const hosting = [{ title: "Minion Mafia Training", dateTime: "Jan 15 • 10:15am", chip: "Host" }];
+  const hosting = [{ title: "Minion Mafia Training", dateTime: "Jan 15 • 10:15am", chip: "Host", thumbnail: "🎯" }];
   const ongoing = [
-    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am" },
-    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am" },
+    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am", thumbnail: "⛵" },
+    { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am", thumbnail: "⛵" },
   ];
 
 
@@ -126,7 +129,7 @@ export default function Page() {
           ) : (
             <Carousel>
               {upcoming.map((e, i) => (
-                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} href="/my-life/upcoming" />
+                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} thumbnail={e.thumbnail} href="/my-life/upcoming" />
               ))}
             </Carousel>
           )}
@@ -136,7 +139,7 @@ export default function Page() {
           <Section title="Hosting" count={hosting.length} viewAllHref="/my-life/hosting">
             <Carousel>
               {hosting.map((e, i) => (
-                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} chip={e.chip} href="/my-life/hosting" />
+                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} chip={e.chip} thumbnail={e.thumbnail} href="/my-life/hosting" />
               ))}
             </Carousel>
           </Section>
@@ -148,7 +151,7 @@ export default function Page() {
           ) : (
             <Carousel>
               {ongoing.map((e, i) => (
-                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} href="/my-life/ongoing" />
+                <MiniEventCard key={i} title={e.title} dateTime={e.dateTime} thumbnail={e.thumbnail} href="/my-life/ongoing" />
               ))}
             </Carousel>
           )}

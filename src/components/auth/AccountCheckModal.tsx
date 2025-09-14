@@ -31,6 +31,7 @@ export default function AccountCheckModal({
   const router = useRouter();
   const { user, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount, refreshAuthState } = useAuth();
   const { setPersonalProfile } = useAppStore();
+  const [modalVisible, setModalVisible] = useState(true);
   
   // Debug authentication state
   console.log('AccountCheckModal: Auth state check:', {
@@ -134,19 +135,33 @@ export default function AccountCheckModal({
     }, 5000);
 
     try {
-      const { exists, userData, error } = await checkUserExists(
+      console.log('AccountCheckModal: Calling checkUserExists with:', {
+        verificationMethod,
+        verificationValue,
+        phone: verificationMethod === 'phone' ? verificationValue : undefined,
+        email: verificationMethod === 'email' ? verificationValue : undefined
+      });
+      
+      const { exists, userData, error, multipleAccountsFound } = await checkUserExists(
         verificationMethod === 'phone' ? verificationValue : undefined,
         verificationMethod === 'email' ? verificationValue : undefined
       );
 
       clearTimeout(timeoutId);
-      console.log('AccountCheckModal: Account check result', { exists, userData, error });
+      console.log('AccountCheckModal: Account check result', { exists, userData, error, multipleAccountsFound });
 
       if (error) {
         console.error('Error checking account:', error);
         setUserExists(false);
         setExistingUser(null);
         return;
+      }
+
+      // Handle multiple accounts found
+      if (multipleAccountsFound) {
+        console.warn('AccountCheckModal: Multiple accounts detected for this contact method');
+        // For now, proceed with the most recent account, but log the issue
+        console.log('AccountCheckModal: Proceeding with most recent account:', userData?.id);
       }
       
       setUserExists(exists);
@@ -160,6 +175,8 @@ export default function AccountCheckModal({
   };
 
   useEffect(() => {
+    console.log('AccountCheckModal: useEffect triggered', { isOpen, hasUser: !!user, userId: user?.id, verificationMethod, verificationValue });
+    
     if (isOpen && user) {
       console.log('AccountCheckModal: Modal opened, checking account', { isOpen, verificationMethod, verificationValue, user: user.id });
       console.log('AccountCheckModal: Environment variables in browser:', {
@@ -169,6 +186,8 @@ export default function AccountCheckModal({
       
       // Re-enable account checking now that Supabase is set up
       checkAccountExists();
+    } else if (isOpen && !user) {
+      console.log('AccountCheckModal: Modal opened but no user authenticated, waiting for user state...');
     }
   }, [isOpen, user, verificationMethod, verificationValue]);
 
@@ -177,6 +196,8 @@ export default function AccountCheckModal({
     try {
       // User is already authenticated after verification
       console.log('AccountCheckModal: User signing in with existing account', existingUser);
+      console.log('AccountCheckModal: Current user state:', { user: user?.id, hasUser: !!user });
+      console.log('AccountCheckModal: Current session check:', await supabase.auth.getSession());
       
       if (existingUser) {
         // Link the missing phone/email to the existing account
@@ -204,13 +225,100 @@ export default function AccountCheckModal({
         
         console.log('AccountCheckModal: Loading existing profile:', profile);
         setPersonalProfile(profile);
+        console.log('AccountCheckModal: Profile set in store, checking store state...');
+        
+        // Check if profile was set correctly
+        const storeState = useAppStore.getState();
+        console.log('AccountCheckModal: Store state after setting profile:', {
+          personalProfile: storeState.personalProfile ? 'EXISTS' : 'NULL',
+          personalProfileId: storeState.personalProfile?.id,
+          isHydrated: storeState.isHydrated
+        });
+        
+        // Verify the session is still active
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('AccountCheckModal: Session verification:', { 
+          hasSession: !!session, 
+          userId: session?.user?.id,
+          userEmail: session?.user?.email 
+        });
+        
+        if (!session) {
+          console.error('AccountCheckModal: Session lost, cannot proceed with sign-in');
+          setIsSigningIn(false);
+          return;
+        }
+        
+        // Small delay to ensure profile is saved
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        console.log('AccountCheckModal: Sign-in completed successfully');
       }
       
-      console.log('AccountCheckModal: Profile loaded, closing modal and redirecting');
-      onClose();
+      console.log('AccountCheckModal: Profile loaded, refreshing auth state');
       
-      // Redirect to main app
-      router.push('/');
+      // Check current session before proceeding
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('AccountCheckModal: Current session before refresh:', { 
+        hasSession: !!session, 
+        userId: session?.user?.id,
+        userEmail: session?.user?.email 
+      });
+      
+      if (!session) {
+        console.error('AccountCheckModal: No session found, cannot proceed with sign-in');
+        setIsSigningIn(false);
+        return;
+      }
+      
+      // Refresh auth state to ensure it's properly updated
+      console.log('AccountCheckModal: About to refresh auth state...');
+      await refreshAuthState();
+      console.log('AccountCheckModal: Auth state refresh completed');
+      
+      // Double-check session after refresh
+      const { data: { session: sessionAfterRefresh } } = await supabase.auth.getSession();
+      console.log('AccountCheckModal: Session after refresh:', { 
+        hasSession: !!sessionAfterRefresh, 
+        userId: sessionAfterRefresh?.user?.id,
+        userEmail: sessionAfterRefresh?.user?.email 
+      });
+      
+      if (!sessionAfterRefresh) {
+        console.error('AccountCheckModal: Session lost after refresh, cannot proceed');
+        setIsSigningIn(false);
+        return;
+      }
+      
+      console.log('AccountCheckModal: Auth state refreshed, closing modal and redirecting');
+      
+      // Small delay to ensure auth state is fully updated before redirect
+      setTimeout(async () => {
+        console.log('AccountCheckModal: About to redirect to /my-life after sign-in');
+        
+        // Check session one more time before redirect
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('AccountCheckModal: Final session check before redirect:', {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          userEmail: session?.user?.email
+        });
+        
+        if (!session) {
+          console.error('AccountCheckModal: No session found before redirect, aborting');
+          setIsSigningIn(false);
+          return;
+        }
+        
+        console.log('AccountCheckModal: Session confirmed, redirecting to /my-life after sign-in');
+        setIsSigningIn(false);
+        
+        // Close the modal by hiding it locally
+        console.log('AccountCheckModal: Closing modal after successful authentication');
+        setModalVisible(false);
+        
+        router.push('/my-life');
+      }, 200);
     } catch (error) {
       console.error('AccountCheckModal: Error signing in:', error);
       setIsSigningIn(false);
@@ -454,7 +562,7 @@ export default function AccountCheckModal({
       
       const { data, error } = await supabase
         .from('profiles')
-        .insert([profileData])
+        .upsert([profileData], { onConflict: 'id' })
         .select()
         .single();
 
@@ -485,16 +593,54 @@ export default function AccountCheckModal({
       setPersonalProfile(localProfile);
       console.log('AccountCheckModal: Profile saved to both Supabase and local state');
       
-      // Close modal and redirect
-      onClose();
+      // Check if profile was set correctly
+      const storeState = useAppStore.getState();
+      console.log('AccountCheckModal: Store state after setting profile (account creation):', {
+        personalProfile: storeState.personalProfile ? 'EXISTS' : 'NULL',
+        personalProfileId: storeState.personalProfile?.id,
+        isHydrated: storeState.isHydrated
+      });
       
-      // Refresh auth state to ensure user is properly detected
+      // Refresh auth state to ensure it's properly updated
+      console.log('AccountCheckModal: About to refresh auth state after account creation...');
       await refreshAuthState();
+      console.log('AccountCheckModal: Auth state refresh completed after account creation');
       
-      // Small delay to ensure profile is saved before redirect
-      setTimeout(() => {
-        router.push('/');
-      }, 100);
+      // Check auth state after refresh
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('AccountCheckModal: Session after refresh (account creation):', { 
+        hasSession: !!session, 
+        userId: session?.user?.id,
+        userEmail: session?.user?.email 
+      });
+      
+      // Small delay to ensure auth state is fully updated before redirect
+      setTimeout(async () => {
+        console.log('AccountCheckModal: About to redirect to /my-life after account creation');
+        
+        // Check session one more time before redirect
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('AccountCheckModal: Final session check before redirect (account creation):', {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          userEmail: session?.user?.email
+        });
+        
+        if (!session) {
+          console.error('AccountCheckModal: No session found before redirect (account creation), aborting');
+          setIsCreating(false);
+          return;
+        }
+        
+        console.log('AccountCheckModal: Session confirmed, redirecting to /my-life after account creation');
+        setIsCreating(false);
+        
+        // Close the modal by hiding it locally
+        console.log('AccountCheckModal: Closing modal after successful account creation');
+        setModalVisible(false);
+        
+        router.push('/my-life');
+      }, 200);
       
     } catch (error) {
       console.error('AccountCheckModal: Error creating profile:', error);
@@ -521,9 +667,35 @@ export default function AccountCheckModal({
       setPersonalProfile(localProfile);
       console.log('AccountCheckModal: Local profile created as fallback');
       
-      // Close modal and redirect
-      onClose();
-      router.push('/');
+      // Refresh auth state to ensure it's properly updated
+      await refreshAuthState();
+      
+      // Small delay to ensure auth state is fully updated before redirect
+      setTimeout(async () => {
+        console.log('AccountCheckModal: About to redirect to /my-life after fallback account creation');
+        
+        // Check session one more time before redirect
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('AccountCheckModal: Final session check before redirect (fallback):', {
+          hasSession: !!session,
+          userId: session?.user?.id,
+          userEmail: session?.user?.email
+        });
+        
+        if (!session) {
+          console.error('AccountCheckModal: No session found before redirect (fallback), aborting');
+          return;
+        }
+        
+        console.log('AccountCheckModal: Session confirmed, redirecting to /my-life after fallback account creation');
+        setIsCreating(false);
+        
+        // Close the modal by hiding it locally
+        console.log('AccountCheckModal: Closing modal after successful fallback account creation');
+        setModalVisible(false);
+        
+        router.push('/my-life');
+      }, 200);
     } finally {
       setIsCreating(false);
     }
@@ -561,6 +733,7 @@ export default function AccountCheckModal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      setModalVisible(true); // Reset modal visibility when opened
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -571,7 +744,7 @@ export default function AccountCheckModal({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !modalVisible) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
@@ -644,27 +817,21 @@ export default function AccountCheckModal({
           {userExists === true ? (
             // Existing Account Card
             <div className="space-y-4">
-              {/* Welcome Message */}
-              <div className="text-center">
-                <p className="text-gray-600 text-sm mb-2">
-                  You already have an account with us. Sign in to continue.
-                </p>
-              </div>
 
               {/* Profile Card - Cool Design */}
               <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-6">
-                <div className="flex flex-col items-center space-y-4">
-                  {/* Profile Picture */}
+                <div className="flex items-center space-x-4">
+                  {/* Profile Picture - Left */}
                   <Avatar 
                     src={existingUser?.avatar_url ?? undefined} 
                     name={existingUser?.full_name || 'User'} 
                     size={64}
                   />
                   
-                  {/* Name */}
-                  <div className="text-center">
+                  {/* Name - Center */}
+                  <div className="flex-1 text-center">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Welcome back, {existingUser?.full_name || 'User'}!
+                      {existingUser?.full_name || 'User'}
                     </h3>
                   </div>
                 </div>
@@ -709,7 +876,7 @@ export default function AccountCheckModal({
                           router.push('/');
                         }
                       }}
-                      className="text-blue-600 underline hover:text-blue-800 transition-colors"
+                      className="text-gray-400 underline hover:text-gray-600 transition-colors"
                     >
                       Create new one
                     </button>

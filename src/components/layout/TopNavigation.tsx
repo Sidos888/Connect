@@ -10,10 +10,7 @@ import { useAuth } from "@/lib/authContext";
 import { useState, useEffect, useRef } from "react";
 import { useModal } from "@/lib/modalContext";
 
-const ProfileMenu = dynamic(() => import("@/components/menu/ProfileMenu"), { 
-  ssr: false,
-  loading: () => <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-});
+import ProfileMenu from "@/components/menu/ProfileMenu";
 
 export default function TopNavigation() {
   const pathname = usePathname();
@@ -146,26 +143,26 @@ export default function TopNavigation() {
                   </button>
 
                   {authOpen && (
-                    <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-neutral-200 bg-white shadow-lg p-2">
-                      <div className="py-1">
+                    <div className="absolute right-0 z-50 mt-2 w-[400px] rounded-xl border border-neutral-200 bg-white shadow-sm p-5">
+                      <div className="space-y-3">
                         <button
                           onClick={() => {
                             setAuthOpen(false);
                             // Add about page navigation here
                           }}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                         >
-                          About Connect
+                          <span className="font-medium">About Connect</span>
                         </button>
-                        <div className="my-1 border-t border-gray-200" />
+                        <div className="border-t border-gray-200 my-6"></div>
                         <button
                           onClick={() => {
                             setAuthOpen(false);
                             showLogin();
                           }}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                         >
-                          Log in or sign up
+                          <span className="font-medium">Log in or sign up</span>
                         </button>
                       </div>
                     </div>

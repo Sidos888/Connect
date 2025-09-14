@@ -46,7 +46,7 @@ export default function NotificationMenu() {
       </button>
 
       {open && (
-        <div role="menu" className="absolute right-0 z-50 mt-2 w-[320px] rounded-xl border border-neutral-200 bg-white shadow-sm p-3">
+        <div role="menu" className="absolute right-0 z-50 mt-2 w-[400px] h-[640px] rounded-xl border border-neutral-200 bg-white shadow-sm p-5">
           {/* Main content area to match profile menu height */}
           <div className="space-y-3">
             {/* Profile-like section */}

@@ -145,7 +145,7 @@ export default function MenuPage() {
             router.push("/onboarding");
           }}
         >
-          Sign out (clear local)
+          Log out (clear local)
         </Button>
       </section>
     </div>

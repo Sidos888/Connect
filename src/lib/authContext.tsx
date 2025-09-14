@@ -12,6 +12,9 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshAuthState: () => Promise<void>;
+  refreshProfile: () => Promise<{ error: Error | null }>;
+  createProfileIfNeeded: () => Promise<{ error: Error | null }>;
+  clearProfileCache: () => void;
   updateProfile: (profile: any) => Promise<{ error: Error | null }>;
   sendPhoneVerification: (phone: string) => Promise<{ error: Error | null }>;
   sendEmailVerification: (email: string) => Promise<{ error: Error | null }>;
@@ -33,11 +36,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = getSupabaseClient();
 
   useEffect(() => {
+    console.log('AuthContext: useEffect triggered', { supabase: !!supabase });
+    if (!supabase) {
+      console.error('AuthContext: Supabase client is null, cannot initialize auth');
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
+      console.log('AuthContext: Getting initial session...');
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('AuthContext: Error getting session:', error);
+        }
+        console.log('AuthContext: Initial session result:', { 
+          hasSession: !!session, 
+          userId: session?.user?.id,
+          userEmail: session?.user?.email,
+          error: error?.message
+        });
+        setUser(session?.user ?? null);
+        setLoading(false);
+      } catch (error) {
+        console.error('AuthContext: Exception getting session:', error);
+        setUser(null);
+        setLoading(false);
+      }
     };
 
     getInitialSession();
@@ -45,15 +71,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null);
+        console.log('AuthContext: Auth state change:', { 
+          event, 
+          hasSession: !!session, 
+          userId: session?.user?.id,
+          userEmail: session?.user?.email,
+          sessionExpiry: session?.expires_at,
+          currentTime: new Date().toISOString()
+        });
+        
+        // Update user state based on session presence, not just specific events
+        if (session?.user) {
+          console.log('AuthContext: Session with user found, updating state');
+          setUser(session.user);
+        } else {
+          console.log('AuthContext: No session or user, clearing state');
+          setUser(null);
+        }
+        
         setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -62,6 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -70,24 +119,166 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (!supabase) {
+      console.error('Supabase client not initialized');
+      return;
+    }
     await supabase.auth.signOut();
   };
 
   const refreshAuthState = async () => {
+    if (!supabase) {
+      console.error('Supabase client not initialized');
+      setLoading(false);
+      return;
+    }
     console.log('AuthContext: Manually refreshing auth state...');
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('AuthContext: Session check result:', { user: session?.user?.id, email: session?.user?.email });
-    setUser(session?.user ?? null);
-    setLoading(false);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('AuthContext: Session check result:', { 
+        user: session?.user?.id, 
+        email: session?.user?.email,
+        hasSession: !!session,
+        error: error?.message
+      });
+      
+      // Always update user state based on session - this ensures consistency
+      setUser(session?.user ?? null);
+      console.log('AuthContext: User state updated to:', session?.user?.id || 'null');
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('AuthContext: Error refreshing auth state:', error);
+      setUser(null);
+      setLoading(false);
+    }
   };
 
-  const updateProfile = async (profile: any) => {
+  const refreshProfile = async () => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
+
+    try {
+      console.log('AuthContext: Force refreshing profile from Supabase...');
+      const { profile, error } = await loadUserProfile();
+      if (error) {
+        console.error('AuthContext: Error refreshing profile:', error);
+        return { error };
+      }
+      
+      if (profile) {
+        console.log('AuthContext: Profile refreshed successfully:', profile);
+        // Note: The profile will be set by the ProtectedRoute component
+        return { error: null };
+      } else {
+        console.log('AuthContext: No profile found during refresh');
+        return { error: null };
+      }
+    } catch (error) {
+      console.error('AuthContext: Exception refreshing profile:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const createProfileIfNeeded = async () => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
+
     if (!user?.id) {
       return { error: new Error('No user logged in') };
     }
 
     try {
-      const { error } = await supabase
+      console.log('AuthContext: Checking if profile exists for user:', user.id);
+      
+      // First check if profile already exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('AuthContext: Error checking existing profile:', checkError);
+        return { error: checkError };
+      }
+
+      if (existingProfile) {
+        console.log('AuthContext: Profile already exists, no need to create');
+        return { error: null };
+      }
+
+      // Create a basic profile if none exists
+      console.log('AuthContext: No profile found, creating basic profile...');
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: user.id,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          phone: user.phone || '',
+          bio: '',
+          avatar_url: null,
+          date_of_birth: null,
+          connect_id: user.id, // Use user ID as connect ID for now
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('AuthContext: Error creating profile:', createError);
+        return { error: createError };
+      }
+
+      console.log('AuthContext: Profile created successfully:', newProfile);
+      return { error: null };
+    } catch (error) {
+      console.error('AuthContext: Exception creating profile:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const clearProfileCache = () => {
+    console.log('AuthContext: Clearing profile cache from localStorage');
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('connect.app.v1');
+        if (raw) {
+          const data = JSON.parse(raw);
+          // Clear only the personalProfile, keep other data
+          const updatedData = { ...data, personalProfile: null };
+          window.localStorage.setItem('connect.app.v1', JSON.stringify(updatedData));
+          console.log('AuthContext: Profile cache cleared successfully');
+        }
+      } catch (error) {
+        console.error('AuthContext: Error clearing profile cache:', error);
+      }
+    }
+  };
+
+  const updateProfile = async (profile: any) => {
+    if (!user?.id) {
+      console.error('updateProfile: No user logged in');
+      return { error: new Error('No user logged in') };
+    }
+
+    if (!supabase) {
+      console.error('updateProfile: Supabase client not initialized');
+      return { error: new Error('Supabase client not initialized') };
+    }
+
+    try {
+      console.log('updateProfile: Updating profile for user:', user.id, 'with data:', {
+        name: profile.name,
+        bio: profile.bio,
+        avatarUrl: profile.avatarUrl
+      });
+
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           full_name: profile.name,
@@ -95,21 +286,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           bio: profile.bio,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
 
       if (error) {
-        console.error('Error updating profile:', error);
+        console.error('updateProfile: Error updating profile:', error);
         return { error };
       }
 
+      console.log('updateProfile: Profile updated successfully:', data);
       return { error: null };
     } catch (err) {
-      console.error('Error updating profile:', err);
+      console.error('updateProfile: Exception updating profile:', err);
       return { error: err as Error };
     }
   };
 
   const sendPhoneVerification = async (phone: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     try {
       const { error } = await supabase.auth.signInWithOtp({
         phone: phone,
@@ -121,6 +317,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendEmailVerification = async (email: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     try {
       console.log('Sending email verification for:', email);
       console.log('Email provider:', email.split('@')[1]);
@@ -145,6 +344,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const verifyPhoneCode = async (phone: string, code: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     try {
       const { data, error } = await supabase.auth.verifyOtp({
         phone: phone,
@@ -164,6 +366,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const verifyEmailCode = async (email: string, code: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     try {
       console.log('Verifying email code for:', email, 'with code:', code);
       const { data, error } = await supabase.auth.verifyOtp({
@@ -188,6 +393,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const checkUserExists = useCallback(async (phone?: string, email?: string) => {
+    if (!supabase) {
+      return { exists: false, error: new Error('Supabase client not initialized') };
+    }
     try {
       console.log('checkUserExists: Checking for existing account', { phone, email });
       
@@ -206,19 +414,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (phone) {
         // Normalize phone number - remove spaces and ensure consistent format
         const normalizedPhone = phone.replace(/\s/g, '');
+        console.log('checkUserExists: Original phone:', phone);
         console.log('checkUserExists: Normalized phone:', normalizedPhone);
-        query = query.eq('phone', normalizedPhone);
+        
+        // Try multiple phone number formats for better matching
+        const phoneVariations = [
+          normalizedPhone, // +61466310826
+          phone.replace(/\s/g, '').replace(/^\+/, ''), // 61466310826
+          phone.replace(/\s/g, '').replace(/^\+61/, '0'), // 0466310826
+          phone.replace(/\s/g, '').replace(/^\+61/, '61'), // 61466310826
+          phone.replace(/\s/g, '').replace(/^\+61/, '4'), // 466310826
+        ];
+        console.log('checkUserExists: Phone variations to try:', phoneVariations);
+        
+        // Use OR query to check all variations
+        const phoneConditions = phoneVariations.map(phone => `phone.eq.${phone}`).join(',');
+        query = query.or(phoneConditions);
       } else if (email) {
         console.log('checkUserExists: Checking email:', email);
         query = query.eq('email', email);
       }
       
-      const { data, error } = await query.limit(1);
-      console.log('checkUserExists: Query result:', { data, error });
+      const { data, error } = await query;
+      console.log('checkUserExists: Query result:', { data, error, count: data?.length });
       
       if (error) {
         console.error('checkUserExists: Database error:', error);
         return { exists: false, error };
+      }
+      
+      // Check if multiple accounts exist
+      if (data && data.length > 1) {
+        console.warn('checkUserExists: Multiple accounts found!', data.map(d => ({ id: d.id, email: d.email, phone: d.phone })));
+        // For now, return the most recent account (highest ID or latest created_at)
+        const sortedData = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const userData = sortedData[0];
+        console.log('checkUserExists: Using most recent account:', { id: userData.id, name: userData.full_name });
+        return { 
+          exists: true, 
+          userData,
+          error: null,
+          multipleAccountsFound: true
+        };
       }
       
       const exists = data && data.length > 0;
@@ -238,6 +475,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const loadUserProfile = async () => {
+    if (!supabase) {
+      return { profile: null, error: new Error('Supabase client not initialized') };
+    }
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -248,14 +488,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle no results gracefully
 
       if (profileError) {
         console.error('AuthContext: Error loading profile:', profileError);
         return { profile: null, error: profileError };
       }
 
-      return { profile, error: null };
+      // If no profile exists, return null profile (not an error)
+      if (!profile) {
+        console.log('AuthContext: No profile found for user - this is normal for new users');
+        return { profile: null, error: null };
+      }
+
+      // Map Supabase profile data to PersonalProfile format
+      const mappedProfile = {
+        id: profile.id,
+        name: profile.full_name || '',
+        bio: profile.bio || '',
+        avatarUrl: profile.avatar_url || null,
+        email: profile.email || user.email || '',
+        phone: profile.phone || '',
+        dateOfBirth: profile.date_of_birth || '',
+        connectId: profile.connect_id || '',
+        createdAt: profile.created_at || '',
+        updatedAt: profile.updated_at || ''
+      };
+
+      console.log('AuthContext: Profile loaded and mapped:', mappedProfile);
+      return { profile: mappedProfile, error: null };
     } catch (error) {
       console.error('AuthContext: Unexpected error loading profile:', error);
       return { profile: null, error: new Error('Failed to load profile: ' + (error as Error).message) };
@@ -263,6 +524,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const uploadAvatar = async (file: File) => {
+    if (!supabase) {
+      return { url: null, error: new Error('Supabase client not initialized') };
+    }
     try {
       console.log('AuthContext: Starting avatar upload...');
       
@@ -299,6 +563,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const linkPhoneToAccount = async (phone: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     try {
       if (!user?.id) {
         return { error: new Error('No user logged in') };
@@ -326,6 +593,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const linkEmailToAccount = async (email: string) => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     try {
       if (!user?.id) {
         return { error: new Error('No user logged in') };
@@ -352,6 +622,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAccount = async () => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
     try {
       console.log('AuthContext: Starting account deletion...');
       
@@ -461,6 +734,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     refreshAuthState,
+    refreshProfile,
+    createProfileIfNeeded,
+    clearProfileCache,
     updateProfile,
     sendPhoneVerification,
     sendEmailVerification,
