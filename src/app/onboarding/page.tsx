@@ -37,6 +37,7 @@ export default function OnboardingPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log('Onboarding form submitted:', { name, bio, avatarUrl });
     setSaving(true);
     try {
       setPersonalProfile({ 
@@ -51,6 +52,7 @@ export default function OnboardingPage() {
         createdAt: new Date().toISOString(), 
         updatedAt: new Date().toISOString() 
       });
+      console.log('Profile set, redirecting to home');
       // TODO: replace with Supabase profile upsert
       router.replace("/");
     } catch (error) {
@@ -65,7 +67,15 @@ export default function OnboardingPage() {
       <p className="text-sm text-neutral-600 mb-6">Create your personal profile to get started.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <ImagePicker label="Avatar" onChange={(_, url) => setAvatarUrl(url)} />
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input 
+          label="Name" 
+          value={name} 
+          onChange={(e) => {
+            console.log('Name input changed:', e.target.value);
+            setName(e.target.value);
+          }} 
+          required 
+        />
         <div>
           <div className="relative">
             <TextArea 
@@ -89,7 +99,24 @@ export default function OnboardingPage() {
             </div>
           </div>
         </div>
-        <Button type="submit" disabled={saving || !name} className="w-full">
+        <Button 
+          type="submit" 
+          disabled={saving || !name} 
+          className="w-full touch-manipulation"
+          onClick={(e) => {
+            console.log('Continue button clicked:', { name, saving, disabled: saving || !name });
+            // Fallback: if form submission doesn't work, handle it manually
+            if (!name || saving) {
+              console.log('Button disabled, not proceeding');
+              return;
+            }
+            // Prevent double submission
+            if (saving) return;
+            console.log('Manual form submission triggered');
+            handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+          }}
+          style={{ touchAction: 'manipulation' }}
+        >
           {saving ? "Saving…" : "Continue"}
         </Button>
       </form>

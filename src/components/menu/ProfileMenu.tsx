@@ -63,21 +63,19 @@ function MenuView({
         {/* Profile Card - Clickable */}
         <button
           onClick={onViewProfile}
-          className="w-full rounded-lg border border-neutral-200 bg-white shadow-sm p-4 hover:shadow-md transition-shadow text-left"
+          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 bg-white shadow-sm"
         >
-          <div className="flex items-center gap-3">
-            <Avatar
-              src={currentAccount?.avatarUrl ?? undefined}
-              name={currentAccount?.name ?? "User"}
-              size={48}
-            />
-            <div className="flex-1">
-              <h3 className="text-base font-semibold text-gray-900">{currentAccount?.name ?? "Your Name"}</h3>
-              <p className="text-xs text-gray-500">Personal Account</p>
-            </div>
-            <div className="text-xs text-gray-500">
-              View
-            </div>
+          <Avatar
+            src={currentAccount?.avatarUrl ?? undefined}
+            name={currentAccount?.name ?? "User"}
+            size={48}
+          />
+          <div className="flex-1">
+            <h3 className="text-base font-semibold text-gray-900">{currentAccount?.name ?? "Your Name"}</h3>
+            <p className="text-xs text-gray-500">Personal Account</p>
+          </div>
+          <div className="text-xs text-gray-500">
+            View
           </div>
         </button>
 
@@ -556,15 +554,9 @@ export default function ProfileMenu() {
       
       if (error) {
         console.error('ProfileMenu: Delete account error:', error);
-        // Even if there's an error, clear local data as fallback
-        console.log('ProfileMenu: Clearing local data as fallback...');
-        clearAll();
-        localStorage.removeItem('connect.app.v1');
-        localStorage.clear();
-        console.log('ProfileMenu: Local data cleared, redirecting...');
-        // Force a hard reload to clear all state
-        window.location.href = '/';
-        return;
+        // Show error to user - don't clear data on error
+        alert('Error deleting account: ' + error.message);
+        return; // Don't proceed with logout
       } else {
         console.log('ProfileMenu: Account deleted successfully');
       }

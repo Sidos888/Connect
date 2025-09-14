@@ -25,18 +25,18 @@ export default function TabBar({ items }: Props) {
   };
   
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white z-50 shadow-none border-none">
+    <nav className="tabbar-nav fixed bottom-0 left-0 right-0 bg-white z-50 border-t border-gray-200">
       <ul className="grid grid-cols-4 px-2 py-1">
         {items.map((item) => {
           const active = isActive(item.href);
           return (
             <li key={item.href} className="text-center">
-              <Link href={item.href} className={`block py-2 px-1 text-xs ${active ? "text-brand" : "text-neutral-500"}`}>
+              <Link href={item.href} className={`block py-2 px-1 text-xs ${active ? "text-brand" : "text-black"}`}>
                 <div className="flex flex-col items-center gap-0.5">
-                  <span aria-hidden className="h-5 w-5">
+                  <span aria-hidden className="h-6 w-6">
                     {item.icon}
                   </span>
-                  <span className={`${active ? "font-semibold" : ""}`}>{item.label}</span>
+                  <span className={`text-xs ${active ? "font-bold" : "font-medium"}`}>{item.label}</span>
                 </div>
               </Link>
             </li>

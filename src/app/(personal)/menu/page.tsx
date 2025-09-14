@@ -4,43 +4,28 @@ import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
 import Link from "next/link";
 import MobileTitle from "@/components/MobileTitle";
+import ProfileStrip from "@/components/my-life/ProfileStrip";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
-import { LogOut, Trash2 } from "lucide-react";
+import { LogOut, Trash2, ChevronRightIcon } from "lucide-react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
+import AccountSwitcherModal from "@/components/AccountSwitcherModal";
 
 export default function Page() {
   const router = useRouter();
-  const { personalProfile, businesses, context, switchToBusiness, switchToPersonal, setAccountSwitching } = useAppStore();
+  const { personalProfile, context } = useAppStore();
   const { signOut, deleteAccount } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [showSwitcher, setShowSwitcher] = React.useState(false);
   const [currentView, setCurrentView] = React.useState<'menu' | 'settings'>('menu');
+  const [showAccountSwitcher, setShowAccountSwitcher] = React.useState(false);
 
   // Get current account info
   const currentAccount = context.type === "business" && currentBusiness 
     ? { name: currentBusiness.name, avatarUrl: currentBusiness.logoUrl, bio: currentBusiness.bio }
     : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio };
-
-  const handleAccountSwitch = async (switchFunction: () => void) => {
-    // Start global loading state
-    setAccountSwitching(true);
-    
-    // Wait a bit to show loading animation
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Execute the switch
-    switchFunction();
-    
-    // Keep loading for a bit more to make it feel complete
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    
-    // End loading animation
-    setAccountSwitching(false);
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -124,12 +109,9 @@ export default function Page() {
       description="Log in / sign up to access your account settings and preferences"
       buttonText="Log in"
     >
-      <div className="bg-white">
-      {/* Only show on mobile - hide on desktop */}
-      <div className="lg:hidden">
+      <div>
         <MobileTitle 
           title={currentView === 'menu' ? "Menu" : "Settings"} 
-          showDivider={false}
           action={
             currentView === 'menu' ? (
               <button
@@ -137,110 +119,59 @@ export default function Page() {
                 aria-label="Notifications"
                 onClick={() => router.push("/notifications")}
               >
-                <BellIcon className="h-5 w-5 text-gray-700" />
+                <BellIcon className="h-5 w-5 text-black" />
               </button>
             ) : null
           }
         />
         
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           {currentView === 'settings' ? (
             <SettingsView />
           ) : (
             <>
-              <div className="mb-4 lg:mb-8">
-                <h1 className="hidden lg:block text-3xl font-bold text-gray-900">Menu</h1>
+              {/* Profile Card with Semi-Connected Bio */}
+              <div className="mb-6 lg:mb-8">
+                <div className="max-w-lg mx-auto lg:max-w-xl">
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    {/* Main Profile Card */}
+                    <div className="px-5 py-4 grid grid-cols-[40px_1fr_40px] items-center">
+                      <div className="flex items-center">
+                        <Avatar 
+                          src={currentAccount?.avatarUrl ?? undefined} 
+                          name={currentAccount?.name ?? "Your Name"} 
+                          size={36} 
+                        />
+                      </div>
+                      <div className="text-base font-semibold text-neutral-900 text-center">
+                        {currentAccount?.name ?? "Your Name"}
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => setShowAccountSwitcher(true)}
+                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                          <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Bio Section - Semi-connected */}
+                    {currentAccount?.bio && (
+                      <div className="border-t border-gray-100 bg-gray-50 px-5 py-3">
+                        <h3 className="font-semibold text-gray-900 mb-2 text-sm">Bio</h3>
+                        <p className="text-sm text-gray-700 leading-relaxed">{currentAccount.bio}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden lg:block mb-8">
+                <h1 className="text-3xl font-bold text-gray-900">Menu</h1>
               </div>
 
               <div className="space-y-6">
-
-          {/* Profile Card */}
-          <div className="rounded-2xl bg-white shadow-sm overflow-hidden">
-        <div className="p-6 flex items-center gap-4 relative">
-          <Avatar src={currentAccount?.avatarUrl ?? undefined} name={currentAccount?.name} size={48} />
-          <div className="flex-1" />
-          <button
-            className={`p-2 rounded-md hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 ring-brand transition-transform ${
-              showSwitcher ? "rotate-180" : ""
-            }`}
-            aria-label="Switch profile"
-            onClick={() => setShowSwitcher((v) => !v)}
-          >
-            <ChevronDownIcon className="h-5 w-5" />
-          </button>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-lg font-bold text-gray-900 truncate max-w-[60%] text-center">
-              {currentAccount?.name ?? "Your Name"}
-            </div>
-          </div>
-        </div>
-
-        {/* Account Switcher */}
-        {showSwitcher && (
-          <div className="px-4 pb-4">
-            <div className="space-y-2">
-              {/* Personal Account (if currently in business mode) */}
-              {context.type === "business" && (
-                <button
-                  className="w-full text-left rounded-xl border border-neutral-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 p-3 flex items-center gap-3"
-                  onClick={() => handleAccountSwitch(switchToPersonal)}
-                >
-                  <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">
-                      {personalProfile?.name?.[0] || "U"}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {personalProfile?.name || "Personal Account"}
-                    </p>
-                    <p className="text-xs text-gray-500">Personal account</p>
-                  </div>
-                </button>
-              )}
-              
-              {/* Business Accounts */}
-              {businesses
-                .filter(business => context.type === "personal" || business.id !== context.businessId)
-                .map((business) => (
-                <button
-                  key={business.id}
-                  className="w-full text-left rounded-xl border border-neutral-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 p-3 flex items-center gap-3"
-                  onClick={() => handleAccountSwitch(() => switchToBusiness(business.id))}
-                >
-                  <div className="w-10 h-10 bg-gray-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">
-                      {business.name?.[0] || "B"}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {business.name}
-                    </p>
-                    <p className="text-xs text-gray-500">Business account</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-            
-            <div className="mt-3">
-              <Link href="/create-business">
-                <Button variant="secondary" className="w-full">Add Business Account</Button>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Divider and Bio */}
-        {!showSwitcher && (
-          <>
-            <div className="bg-gray-100 h-px" />
-            <div className="px-4 pb-4 pt-3">
-              <div className="text-sm text-neutral-600 text-center">{currentAccount?.bio || "No bio yet."}</div>
-            </div>
-          </>
-        )}
-      </div>
 
           {/* Menu Grid - Mobile 2x3 layout */}
           <div className="mb-4">
@@ -304,7 +235,12 @@ export default function Page() {
           <p className="text-gray-600">Use the profile menu in the top right to access settings and account options.</p>
         </div>
       </div>
-    </div>
+
+      {/* Account Switcher Modal */}
+      <AccountSwitcherModal 
+        isOpen={showAccountSwitcher}
+        onClose={() => setShowAccountSwitcher(false)}
+      />
     </ProtectedRoute>
   );
 }

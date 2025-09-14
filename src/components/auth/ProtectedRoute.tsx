@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/authContext';
 import { usePathname } from 'next/navigation';
 import AuthButton from './AuthButton';
 import { useModal } from '@/lib/modalContext';
+import { useAppStore } from '@/lib/store';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, fallback, title, description, buttonText }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
+  const { personalProfile, isHydrated } = useAppStore();
   const { showLogin } = useModal();
   const pathname = usePathname();
 
@@ -62,7 +64,11 @@ export default function ProtectedRoute({ children, fallback, title, description,
   // Debug logging to see what's happening
   console.log('ProtectedRoute Debug:', {
     user: user ? 'SIGNED IN' : 'NOT SIGNED IN',
+    userId: user?.id,
     loading,
+    isHydrated,
+    personalProfile: personalProfile ? 'EXISTS' : 'NULL',
+    personalProfileId: personalProfile?.id,
     pathname,
     title,
     description,
@@ -71,6 +77,15 @@ export default function ProtectedRoute({ children, fallback, title, description,
     displayDescription,
     displayButtonText
   });
+
+  // Wait for store to hydrate
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -106,6 +121,18 @@ export default function ProtectedRoute({ children, fallback, title, description,
         </div>
 
       </>
+    );
+  }
+
+  // User is authenticated but no profile - this shouldn't happen if guard is working
+  if (user && !personalProfile) {
+    console.log('ProtectedRoute: User authenticated but no profile - redirecting to onboarding');
+    // Redirect to onboarding to complete profile
+    window.location.href = '/onboarding';
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+      </div>
     );
   }
 

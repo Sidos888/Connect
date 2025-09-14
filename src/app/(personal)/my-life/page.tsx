@@ -32,7 +32,7 @@ export default function Page() {
       <div>
         <MobileTitle title="My Business" />
         
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <div className="mb-6 lg:mb-8">
             <div className="max-w-lg mx-auto lg:max-w-xl">
               <ProfileStrip name={personalProfile?.name ?? "Business Owner"} avatarUrl={personalProfile?.avatarUrl ?? undefined} />
@@ -110,7 +110,7 @@ export default function Page() {
       <div>
         <MobileTitle title="My Life" />
         
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <div className="mb-6 lg:mb-8">
             <div className="max-w-lg mx-auto lg:max-w-xl">
               <ProfileStrip name={personalProfile?.name ?? "Your Name"} avatarUrl={personalProfile?.avatarUrl ?? undefined} />

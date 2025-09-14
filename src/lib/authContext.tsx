@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshAuthState: () => Promise<void>;
   updateProfile: (profile: any) => Promise<{ error: Error | null }>;
   sendPhoneVerification: (phone: string) => Promise<{ error: Error | null }>;
   sendEmailVerification: (email: string) => Promise<{ error: Error | null }>;
@@ -70,6 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+  };
+
+  const refreshAuthState = async () => {
+    console.log('AuthContext: Manually refreshing auth state...');
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('AuthContext: Session check result:', { user: session?.user?.id, email: session?.user?.email });
+    setUser(session?.user ?? null);
+    setLoading(false);
   };
 
   const updateProfile = async (profile: any) => {
@@ -451,6 +460,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
+    refreshAuthState,
     updateProfile,
     sendPhoneVerification,
     sendEmailVerification,

@@ -54,7 +54,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
         }}
         onProfileSetup={() => {
           setIsLoginOpen(false);
-          router.push('/onboarding');
+          // Don't redirect to onboarding - let AccountCheckModal handle profile creation
         }}
       />
 
@@ -71,7 +71,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
         }}
         onProfileSetup={() => {
           setIsSignUpOpen(false);
-          router.push('/onboarding');
+          // Don't redirect to onboarding - let AccountCheckModal handle profile creation
         }}
       />
     </ModalContext.Provider>

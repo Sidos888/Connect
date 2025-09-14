@@ -79,8 +79,8 @@ body {
 
 /* Force Vercel rebuild - working version */
 
-/* Remove any potential borders from navigation */
-nav {
+/* Remove any potential borders from navigation, except TabBar */
+nav:not(.tabbar-nav) {
   border: none !important;
   box-shadow: none !important;
 }

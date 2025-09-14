@@ -155,9 +155,9 @@ export default function MessagesPage() {
         {/* Mobile Title */}
         <MobileTitle title="Chat" />
         
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           {/* Mobile Search */}
-          <div className="relative mb-4">
+          <div className="relative mb-6 lg:mb-8">
             <input
               type="text"
               value={mobileSearchQuery}

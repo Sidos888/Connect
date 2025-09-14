@@ -28,11 +28,13 @@ export default function VerificationModal({
 }: VerificationModalProps) {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Focus first input when modal opens
   useEffect(() => {
     if (isOpen && inputRefs.current[0]) {
+      setIsVerifying(false);
       inputRefs.current[0].focus();
     }
   }, [isOpen]);
@@ -40,10 +42,38 @@ export default function VerificationModal({
   const handleInputChange = (index: number, value: string) => {
     console.log('VerificationModal: Input change', { index, value, currentCode: code });
     
-    // Only allow single digit
-    if (value.length > 1) return;
+    // Handle mobile SMS autofill - if we get multiple digits, treat it as a paste
+    if (value.length > 1) {
+      console.log('VerificationModal: Multiple digits detected, handling as autofill');
+      const digits = value.replace(/\D/g, '').slice(0, 6);
+      const newCode = [...code];
+      
+      for (let i = 0; i < digits.length && i < 6; i++) {
+        newCode[i] = digits[i];
+      }
+      
+      setCode(newCode);
+      
+      // Focus the next empty input or the last one
+      const nextEmptyIndex = newCode.findIndex(digit => digit === '');
+      const focusIndex = nextEmptyIndex === -1 ? 5 : nextEmptyIndex;
+      setActiveIndex(focusIndex);
+      
+      // Auto-verify if all 6 digits are filled
+      if (newCode.every(digit => digit !== '') && newCode.length === 6) {
+        console.log('VerificationModal: All digits entered via autofill, auto-verifying');
+        setIsVerifying(true);
+        setTimeout(() => onVerify(newCode.join('')), 500); // Half second delay for smooth transition
+      } else {
+        // Focus the appropriate input after autofill
+        setTimeout(() => {
+          inputRefs.current[focusIndex]?.focus();
+        }, 50);
+      }
+      return;
+    }
     
-    // Only allow digits
+    // Only allow digits for single character input
     if (value && !/^\d$/.test(value)) return;
 
     const newCode = [...code];
@@ -62,7 +92,8 @@ export default function VerificationModal({
     // Auto-verify when all digits are entered
     if (newCode.every(digit => digit !== '') && newCode.length === 6) {
       console.log('VerificationModal: All digits entered, auto-verifying');
-      onVerify(newCode.join(''));
+      setIsVerifying(true);
+      setTimeout(() => onVerify(newCode.join('')), 500); // Half second delay for smooth transition
     }
   };
 
@@ -123,6 +154,7 @@ export default function VerificationModal({
     await onResend();
     setCode(['', '', '', '', '', '']);
     setActiveIndex(0);
+    setIsVerifying(false);
     inputRefs.current[0]?.focus();
   };
 
@@ -179,6 +211,42 @@ export default function VerificationModal({
             </div>
           )}
 
+          {/* Hidden SMS autofill input for better mobile support */}
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="one-time-code"
+            maxLength={6}
+            className="absolute opacity-0 pointer-events-none"
+            style={{ left: '-9999px' }}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '');
+              if (value.length > 0) {
+                console.log('VerificationModal: SMS autofill detected via hidden input:', value);
+                // Handle as autofill
+                const digits = value.slice(0, 6).split('');
+                const newCode = ['', '', '', '', '', ''];
+                
+                for (let i = 0; i < digits.length; i++) {
+                  newCode[i] = digits[i];
+                }
+                
+                setCode(newCode);
+                
+                // Auto-verify if all 6 digits are filled
+                if (newCode.every(digit => digit !== '') && newCode.length === 6) {
+                  console.log('VerificationModal: All digits entered via SMS autofill, auto-verifying');
+                  setIsVerifying(true);
+                  setTimeout(() => onVerify(newCode.join('')), 500); // Half second delay for smooth transition
+                }
+                
+                // Clear the hidden input
+                e.target.value = '';
+              }
+            }}
+          />
+
           {/* 6 Digit Input Boxes */}
           <div className="flex justify-center gap-2 md:gap-4 mb-8 px-4">
             {code.map((digit, index) => (
@@ -187,7 +255,9 @@ export default function VerificationModal({
                 ref={(el) => { inputRefs.current[index] = el; }}
                 type="text"
                 inputMode="numeric"
-                maxLength={1}
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
+                maxLength={6}
                 value={digit}
                 onChange={(e) => handleInputChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
@@ -196,7 +266,9 @@ export default function VerificationModal({
                 className={`
                   w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-2 rounded-xl
                   focus:outline-none focus:ring-0 transition-all duration-150 bg-white
-                  ${activeIndex === index
+                  ${isVerifying
+                    ? 'border-green-500 bg-green-50'
+                    : activeIndex === index
                     ? 'border-brand ring-2 ring-brand/20'
                     : digit
                     ? 'border-gray-300'
@@ -212,16 +284,16 @@ export default function VerificationModal({
             {/* Verify Button */}
             <button
               onClick={handleVerify}
-              disabled={loading || code.join('').length !== 6}
+              disabled={loading || isVerifying || code.join('').length !== 6}
               className={`
                 w-full h-14 rounded-lg font-semibold text-white transition-all
-                ${code.join('').length === 6 && !loading
+                ${code.join('').length === 6 && !loading && !isVerifying
                   ? 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'
                   : 'bg-gray-300 cursor-not-allowed'
                 }
               `}
             >
-              {loading ? 'Verifying...' : 'Continue'}
+              {isVerifying ? 'Verifying...' : loading ? 'Verifying...' : 'Continue'}
             </button>
 
             {/* Resend Button */}

@@ -26,11 +26,33 @@ export default function Guard({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      // If user is authenticated but has no profile, try to load from Supabase
-      if (user && !personalProfile && !profileLoading) {
+      // If user is authenticated but has no profile or has a temporary profile, try to load from Supabase
+      const hasTemporaryProfile = personalProfile && (personalProfile.id === 'temp-id' || personalProfile.connectId === 'TEMP');
+      console.log('Guard Debug:', {
+        user: user ? 'SIGNED IN' : 'NOT SIGNED IN',
+        userId: user?.id,
+        personalProfile: personalProfile ? 'EXISTS' : 'NULL',
+        personalProfileId: personalProfile?.id,
+        personalProfileConnectId: personalProfile?.connectId,
+        hasTemporaryProfile,
+        profileLoading,
+        pathname
+      });
+      
+      if (user && (!personalProfile || hasTemporaryProfile) && !profileLoading) {
+        console.log('Guard: Loading profile from Supabase');
         setProfileLoading(true);
-        loadUserProfile().then(({ profile, error }) => {
+        
+        // Add timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          console.log('Guard: Profile loading timeout - stopping loading state');
           setProfileLoading(false);
+        }, 10000); // 10 second timeout
+        
+        loadUserProfile().then(({ profile, error }) => {
+          clearTimeout(timeoutId);
+          setProfileLoading(false);
+          console.log('Guard: Profile loaded from Supabase:', { profile: profile ? 'EXISTS' : 'NULL', error: error?.message });
           if (profile) {
             // Convert Supabase profile to PersonalProfile format
             const personalProfile = {
@@ -46,28 +68,21 @@ export default function Guard({ children }: { children: React.ReactNode }) {
               updatedAt: profile.updated_at || new Date().toISOString(),
             };
             setPersonalProfile(personalProfile);
+            console.log('Guard: Profile set in local store');
           } else {
-            // No profile found - check if we're on a protected route
-            if (pathname !== "/" && pathname !== "/onboarding") {
-              // If on a protected route, redirect to onboarding
-              router.replace("/onboarding");
-            }
-            // If on explore page (/), allow it to stay
+            console.log('Guard: No profile found in Supabase - user may need to complete onboarding');
           }
+          // Don't redirect to onboarding - let ProtectedRoute handle authentication flow
+        }).catch((error) => {
+          clearTimeout(timeoutId);
+          setProfileLoading(false);
+          console.error('Guard: Error loading profile from Supabase:', error);
         });
         return;
       }
       
-      // If user is authenticated but still has no profile after loading, redirect to onboarding
-      if (user && !personalProfile && profileLoading === false && pathname !== "/" && pathname !== "/onboarding") {
-        router.replace("/onboarding");
-        return;
-      }
-      
-      // Allow root path (/) to be accessible without personalProfile for explore page
-      if (!personalProfile && pathname !== "/onboarding" && pathname !== "/") {
-        router.replace("/");
-      }
+      // Don't force redirects - let ProtectedRoute handle authentication flow
+      // This allows clean sign-in/sign-up pages to show instead of onboarding
     } catch (error) {
       console.error("Guard redirect error:", error);
     }

@@ -6,10 +6,12 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import TextArea from '@/components/TextArea';
 import ImagePicker from '@/components/ImagePicker';
+import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/authContext';
 import { useAppStore } from '@/lib/store';
 import { createClient } from '@supabase/supabase-js';
 import { generateUniqueConnectId, generateConnectId } from '@/lib/connectId';
+import { useRouter } from 'next/navigation';
 
 interface AccountCheckModalProps {
   isOpen: boolean;
@@ -26,7 +28,8 @@ export default function AccountCheckModal({
   verificationValue,
   onResetToInitialLogin
 }: AccountCheckModalProps) {
-  const { user, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount } = useAuth();
+  const router = useRouter();
+  const { user, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount, refreshAuthState } = useAuth();
   const { setPersonalProfile } = useAppStore();
   
   // Debug authentication state
@@ -57,6 +60,7 @@ export default function AccountCheckModal({
   
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [userExists, setUserExists] = useState<boolean | null>(null);
   const [existingUser, setExistingUser] = useState<{ id: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; bio?: string; date_of_birth?: string; created_at: string; updated_at: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -169,6 +173,7 @@ export default function AccountCheckModal({
   }, [isOpen, user, verificationMethod, verificationValue]);
 
   const handleSignIn = async () => {
+    setIsSigningIn(true);
     try {
       // User is already authenticated after verification
       console.log('AccountCheckModal: User signing in with existing account', existingUser);
@@ -205,9 +210,10 @@ export default function AccountCheckModal({
       onClose();
       
       // Redirect to main app
-      window.location.href = '/';
+      router.push('/');
     } catch (error) {
       console.error('AccountCheckModal: Error signing in:', error);
+      setIsSigningIn(false);
     }
   };
 
@@ -376,7 +382,7 @@ export default function AccountCheckModal({
       console.log('AccountCheckModal: Local profile created as timeout fallback');
       
       onClose();
-      window.location.href = '/';
+      router.push('/');
     }, 10000); // 10 second timeout
     
     try {
@@ -481,7 +487,14 @@ export default function AccountCheckModal({
       
       // Close modal and redirect
       onClose();
-      window.location.href = '/';
+      
+      // Refresh auth state to ensure user is properly detected
+      await refreshAuthState();
+      
+      // Small delay to ensure profile is saved before redirect
+      setTimeout(() => {
+        router.push('/');
+      }, 100);
       
     } catch (error) {
       console.error('AccountCheckModal: Error creating profile:', error);
@@ -510,7 +523,7 @@ export default function AccountCheckModal({
       
       // Close modal and redirect
       onClose();
-      window.location.href = '/';
+      router.push('/');
     } finally {
       setIsCreating(false);
     }
@@ -561,8 +574,9 @@ export default function AccountCheckModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md mx-auto shadow-2xl">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
+      {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-xl h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           {currentPage === 1 && userExists === false ? (
@@ -607,7 +621,7 @@ export default function AccountCheckModal({
                 
                 // Close modal and redirect to explore page
                 onClose();
-                window.location.href = '/';
+                router.push('/');
               }}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               aria-label="Close and go to unsigned-in explore page"
@@ -619,36 +633,38 @@ export default function AccountCheckModal({
           )}
           
           <h2 className="text-xl font-semibold text-gray-900">
-            {userExists === true ? 'Is this your account?' : 
+            {userExists === true ? 'Welcome back!' : 
              currentPage === 1 ? 'Create Account' : 'Complete Profile'}
           </h2>
           
           <div className="w-9" />
         </div>
 
-        <div className="p-6">
+        <div className="p-6 flex-1 overflow-y-auto">
           {userExists === true ? (
             // Existing Account Card
             <div className="space-y-4">
-              {/* Profile Card */}
-              <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                    {existingUser?.avatar_url ? (
-                      <img
-                        src={existingUser.avatar_url}
-                        alt={existingUser.full_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-orange-600" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-center">
-                    <h3 className="text-base font-semibold text-gray-900">
-                      {existingUser?.full_name || 'User'}
+              {/* Welcome Message */}
+              <div className="text-center">
+                <p className="text-gray-600 text-sm mb-2">
+                  You already have an account with us. Sign in to continue.
+                </p>
+              </div>
+
+              {/* Profile Card - Cool Design */}
+              <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-6">
+                <div className="flex flex-col items-center space-y-4">
+                  {/* Profile Picture */}
+                  <Avatar 
+                    src={existingUser?.avatar_url ?? undefined} 
+                    name={existingUser?.full_name || 'User'} 
+                    size={64}
+                  />
+                  
+                  {/* Name */}
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Welcome back, {existingUser?.full_name || 'User'}!
                     </h3>
                   </div>
                 </div>
@@ -657,9 +673,10 @@ export default function AccountCheckModal({
               {/* Sign In Button */}
               <Button
                 onClick={handleSignIn}
+                disabled={isSigningIn}
                 className="w-full"
               >
-                Sign In
+                {isSigningIn ? 'Signing in...' : 'Sign In'}
               </Button>
 
               {/* Text below with create new account option */}
@@ -689,7 +706,7 @@ export default function AccountCheckModal({
                         } else {
                           // Fallback: close modal and redirect
                           onClose();
-                          window.location.href = '/';
+                          router.push('/');
                         }
                       }}
                       className="text-blue-600 underline hover:text-blue-800 transition-colors"

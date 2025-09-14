@@ -15,6 +15,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.error('Delete API: Invalid UUID format:', userId);
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    }
+
     // If we have a service role key, use it for admin operations
     if (supabaseServiceKey) {
       console.log('Delete API: Using service role key for admin deletion');
