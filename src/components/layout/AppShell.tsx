@@ -16,6 +16,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const isChatPage = pathname.startsWith('/chat');
   const isSettingsPage = pathname === '/settings';
+  const isMenuPage = pathname === '/menu';
   
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore'];

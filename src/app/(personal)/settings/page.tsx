@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/Button";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
@@ -17,6 +17,37 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Hide bottom nav on mobile settings page
+  useEffect(() => {
+    const hideBottomNav = () => {
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = 'none';
+        (bottomNav as HTMLElement).style.visibility = 'hidden';
+        (bottomNav as HTMLElement).style.opacity = '0';
+        (bottomNav as HTMLElement).style.transform = 'translateY(100%)';
+      }
+      document.body.style.paddingBottom = '0';
+    };
+
+    const showBottomNav = () => {
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = '';
+        (bottomNav as HTMLElement).style.visibility = '';
+        (bottomNav as HTMLElement).style.opacity = '';
+        (bottomNav as HTMLElement).style.transform = '';
+      }
+      document.body.style.paddingBottom = '';
+    };
+    
+    hideBottomNav();
+    
+    return () => {
+      showBottomNav();
+    };
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -187,41 +218,53 @@ export default function SettingsPage() {
     );
   }
 
+  useEffect(() => {
+    document.body.classList.add('no-scroll');
+    return () => document.body.classList.remove('no-scroll');
+  }, []);
+
   return (
-    <div className="lg:hidden min-h-screen bg-white flex flex-col -mx-4 -my-6">
+    <div className="lg:hidden h-screen overflow-hidden bg-white flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-4 p-4 border-b border-gray-200">
+      <div className="bg-white px-4 pt-safe-top pt-5 pb-4">
+        <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-2 rounded-md hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 ring-brand"
+          className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
           aria-label="Go back"
         >
+          <span className="back-btn-circle">
           <ChevronLeftIcon className="h-5 w-5" />
+          </span>
         </button>
+          <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+        </div>
       </div>
 
-      {/* Settings content - empty space for future settings */}
-      <div className="flex-1">
-      </div>
-      
-      {/* Account actions at bottom */}
-      <div className="space-y-3 p-4 pt-6 border-t border-gray-200">
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-        >
-          <LogOut size={20} className="text-gray-600" />
-          <span className="font-medium">Log out</span>
-        </button>
+      {/* Settings content */}
+      <div className="flex-1 flex flex-col px-4 py-4">
+        {/* Empty space to push buttons to bottom */}
+        <div className="flex-1"></div>
         
-        <button
-          onClick={handleDeleteAccount}
-          className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-        >
-          <Trash2 size={20} className="text-red-500" />
-          <span className="font-medium">Delete Account</span>
-        </button>
+        {/* Account actions at bottom */}
+        <div className="space-y-3 pb-safe-bottom mb-4">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-lg"
+          >
+            <LogOut size={20} className="text-gray-600" />
+            <span className="font-medium">Log out</span>
+          </button>
+          
+          <button
+            onClick={handleDeleteAccount}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors text-lg"
+          >
+            <Trash2 size={20} className="text-red-500" />
+            <span className="font-medium">Delete Account</span>
+          </button>
+        </div>
       </div>
     </div>
   );

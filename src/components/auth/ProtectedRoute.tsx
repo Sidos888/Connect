@@ -163,17 +163,8 @@ export default function ProtectedRoute({ children, fallback, title, description,
     );
   }
 
-  // Show loading for profile only for a limited time, then show content anyway
-  if (isLoadingProfile && !forceStopLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <LoadingSpinner className="mx-auto mb-4" />
-          <p className="text-sm text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
+  // Don't show loading animation for profile loading - let content render immediately
+  // Profile will load in the background
 
   if (!user) {
     if (fallback) {

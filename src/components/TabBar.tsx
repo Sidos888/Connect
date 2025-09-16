@@ -37,7 +37,7 @@ export default function TabBar({ items }: Props) {
   };
   
   return (
-    <nav className="tabbar-nav fixed bottom-0 left-0 right-0 bg-white z-50 border-t border-gray-200">
+    <nav className="tabbar-nav fixed bottom-0 left-0 right-0 bg-white z-50 border-t border-gray-200" data-testid="mobile-bottom-nav">
       <ul className="grid grid-cols-4 px-2 py-1">
         {items.map((item) => {
           const active = isActive(item.href);

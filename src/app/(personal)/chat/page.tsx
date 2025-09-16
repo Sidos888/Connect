@@ -109,13 +109,7 @@ export default function MessagesPage() {
   ];
 
   // Show loading state
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  // Don't show loading animation - let content render immediately
 
   // Show login prompt if not authenticated
   if (!user) {

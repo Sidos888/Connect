@@ -8,8 +8,8 @@ import ProfileStrip from "@/components/my-life/ProfileStrip";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { ChevronDownIcon, BellIcon, ChevronLeftIcon, UsersIcon } from "@/components/icons";
-import { LogOut, Trash2, ChevronRightIcon } from "lucide-react";
+import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
+import { LogOut, Trash2, ChevronRightIcon, Users } from "lucide-react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
 import AccountSwitcherSwipeModal from "@/components/AccountSwitcherSwipeModal";
@@ -23,7 +23,7 @@ export default function Page() {
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'edit-profile'>('menu');
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'profile' | 'edit-profile'>('menu');
   const [showAccountSwitcher, setShowAccountSwitcher] = React.useState(false);
 
   // Reset menu state when resetMenuState is called
@@ -40,6 +40,41 @@ export default function Page() {
       window.removeEventListener('resetMenuState', handleReset);
     };
   }, []);
+
+  // Hide bottom nav when in edit profile mode
+  React.useEffect(() => {
+    const hideBottomNav = () => {
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = 'none';
+        (bottomNav as HTMLElement).style.visibility = 'hidden';
+        (bottomNav as HTMLElement).style.opacity = '0';
+        (bottomNav as HTMLElement).style.transform = 'translateY(100%)';
+      }
+      document.body.style.paddingBottom = '0';
+    };
+
+    const showBottomNav = () => {
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = '';
+        (bottomNav as HTMLElement).style.visibility = '';
+        (bottomNav as HTMLElement).style.opacity = '';
+        (bottomNav as HTMLElement).style.transform = '';
+      }
+      document.body.style.paddingBottom = '';
+    };
+    
+    if (currentView === 'edit-profile' || currentView === 'profile') {
+      hideBottomNav();
+    } else {
+      showBottomNav();
+    }
+    
+    return () => {
+      showBottomNav();
+    };
+  }, [currentView]);
 
   // Get current account info
   const currentAccount = context.type === "business" && currentBusiness 
@@ -124,36 +159,38 @@ export default function Page() {
     };
 
     return (
-      <div className="lg:hidden min-h-screen bg-white flex flex-col -mx-4 -my-6">
+      <div className="lg:hidden min-h-screen bg-white flex flex-col">
         {/* Header */}
-        <div className="flex items-center gap-4 p-4 border-b border-gray-200">
-          <button
-            onClick={() => setCurrentView('menu')}
-            className="p-2 rounded-md hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 ring-brand"
-            aria-label="Go back"
-          >
-            <ChevronLeftIcon className="h-5 w-5" />
-          </button>
-          <h1 className="text-xl font-semibold">Edit Profile</h1>
+        <div className="bg-white px-4 pt-safe-top pt-3 pb-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentView('menu')}
+              className="p-2 rounded-md hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 ring-brand"
+              aria-label="Go back"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <h1 className="text-xl font-semibold text-gray-900">Edit Profile</h1>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4">
-          <div className="max-w-md mx-auto space-y-6">
+        <div className="flex-1 px-4 py-4">
+          <div className="space-y-5">
             {/* Profile Picture Section */}
-            <div className="flex flex-col items-center justify-center py-2">
+            <div className="flex flex-col items-center justify-center py-1">
               <div className="flex justify-center">
                 <ImagePicker
                   onChange={handleImageChange}
                   initialPreviewUrl={formData.profilePicturePreview}
                   shape="circle"
-                  size={120}
+                  size={100}
                 />
               </div>
             </div>
 
             {/* Form Fields */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Name Field */}
               <div>
                 <Input
@@ -200,11 +237,11 @@ export default function Page() {
             )}
 
             {/* Action Buttons */}
-            <div className="text-center space-y-4 pt-8">
+            <div className="text-center space-y-3 pt-4">
               <button
                 onClick={handleSave}
                 disabled={loading || !formData.name.trim()}
-                className="w-full px-6 py-3 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="w-full px-6 py-2.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -228,45 +265,229 @@ export default function Page() {
     );
   };
 
+  // Profile View Component
+  const ProfileView = () => {
+    React.useEffect(() => {
+      document.body.classList.add('no-scroll');
+      return () => document.body.classList.remove('no-scroll');
+    }, []);
+    return (
+      <div className="lg:hidden h-screen overflow-hidden bg-white flex flex-col">
+        {/* Header */}
+        <div className="bg-white px-4 pt-safe-top pt-5 pb-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentView('menu')}
+              className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+              aria-label="Back to menu"
+            >
+              <span className="back-btn-circle">
+                <ChevronLeftIcon className="h-5 w-5" />
+              </span>
+            </button>
+            <h1 className="text-2xl font-semibold text-gray-900">Profile</h1>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 px-4 py-6">
+          {/* Profile Card */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            {/* Card Header: Edit Profile action (right aligned) */}
+            <div className="flex justify-end items-start mb-4">
+              <button
+                onClick={() => setCurrentView('edit-profile')}
+                className="text-black hover:text-black font-medium text-sm underline"
+              >
+                Edit Profile
+              </button>
+            </div>
+
+            {/* Profile Picture */}
+            <div className="flex justify-center mb-4">
+              <Avatar 
+                src={currentAccount?.avatarUrl ?? undefined} 
+                name={currentAccount?.name ?? "Your Name"} 
+                size={120} 
+              />
+            </div>
+
+            {/* Name and Account Type (centered) */}
+            <div className="text-center mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                {currentAccount?.name ?? "Your Name"}
+              </h2>
+              <p className="text-gray-600 text-sm">Personal Account</p>
+            </div>
+
+            {/* Bio Section (optional) */}
+            {currentAccount?.bio && (
+              <div className="text-center mt-6">
+                <h3 className="font-semibold text-gray-900 mb-2 text-sm">Bio</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {currentAccount.bio}
+                </p>
+              </div>
+            )}
+
+            {/* Share Profile Option */}
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <button className="w-full flex items-center justify-center gap-2 py-3 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+                <span className="font-medium">Share Profile</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Settings Component
-  const SettingsView = () => (
-    <div className="lg:hidden min-h-screen bg-white flex flex-col -mx-4 -my-6">
+  const SettingsView = () => {
+    // Hide bottom nav when in settings mode
+    React.useEffect(() => {
+      const hideBottomNav = () => {
+        // Try multiple selectors to find the bottom nav
+        const selectors = [
+          '[data-testid="mobile-bottom-nav"]',
+          '.tabbar-nav',
+          'nav[class*="bottom"]',
+          'nav[class*="fixed"]',
+          '.fixed.bottom-0'
+        ];
+        
+        let bottomNav = null;
+        for (const selector of selectors) {
+          bottomNav = document.querySelector(selector);
+          if (bottomNav) break;
+        }
+        
+        console.log('Settings: Found bottom nav:', bottomNav);
+        
+        if (bottomNav) {
+          (bottomNav as HTMLElement).style.display = 'none !important';
+          (bottomNav as HTMLElement).style.visibility = 'hidden !important';
+          (bottomNav as HTMLElement).style.opacity = '0 !important';
+          (bottomNav as HTMLElement).style.transform = 'translateY(100%) !important';
+          (bottomNav as HTMLElement).style.position = 'fixed !important';
+          (bottomNav as HTMLElement).style.bottom = '-100px !important';
+          (bottomNav as HTMLElement).style.zIndex = '-1 !important';
+        }
+        
+        // Also try to hide by class
+        const navElements = document.querySelectorAll('nav');
+        navElements.forEach(nav => {
+          if (nav.className.includes('bottom') || nav.className.includes('fixed')) {
+            (nav as HTMLElement).style.display = 'none !important';
+            (nav as HTMLElement).style.visibility = 'hidden !important';
+          }
+        });
+        
+        document.body.style.paddingBottom = '0';
+        document.documentElement.style.setProperty('--bottom-nav-height', '0px');
+      };
+
+      const showBottomNav = () => {
+        const selectors = [
+          '[data-testid="mobile-bottom-nav"]',
+          '.tabbar-nav',
+          'nav[class*="bottom"]',
+          'nav[class*="fixed"]',
+          '.fixed.bottom-0'
+        ];
+        
+        let bottomNav = null;
+        for (const selector of selectors) {
+          bottomNav = document.querySelector(selector);
+          if (bottomNav) break;
+        }
+        
+        if (bottomNav) {
+          (bottomNav as HTMLElement).style.display = '';
+          (bottomNav as HTMLElement).style.visibility = '';
+          (bottomNav as HTMLElement).style.opacity = '';
+          (bottomNav as HTMLElement).style.transform = '';
+          (bottomNav as HTMLElement).style.position = '';
+          (bottomNav as HTMLElement).style.bottom = '';
+          (bottomNav as HTMLElement).style.zIndex = '';
+        }
+        
+        // Restore nav elements
+        const navElements = document.querySelectorAll('nav');
+        navElements.forEach(nav => {
+          if (nav.className.includes('bottom') || nav.className.includes('fixed')) {
+            (nav as HTMLElement).style.display = '';
+            (nav as HTMLElement).style.visibility = '';
+          }
+        });
+        
+        document.body.style.paddingBottom = '';
+        document.documentElement.style.removeProperty('--bottom-nav-height');
+      };
+      
+      // Add a small delay to ensure DOM is ready
+      setTimeout(() => {
+        hideBottomNav();
+        // Also add class to body for CSS targeting
+        document.body.classList.add('settings-mode');
+        document.body.classList.add('no-scroll');
+      }, 100);
+      
+      return () => {
+        showBottomNav();
+        document.body.classList.remove('settings-mode');
+        document.body.classList.remove('no-scroll');
+      };
+    }, []);
+
+    return (
+    <div className="lg:hidden h-screen overflow-hidden bg-white flex flex-col settings-mode" style={{ paddingBottom: '0' }}>
       {/* Header */}
-      <div className="flex items-center gap-4 p-4 border-b border-gray-200">
-        <button
-          onClick={() => setCurrentView('menu')}
-          className="p-2 rounded-md hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 ring-brand"
-          aria-label="Back to menu"
-        >
-          <ChevronLeftIcon className="h-5 w-5" />
-        </button>
-        <h1 className="text-xl font-semibold">Settings</h1>
+      <div className="bg-white px-4 pt-safe-top pt-3 pb-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setCurrentView('menu')}
+            className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Back to menu"
+          >
+            <span className="back-btn-circle">
+              <ChevronLeftIcon className="h-5 w-5" />
+            </span>
+          </button>
+          <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+        </div>
       </div>
 
-      {/* Settings content - empty space for future settings */}
-      <div className="flex-1">
-      </div>
-      
-      {/* Account actions at bottom */}
-      <div className="space-y-3 p-4 pt-6 border-t border-gray-200">
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-        >
-          <LogOut size={20} className="text-gray-600" />
-          <span className="font-medium">Log out</span>
-        </button>
+      {/* Content */}
+      <div className="flex-1 flex flex-col px-4 py-4">
+        {/* Empty space to push buttons to bottom */}
+        <div className="flex-1"></div>
         
-        <button
-          onClick={handleDeleteAccount}
-          className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-        >
-          <Trash2 size={20} className="text-red-500" />
-          <span className="font-medium">Delete Account</span>
-        </button>
+        {/* Account actions at bottom */}
+        <div className="space-y-3 pb-safe-bottom mb-4">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <LogOut size={20} className="text-gray-600" />
+            <span className="font-medium">Log out</span>
+          </button>
+          
+          <button
+            onClick={handleDeleteAccount}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <Trash2 size={20} className="text-red-500" />
+            <span className="font-medium">Delete Account</span>
+          </button>
+        </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <ProtectedRoute
@@ -276,6 +497,8 @@ export default function Page() {
     >
       {currentView === 'settings' ? (
         <SettingsView />
+      ) : currentView === 'profile' ? (
+        <ProfileView />
       ) : currentView === 'edit-profile' ? (
         <EditProfileView />
       ) : (
@@ -308,7 +531,7 @@ export default function Page() {
                   {/* Profile Card - Front layer with full corner radius */}
                   <div className="relative z-10">
                     <button
-                      onClick={() => setCurrentView('edit-profile')}
+                      onClick={() => setCurrentView('profile')}
                       className="w-full rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-4 grid grid-cols-[40px_1fr_40px] items-center hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-center">
@@ -329,7 +552,7 @@ export default function Page() {
                           }}
                           className="p-1 rounded-full hover:bg-gray-100 transition-colors"
                         >
-                          <UsersIcon className="h-5 w-5 text-gray-400" />
+                          <Users className="h-5 w-5 text-gray-400" />
                         </button>
                       </div>
                     </button>

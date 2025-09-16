@@ -12,10 +12,6 @@ export default function ExplorePage() {
     router.replace("/");
   }, [router]);
 
-  // Show loading while redirecting
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <LoadingSpinner />
-    </div>
-  );
+  // Redirect immediately without loading animation
+  return null;
 }
