@@ -98,7 +98,7 @@ export default function ChatLayout() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Chat List Sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Messages</h1>
