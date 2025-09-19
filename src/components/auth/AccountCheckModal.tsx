@@ -147,51 +147,69 @@ export default function AccountCheckModal({
     }, 60000); // Increased to 60 seconds
 
     try {
-      // FAST CHECK: Simple and reliable database query
+      // FAST CHECK: Enhanced with phone format variations
       console.log('AccountCheckModal: 🚀 FAST CHECK: Direct database query for existing account...');
       console.log('AccountCheckModal: 🔍 FAST CHECK: Looking for:', {
         method: verificationMethod,
         identifier: verificationValue
       });
       
-      // Step 1: Find the identity record
-      const { data: identityRecord, error: identityError } = await supabase
-        .from('account_identities')
-        .select('account_id')
-        .eq('method', verificationMethod)
-        .eq('identifier', verificationValue)
-        .maybeSingle();
+      // Generate phone format variations if it's a phone number
+      let identifiersToTry = [verificationValue];
+      if ((verificationMethod as string) === 'phone') {
+        const phone = verificationValue;
+        // Based on logs, database has "466310826" but we're searching for "61466310826"
+        const phoneVariations = [
+          phone, // Original: "61466310826"
+          phone.replace(/^61/, ''), // Remove 61 prefix: "466310826" ← This should match!
+          phone.replace(/^\+61/, ''), // Remove +61 prefix
+          `+61${phone}`, // Add +61 prefix
+          `0${phone.replace(/^61/, '')}`, // Add 0 prefix to core number
+          phone.replace(/^61/, '0'), // Replace 61 with 0
+        ];
+        identifiersToTry = [...new Set(phoneVariations)]; // Remove duplicates
+        console.log('AccountCheckModal: 📱 Phone format variations to try:', identifiersToTry);
+      }
       
-      console.log('AccountCheckModal: 🔍 FAST CHECK: Identity lookup result:', {
-        identityRecord,
-        identityError,
-        hasAccountId: !!identityRecord?.account_id,
-        accountId: identityRecord?.account_id,
-        errorCode: identityError?.code,
-        errorMessage: identityError?.message
-      });
-      
-      if (!identityError && identityRecord?.account_id) {
-        // Step 2: Get the account data
-        const { data: accountData, error: accountError } = await supabase
-          .from('accounts')
-          .select('*')
-          .eq('id', identityRecord.account_id)
+      // Try each identifier variation
+      for (const identifier of identifiersToTry) {
+        console.log('AccountCheckModal: 🔍 FAST CHECK: Trying identifier:', identifier);
+        
+        const { data: identityRecord, error: identityError } = await supabase
+          .from('account_identities')
+          .select('account_id')
+          .eq('method', verificationMethod)
+          .eq('identifier', identifier)
           .maybeSingle();
         
-        console.log('AccountCheckModal: 🔍 FAST CHECK: Account lookup result:', {
-          accountData,
-          accountError,
-          hasAccount: !!accountData
+        console.log('AccountCheckModal: 🔍 FAST CHECK: Identity lookup result for', identifier, ':', {
+          identityRecord,
+          identityError,
+          hasAccountId: !!identityRecord?.account_id
         });
         
-        if (!accountError && accountData) {
-          console.log('AccountCheckModal: ✅ FAST CHECK: Found account directly!', accountData);
-          clearTimeout(timeoutId);
-          setUserExists(true);
-          setExistingUser(accountData);
-          setAccountCheckInProgress(false);
-          return;
+        if (!identityError && identityRecord?.account_id) {
+          // Step 2: Get the account data
+          const { data: accountData, error: accountError } = await supabase
+            .from('accounts')
+            .select('*')
+            .eq('id', identityRecord.account_id)
+            .maybeSingle();
+          
+          console.log('AccountCheckModal: 🔍 FAST CHECK: Account lookup result:', {
+            accountData,
+            accountError,
+            hasAccount: !!accountData
+          });
+          
+          if (!accountError && accountData) {
+            console.log('AccountCheckModal: ✅ FAST CHECK: Found account with identifier:', identifier, accountData);
+            clearTimeout(timeoutId);
+            setUserExists(true);
+            setExistingUser(accountData);
+            setAccountCheckInProgress(false);
+            return;
+          }
         }
       }
       
