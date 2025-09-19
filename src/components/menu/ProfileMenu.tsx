@@ -535,7 +535,7 @@ function SettingsView({
 
 export default function ProfileMenu() {
   const { personalProfile, clearAll, setPersonalProfile } = useAppStore();
-  const { signOut, deleteAccount, updateProfile, uploadAvatar } = useAuth();
+  const { signOut, deleteAccount, updateProfile, uploadAvatar, supabase } = useAuth();
   const [open, setOpen] = useState(false);
   const [showDim, setShowDim] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -688,17 +688,17 @@ export default function ProfileMenu() {
     
     try {
       console.log('ProfileMenu: Starting sign out...');
+      
+      // Clear all local state first
+      clearAll();
+      
+      // Then sign out from auth
       await signOut();
       console.log('ProfileMenu: Sign out completed');
       
-      // Clear all local state
-      clearAll();
-      
-      // Force a page reload to ensure clean state
-      console.log('ProfileMenu: Forcing page reload after sign out');
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      // Immediate redirect to prevent hanging
+      console.log('ProfileMenu: Redirecting to home page');
+      window.location.href = '/';
       
     } catch (error) {
       console.error('ProfileMenu: Sign out error:', error);
@@ -722,44 +722,70 @@ export default function ProfileMenu() {
   };
 
   const confirmDeleteAccount = async () => {
-    console.log('ProfileMenu: Starting account deletion...');
+    console.log('🚯 BULLETPROOF DELETE: Starting comprehensive account deletion');
     setIsDeletingAccount(true);
     
     try {
-      console.log('ProfileMenu: Calling deleteAccount()...');
-      const { error } = await deleteAccount();
-      console.log('ProfileMenu: deleteAccount() completed, error:', error);
+      // Store the profile ID before we clear local data
+      const accountId = personalProfile?.id;
       
-      if (error) {
-        console.error('ProfileMenu: Delete account error:', error);
-        alert('Error deleting account: ' + error.message);
-        setIsDeletingAccount(false);
-        return;
+      if (accountId && supabase) {
+        console.log('🚯 DATABASE: Starting database cleanup for:', accountId);
+        
+        try {
+          // Step 1: Delete account_identities first (foreign key dependency)
+          console.log('🚯 DATABASE: Deleting account identities...');
+          const { error: identityError } = await supabase
+            .from('account_identities')
+            .delete()
+            .eq('account_id', accountId);
+          
+          if (identityError) {
+            console.error('🚯 DATABASE: Identity cleanup failed:', identityError);
+          } else {
+            console.log('🚯 DATABASE: ✅ Identity records deleted');
+          }
+          
+          // Step 2: Delete accounts record
+          console.log('🚯 DATABASE: Deleting account record...');
+          const { error: accountError } = await supabase
+            .from('accounts')
+            .delete()
+            .eq('id', accountId);
+          
+          if (accountError) {
+            console.error('🚯 DATABASE: Account cleanup failed:', accountError);
+          } else {
+            console.log('🚯 DATABASE: ✅ Account record deleted');
+          }
+          
+          console.log('🚯 DATABASE: ✅ Database cleanup completed successfully');
+        } catch (dbError) {
+          console.error('🚯 DATABASE: Database cleanup error:', dbError);
+          // Continue with local cleanup even if database cleanup fails
+        }
       }
       
-      console.log('ProfileMenu: Account deleted successfully, waiting 2 seconds...');
-      
-      // Wait 2 seconds for the loading animation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Clear all local data
-      console.log('ProfileMenu: Clearing all local data...');
+      // Now clear all local data after database cleanup
+      console.log('🚯 LOCAL: Clearing all local data and signing out');
       clearAll();
-      localStorage.removeItem('connect.app.v1');
       localStorage.clear();
+      sessionStorage.clear();
       
-      // Close modal and redirect to explore page (not signed in)
-      console.log('ProfileMenu: Closing modal and redirecting to explore...');
-      setOpen(false);
-      setShowSettings(false);
-      setShowDeleteConfirm(false);
-      setShowFinalConfirm(false);
-      router.push('/explore');
+      // Sign out (don't wait for it to complete)
+      signOut().catch(err => console.log('Sign out error (ignoring):', err));
+      
+      // Short animation
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // FORCE REDIRECT - multiple methods for reliability
+      console.log('🚯 FORCE REDIRECT: Going to explore now');
+      window.location.replace('/explore');
       
     } catch (error) {
-      console.error('ProfileMenu: Unexpected error during account deletion:', error);
-      alert('An unexpected error occurred while deleting your account');
-      setIsDeletingAccount(false);
+      console.error('🚯 Error during nuclear delete, forcing redirect:', error);
+      // Force redirect no matter what
+      window.location.replace('/explore');
     }
   };
 

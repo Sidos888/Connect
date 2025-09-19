@@ -19,7 +19,7 @@ export default function AppShell({ children }: AppShellProps) {
   const isMenuPage = pathname === '/menu';
   
   // Routes that are always accessible (no login required)
-  const publicRoutes = ['/', '/explore'];
+  const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test'];
   const normalizedPath = pathname.replace(/\/$/, '') || '/';
   const isPublicRoute = publicRoutes.includes(normalizedPath);
 

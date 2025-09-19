@@ -30,34 +30,50 @@ export function isValidConnectId(connectId: string): boolean {
 export async function generateUniqueConnectId(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  maxAttempts: number = 10
+  maxAttempts: number = 5
 ): Promise<string> {
+  console.log(`generateUniqueConnectId: Starting with ${maxAttempts} attempts`);
+  
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const connectId = generateConnectId();
+    console.log(`generateUniqueConnectId: Attempt ${attempt + 1}/${maxAttempts} - Testing: ${connectId}`);
     
-    // Check if this connect_id already exists
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('connect_id')
-      .eq('connect_id', connectId)
-      .single();
-    
-    // If no data found, this connect_id is unique
-    if (error && error.code === 'PGRST116') {
-      return connectId;
-    }
-    
-    // If there was an error other than "not found", throw it
-    if (error && error.code !== 'PGRST116') {
-      throw error;
-    }
-    
-    // If data exists, this connect_id is taken, try again
-    if (data) {
+    try {
+      // Check if this connect_id already exists
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('connect_id')
+        .eq('connect_id', connectId)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
+      
+      console.log(`generateUniqueConnectId: Query result for ${connectId}:`, { data, error });
+      
+      // If no error and no data, this connect_id is unique
+      if (!error && !data) {
+        console.log(`generateUniqueConnectId: ✅ Found unique ID: ${connectId}`);
+        return connectId;
+      }
+      
+      // If there was an error, log it but continue trying
+      if (error) {
+        console.warn(`generateUniqueConnectId: Query error for ${connectId}:`, error);
+        // For most errors, continue trying with a new ID
+        continue;
+      }
+      
+      // If data exists, this connect_id is taken, try again
+      if (data) {
+        console.log(`generateUniqueConnectId: ID ${connectId} is taken, trying again...`);
+        continue;
+      }
+    } catch (queryError) {
+      console.error(`generateUniqueConnectId: Unexpected error for ${connectId}:`, queryError);
       continue;
     }
   }
   
   // If we've exhausted all attempts, throw an error
-  throw new Error(`Failed to generate unique connect_id after ${maxAttempts} attempts`);
+  const errorMsg = `Failed to generate unique connect_id after ${maxAttempts} attempts`;
+  console.error('generateUniqueConnectId:', errorMsg);
+  throw new Error(errorMsg);
 }

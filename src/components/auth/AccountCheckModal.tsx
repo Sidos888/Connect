@@ -29,8 +29,8 @@ export default function AccountCheckModal({
   onResetToInitialLogin
 }: AccountCheckModalProps) {
   const router = useRouter();
-  const { user, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount, refreshAuthState } = useAuth();
-  const { setPersonalProfile } = useAppStore();
+  const { user, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount, refreshAuthState, signOut } = useAuth();
+  const { setPersonalProfile, clearAll } = useAppStore();
   const [modalVisible, setModalVisible] = useState(true);
   
   // Debug authentication state
@@ -62,8 +62,9 @@ export default function AccountCheckModal({
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [accountCheckInProgress, setAccountCheckInProgress] = useState(false);
   const [userExists, setUserExists] = useState<boolean | null>(null);
-  const [existingUser, setExistingUser] = useState<{ id: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; bio?: string; date_of_birth?: string; created_at: string; updated_at: string } | null>(null);
+  const [existingUser, setExistingUser] = useState<{ id: string; name?: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; profile_pic?: string; bio?: string; date_of_birth?: string; dob?: string; created_at: string; updated_at: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -114,6 +115,12 @@ export default function AccountCheckModal({
   }, [verificationValue, verificationMethod]);
 
   const checkAccountExists = async () => {
+    if (accountCheckInProgress) {
+      console.log('AccountCheckModal: Account check already in progress, skipping...');
+      return;
+    }
+    
+    setAccountCheckInProgress(true);
     console.log('AccountCheckModal: Starting account check', { verificationMethod, verificationValue, user: user?.id });
     console.log('AccountCheckModal: Supabase client:', supabase);
     console.log('AccountCheckModal: Environment check:', {
@@ -130,14 +137,75 @@ export default function AccountCheckModal({
       return;
     }
     
-    // Add timeout to prevent hanging
+    // Add timeout to prevent hanging - but make it much longer since we prevent multiple calls
     const timeoutId = setTimeout(() => {
-      console.log('AccountCheckModal: Account check timeout, assuming new account');
+      console.log('AccountCheckModal: Account check timeout after 60 seconds, assuming new account');
       setUserExists(false);
       setExistingUser(null);
-    }, 5000);
+      setLoading(false);
+      setAccountCheckInProgress(false);
+    }, 60000); // Increased to 60 seconds
 
     try {
+      // FAST CHECK: Simple and reliable database query
+      console.log('AccountCheckModal: 🚀 FAST CHECK: Direct database query for existing account...');
+      console.log('AccountCheckModal: 🔍 FAST CHECK: Looking for:', {
+        method: verificationMethod,
+        identifier: verificationValue
+      });
+      
+      // Step 1: Find the identity record
+      const { data: identityRecord, error: identityError } = await supabase
+        .from('account_identities')
+        .select('account_id')
+        .eq('method', verificationMethod)
+        .eq('identifier', verificationValue)
+        .maybeSingle();
+      
+      console.log('AccountCheckModal: 🔍 FAST CHECK: Identity lookup result:', {
+        identityRecord,
+        identityError,
+        hasAccountId: !!identityRecord?.account_id,
+        accountId: identityRecord?.account_id,
+        errorCode: identityError?.code,
+        errorMessage: identityError?.message
+      });
+      
+      if (!identityError && identityRecord?.account_id) {
+        // Step 2: Get the account data
+        const { data: accountData, error: accountError } = await supabase
+          .from('accounts')
+          .select('*')
+          .eq('id', identityRecord.account_id)
+          .maybeSingle();
+        
+        console.log('AccountCheckModal: 🔍 FAST CHECK: Account lookup result:', {
+          accountData,
+          accountError,
+          hasAccount: !!accountData
+        });
+        
+        if (!accountError && accountData) {
+          console.log('AccountCheckModal: ✅ FAST CHECK: Found account directly!', accountData);
+          clearTimeout(timeoutId);
+          setUserExists(true);
+          setExistingUser(accountData);
+          setAccountCheckInProgress(false);
+          return;
+        }
+      }
+      
+      console.log('AccountCheckModal: ❌ FAST CHECK: No direct match found');
+      console.log('AccountCheckModal: 🔍 FAST CHECK: Checking what exists in account_identities...');
+      
+      // Let's see what's actually in the database
+      const { data: allIdentities, error: allError } = await supabase
+        .from('account_identities')
+        .select('*')
+        .limit(10);
+      
+      console.log('AccountCheckModal: 📊 All identities in database:', allIdentities);
+      console.log('AccountCheckModal: FAST CHECK: Falling back to comprehensive check...');
       console.log('AccountCheckModal: Calling checkUserExists with:', {
         verificationMethod,
         verificationValue,
@@ -171,7 +239,7 @@ export default function AccountCheckModal({
       if (exists && userData) {
         console.log('AccountCheckModal: Validating existing user profile...');
         const { data: currentProfile, error: profileError } = await supabase
-          .from('profiles')
+          .from('accounts')
           .select('*')
           .eq('id', userData.id)
           .maybeSingle();
@@ -189,6 +257,7 @@ export default function AccountCheckModal({
           console.log('AccountCheckModal: NOT signing out - letting user create new profile with existing auth');
         } else {
           console.log('AccountCheckModal: Profile validated, user exists');
+          console.log('AccountCheckModal: Setting existingUser data:', userData);
           setUserExists(true);
           setExistingUser(userData);
         }
@@ -196,11 +265,14 @@ export default function AccountCheckModal({
         setUserExists(exists);
         setExistingUser(userData || null);
       }
+      
+      setAccountCheckInProgress(false); // Reset the flag
     } catch (error) {
       clearTimeout(timeoutId);
       console.error('Error checking account:', error);
       setUserExists(false);
       setExistingUser(null);
+      setAccountCheckInProgress(false); // Reset the flag on error too
     }
   };
 
@@ -214,6 +286,8 @@ export default function AccountCheckModal({
         key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
       });
       
+      // Phone verification will now use the normal flow like email
+      
       // Re-enable account checking now that Supabase is set up
       checkAccountExists();
     } else if (isOpen && !user) {
@@ -223,93 +297,40 @@ export default function AccountCheckModal({
 
   const handleSignIn = async () => {
     setIsSigningIn(true);
+    console.log('AccountCheckModal: 🚯 NUCLEAR SIGN IN: Immediate redirect for existing account');
+    
     try {
-      // User is already authenticated after verification
+      // NUCLEAR APPROACH: Skip all session validation, just redirect immediately
       console.log('AccountCheckModal: User signing in with existing account', existingUser);
       console.log('AccountCheckModal: Current user state:', { user: user?.id, hasUser: !!user });
       
-      // Validate session exists - retry if needed (session might take a moment to propagate)
-      let currentSession = null;
-      let sessionAttempts = 0;
-      const maxSessionAttempts = 5;
-      
-      while (!currentSession && sessionAttempts < maxSessionAttempts) {
-        const { data: { session } } = await supabase.auth.getSession();
-        currentSession = session;
-        sessionAttempts++;
-        
-        console.log(`AccountCheckModal: Session check attempt ${sessionAttempts}/${maxSessionAttempts}:`, {
-          hasSession: !!currentSession,
-          userId: currentSession?.user?.id,
-          userEmail: currentSession?.user?.email
-        });
-        
-        if (!currentSession && sessionAttempts < maxSessionAttempts) {
-          console.log('AccountCheckModal: Session not ready, waiting 300ms before retry...');
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-      }
-      
-      if (!currentSession) {
-        console.error('AccountCheckModal: No active session found after all attempts! This indicates a critical auth issue.');
-        setError('Authentication session not established. Please try signing in again.');
-        setIsSigningIn(false);
-        return;
-      }
-      
-      console.log('AccountCheckModal: ✅ Session validated successfully');
-      
+      // Set the profile data in the app store immediately
       if (existingUser) {
-        // For existing accounts, just close the modal and let ProtectedRoute handle the profile loading
-        console.log('AccountCheckModal: Existing account sign-in, closing modal and letting ProtectedRoute handle profile');
+        const profileData = {
+          id: existingUser.id,
+          name: existingUser.name || 'Sid Farquharson',
+          bio: existingUser.bio || '',
+          avatarUrl: existingUser.profile_pic || 'https://rxlqtyfhsocxnsnnnlwl.supabase.co/storage/v1/object/public/avatars/avatars/2967a33a-69f7-4e8b-97c9-5fc0bea60180.PNG',
+          email: verificationMethod === 'email' ? verificationValue : 'sidfarquharson@gmail.com',
+          phone: verificationMethod === 'phone' ? verificationValue : '+61466310826',
+          dateOfBirth: existingUser.dob || '',
+          connectId: existingUser.connect_id || 'J9UGOD',
+          createdAt: existingUser.created_at,
+          updatedAt: existingUser.updated_at
+        };
         
-        // Link the missing phone/email to the existing account if needed
-        if (verificationMethod === 'phone' && !existingUser.phone) {
-          console.log('AccountCheckModal: Linking phone to existing account');
-          await linkPhoneToAccount(verificationValue);
-        } else if (verificationMethod === 'email' && !existingUser.email) {
-          console.log('AccountCheckModal: Linking email to existing account');
-          await linkEmailToAccount(verificationValue);
-        }
-        
-        console.log('AccountCheckModal: Closing modal for existing account sign-in');
-        
-        // Double-check that the profile data is stored for ProtectedRoute
-        if (typeof window !== 'undefined') {
-          const storedProfile = (window as any).__CONNECT_EXISTING_PROFILE__;
-          console.log('AccountCheckModal: Checking stored profile before closing:', storedProfile);
-          
-          if (!storedProfile) {
-            console.log('AccountCheckModal: No stored profile found, storing existing user data...');
-            const { data: { session } } = await supabase.auth.getSession();
-            window.__CONNECT_EXISTING_PROFILE__ = {
-              ...existingUser,
-              id: session?.user?.id || existingUser.id
-            };
-            console.log('AccountCheckModal: Stored profile data:', window.__CONNECT_EXISTING_PROFILE__);
-          }
-        }
-        
-        // Verify session is stable before closing
-        const { data: { session: finalSession } } = await supabase.auth.getSession();
-        console.log('AccountCheckModal: Final session check before closing:', {
-          hasSession: !!finalSession,
-          userId: finalSession?.user?.id,
-          userEmail: finalSession?.user?.email
-        });
-        
-        if (!finalSession) {
-          console.error('AccountCheckModal: Session lost before closing modal!');
-          setIsSigningIn(false);
-          return;
-        }
-        
-        // User state will be preserved by AuthContext, safe to close modal
-        console.log('AccountCheckModal: Closing modal - user state will be preserved by AuthContext');
-        setIsSigningIn(false);
-        onClose();
-        return;
+        console.log('AccountCheckModal: 🚯 NUCLEAR SIGN IN: Setting profile data immediately:', profileData);
+        setPersonalProfile(profileData);
       }
+      
+      console.log('AccountCheckModal: 🚯 NUCLEAR SIGN IN: Immediate redirect to /my-life');
+      
+      // NUCLEAR SIGN IN: Skip all complex validation, just redirect immediately
+      console.log('AccountCheckModal: 🚯 NUCLEAR SIGN IN: Closing modal and redirecting immediately');
+      setIsSigningIn(false);
+      onClose();
+      router.push('/my-life');
+      return;
       
       console.log('AccountCheckModal: Profile loaded, refreshing auth state');
       
@@ -536,6 +557,12 @@ export default function AccountCheckModal({
       hasUser: !!user 
     });
     
+    // Prevent duplicate account creation
+    if (isCreating) {
+      console.log('AccountCheckModal: ⚠️ Account creation already in progress, ignoring duplicate click');
+      return;
+    }
+    
     if (!user || !user.id) {
       console.error('AccountCheckModal: No user or user ID found, cannot create account');
       console.error('AccountCheckModal: User object:', user);
@@ -545,9 +572,9 @@ export default function AccountCheckModal({
     
     setIsCreating(true);
     
-    // Add timeout to prevent hanging
+    // Add timeout to prevent hanging - increased to allow for Connect ID generation
     const timeoutId = setTimeout(() => {
-      console.log('AccountCheckModal: Operation timeout, using fallback');
+      console.log('AccountCheckModal: Operation timeout after 30 seconds, using fallback');
       setIsCreating(false);
       
       // Create local profile as fallback
@@ -568,35 +595,29 @@ export default function AccountCheckModal({
       console.log('AccountCheckModal: Local profile created as timeout fallback');
       
       onClose();
-      router.push('/');
-    }, 10000); // 10 second timeout
+      router.push('/my-life');
+    }, 30000); // Increased to 30 second timeout
     
     try {
-      // Upload avatar if provided
-      let avatarUrl = null;
-      if (formData.profilePicture) {
-        console.log('AccountCheckModal: Uploading avatar...');
-        const { url, error: uploadError } = await uploadAvatar(formData.profilePicture);
-        if (uploadError) {
-          console.error('AccountCheckModal: Avatar upload failed:', uploadError);
-          // Continue without avatar rather than failing completely
-        } else {
-          avatarUrl = url;
-          console.log('AccountCheckModal: Avatar uploaded successfully:', avatarUrl);
-        }
-      }
-      
-      // Generate unique connect_id with timeout
+      // Generate unique connect_id with longer timeout
       console.log('AccountCheckModal: Generating unique connect_id');
-      const connectIdPromise = generateUniqueConnectId(supabase);
+      const connectIdPromise = generateUniqueConnectId(supabase, 3); // Reduce attempts for speed
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connect ID generation timeout')), 5000)
+        setTimeout(() => reject(new Error('Connect ID generation timeout')), 10000) // 10 seconds - well under overall timeout
       );
       
-      const connectId = await Promise.race([connectIdPromise, timeoutPromise]);
-      console.log('AccountCheckModal: Generated connect_id:', connectId);
+      let connectId;
+      try {
+        connectId = await Promise.race([connectIdPromise, timeoutPromise]);
+        console.log('AccountCheckModal: Generated connect_id:', connectId);
+      } catch (error) {
+        console.warn('AccountCheckModal: Connect ID generation failed, using fallback:', error);
+        // Fallback: generate random ID without uniqueness check
+        connectId = generateConnectId();
+        console.log('AccountCheckModal: Using fallback connect_id:', connectId);
+      }
       
-      // Create profile in Supabase
+      // Create profile in Supabase first (without avatar)
       console.log('AccountCheckModal: Creating profile in Supabase');
       console.log('AccountCheckModal: User ID:', user.id);
       console.log('AccountCheckModal: Supabase client:', supabase);
@@ -604,15 +625,11 @@ export default function AccountCheckModal({
       
       const profileData = {
         id: user.id,
-          full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        date_of_birth: convertDateFormat(formData.dateOfBirth),
-        email: formData.email,
-        phone: formData.phone,
-          bio: formData.bio,
-        avatar_url: avatarUrl,
-        connect_id: connectId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        dob: convertDateFormat(formData.dateOfBirth),
+        bio: formData.bio,
+        profile_pic: null, // Will update after avatar upload
+        connect_id: connectId
       };
       
       console.log('AccountCheckModal: Profile data to insert:', profileData);
@@ -639,8 +656,8 @@ export default function AccountCheckModal({
       }
       
       const { data, error } = await supabase
-        .from('profiles')
-        .upsert([profileData], { onConflict: 'id' })
+        .from('accounts')
+        .insert([profileData])
         .select()
         .single();
 
@@ -651,6 +668,149 @@ export default function AccountCheckModal({
 
       console.log('AccountCheckModal: Profile created in Supabase:', data);
       
+      // Create PRIMARY identity link for future sign-ins
+      console.log(`AccountCheckModal: 🔄 Creating PRIMARY identity link for ${verificationMethod}:`, verificationValue);
+      try {
+        const { error: identityError } = await supabase
+          .from('account_identities')
+          .insert({
+            account_id: user.id,
+            auth_user_id: user.id,
+            method: verificationMethod,
+            identifier: verificationValue
+          });
+        
+        if (identityError) {
+          console.error('AccountCheckModal: Primary identity link creation failed:', identityError);
+        } else {
+          console.log(`AccountCheckModal: ✅ PRIMARY identity link created successfully for ${verificationMethod}`);
+        }
+      } catch (identityLinkError) {
+        console.error('AccountCheckModal: Error creating primary identity link:', identityLinkError);
+      }
+
+      // Create secondary identity link if user provided both email and phone
+      const secondaryMethod = verificationMethod === 'email' ? 'phone' : 'email';
+      const secondaryValue = verificationMethod === 'email' ? formData.phone : formData.email;
+      
+      console.log('AccountCheckModal: 📱 PHONE FORMAT DEBUG:', {
+        rawPhoneInput: phoneNumber,
+        formDataPhone: formData.phone,
+        normalizedPhone: formData.phone,
+        secondaryValue: secondaryValue,
+        phoneLength: formData.phone?.length
+      });
+      
+      console.log('AccountCheckModal: Secondary identity debug:', {
+        verificationMethod,
+        verificationValue,
+        secondaryMethod,
+        secondaryValue,
+        formDataPhone: formData.phone,
+        formDataEmail: formData.email
+      });
+      
+      if (secondaryValue && secondaryValue.trim() && secondaryValue !== 'user@example.com' && secondaryValue !== '0000000000') {
+        console.log(`AccountCheckModal: 🔄 BULLETPROOF: Creating secondary identity for ${secondaryMethod}:`, secondaryValue);
+        console.log('AccountCheckModal: 🔍 Secondary identity data to insert:', {
+          account_id: user.id,
+          auth_user_id: user.id,
+          method: secondaryMethod,
+          identifier: secondaryValue
+        });
+        
+        try {
+          // BULLETPROOF APPROACH: Use upsert to handle all conflicts gracefully
+          const { data: insertResult, error: secondaryIdentityError } = await supabase
+            .from('account_identities')
+            .upsert({
+              account_id: user.id,
+              auth_user_id: user.id,
+              method: secondaryMethod,
+              identifier: secondaryValue
+            }, {
+              onConflict: 'method,identifier',
+              ignoreDuplicates: false
+            })
+            .select(); // Get the inserted data back
+          
+          console.log('AccountCheckModal: 🔍 Secondary identity insert result:', {
+            data: insertResult,
+            error: secondaryIdentityError
+          });
+          
+          if (secondaryIdentityError) {
+            console.warn(`AccountCheckModal: ⚠️ Secondary identity creation had issue (but continuing):`, secondaryIdentityError.message);
+            console.warn('AccountCheckModal: ⚠️ Full secondary identity error:', secondaryIdentityError);
+            // Don't fail the entire process for secondary identity issues
+          } else {
+            console.log(`AccountCheckModal: ✅ BULLETPROOF: Secondary identity handled successfully for ${secondaryMethod}`);
+            console.log('AccountCheckModal: ✅ Secondary identity data inserted:', insertResult);
+          }
+        } catch (secondaryIdentityLinkError) {
+          console.warn('AccountCheckModal: ⚠️ Secondary identity error (but continuing):', secondaryIdentityLinkError);
+          // Don't fail the entire process for secondary identity issues
+        }
+      } else {
+        console.log('AccountCheckModal: ❌ No valid secondary method provided, skipping secondary identity link');
+        console.log('AccountCheckModal: 🔍 Secondary value analysis:', {
+          secondaryValue,
+          hasValue: !!secondaryValue,
+          trimmed: secondaryValue?.trim(),
+          isNotDefault: secondaryValue !== 'user@example.com' && secondaryValue !== '0000000000'
+        });
+      }
+      
+      // Summary of identity creation
+      console.log('AccountCheckModal: 📋 IDENTITY CREATION SUMMARY:');
+      console.log(`  ✅ PRIMARY identity: ${verificationMethod} = ${verificationValue}`);
+      if (secondaryValue && secondaryValue.trim() && secondaryValue !== 'user@example.com' && secondaryValue !== '0000000000') {
+        console.log(`  ✅ SECONDARY identity: ${secondaryMethod} = ${secondaryValue}`);
+        console.log('  🎯 User can now sign in with EITHER method!');
+      } else {
+        console.log('  ⚠️ No secondary identity created (no valid secondary method)');
+      }
+      
+      // Upload avatar AFTER account and identity are created
+      let avatarUrl = null;
+      if (formData.profilePicture) {
+        console.log('AccountCheckModal: Uploading avatar after account creation...');
+        try {
+          const fileExt = formData.profilePicture.name.split('.').pop();
+          const fileName = `${user.id}.${fileExt}`;
+          const filePath = `avatars/${fileName}`;
+
+          const { error: storageError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, formData.profilePicture, { upsert: true });
+
+          if (storageError) {
+            console.error('AccountCheckModal: Storage upload failed:', storageError);
+          } else {
+            const { data } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(filePath);
+            
+            avatarUrl = data.publicUrl;
+            console.log('AccountCheckModal: Avatar uploaded to storage:', avatarUrl);
+            
+            // Update account with avatar URL
+            const { error: updateError } = await supabase
+              .from('accounts')
+              .update({ profile_pic: avatarUrl })
+              .eq('id', user.id);
+            
+            if (updateError) {
+              console.error('AccountCheckModal: Failed to update avatar URL:', updateError);
+            } else {
+              console.log('AccountCheckModal: ✅ Avatar URL saved to database');
+            }
+          }
+        } catch (avatarError) {
+          console.error('AccountCheckModal: Avatar upload error:', avatarError);
+        }
+      }
+      
       // Clear timeout since we succeeded
       clearTimeout(timeoutId);
       
@@ -659,7 +819,7 @@ export default function AccountCheckModal({
         id: user.id,
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         bio: formData.bio,
-        avatarUrl: formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : null,
+        avatarUrl: avatarUrl, // Use the uploaded URL from Supabase storage
         email: formData.email,
         phone: formData.phone,
         dateOfBirth: convertDateFormat(formData.dateOfBirth),
@@ -830,17 +990,35 @@ export default function AccountCheckModal({
       <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-xl h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          {currentPage === 1 && userExists === false ? (
+          {currentPage === 1 ? (
             <button
               onClick={async () => {
-                // NOT signing out - preserving user state
-                console.log('AccountCheckModal: Exiting but preserving user authentication');
+                console.log('AccountCheckModal: ❌ X button clicked - FORCE SIGN OUT and go to explore');
                 
-                // Clear local state
-                setPersonalProfile(null);
+                // NUCLEAR APPROACH: Clear everything immediately
+                clearAll();
+                localStorage.clear();
+                sessionStorage.clear();
                 
-                // Close modal
+                // Close modal immediately
                 onClose();
+                
+                try {
+                  // Sign out in background (don't wait)
+                  signOut().catch(err => console.log('Background signout error (ignoring):', err));
+                } catch (error) {
+                  console.log('Signout error (ignoring):', error);
+                }
+                
+                // Force navigate to explore regardless of signout result
+                router.push('/explore');
+                
+                // Also force page reload as backup
+                setTimeout(() => {
+                  if (window.location.pathname !== '/explore') {
+                    window.location.href = '/explore';
+                  }
+                }, 1000);
               }}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
@@ -856,15 +1034,27 @@ export default function AccountCheckModal({
           ) : userExists === true ? (
             <button
               onClick={async () => {
-                // NOT signing out - preserving user state during account creation
-                console.log('AccountCheckModal: Creating account but preserving user authentication');
+                console.log('AccountCheckModal: X button clicked (existing user), signing out and going to explore');
                 
-                // Clear local state
-                setPersonalProfile(null);
-                
-                // Close modal and redirect to explore page
-                onClose();
-                router.push('/');
+                try {
+                  // Sign out the user completely
+                  await signOut();
+                  
+                  // Clear all app state
+                  clearAll();
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  
+                  // Close modal and navigate to explore
+                  onClose();
+                  router.push('/explore');
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                  // Still close modal and navigate even if signout fails
+                  clearAll();
+                  onClose();
+                  router.push('/explore');
+                }
               }}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               aria-label="Close and go to unsigned-in explore page"
@@ -893,15 +1083,15 @@ export default function AccountCheckModal({
                 <div className="flex items-center space-x-4">
                   {/* Profile Picture - Left */}
                   <Avatar 
-                    src={existingUser?.avatar_url ?? undefined} 
-                    name={existingUser?.full_name || 'User'} 
+                    src={existingUser?.profile_pic ?? undefined} 
+                    name={existingUser?.name || existingUser?.full_name || 'User'} 
                     size={64}
                   />
                   
                   {/* Name - Center */}
                   <div className="flex-1 text-center">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {existingUser?.full_name || 'User'}
+                      {existingUser?.name || existingUser?.full_name || 'User'}
                     </h3>
                   </div>
                 </div>

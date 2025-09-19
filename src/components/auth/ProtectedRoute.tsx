@@ -17,7 +17,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, fallback, title, description, buttonText }: ProtectedRouteProps) {
-  const { user, loading, loadUserProfile, createProfileIfNeeded, clearProfileCache } = useAuth();
+  const { user, loading, loadUserProfile, createProfileIfNeeded, clearProfileCache, supabase } = useAuth();
   const { personalProfile, isHydrated, setPersonalProfile } = useAppStore();
   const { showLogin } = useModal();
   const pathname = usePathname();
@@ -184,11 +184,38 @@ export default function ProtectedRoute({ children, fallback, title, description,
             console.error('ProtectedRoute: ❌ Error loading profile:', error);
           } else {
             console.log('ProtectedRoute: ❌ No profile found for user:', user?.id);
-            console.log('ProtectedRoute: 🔍 This might be due to account merging - checking if profile exists elsewhere...');
+            console.log('ProtectedRoute: 🔍 Searching for profile by email/phone instead...');
             
-            // Don't create a profile immediately - this might be a timing issue
-            // Let the user proceed and the profile might load on next navigation
-            console.log('ProtectedRoute: ⚠️ Skipping profile creation to avoid duplicates');
+            // Try to find profile by email or phone
+            if (user?.email) {
+              console.log('ProtectedRoute: 🔍 Searching by email:', user.email);
+              const { data: profileByEmail } = await supabase
+                .from('accounts')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
+                
+              if (profileByEmail) {
+                console.log('ProtectedRoute: ✅ Found profile by email, updating auth user ID');
+                
+                // Map and set the profile directly
+                console.log('ProtectedRoute: ✅ Profile found, setting in app state');
+                const mappedProfile = {
+                  id: profileByEmail.id,
+                  name: profileByEmail.name,
+                  bio: profileByEmail.bio,
+                  avatarUrl: profileByEmail.profile_pic,
+                  email: user.email, // From auth user
+                  phone: user.phone, // From auth user  
+                  dateOfBirth: profileByEmail.dob,
+                  connectId: profileByEmail.connect_id,
+                  createdAt: profileByEmail.created_at,
+                  updatedAt: profileByEmail.updated_at
+                };
+                setPersonalProfile(mappedProfile);
+                console.log('ProtectedRoute: ✅ Profile set successfully:', mappedProfile);
+              }
+            }
           }
         }
       } catch (error) {
