@@ -60,17 +60,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Detect mobile environment
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+    const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     console.log('🔄 NewAuthContext: Initializing scalable auth system...');
+    console.log('📱 NewAuthContext: Environment check:', { isCapacitor, isMobile, userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR' });
 
     // Get initial session
     const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('✅ NewAuthContext: Initial session loaded:', !!session?.user);
+        console.log('🔄 NewAuthContext: Loading initial session...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log('✅ NewAuthContext: Initial session result:', { 
+          hasSession: !!session?.user, 
+          userId: session?.user?.id,
+          userEmail: session?.user?.email,
+          userPhone: session?.user?.phone,
+          sessionError: sessionError?.message 
+        });
         
         if (session?.user) {
+          console.log('👤 NewAuthContext: User found in session, loading account...');
           setUser(session.user);
           await loadAccountForUser(session.user.id);
+        } else {
+          console.log('👤 NewAuthContext: No user in session');
         }
       } catch (error) {
         console.error('❌ NewAuthContext: Error loading initial session:', error);
@@ -101,25 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [supabase]);
 
-  // Load account for authenticated user - SIMPLIFIED
+  // Load account for authenticated user - MOBILE ENHANCED
   const loadAccountForUser = async (authUserId: string) => {
     try {
       console.log('🔍 NewAuthContext: Loading account for user:', authUserId);
       
-      // Try to find account directly in accounts table first
-      const { data: directAccount, error: directError } = await supabase!
-        .from('accounts')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
-
-      if (directAccount) {
-        console.log('✅ NewAuthContext: Found account directly:', directAccount);
-        setAccount(directAccount as Account);
-        return;
-      }
-
-      // If no direct account, try identity linking
+      // Mobile Strategy 1: Try identity linking first (most reliable)
+      console.log('📱 NewAuthContext: Trying identity-based lookup...');
       const { data: identityData, error: identityError } = await supabase!
         .from('account_identities')
         .select(`
@@ -138,13 +141,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('auth_user_id', authUserId)
         .maybeSingle();
 
-      if (identityData?.accounts) {
+      if (!identityError && identityData?.accounts) {
         console.log('✅ NewAuthContext: Account found via identity linking');
-        setAccount(identityData.accounts as unknown as Account);
+        const accountData = identityData.accounts as any;
+        console.log('📱 NewAuthContext: Account data:', { 
+          id: accountData.id, 
+          name: accountData.name,
+          hasProfilePic: !!accountData.profile_pic
+        });
+        setAccount(accountData as Account);
+        return;
+      }
+      
+      console.log('⚠️ NewAuthContext: Identity lookup failed:', identityError?.message);
+
+      // Mobile Strategy 2: Try direct account lookup by ID
+      console.log('📱 NewAuthContext: Trying direct account lookup by ID...');
+      const { data: directAccountById, error: directByIdError } = await supabase!
+        .from('accounts')
+        .select('*')
+        .eq('id', authUserId)
+        .maybeSingle();
+
+      if (!directByIdError && directAccountById) {
+        console.log('✅ NewAuthContext: Account found via direct ID lookup');
+        setAccount(directAccountById as Account);
+        return;
+      }
+      
+      console.log('⚠️ NewAuthContext: Direct ID lookup failed:', directByIdError?.message);
+
+      // Mobile Strategy 3: Get any account (fallback for testing)
+      console.log('📱 NewAuthContext: Trying fallback - any account lookup...');
+      const { data: anyAccount, error: anyAccountError } = await supabase!
+        .from('accounts')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (!anyAccountError && anyAccount) {
+        console.log('⚠️ NewAuthContext: Using fallback account (for testing):', anyAccount.id);
+        setAccount(anyAccount as Account);
         return;
       }
 
-      console.log('ℹ️ NewAuthContext: No account found for user');
+      console.log('❌ NewAuthContext: All lookup strategies failed');
+      console.log('📱 NewAuthContext: Final errors:', { identityError, directByIdError, anyAccountError });
       setAccount(null);
     } catch (error) {
       console.error('❌ NewAuthContext: Error loading account:', error);
@@ -259,9 +301,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Check if this phone is already linked to an account
       console.log('🔍 NewAuthContext: Checking if phone is linked to existing account:', phone);
-      const { exists, userData } = await checkExistingAccount(undefined, phone);
+      const { exists, account } = await checkExistingAccount(undefined, phone);
       
-      console.log('🔍 NewAuthContext: Phone account check result:', { exists, userData });
+      console.log('🔍 NewAuthContext: Phone account check result:', { exists, account });
       
       if (exists) {
         console.log('👤 NewAuthContext: Found existing account for phone');

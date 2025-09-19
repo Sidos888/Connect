@@ -286,7 +286,23 @@ export default function AccountCheckModal({
         key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
       });
       
-      // Phone verification will now use the normal flow like email
+      // Mobile environment detection
+      const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+      const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      console.log('📱 AccountCheckModal: Mobile environment:', { isCapacitor, isMobile });
+      
+      // Enhanced mobile debugging for account checking
+      if (isCapacitor || isMobile) {
+        console.log('📱 AccountCheckModal: MOBILE MODE - Enhanced debugging enabled');
+        console.log('📱 AccountCheckModal: User verification details:', {
+          method: verificationMethod,
+          value: verificationValue,
+          hasUser: !!user,
+          userId: user?.id,
+          userEmail: user?.email,
+          userPhone: user?.phone
+        });
+      }
       
       // Re-enable account checking now that Supabase is set up
       checkAccountExists();
