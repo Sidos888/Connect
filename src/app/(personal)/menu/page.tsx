@@ -471,7 +471,7 @@ export default function Page() {
               <ChevronLeftIcon className="h-5 w-5" />
             </span>
           </button>
-          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block', backgroundColor: 'magenta', color: 'white', fontSize: '48px' }}>🚀 SETTINGS v{Date.now()} 🚀</h1>
+          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Menu</h1>
         </div>
       </div>
 

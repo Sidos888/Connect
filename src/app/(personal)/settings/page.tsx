@@ -10,7 +10,6 @@ import { LogOut, Trash2 } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-// FORCE RECOMPILE SETTINGS 2025-09-18
 export default function SettingsPage() {
   const router = useRouter();
   const { clearAll, personalProfile } = useAppStore();
@@ -259,7 +258,7 @@ export default function SettingsPage() {
           <ChevronLeftIcon className="h-5 w-5" />
           </span>
         </button>
-          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block', backgroundColor: 'cyan', color: 'black', fontSize: '48px' }}>🎯 REAL SETTINGS 🎯</h1>
+          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Settings</h1>
         </div>
       </div>
 
