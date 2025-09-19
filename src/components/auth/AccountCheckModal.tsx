@@ -44,12 +44,12 @@ export default function AccountCheckModal({
   useEffect(() => {
     if (isOpen) {
       console.log('AccountCheckModal: Modal opened, checking auth state...');
-      supabase.auth.getUser().then(({ data: { user: currentUser }, error }) => {
+      supabase.auth.getUser().then(({ data: { user: currentUser }, error }: { data: { user: any }, error: any }) => {
         console.log('AccountCheckModal: Current user from Supabase:', currentUser?.id || 'None');
         console.log('AccountCheckModal: Auth error:', error?.message || 'None');
       });
       
-      supabase.auth.getSession().then(({ data: { session }, error }) => {
+      supabase.auth.getSession().then(({ data: { session }, error }: { data: { session: any }, error: any }) => {
         console.log('AccountCheckModal: Current session exists:', !!session);
         console.log('AccountCheckModal: Session error:', error?.message || 'None');
         if (session) {
@@ -213,13 +213,13 @@ export default function AccountCheckModal({
         email: verificationMethod === 'email' ? verificationValue : undefined
       });
       
-      const { exists, userData, error, multipleAccountsFound } = await checkUserExists(
+      const { exists, userData, error } = await checkUserExists(
         verificationMethod === 'phone' ? verificationValue : undefined,
         verificationMethod === 'email' ? verificationValue : undefined
       );
 
       clearTimeout(timeoutId);
-      console.log('AccountCheckModal: Account check result', { exists, userData, error, multipleAccountsFound });
+      console.log('AccountCheckModal: Account check result', { exists, userData, error });
 
       if (error) {
         console.error('Error checking account:', error);
@@ -228,12 +228,7 @@ export default function AccountCheckModal({
         return;
       }
 
-      // Handle multiple accounts found
-      if (multipleAccountsFound) {
-        console.warn('AccountCheckModal: Multiple accounts detected for this contact method');
-        // For now, proceed with the most recent account, but log the issue
-        console.log('AccountCheckModal: Proceeding with most recent account:', userData?.id);
-      }
+      // Handle multiple accounts found (removed since checkUserExists doesn't return this property)
       
       // If user exists, validate the profile still exists in database
       if (exists && userData) {
@@ -330,7 +325,7 @@ export default function AccountCheckModal({
           email: verificationMethod === 'email' ? verificationValue : 'sidfarquharson@gmail.com',
           phone: verificationMethod === 'phone' ? verificationValue : '+61466310826',
           dateOfBirth: existingUser.dob || '',
-          connectId: existingUser.connect_id || 'J9UGOD',
+          connectId: (existingUser as any).connect_id || 'J9UGOD',
           createdAt: existingUser.created_at,
           updatedAt: existingUser.updated_at
         };
@@ -839,7 +834,7 @@ export default function AccountCheckModal({
         email: formData.email,
         phone: formData.phone,
         dateOfBirth: convertDateFormat(formData.dateOfBirth),
-        connectId: connectId,
+        connectId: connectId as string,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -1141,7 +1136,7 @@ export default function AccountCheckModal({
                         }
 
                         // Clear local state
-                        setPersonalProfile(null);
+                        clearAll();
 
                         // Reset to initial login state if callback provided
                         if (onResetToInitialLogin) {
