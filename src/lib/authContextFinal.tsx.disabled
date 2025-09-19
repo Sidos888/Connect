@@ -1,0 +1,416 @@
+"use client";
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User } from '@supabase/supabase-js';
+import { getSupabaseClient } from './supabaseClient';
+
+// Account interface (our true user profile)
+interface Account {
+  id: string;
+  name: string;
+  bio?: string;
+  dob?: string;
+  profile_pic?: string;
+  connect_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  account: Account | null;
+  loading: boolean;
+  supabase: any;
+  
+  // Authentication methods (compatible with existing UI)
+  sendEmailVerification: (email: string) => Promise<{ error: Error | null }>;
+  sendPhoneVerification: (phone: string) => Promise<{ error: Error | null }>;
+  verifyEmailCode: (email: string, code: string) => Promise<{ error: Error | null; isExistingAccount?: boolean; tempUser?: any }>;
+  verifyPhoneCode: (phone: string, code: string) => Promise<{ error: Error | null; isExistingAccount?: boolean; tempUser?: any }>;
+  
+  // Legacy compatibility methods
+  checkUserExists: (phone?: string, email?: string) => Promise<{ exists: boolean; userData?: any; error: Error | null }>;
+  
+  // Account management
+  createAccount: (userData: { name: string; email?: string; phone?: string }) => Promise<{ error: Error | null }>;
+  
+  // Utility
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = getSupabaseClient();
+
+  // Initialize auth state
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    console.log('🔄 NewAuthContext: Initializing scalable auth system...');
+
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('✅ NewAuthContext: Initial session loaded:', !!session?.user);
+        
+        if (session?.user) {
+          setUser(session.user);
+          await loadAccountForUser(session.user.id);
+        }
+      } catch (error) {
+        console.error('❌ NewAuthContext: Error loading initial session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 NewAuthContext: Auth state change:', event, !!session?.user);
+      
+      if (session?.user) {
+        setUser(session.user);
+        await loadAccountForUser(session.user.id);
+      } else {
+        setUser(null);
+        setAccount(null);
+      }
+      
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  // Load account for authenticated user
+  const loadAccountForUser = async (authUserId: string) => {
+    try {
+      console.log('🔍 NewAuthContext: Loading account for user:', authUserId);
+      
+      // Find account through account_identities
+      const { data: identityData, error: identityError } = await supabase
+        .from('account_identities')
+        .select(`
+          account_id,
+          accounts!inner (
+            id,
+            name,
+            bio,
+            dob,
+            profile_pic,
+            connect_id,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('auth_user_id', authUserId)
+        .maybeSingle();
+
+      if (identityError) {
+        console.error('❌ NewAuthContext: Error loading account:', identityError);
+        return;
+      }
+
+      if (identityData?.accounts) {
+        console.log('✅ NewAuthContext: Account found via identity linking');
+        setAccount(identityData.accounts as Account);
+      } else {
+        console.log('ℹ️ NewAuthContext: No account found for user');
+        setAccount(null);
+      }
+    } catch (error) {
+      console.error('❌ NewAuthContext: Error loading account:', error);
+      setAccount(null);
+    }
+  };
+
+  // Send email verification
+  const sendEmailVerification = async (email: string) => {
+    if (!supabase) return { error: new Error('Supabase client not initialized') };
+
+    try {
+      console.log('📧 NewAuthContext: Sending email verification to:', email);
+      
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: { 
+          emailRedirectTo: undefined,
+          shouldCreateUser: true // Allow user creation for new accounts
+        }
+      });
+
+      if (error) throw error;
+      
+      console.log('✅ NewAuthContext: Email verification sent successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('❌ NewAuthContext: Error sending email verification:', error);
+      return { error: error as Error };
+    }
+  };
+
+  // Send phone verification
+  const sendPhoneVerification = async (phone: string) => {
+    if (!supabase) return { error: new Error('Supabase client not initialized') };
+
+    try {
+      console.log('📱 NewAuthContext: Sending phone verification to:', phone);
+      
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phone,
+        options: {
+          shouldCreateUser: true // Allow user creation for new accounts
+        }
+      });
+
+      if (error) throw error;
+      
+      console.log('✅ NewAuthContext: Phone verification sent successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('❌ NewAuthContext: Error sending phone verification:', error);
+      return { error: error as Error };
+    }
+  };
+
+  // Verify email code
+  const verifyEmailCode = async (email: string, code: string) => {
+    if (!supabase) return { error: new Error('Supabase client not initialized') };
+
+    try {
+      console.log('🔐 NewAuthContext: Verifying email code for:', email);
+      
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: 'email'
+      });
+
+      if (error) throw error;
+      if (!data.user) throw new Error('No user returned from verification');
+
+      console.log('✅ NewAuthContext: Email verification successful, user ID:', data.user.id);
+
+      // Check if this email is already linked to an account
+      const { exists } = await checkExistingAccount(email);
+      
+      if (exists) {
+        console.log('👤 NewAuthContext: Found existing account for email');
+        return { error: null, isExistingAccount: true };
+      } else {
+        console.log('🆕 NewAuthContext: New user, will need to create account');
+        return { 
+          error: null, 
+          isExistingAccount: false,
+          tempUser: { email, authUserId: data.user.id }
+        };
+      }
+    } catch (error) {
+      console.error('❌ NewAuthContext: Error verifying email code:', error);
+      return { error: error as Error };
+    }
+  };
+
+  // Verify phone code
+  const verifyPhoneCode = async (phone: string, code: string) => {
+    if (!supabase) return { error: new Error('Supabase client not initialized') };
+
+    try {
+      console.log('🔐 NewAuthContext: Verifying phone code for:', phone);
+      
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone,
+        token: code,
+        type: 'sms'
+      });
+
+      if (error) throw error;
+      if (!data.user) throw new Error('No user returned from verification');
+
+      console.log('✅ NewAuthContext: Phone verification successful, user ID:', data.user.id);
+
+      // Check if this phone is already linked to an account
+      const { exists } = await checkExistingAccount(undefined, phone);
+      
+      if (exists) {
+        console.log('👤 NewAuthContext: Found existing account for phone');
+        return { error: null, isExistingAccount: true };
+      } else {
+        console.log('🆕 NewAuthContext: New user, will need to create account');
+        return { 
+          error: null, 
+          isExistingAccount: false,
+          tempUser: { phone, authUserId: data.user.id }
+        };
+      }
+    } catch (error) {
+      console.error('❌ NewAuthContext: Error verifying phone code:', error);
+      return { error: error as Error };
+    }
+  };
+
+  // Check if account exists by email or phone
+  const checkExistingAccount = async (email?: string, phone?: string) => {
+    if (!supabase) return { exists: false, error: new Error('Supabase client not initialized') };
+
+    try {
+      let query = supabase
+        .from('account_identities')
+        .select(`
+          account_id,
+          accounts!inner (
+            id,
+            name,
+            bio,
+            dob,
+            profile_pic,
+            connect_id,
+            created_at,
+            updated_at
+          )
+        `);
+
+      if (email) {
+        query = query.eq('method', 'email').eq('identifier', email);
+      } else if (phone) {
+        query = query.eq('method', 'phone').eq('identifier', phone);
+      } else {
+        return { exists: false, error: new Error('No identifier provided') };
+      }
+
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.accounts) {
+        return { exists: true, account: data.accounts as Account, error: null };
+      } else {
+        return { exists: false, account: null, error: null };
+      }
+    } catch (error) {
+      console.error('❌ NewAuthContext: Error checking existing account:', error);
+      return { exists: false, error: error as Error };
+    }
+  };
+
+  // Legacy compatibility method for existing UI components
+  const checkUserExists = async (phone?: string, email?: string) => {
+    const { exists, account, error } = await checkExistingAccount(email, phone);
+    return { 
+      exists, 
+      userData: account ? {
+        id: account.id,
+        name: account.name,
+        bio: account.bio,
+        profile_pic: account.profile_pic,
+        connect_id: account.connect_id,
+        created_at: account.created_at,
+        updated_at: account.updated_at
+      } : null,
+      error 
+    };
+  };
+
+  // Create new account
+  const createAccount = async (userData: { name: string; email?: string; phone?: string }) => {
+    if (!supabase || !user) return { error: new Error('Not authenticated') };
+
+    try {
+      console.log('📝 NewAuthContext: Creating new account for:', userData.name);
+      
+      // Create account
+      const { data: newAccount, error: accountError } = await supabase
+        .from('accounts')
+        .insert({
+          name: userData.name,
+          connect_id: generateConnectId(userData.name)
+        })
+        .select()
+        .single();
+
+      if (accountError) throw accountError;
+
+      // Link primary auth user
+      const primaryMethod = userData.email ? 'email' : 'phone';
+      const primaryIdentifier = userData.email || userData.phone;
+      
+      const { error: primaryIdentityError } = await supabase
+        .from('account_identities')
+        .insert({
+          account_id: newAccount.id,
+          auth_user_id: user.id,
+          method: primaryMethod,
+          identifier: primaryIdentifier
+        });
+
+      if (primaryIdentityError) throw primaryIdentityError;
+
+      console.log('✅ NewAuthContext: Account created successfully');
+      setAccount(newAccount);
+      return { error: null };
+    } catch (error) {
+      console.error('❌ NewAuthContext: Error creating account:', error);
+      return { error: error as Error };
+    }
+  };
+
+  // Sign out
+  const signOut = async () => {
+    if (!supabase) return;
+    
+    console.log('👋 Signing out user');
+    await supabase.auth.signOut();
+    setUser(null);
+    setAccount(null);
+  };
+
+  // Generate unique connect ID
+  const generateConnectId = (name: string) => {
+    const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    return `${cleanName}_${randomSuffix}`;
+  };
+
+  const value: AuthContextType = {
+    user,
+    account,
+    loading,
+    supabase,
+    sendEmailVerification,
+    sendPhoneVerification,
+    verifyEmailCode,
+    verifyPhoneCode,
+    checkUserExists,
+    createAccount,
+    signOut
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
