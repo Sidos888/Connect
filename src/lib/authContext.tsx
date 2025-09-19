@@ -695,26 +695,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Update profile
   const updateProfile = async (profileUpdates: any) => {
-    if (!supabase || !account) return { error: new Error('No account to update') };
+    if (!supabase || !account) {
+      console.error('📝 NewAuthContext: Cannot update - missing supabase or account');
+      return { error: new Error('No account to update') };
+    }
 
     try {
-      console.log('📝 NewAuthContext: Updating profile...');
+      console.log('📝 NewAuthContext: Updating profile with data:', {
+        currentAccountId: account.id,
+        currentBio: account.bio,
+        newName: profileUpdates.name,
+        newBio: profileUpdates.bio,
+        newProfilePic: profileUpdates.avatarUrl || profileUpdates.profile_pic,
+        bioChanged: account.bio !== profileUpdates.bio
+      });
+      
+      const updateData = {
+        name: profileUpdates.name,
+        bio: profileUpdates.bio,
+        profile_pic: profileUpdates.avatarUrl || profileUpdates.profile_pic
+      };
+      
+      console.log('📝 NewAuthContext: Sending update to database:', updateData);
       
       const { data, error } = await supabase
         .from('accounts')
-        .update({
-          name: profileUpdates.name,
-          bio: profileUpdates.bio,
-          profile_pic: profileUpdates.avatarUrl || profileUpdates.profile_pic
-        })
+        .update(updateData)
         .eq('id', account.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('📝 NewAuthContext: Database update error:', error);
+        throw error;
+      }
       
-      console.log('✅ NewAuthContext: Profile updated successfully');
+      console.log('✅ NewAuthContext: Profile updated successfully in database');
+      console.log('📝 NewAuthContext: Updated data from database:', {
+        id: data.id,
+        name: data.name,
+        bio: data.bio,
+        profile_pic: data.profile_pic,
+        bioLength: data.bio?.length || 0
+      });
+      
       setAccount(data);
+      console.log('📝 NewAuthContext: Account state updated in context');
+      
       return { error: null };
     } catch (error) {
       console.error('❌ NewAuthContext: Error updating profile:', error);

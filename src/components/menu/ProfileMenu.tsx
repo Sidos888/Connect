@@ -854,11 +854,20 @@ export default function ProfileMenu() {
       console.log('handleSaveProfile: Updating profile with data:', updatedProfile);
 
       // Update in Supabase - pass the correct format expected by updateProfile
+      console.log('handleSaveProfile: About to call updateProfile with:', {
+        name: data.name,
+        bio: data.bio,
+        avatarUrl: avatarUrl,
+        bioLength: data.bio?.length || 0
+      });
+      
       const { error } = await updateProfile({
         name: data.name,
         bio: data.bio,
         avatarUrl: avatarUrl
       });
+      
+      console.log('handleSaveProfile: updateProfile result:', { error: error?.message || 'SUCCESS' });
       
       if (error) {
         console.error('handleSaveProfile: Error updating profile in Supabase:', error);
@@ -868,8 +877,26 @@ export default function ProfileMenu() {
       console.log('handleSaveProfile: Profile updated successfully in Supabase');
 
       // Update local state
+      console.log('handleSaveProfile: About to update local state with:', {
+        id: updatedProfile.id,
+        name: updatedProfile.name,
+        bio: updatedProfile.bio,
+        bioLength: updatedProfile.bio?.length || 0
+      });
+      
       setPersonalProfile(updatedProfile);
       console.log('handleSaveProfile: Local state updated');
+      
+      // Verify local state was updated
+      setTimeout(() => {
+        const currentProfile = useAppStore.getState().personalProfile;
+        console.log('handleSaveProfile: ✅ Local state verification:', {
+          wasUpdated: !!currentProfile,
+          currentBio: currentProfile?.bio,
+          bioLength: currentProfile?.bio?.length || 0,
+          bioMatches: currentProfile?.bio === updatedProfile.bio
+        });
+      }, 100);
       
       // Go back to profile view
       setShowEditProfile(false);
