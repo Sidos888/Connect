@@ -144,12 +144,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!identityError && identityData?.accounts) {
         console.log('✅ NewAuthContext: Account found via identity linking');
         const accountData = identityData.accounts as any;
-        console.log('📱 NewAuthContext: Account data:', { 
+        console.log('📱 NewAuthContext: DETAILED Account data from database:', { 
           id: accountData.id, 
           name: accountData.name,
-          hasProfilePic: !!accountData.profile_pic
+          bio: accountData.bio,
+          profile_pic: accountData.profile_pic,
+          connect_id: accountData.connect_id,
+          created_at: accountData.created_at,
+          updated_at: accountData.updated_at,
+          hasProfilePic: !!accountData.profile_pic,
+          bioLength: accountData.bio?.length || 0
         });
         setAccount(accountData as Account);
+        console.log('📱 NewAuthContext: Account state updated in context');
         return;
       }
       
@@ -165,7 +172,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!directByIdError && directAccountById) {
         console.log('✅ NewAuthContext: Account found via direct ID lookup');
+        console.log('📱 NewAuthContext: DETAILED Direct account data:', {
+          id: directAccountById.id,
+          name: directAccountById.name,
+          bio: directAccountById.bio,
+          profile_pic: directAccountById.profile_pic,
+          connect_id: directAccountById.connect_id,
+          created_at: directAccountById.created_at,
+          updated_at: directAccountById.updated_at,
+          bioLength: directAccountById.bio?.length || 0
+        });
         setAccount(directAccountById as Account);
+        console.log('📱 NewAuthContext: Direct account state updated in context');
         return;
       }
       
@@ -414,13 +432,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Legacy compatibility method for ProtectedRoute
   const loadUserProfile = async () => {
     if (!user) {
+      console.log('🔍 loadUserProfile: No authenticated user');
       return { profile: null, error: new Error('No authenticated user') };
     }
     
     try {
+      console.log('🔍 loadUserProfile: Loading account for user:', user.id);
       await loadAccountForUser(user.id);
-      return { 
-        profile: account ? {
+      
+      console.log('🔍 loadUserProfile: Account loaded, current account state:', {
+        hasAccount: !!account,
+        accountId: account?.id,
+        accountName: account?.name,
+        accountBio: account?.bio,
+        accountProfilePic: account?.profile_pic
+      });
+      
+      if (account) {
+        const profileData = {
           id: account.id,
           name: account.name,
           bio: account.bio,
@@ -428,10 +457,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           connect_id: account.connect_id,
           created_at: account.created_at,
           updated_at: account.updated_at
-        } : null, 
-        error: null 
-      };
+        };
+        
+        console.log('🔍 loadUserProfile: Returning profile data:', {
+          id: profileData.id,
+          name: profileData.name,
+          bio: profileData.bio,
+          hasAvatar: !!profileData.avatarUrl
+        });
+        
+        return { profile: profileData, error: null };
+      } else {
+        console.log('🔍 loadUserProfile: No account found after loadAccountForUser');
+        return { profile: null, error: null };
+      }
     } catch (error) {
+      console.error('🔍 loadUserProfile: Error:', error);
       return { profile: null, error: error as Error };
     }
   };

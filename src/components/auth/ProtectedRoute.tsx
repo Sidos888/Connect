@@ -139,9 +139,25 @@ export default function ProtectedRoute({ children, fallback, title, description,
               id: freshProfile.id,
               name: freshProfile.name,
               bio: freshProfile.bio,
-              hasAvatar: !!freshProfile.avatarUrl
+              hasAvatar: !!freshProfile.avatarUrl,
+              bioLength: freshProfile.bio?.length || 0,
+              fullProfileData: freshProfile
             });
+            
+            console.log('ProtectedRoute: 🔄 Setting profile in app store...');
             setPersonalProfile(freshProfile);
+            
+            // Verify it was set correctly
+            setTimeout(() => {
+              const currentProfile = useAppStore.getState().personalProfile;
+              console.log('ProtectedRoute: ✅ Profile verification after setting:', {
+                wasSet: !!currentProfile,
+                profileId: currentProfile?.id,
+                profileName: currentProfile?.name,
+                profileBio: currentProfile?.bio,
+                bioLength: currentProfile?.bio?.length || 0
+              });
+            }, 100);
           } else {
             console.error('ProtectedRoute: ❌ Error loading profile:', profileError);
             // Try direct database lookup as fallback
