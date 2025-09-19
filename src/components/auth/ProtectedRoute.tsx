@@ -17,7 +17,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, fallback, title, description, buttonText }: ProtectedRouteProps) {
-  const { user, loading, loadUserProfile, createProfileIfNeeded, clearProfileCache, supabase } = useAuth();
+  const { user, loading, loadUserProfile, supabase } = useAuth();
   const { personalProfile, isHydrated, setPersonalProfile } = useAppStore();
   const { showLogin } = useModal();
   const pathname = usePathname();
@@ -175,8 +175,12 @@ export default function ProtectedRoute({ children, fallback, title, description,
         } catch (error) {
           console.error('ProtectedRoute: ❌ Error loading fresh profile:', error);
         } finally {
+          setIsLoadingProfile(false);
+          console.log('ProtectedRoute: ⚡ INSTANT profile loading completed');
+        }
+      } catch (outerError) {
+        console.error('ProtectedRoute: ❌ Outer error in profile loading:', outerError);
         setIsLoadingProfile(false);
-        console.log('ProtectedRoute: ⚡ INSTANT profile loading completed');
       }
     };
 
@@ -280,7 +284,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
                   
                 } catch (error) {
                   console.error('ProtectedRoute: Error calling showLogin:', error);
-                  console.error('ProtectedRoute: Error stack:', error?.stack);
+                  console.error('ProtectedRoute: Error stack:', (error as Error)?.stack);
                   
                   // Force immediate page reload as fallback
                   console.log('ProtectedRoute: Forcing immediate page reload due to error');
