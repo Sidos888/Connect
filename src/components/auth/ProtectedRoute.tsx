@@ -172,10 +172,9 @@ export default function ProtectedRoute({ children, fallback, title, description,
               }
             }
           }
-        }
-      } catch (error) {
-        console.error('ProtectedRoute: Error in instant profile loading:', error);
-      } finally {
+        } catch (error) {
+          console.error('ProtectedRoute: ❌ Error loading fresh profile:', error);
+        } finally {
         setIsLoadingProfile(false);
         console.log('ProtectedRoute: ⚡ INSTANT profile loading completed');
       }
