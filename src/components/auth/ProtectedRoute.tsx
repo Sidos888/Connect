@@ -119,98 +119,53 @@ export default function ProtectedRoute({ children, fallback, title, description,
           }
         }
         
-        console.log('ProtectedRoute: 🔍 Checking for stored profile data:', {
-          hasWindow: typeof window !== 'undefined',
-          hasStoredProfile: !!existingProfile,
-          storedProfileId: existingProfile?.id,
-          storedProfileName: existingProfile?.full_name,
-          currentUserId: user?.id,
-          foundInWindow: !!(typeof window !== 'undefined' && (window as any).__CONNECT_EXISTING_PROFILE__),
-          foundInLocalStorage: !!existingProfile && !(typeof window !== 'undefined' && (window as any).__CONNECT_EXISTING_PROFILE__)
-        });
+        console.log('ProtectedRoute: 🔍 PRIORITIZING LIVE DATA - Always loading fresh from Supabase first');
         
-        if (existingProfile) {
-          console.log('ProtectedRoute: ⚡ INSTANT profile from stored data (will load fresh avatar):', existingProfile);
+        // ALWAYS load fresh data from Supabase first for real-time sync
+        try {
+          console.log('ProtectedRoute: 🔍 Loading FRESH profile from database for user:', user.id);
+          const { profile: freshProfile, error: profileError } = await loadUserProfile();
           
-          // Set profile IMMEDIATELY with stored data, but load fresh avatar
-          const profile = {
-            id: existingProfile.id,
-            name: existingProfile.full_name || '',
-            bio: existingProfile.bio || '',
-            avatarUrl: existingProfile.avatar_url, // Will be null, so avatar loads fresh
-            email: existingProfile.email || '',
-            phone: existingProfile.phone || '',
-            dateOfBirth: existingProfile.date_of_birth || '',
-            connectId: existingProfile.connect_id || '',
-            createdAt: existingProfile.created_at,
-            updatedAt: existingProfile.updated_at
-          };
+          console.log('ProtectedRoute: 🔍 Fresh profile result:', { 
+            hasProfile: !!freshProfile, 
+            profileName: freshProfile?.name,
+            profileBio: freshProfile?.bio,
+            hasAvatar: !!freshProfile?.avatarUrl,
+            error: profileError?.message 
+          });
           
-          setPersonalProfile(profile);
-          delete (window as any).__CONNECT_EXISTING_PROFILE__;
-          console.log('ProtectedRoute: ⚡ Profile set INSTANTLY from stored data');
-          
-          // Load fresh profile from database to ensure data consistency
-          console.log('ProtectedRoute: 🖼️ Loading fresh profile from database to ensure consistency...');
-          try {
-            const { profile: freshProfile, error: avatarError } = await loadUserProfile();
-            console.log('ProtectedRoute: 🔍 Fresh profile result:', { 
-              hasProfile: !!freshProfile, 
-              hasAvatar: !!freshProfile?.avatarUrl,
-              avatarUrl: freshProfile?.avatarUrl,
-              error: avatarError?.message 
+          if (!profileError && freshProfile) {
+            console.log('ProtectedRoute: ✅ Profile loaded from database:', {
+              id: freshProfile.id,
+              name: freshProfile.name,
+              bio: freshProfile.bio,
+              hasAvatar: !!freshProfile.avatarUrl
             });
-            
-            if (!avatarError && freshProfile) {
-              console.log('ProtectedRoute: ✅ Fresh profile loaded, updating with database data');
-              setPersonalProfile(freshProfile);
-            } else {
-              console.log('ProtectedRoute: ⚠️ Fresh profile loading failed, using stored data as fallback');
-              // Keep the stored profile as fallback
-            }
-          } catch (error) {
-            console.error('ProtectedRoute: ❌ Exception loading fresh profile:', error);
-            console.log('ProtectedRoute: 🔄 Using stored data as fallback');
-          }
-        } else {
-          // Load from database (but make it fast)
-          console.log('ProtectedRoute: 🔍 Loading profile from database for user:', user?.id);
-          const { profile, error } = await loadUserProfile();
-          
-          if (profile) {
-            console.log('ProtectedRoute: ✅ Profile loaded from database:', profile);
-            setPersonalProfile(profile);
-          } else if (error) {
-            console.error('ProtectedRoute: ❌ Error loading profile:', error);
+            setPersonalProfile(freshProfile);
           } else {
-            console.log('ProtectedRoute: ❌ No profile found for user:', user?.id);
-            console.log('ProtectedRoute: 🔍 Searching for profile by email/phone instead...');
-            
-            // Try to find profile by email or phone
-            if (user?.email) {
-              console.log('ProtectedRoute: 🔍 Searching by email:', user.email);
-              const { data: profileByEmail } = await supabase
+            console.error('ProtectedRoute: ❌ Error loading profile:', profileError);
+            // Try direct database lookup as fallback
+            if (user?.id && supabase) {
+              console.log('ProtectedRoute: 🔍 Trying direct database lookup as fallback...');
+              const { data: directProfile, error: directError } = await supabase
                 .from('accounts')
                 .select('*')
                 .eq('id', user.id)
                 .maybeSingle();
                 
-              if (profileByEmail) {
-                console.log('ProtectedRoute: ✅ Found profile by email, updating auth user ID');
-                
-                // Map and set the profile directly
-                console.log('ProtectedRoute: ✅ Profile found, setting in app state');
+              if (!directError && directProfile) {
+                console.log('ProtectedRoute: ✅ Found profile via direct lookup');
                 const mappedProfile = {
-                  id: profileByEmail.id,
-                  name: profileByEmail.name,
-                  bio: profileByEmail.bio,
-                  avatarUrl: profileByEmail.profile_pic,
-                  email: user.email, // From auth user
-                  phone: user.phone, // From auth user  
-                  dateOfBirth: profileByEmail.dob,
-                  connectId: profileByEmail.connect_id,
-                  createdAt: profileByEmail.created_at,
-                  updatedAt: profileByEmail.updated_at
+                  id: directProfile.id,
+                  name: directProfile.name,
+                  bio: directProfile.bio,
+                  avatarUrl: directProfile.profile_pic,
+                  email: user.email || '',
+                  phone: user.phone || '',
+                  dateOfBirth: directProfile.dob || '',
+                  connectId: directProfile.connect_id || '',
+                  createdAt: directProfile.created_at,
+                  updatedAt: directProfile.updated_at
                 };
                 setPersonalProfile(mappedProfile);
                 console.log('ProtectedRoute: ✅ Profile set successfully:', mappedProfile);
