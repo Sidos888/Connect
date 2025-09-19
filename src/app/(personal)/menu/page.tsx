@@ -458,7 +458,7 @@ export default function Page() {
     }, []);
 
     return (
-    <div className="fixed inset-0 z-50 h-screen overflow-hidden flex flex-col settings-mode" style={{ paddingBottom: '0', backgroundColor: 'yellow' }}>
+    <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
       {/* Header */}
       <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
         <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
@@ -471,7 +471,7 @@ export default function Page() {
               <ChevronLeftIcon className="h-5 w-5" />
             </span>
           </button>
-          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Menu</h1>
+          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Settings</h1>
         </div>
       </div>
 
