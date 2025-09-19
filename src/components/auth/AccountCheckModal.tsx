@@ -101,11 +101,11 @@ export default function AccountCheckModal({
     if (verificationValue) {
       setFormData(prev => ({
         ...prev,
-        [verificationMethod === 'email' ? 'email' : 'phone']: verificationValue
+        [(verificationMethod as string) === 'email' ? 'email' : 'phone']: verificationValue
       }));
       
       // If phone verification, extract the phone number digits for the Airbnb input
-      if (verificationMethod === 'phone') {
+      if ((verificationMethod as string) === 'phone') {
         const phoneDigits = verificationValue.replace(/[^\d]/g, '');
         // Remove country code (61) from the beginning if present
         const localDigits = phoneDigits.startsWith('61') ? phoneDigits.slice(2) : phoneDigits;
@@ -209,13 +209,13 @@ export default function AccountCheckModal({
       console.log('AccountCheckModal: Calling checkUserExists with:', {
         verificationMethod,
         verificationValue,
-        phone: verificationMethod === 'phone' ? verificationValue : undefined,
-        email: verificationMethod === 'email' ? verificationValue : undefined
+        phone: (verificationMethod as string) === 'phone' ? verificationValue : undefined,
+        email: (verificationMethod as string) === 'email' ? verificationValue : undefined
       });
       
       const { exists, userData, error } = await checkUserExists(
-        verificationMethod === 'phone' ? verificationValue : undefined,
-        verificationMethod === 'email' ? verificationValue : undefined
+        (verificationMethod as string) === 'phone' ? verificationValue : undefined,
+        (verificationMethod as string) === 'email' ? verificationValue : undefined
       );
 
       clearTimeout(timeoutId);
@@ -322,8 +322,8 @@ export default function AccountCheckModal({
           name: existingUser.name || 'Sid Farquharson',
           bio: existingUser.bio || '',
           avatarUrl: existingUser.profile_pic || 'https://rxlqtyfhsocxnsnnnlwl.supabase.co/storage/v1/object/public/avatars/avatars/2967a33a-69f7-4e8b-97c9-5fc0bea60180.PNG',
-          email: verificationMethod === 'email' ? verificationValue : 'sidfarquharson@gmail.com',
-          phone: verificationMethod === 'phone' ? verificationValue : '+61466310826',
+          email: (verificationMethod as string) === 'email' ? verificationValue : 'sidfarquharson@gmail.com',
+          phone: (verificationMethod as string) === 'phone' ? verificationValue : '+61466310826',
           dateOfBirth: existingUser.dob || '',
           connectId: (existingUser as any).connect_id || 'J9UGOD',
           createdAt: existingUser.created_at,
@@ -701,8 +701,8 @@ export default function AccountCheckModal({
       }
 
       // Create secondary identity link if user provided both email and phone
-      const secondaryMethod = verificationMethod === 'email' ? 'phone' : 'email';
-      const secondaryValue = verificationMethod === 'email' ? formData.phone : formData.email;
+      const secondaryMethod = (verificationMethod as string) === 'email' ? 'phone' : 'email';
+      const secondaryValue = (verificationMethod as string) === 'email' ? formData.phone : formData.email;
       
       console.log('AccountCheckModal: 📱 PHONE FORMAT DEBUG:', {
         rawPhoneInput: phoneNumber,
@@ -1347,7 +1347,7 @@ export default function AccountCheckModal({
                   </div>
                   
                   {/* Render fields based on verification method - verified method at bottom */}
-                  {verificationMethod === 'email' ? (
+                  {(verificationMethod as string) === 'email' ? (
                     // Email verified - show phone first, then email
                     <>
                       <div>
@@ -1361,7 +1361,7 @@ export default function AccountCheckModal({
                               className="w-full h-14 pl-4 pr-12 pt-5 pb-3 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
                               onFocus={() => setCountryFocused(true)}
                               onBlur={() => setCountryFocused(false)}
-                              disabled={verificationMethod === 'phone'}
+                              disabled={(verificationMethod as string) === 'phone'}
                             >
                               <option value="+61">Australia (+61)</option>
                             </select>
@@ -1395,7 +1395,7 @@ export default function AccountCheckModal({
                                 lineHeight: '1.2',
                                 fontFamily: 'inherit'
                               }}
-                              disabled={verificationMethod === 'phone'}
+                              disabled={(verificationMethod as string) === 'phone'}
                               required
                             />
                             
@@ -1438,7 +1438,7 @@ export default function AccountCheckModal({
                                   {formatPhoneNumber(phoneNumber)}
                                 </div>
                                 {/* Verification status */}
-                                {verificationMethod === 'phone' && (
+                                {(verificationMethod as string) === 'phone' && (
                                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
                                     <span>✓</span>
                                     <span>Verified</span>
@@ -1467,7 +1467,7 @@ export default function AccountCheckModal({
                               lineHeight: '1.2',
                               fontFamily: 'inherit'
                             }}
-                            disabled={verificationMethod === 'email'}
+                            disabled={(verificationMethod as string) === 'email'}
                             required
                           />
                           
@@ -1489,7 +1489,7 @@ export default function AccountCheckModal({
                                 {formData.email}
                               </div>
                               {/* Verification status */}
-                              {formData.email && verificationMethod === 'email' && (
+                              {formData.email && (verificationMethod as string) === 'email' && (
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
                                   <span>✓</span>
                                   <span>Verified</span>
@@ -1520,7 +1520,7 @@ export default function AccountCheckModal({
                               lineHeight: '1.2',
                               fontFamily: 'inherit'
                             }}
-                            disabled={verificationMethod === 'email'}
+                            disabled={(verificationMethod as string) === 'email'}
                             required
                           />
                           
@@ -1542,7 +1542,7 @@ export default function AccountCheckModal({
                                 {formData.email}
                               </div>
                               {/* Verification status */}
-                              {formData.email && verificationMethod === 'email' && (
+                              {formData.email && (verificationMethod as string) === 'email' && (
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
                                   <span>✓</span>
                                   <span>Verified</span>
@@ -1564,7 +1564,7 @@ export default function AccountCheckModal({
                               className="w-full h-14 pl-4 pr-12 pt-5 pb-3 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
                               onFocus={() => setCountryFocused(true)}
                               onBlur={() => setCountryFocused(false)}
-                              disabled={verificationMethod === 'phone'}
+                              disabled={(verificationMethod as string) === 'phone'}
                             >
                               <option value="+61">Australia (+61)</option>
                             </select>
@@ -1598,7 +1598,7 @@ export default function AccountCheckModal({
                                 lineHeight: '1.2',
                                 fontFamily: 'inherit'
                               }}
-                              disabled={verificationMethod === 'phone'}
+                              disabled={(verificationMethod as string) === 'phone'}
                               required
                             />
                             
@@ -1641,7 +1641,7 @@ export default function AccountCheckModal({
                                   {formatPhoneNumber(phoneNumber)}
                                 </div>
                                 {/* Verification status */}
-                                {verificationMethod === 'phone' && (
+                                {(verificationMethod as string) === 'phone' && (
                                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
                                     <span>✓</span>
                                     <span>Verified</span>
