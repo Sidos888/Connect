@@ -69,7 +69,8 @@ export default function AccountCheckModal({
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     dateOfBirth: '',
     email: '',
     phone: '',
@@ -85,10 +86,12 @@ export default function AccountCheckModal({
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
   // Floating label states
-  const [fullNameFocused, setFullNameFocused] = useState(false);
+  const [firstNameFocused, setFirstNameFocused] = useState(false);
+  const [lastNameFocused, setLastNameFocused] = useState(false);
   const [dateOfBirthFocused, setDateOfBirthFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
-  const fullNameRef = useRef<HTMLInputElement>(null);
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
   const dateOfBirthRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
@@ -164,8 +167,35 @@ export default function AccountCheckModal({
         console.log('AccountCheckModal: Proceeding with most recent account:', userData?.id);
       }
       
-      setUserExists(exists);
-      setExistingUser(userData || null);
+      // If user exists, validate the profile still exists in database
+      if (exists && userData) {
+        console.log('AccountCheckModal: Validating existing user profile...');
+        const { data: currentProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userData.id)
+          .maybeSingle();
+        
+        if (profileError) {
+          console.error('AccountCheckModal: Error validating profile:', profileError);
+          // Treat as new user if we can't validate
+          setUserExists(false);
+          setExistingUser(null);
+        } else if (!currentProfile) {
+          console.log('AccountCheckModal: Profile no longer exists in database, treating as new user');
+          // Profile was deleted, treat as new user but DON'T sign out
+          setUserExists(false);
+          setExistingUser(null);
+          console.log('AccountCheckModal: NOT signing out - letting user create new profile with existing auth');
+        } else {
+          console.log('AccountCheckModal: Profile validated, user exists');
+          setUserExists(true);
+          setExistingUser(userData);
+        }
+      } else {
+        setUserExists(exists);
+        setExistingUser(userData || null);
+      }
     } catch (error) {
       clearTimeout(timeoutId);
       console.error('Error checking account:', error);
@@ -197,10 +227,43 @@ export default function AccountCheckModal({
       // User is already authenticated after verification
       console.log('AccountCheckModal: User signing in with existing account', existingUser);
       console.log('AccountCheckModal: Current user state:', { user: user?.id, hasUser: !!user });
-      console.log('AccountCheckModal: Current session check:', await supabase.auth.getSession());
+      
+      // Validate session exists - retry if needed (session might take a moment to propagate)
+      let currentSession = null;
+      let sessionAttempts = 0;
+      const maxSessionAttempts = 5;
+      
+      while (!currentSession && sessionAttempts < maxSessionAttempts) {
+        const { data: { session } } = await supabase.auth.getSession();
+        currentSession = session;
+        sessionAttempts++;
+        
+        console.log(`AccountCheckModal: Session check attempt ${sessionAttempts}/${maxSessionAttempts}:`, {
+          hasSession: !!currentSession,
+          userId: currentSession?.user?.id,
+          userEmail: currentSession?.user?.email
+        });
+        
+        if (!currentSession && sessionAttempts < maxSessionAttempts) {
+          console.log('AccountCheckModal: Session not ready, waiting 300ms before retry...');
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      
+      if (!currentSession) {
+        console.error('AccountCheckModal: No active session found after all attempts! This indicates a critical auth issue.');
+        setError('Authentication session not established. Please try signing in again.');
+        setIsSigningIn(false);
+        return;
+      }
+      
+      console.log('AccountCheckModal: ✅ Session validated successfully');
       
       if (existingUser) {
-        // Link the missing phone/email to the existing account
+        // For existing accounts, just close the modal and let ProtectedRoute handle the profile loading
+        console.log('AccountCheckModal: Existing account sign-in, closing modal and letting ProtectedRoute handle profile');
+        
+        // Link the missing phone/email to the existing account if needed
         if (verificationMethod === 'phone' && !existingUser.phone) {
           console.log('AccountCheckModal: Linking phone to existing account');
           await linkPhoneToAccount(verificationValue);
@@ -209,63 +272,56 @@ export default function AccountCheckModal({
           await linkEmailToAccount(verificationValue);
         }
         
-        // Load the existing user's profile into local state
-        const profile = {
-          id: existingUser.id,
-          name: existingUser.full_name || '',
-          bio: existingUser.bio || '',
-          avatarUrl: existingUser.avatar_url,
-          email: existingUser.email || verificationValue,
-          phone: existingUser.phone || verificationValue,
-          dateOfBirth: existingUser.date_of_birth || '',
-          connectId: existingUser.connect_id || '',
-          createdAt: existingUser.created_at,
-          updatedAt: existingUser.updated_at
-        };
+        console.log('AccountCheckModal: Closing modal for existing account sign-in');
         
-        console.log('AccountCheckModal: Loading existing profile:', profile);
-        setPersonalProfile(profile);
-        console.log('AccountCheckModal: Profile set in store, checking store state...');
+        // Double-check that the profile data is stored for ProtectedRoute
+        if (typeof window !== 'undefined') {
+          const storedProfile = (window as any).__CONNECT_EXISTING_PROFILE__;
+          console.log('AccountCheckModal: Checking stored profile before closing:', storedProfile);
+          
+          if (!storedProfile) {
+            console.log('AccountCheckModal: No stored profile found, storing existing user data...');
+            const { data: { session } } = await supabase.auth.getSession();
+            window.__CONNECT_EXISTING_PROFILE__ = {
+              ...existingUser,
+              id: session?.user?.id || existingUser.id
+            };
+            console.log('AccountCheckModal: Stored profile data:', window.__CONNECT_EXISTING_PROFILE__);
+          }
+        }
         
-        // Check if profile was set correctly
-        const storeState = useAppStore.getState();
-        console.log('AccountCheckModal: Store state after setting profile:', {
-          personalProfile: storeState.personalProfile ? 'EXISTS' : 'NULL',
-          personalProfileId: storeState.personalProfile?.id,
-          isHydrated: storeState.isHydrated
+        // Verify session is stable before closing
+        const { data: { session: finalSession } } = await supabase.auth.getSession();
+        console.log('AccountCheckModal: Final session check before closing:', {
+          hasSession: !!finalSession,
+          userId: finalSession?.user?.id,
+          userEmail: finalSession?.user?.email
         });
         
-        // Verify the session is still active
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('AccountCheckModal: Session verification:', { 
-          hasSession: !!session, 
-          userId: session?.user?.id,
-          userEmail: session?.user?.email 
-        });
-        
-        if (!session) {
-          console.error('AccountCheckModal: Session lost, cannot proceed with sign-in');
+        if (!finalSession) {
+          console.error('AccountCheckModal: Session lost before closing modal!');
           setIsSigningIn(false);
           return;
         }
         
-        // Small delay to ensure profile is saved
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        console.log('AccountCheckModal: Sign-in completed successfully');
+        // User state will be preserved by AuthContext, safe to close modal
+        console.log('AccountCheckModal: Closing modal - user state will be preserved by AuthContext');
+        setIsSigningIn(false);
+        onClose();
+        return;
       }
       
       console.log('AccountCheckModal: Profile loaded, refreshing auth state');
       
       // Check current session before proceeding
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session: beforeRefreshSession } } = await supabase.auth.getSession();
       console.log('AccountCheckModal: Current session before refresh:', { 
-        hasSession: !!session, 
-        userId: session?.user?.id,
-        userEmail: session?.user?.email 
+        hasSession: !!beforeRefreshSession, 
+        userId: beforeRefreshSession?.user?.id,
+        userEmail: beforeRefreshSession?.user?.email 
       });
       
-      if (!session) {
+      if (!beforeRefreshSession) {
         console.error('AccountCheckModal: No session found, cannot proceed with sign-in');
         setIsSigningIn(false);
         return;
@@ -297,14 +353,14 @@ export default function AccountCheckModal({
         console.log('AccountCheckModal: About to redirect to /my-life after sign-in');
         
         // Check session one more time before redirect
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session: finalSession } } = await supabase.auth.getSession();
         console.log('AccountCheckModal: Final session check before redirect:', {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          userEmail: session?.user?.email
+          hasSession: !!finalSession,
+          userId: finalSession?.user?.id,
+          userEmail: finalSession?.user?.email
         });
         
-        if (!session) {
+        if (!finalSession) {
           console.error('AccountCheckModal: No session found before redirect, aborting');
           setIsSigningIn(false);
           return;
@@ -358,18 +414,18 @@ export default function AccountCheckModal({
     });
   };
 
-  // Airbnb phone input system functions
+  // Smart phone input system with +61 XXX XXX XXX display - handles both 0466310826 and 466310826 formats
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     // Remove all non-digits and spaces, then remove spaces
     const digits = value.replace(/[^\d]/g, '');
-    // Limit to 9 digits
-    const limitedDigits = digits.slice(0, 9);
+    // Allow up to 10 digits (for 0466310826 format) or 9 digits (for 466310826 format)
+    const limitedDigits = digits.slice(0, 10);
     setPhoneNumber(limitedDigits);
     
-    // Update formData with the full phone number including country code
-    const fullPhone = countryCode + limitedDigits;
-    setFormData(prev => ({ ...prev, phone: fullPhone }));
+    // Update formData with normalized phone number
+    const normalizedPhone = normalizePhoneForBackend(limitedDigits);
+    setFormData(prev => ({ ...prev, phone: normalizedPhone }));
     
     // Position cursor correctly after input - account for spaces in formatted display
     setTimeout(() => {
@@ -381,11 +437,25 @@ export default function AccountCheckModal({
     }, 0);
   };
 
-  // Format phone number with 3-3-3 spacing
+  // Format phone number with 3-3-3 spacing for display
   const formatPhoneNumber = (phone: string) => {
     if (phone.length <= 3) return phone;
     if (phone.length <= 6) return `${phone.slice(0, 3)} ${phone.slice(3)}`;
     return `${phone.slice(0, 3)} ${phone.slice(3, 6)} ${phone.slice(6)}`;
+  };
+
+  // Smart phone number normalization for backend
+  const normalizePhoneForBackend = (phone: string) => {
+    const digits = phone.replace(/[^\d]/g, '');
+    
+    // If starts with 0, remove it and add +61
+    if (digits.startsWith('0')) {
+      return `+61${digits.slice(1)}`;
+    }
+    // If doesn't start with 0, just add +61
+    else {
+      return `+61${digits}`;
+    }
   };
 
   const handlePhoneFocus = () => {
@@ -411,12 +481,20 @@ export default function AccountCheckModal({
   };
 
   // Floating label handlers
-  const handleFullNameFocus = () => {
-    setFullNameFocused(true);
+  const handleFirstNameFocus = () => {
+    setFirstNameFocused(true);
   };
 
-  const handleFullNameBlur = () => {
-    setFullNameFocused(false);
+  const handleFirstNameBlur = () => {
+    setFirstNameFocused(false);
+  };
+
+  const handleLastNameFocus = () => {
+    setLastNameFocused(true);
+  };
+
+  const handleLastNameBlur = () => {
+    setLastNameFocused(false);
   };
 
   const handleDateOfBirthFocus = () => {
@@ -475,7 +553,7 @@ export default function AccountCheckModal({
       // Create local profile as fallback
       const localProfile = {
         id: user.id,
-        name: formData.fullName,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
         bio: formData.bio,
         avatarUrl: formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : null,
         email: formData.email,
@@ -526,7 +604,7 @@ export default function AccountCheckModal({
       
       const profileData = {
         id: user.id,
-          full_name: formData.fullName,
+          full_name: `${formData.firstName} ${formData.lastName}`.trim(),
         date_of_birth: convertDateFormat(formData.dateOfBirth),
         email: formData.email,
         phone: formData.phone,
@@ -579,7 +657,7 @@ export default function AccountCheckModal({
       // Also save to local state for immediate use
       const localProfile = {
         id: user.id,
-        name: formData.fullName,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
         bio: formData.bio,
         avatarUrl: formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : null,
         email: formData.email,
@@ -607,11 +685,11 @@ export default function AccountCheckModal({
       console.log('AccountCheckModal: Auth state refresh completed after account creation');
       
       // Check auth state after refresh
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session: afterCreateSession } } = await supabase.auth.getSession();
       console.log('AccountCheckModal: Session after refresh (account creation):', { 
-        hasSession: !!session, 
-        userId: session?.user?.id,
-        userEmail: session?.user?.email 
+        hasSession: !!afterCreateSession, 
+        userId: afterCreateSession?.user?.id,
+        userEmail: afterCreateSession?.user?.email 
       });
       
       // Small delay to ensure auth state is fully updated before redirect
@@ -619,14 +697,14 @@ export default function AccountCheckModal({
         console.log('AccountCheckModal: About to redirect to /my-life after account creation');
         
         // Check session one more time before redirect
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session: finalCreateSession } } = await supabase.auth.getSession();
         console.log('AccountCheckModal: Final session check before redirect (account creation):', {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          userEmail: session?.user?.email
+          hasSession: !!finalCreateSession,
+          userId: finalCreateSession?.user?.id,
+          userEmail: finalCreateSession?.user?.email
         });
         
-        if (!session) {
+        if (!finalCreateSession) {
           console.error('AccountCheckModal: No session found before redirect (account creation), aborting');
           setIsCreating(false);
           return;
@@ -653,7 +731,7 @@ export default function AccountCheckModal({
       const fallbackConnectId = generateConnectId();
       const localProfile = {
         id: user.id,
-        name: formData.fullName,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
         bio: formData.bio,
         avatarUrl: formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : null,
         email: formData.email,
@@ -675,14 +753,14 @@ export default function AccountCheckModal({
         console.log('AccountCheckModal: About to redirect to /my-life after fallback account creation');
         
         // Check session one more time before redirect
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session: finalFallbackSession } } = await supabase.auth.getSession();
         console.log('AccountCheckModal: Final session check before redirect (fallback):', {
-          hasSession: !!session,
-          userId: session?.user?.id,
-          userEmail: session?.user?.email
+          hasSession: !!finalFallbackSession,
+          userId: finalFallbackSession?.user?.id,
+          userEmail: finalFallbackSession?.user?.email
         });
         
-        if (!session) {
+        if (!finalFallbackSession) {
           console.error('AccountCheckModal: No session found before redirect (fallback), aborting');
           return;
         }
@@ -705,9 +783,9 @@ export default function AccountCheckModal({
     console.log('AccountCheckModal: Moving to page 2, current form data:', formData);
     
     // Ensure we have minimum required data
-    if (!formData.fullName?.trim()) {
-      console.log('AccountCheckModal: No full name, using default');
-      setFormData(prev => ({ ...prev, fullName: 'User' }));
+    if (!formData.firstName?.trim() && !formData.lastName?.trim()) {
+      console.log('AccountCheckModal: No first/last name, using default');
+      setFormData(prev => ({ ...prev, firstName: 'User', lastName: '' }));
     }
     if (!formData.dateOfBirth?.trim()) {
       console.log('AccountCheckModal: No date of birth, using default');
@@ -755,12 +833,8 @@ export default function AccountCheckModal({
           {currentPage === 1 && userExists === false ? (
             <button
               onClick={async () => {
-                // Sign out the user to clean up partial authentication
-                try {
-                  await supabase.auth.signOut();
-                } catch (error) {
-                  console.error('Error signing out during exit:', error);
-                }
+                // NOT signing out - preserving user state
+                console.log('AccountCheckModal: Exiting but preserving user authentication');
                 
                 // Clear local state
                 setPersonalProfile(null);
@@ -782,12 +856,8 @@ export default function AccountCheckModal({
           ) : userExists === true ? (
             <button
               onClick={async () => {
-                // Sign out the user first to ensure they're unsigned in
-                try {
-                  await supabase.auth.signOut();
-                } catch (error) {
-                  console.error('Error signing out:', error);
-                }
+                // NOT signing out - preserving user state during account creation
+                console.log('AccountCheckModal: Creating account but preserving user authentication');
                 
                 // Clear local state
                 setPersonalProfile(null);
@@ -888,19 +958,21 @@ export default function AccountCheckModal({
             // Create Account Flow
             <>
               {currentPage === 1 ? (
-                // Page 1: Full Name + DOB
+                // Page 1: First Name + Last Name + DOB
                 <div className="space-y-6">
-                  <div>
+                  {/* First Name and Last Name - Side by Side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* First Name */}
                     <div className="relative">
                       <input
-                        ref={fullNameRef}
+                        ref={firstNameRef}
                         type="text"
-                        value={formData.fullName}
-                        onChange={(e) => handleInputChange('fullName', e.target.value)}
-                        onFocus={handleFullNameFocus}
-                        onBlur={handleFullNameBlur}
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        onFocus={handleFirstNameFocus}
+                        onBlur={handleFirstNameBlur}
                         placeholder=""
-                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(fullNameFocused || formData.fullName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(firstNameFocused || formData.firstName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
                         style={{ 
                           caretColor: 'black',
                           fontSize: '16px',
@@ -910,35 +982,85 @@ export default function AccountCheckModal({
                         required
                       />
                       
-                      {/* Step 1: Initial state - only "Name" label */}
-                      {!fullNameFocused && !formData.fullName && (
+                      {/* Step 1: Initial state - only "First Name" label */}
+                      {!firstNameFocused && !formData.firstName && (
                         <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                          Name
+                          First Name
                         </label>
                       )}
                       
                       {/* Step 2: Focused state - label moves up, placeholder appears */}
-                      {fullNameFocused && !formData.fullName && (
+                      {firstNameFocused && !formData.firstName && (
                         <>
                           <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            Name
+                            First Name
                           </label>
-                          {/* First and last name placeholder */}
                           <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            First and last name
+                            Your first name
                           </div>
                         </>
                       )}
                       
                       {/* Step 3: Typing state - actual name replaces placeholder */}
-                      {formData.fullName && (
+                      {formData.firstName && (
                         <>
                           <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            Name
-                    </label>
-                          {/* Actual name content */}
+                            First Name
+                          </label>
                           <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            {formData.fullName}
+                            {formData.firstName}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Last Name */}
+                    <div className="relative">
+                      <input
+                        ref={lastNameRef}
+                        type="text"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        onFocus={handleLastNameFocus}
+                        onBlur={handleLastNameBlur}
+                        placeholder=""
+                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(lastNameFocused || formData.lastName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                        style={{ 
+                          caretColor: 'black',
+                          fontSize: '16px',
+                          lineHeight: '1.2',
+                          fontFamily: 'inherit'
+                        }}
+                        required
+                      />
+                      
+                      {/* Step 1: Initial state - only "Last Name" label */}
+                      {!lastNameFocused && !formData.lastName && (
+                        <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                          Last Name
+                        </label>
+                      )}
+                      
+                      {/* Step 2: Focused state - label moves up, placeholder appears */}
+                      {lastNameFocused && !formData.lastName && (
+                        <>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Last Name
+                          </label>
+                          <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                            Your last name
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* Step 3: Typing state - actual name replaces placeholder */}
+                      {formData.lastName && (
+                        <>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Last Name
+                          </label>
+                          <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                            {formData.lastName}
                           </div>
                         </>
                       )}
@@ -1065,7 +1187,7 @@ export default function AccountCheckModal({
                               onFocus={handlePhoneFocus}
                               onBlur={handlePhoneBlur}
                               placeholder=""
-                              className={`w-full h-14 pl-16 pr-4 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                              className={`w-full h-14 pl-12 pr-4 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
                               style={{ 
                                 caretColor: 'black',
                                 fontSize: '16px',
@@ -1094,7 +1216,7 @@ export default function AccountCheckModal({
                                   +61
                                 </div>
                                 {/* XXX XXX XXX to the right of +61 */}
-                                <div className="absolute left-16 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                <div className="absolute left-12 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
                                   XXX XXX XXX
                                 </div>
                               </>
@@ -1111,7 +1233,7 @@ export default function AccountCheckModal({
                                   +61
                                 </div>
                                 {/* Digits to the right of +61 */}
-                                <div className="absolute left-16 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                <div className="absolute left-12 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
                                   {formatPhoneNumber(phoneNumber)}
                                 </div>
                                 {/* Verification status */}
@@ -1268,7 +1390,7 @@ export default function AccountCheckModal({
                               onFocus={handlePhoneFocus}
                               onBlur={handlePhoneBlur}
                               placeholder=""
-                              className={`w-full h-14 pl-16 pr-4 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                              className={`w-full h-14 pl-12 pr-4 border-0 focus:ring-0 focus:border-0 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
                               style={{ 
                                 caretColor: 'black',
                                 fontSize: '16px',
@@ -1297,7 +1419,7 @@ export default function AccountCheckModal({
                                   +61
                                 </div>
                                 {/* XXX XXX XXX to the right of +61 */}
-                                <div className="absolute left-16 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                <div className="absolute left-12 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
                                   XXX XXX XXX
                                 </div>
                               </>
@@ -1314,7 +1436,7 @@ export default function AccountCheckModal({
                                   +61
                                 </div>
                                 {/* Digits to the right of +61 */}
-                                <div className="absolute left-16 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                                <div className="absolute left-12 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
                                   {formatPhoneNumber(phoneNumber)}
                                 </div>
                                 {/* Verification status */}
@@ -1337,7 +1459,7 @@ export default function AccountCheckModal({
                       console.log('AccountCheckModal: Continue button clicked, form data:', formData);
                       nextPage();
                     }}
-                    disabled={!formData.fullName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim()}
+                    disabled={!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim()}
                     className="w-full"
                   >
                     Continue

@@ -30,45 +30,68 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
 
-  // Airbnb phone input system - 3 steps
+  // Simplified phone input system - handles both 0466310826 and 466310826 formats
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Remove all non-digits and spaces, then remove spaces
-    const digits = value.replace(/[^\d]/g, '');
-    // Limit to 9 digits
-    const limitedDigits = digits.slice(0, 9);
-    setPhoneNumber(limitedDigits);
     
-    // Position cursor correctly after input - account for spaces in formatted display
-    setTimeout(() => {
+    // Ensure +61 prefix is always present
+    if (!value.startsWith('+61')) {
+      // If user deleted the +61, restore it
       if (phoneInputRef.current) {
-        const formatted = formatPhoneNumber(limitedDigits);
-        const cursorPos = formatted.length;
-        phoneInputRef.current.setSelectionRange(cursorPos, cursorPos);
+        phoneInputRef.current.value = '+61 ';
+        phoneInputRef.current.setSelectionRange(4, 4);
       }
-    }, 0);
+      return;
+    }
+    
+    // Remove +61 prefix and spaces to get just the digits
+    const cleanValue = value.replace(/^\+61\s*/, '').replace(/\s/g, '');
+    // Remove all non-digits
+    const digits = cleanValue.replace(/[^\d]/g, '');
+    // Allow up to 10 digits (for 0466310826 format) or 9 digits (for 466310826 format)
+    const limitedDigits = digits.slice(0, 10);
+    console.log('SignUpModal: Phone input change:', { value, cleanValue, digits, limitedDigits, length: limitedDigits.length });
+    setPhoneNumber(limitedDigits);
   };
 
-  // Format phone number with 3-3-3 spacing
+  // Format phone number with 3-3-3 spacing for display
   const formatPhoneNumber = (phone: string) => {
     if (phone.length <= 3) return phone;
     if (phone.length <= 6) return `${phone.slice(0, 3)} ${phone.slice(3)}`;
     return `${phone.slice(0, 3)} ${phone.slice(3, 6)} ${phone.slice(6)}`;
   };
 
+  // Smart phone number normalization for backend
+  const normalizePhoneForBackend = (phone: string) => {
+    console.log('SignUpModal normalizePhoneForBackend: Input:', { phone, length: phone.length });
+    
+    // Remove all non-digit characters to get just the numbers
+    const digits = phone.replace(/[^\d]/g, '');
+    console.log('SignUpModal normalizePhoneForBackend: Digits only:', { digits, length: digits.length });
+    
+    // If starts with 0, remove it and add +61
+    if (digits.startsWith('0')) {
+      const result = `+61${digits.slice(1)}`;
+      console.log('SignUpModal normalizePhoneForBackend: Starts with 0, result:', result);
+      return result;
+    }
+    // If doesn't start with 0, just add +61
+    else {
+      const result = `+61${digits}`;
+      console.log('SignUpModal normalizePhoneForBackend: Does not start with 0, result:', result);
+      return result;
+    }
+  };
+
   const handlePhoneFocus = () => {
     setPhoneFocused(true);
-    // Position cursor at the end of existing text, or at the first X if no text
+    // Position cursor after +61 when focused
     setTimeout(() => {
       if (phoneInputRef.current) {
-        if (phoneNumber) {
-          // If there's existing text, position cursor at the end
-          const formatted = formatPhoneNumber(phoneNumber);
-          const cursorPos = formatted.length;
-          phoneInputRef.current.setSelectionRange(cursorPos, cursorPos);
-        } else {
-          // If no text, position cursor at the first X
-          phoneInputRef.current.setSelectionRange(0, 0);
+        const currentValue = phoneInputRef.current.value;
+        if (currentValue.startsWith('+61 ')) {
+          // Position cursor after "+61 "
+          phoneInputRef.current.setSelectionRange(4, 4);
         }
       }
     }, 10);
@@ -90,7 +113,8 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
     setError('');
     
     try {
-      const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\s/g, '')}`;
+      const fullPhoneNumber = normalizePhoneForBackend(phoneNumber);
+      console.log('SignUpModal: Normalized phone number:', { input: phoneNumber, normalized: fullPhoneNumber });
       const { error } = await sendPhoneVerification(fullPhoneNumber);
       
       if (error) {
@@ -139,7 +163,8 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
     try {
       let error;
       if (verificationMethod === 'phone') {
-        const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\s/g, '')}`;
+        const fullPhoneNumber = normalizePhoneForBackend(phoneNumber);
+        console.log('SignUpModal: Verifying phone code for:', fullPhoneNumber);
         const result = await verifyPhoneCode(fullPhoneNumber, code);
         error = result.error;
       } else {
@@ -153,17 +178,18 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
         return;
       }
       
-      // Show account check modal
+      console.log('SignUpModal: Verification successful, staying on verification screen for 3 seconds...');
       setVerificationValue(verificationMethod === 'phone' ? phoneNumber : email);
       
-      // Small delay to ensure user state is updated in AuthContext
+      // Keep user on verification screen for 3 seconds to show success state
+      // This prevents the brief flash to signup form before AccountCheckModal
       setTimeout(() => {
-        console.log('SignUpModal: Setting step to account-check after verification');
+        console.log('SignUpModal: Now showing AccountCheckModal after delay');
         setStep('account-check');
-      }, 100);
+        setLoading(false);
+      }, 3000);
     } catch {
       setError('Invalid verification code');
-    } finally {
       setLoading(false);
     }
   };
@@ -174,7 +200,9 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
 
     try {
       if (verificationMethod === 'phone') {
-        await sendPhoneVerification(phoneNumber);
+        const fullPhoneNumber = normalizePhoneForBackend(phoneNumber);
+        console.log('SignUpModal: Resending to normalized phone:', { input: phoneNumber, normalized: fullPhoneNumber });
+        await sendPhoneVerification(fullPhoneNumber);
       } else {
         await sendEmailVerification(email);
       }
@@ -243,12 +271,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
             });
             
             if (!session) {
-              console.log('SignUpModal: No session found, signing out');
-              try {
-                await signOut();
-              } catch (error) {
-                console.error('Error signing out during modal close:', error);
-              }
+              console.log('SignUpModal: No session found, but NOT signing out - preserving user state');
             } else {
               console.log('SignUpModal: Session found, NOT signing out');
             }
@@ -313,65 +336,35 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
                 </div>
               </div>
 
-              {/* Phone Number Input - Airbnb Style */}
+              {/* Phone Number Input - Simplified with visible text */}
               <div className="relative">
                 <input
                   ref={phoneInputRef}
                   type="tel"
-                  value={phoneFocused || phoneNumber ? formatPhoneNumber(phoneNumber) : ''}
+                  value={phoneFocused || phoneNumber ? `+61 ${formatPhoneNumber(phoneNumber)}` : ''}
                   onChange={handlePhoneChange}
                   onFocus={handlePhoneFocus}
                   onBlur={handlePhoneBlur}
                   placeholder=""
-                  className={`w-full h-14 pl-16 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
                   style={{ 
-                    caretColor: 'black',
                     fontSize: '16px',
                     lineHeight: '1.2',
-                    fontFamily: 'inherit'
+                    fontFamily: 'inherit',
+                    color: 'black'
                   }}
                   required
                 />
                 
-                {/* Step 1: Initial state - only "Phone number" label */}
-                {!phoneFocused && !phoneNumber && (
+                {/* Floating label */}
+                {(phoneFocused || phoneNumber) ? (
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Phone number
+                  </label>
+                ) : (
                   <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                     Phone number
                   </label>
-                )}
-                
-                {/* Step 2: Focused state - label moves up, +61 and XXX XXX XXX appear */}
-                {phoneFocused && !phoneNumber && (
-                  <>
-                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                      Phone number
-                    </label>
-                    {/* +61 prefix */}
-                    <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      +61
-                    </div>
-                    {/* XXX XXX XXX to the right of +61 */}
-                    <div className="absolute left-16 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      XXX XXX XXX
-                    </div>
-                  </>
-                )}
-                
-                {/* Step 3: Typing state - digits replace X's */}
-                {phoneNumber && (
-                  <>
-                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                      Phone number
-                    </label>
-                    {/* +61 prefix */}
-                    <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      +61
-                    </div>
-                    {/* Digits to the right of +61 */}
-                    <div className="absolute left-16 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      {formatPhoneNumber(phoneNumber)}
-                    </div>
-                  </>
                 )}
               </div>
 
@@ -474,7 +467,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
 
               {/* Error Message */}
               {error && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="mt-4">
                   <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}

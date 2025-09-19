@@ -115,7 +115,7 @@ export default function MessagesPage() {
   if (!user) {
     return (
       <>
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="flex flex-col items-center justify-center h-screen bg-gray-50 p-4 overflow-hidden">
           <div className="text-center w-full max-w-sm">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
               Chats
@@ -146,7 +146,7 @@ export default function MessagesPage() {
       </div>
 
       {/* Mobile Layout */}
-      <div className="lg:hidden min-h-screen bg-gray-50">
+      <div className="lg:hidden min-h-screen bg-white">
         {/* Mobile Title */}
         <MobileTitle title="Chat" />
         
@@ -157,8 +157,8 @@ export default function MessagesPage() {
               type="text"
               value={mobileSearchQuery}
               onChange={(e) => setMobileSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+              placeholder="Search"
+              className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent placeholder:text-neutral-400"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,23 +167,23 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Mobile Category Filter Cards - Horizontal Scroll */}
+          {/* Mobile Category Filter Pills - cleaner, cohesive */}
           <div className="flex gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar">
             {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
               <button
                 key={category.id}
                 onClick={() => setMobileActiveCategory(category.id)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full transition-all duration-200 whitespace-nowrap border ${
                   mobileActiveCategory === category.id
-                    ? 'bg-neutral-200 text-neutral-800'
-                    : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
-                }`}
+                    ? 'bg-neutral-100 border-neutral-300 text-neutral-900'
+                    : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                } shadow-sm`}
               >
-                <span className="text-sm font-medium">{category.label}</span>
+                <span className="text-sm font-medium leading-none">{category.label}</span>
                 {category.count !== null && (
-                  <span className={`ml-1 text-xs ${
+                  <span className={`ml-2 text-xs leading-none ${
                     mobileActiveCategory === category.id 
-                      ? 'text-white text-opacity-70' 
+                      ? 'text-neutral-700' 
                       : 'text-neutral-500'
                   }`}>
                     {category.count}

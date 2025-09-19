@@ -5,10 +5,13 @@
   --foreground: #111827; /* Neutral-900 */
 }
 
-/* Force hide bottom nav in settings mode */
+/* Force hide bottom nav in settings mode - immediate effect */
 .settings-mode nav[data-testid="mobile-bottom-nav"],
 .settings-mode .tabbar-nav,
-.settings-mode nav[class*="bottom"] {
+.settings-mode nav[class*="bottom"],
+.settings-mode nav[class*="fixed"],
+.settings-mode div[class*="bottom-"],
+.settings-mode div[class*="fixed bottom"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -16,6 +19,7 @@
   position: fixed !important;
   bottom: -100px !important;
   z-index: -1 !important;
+  transition: none !important;
 }
 
 /* Mobile safe area support */
@@ -35,7 +39,7 @@
   padding-right: env(safe-area-inset-right, 0px);
 }
 
-/* Back button: no hover fill anywhere (mobile/web), simple icon only */
+/* Back button: grey circle on hover */
 .back-btn-circle {
   width: 36px;
   height: 36px;
@@ -44,8 +48,11 @@
   align-items: center;
   justify-content: center;
   background: transparent;
+  transition: background-color 0.2s ease;
 }
-.back-btn-circle:hover { background: transparent; }
+.back-btn-circle:hover { 
+  background: rgb(243 244 246); /* bg-gray-100 */
+}
 
 /* Disable scroll on demand */
 .no-scroll {
@@ -138,4 +145,34 @@ nav:not(.tabbar-nav) {
 /* Hide bottom navigation when modal is open */
 body:has(.modal-open) .tabbar-nav {
   display: none !important;
+}
+
+/* Prevent scrolling on login/signup screens */
+.login-screen {
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* Ensure body doesn't scroll when showing login screens */
+body {
+  position: relative;
+}
+
+/* Override browser autofill styling - default to visible black text */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #000000 !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  background-color: white !important;
+  color: #000000 !important;
+}
+
+/* Only make text transparent for inputs that explicitly use text-transparent class */
+input.text-transparent:-webkit-autofill,
+input[class*="text-transparent"]:-webkit-autofill {
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
 }

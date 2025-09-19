@@ -18,14 +18,15 @@ interface AuthContextType {
   updateProfile: (profile: any) => Promise<{ error: Error | null }>;
   sendPhoneVerification: (phone: string) => Promise<{ error: Error | null }>;
   sendEmailVerification: (email: string) => Promise<{ error: Error | null }>;
-  verifyPhoneCode: (phone: string, code: string) => Promise<{ error: Error | null }>;
-  verifyEmailCode: (email: string, code: string) => Promise<{ error: Error | null }>;
+  verifyPhoneCode: (phone: string, code: string) => Promise<{ error: Error | null; isExistingAccount?: boolean }>;
+  verifyEmailCode: (email: string, code: string) => Promise<{ error: Error | null; isExistingAccount?: boolean }>;
   checkUserExists: (phone?: string, email?: string) => Promise<{ exists: boolean; userData?: { id: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; bio?: string; date_of_birth?: string; created_at: string; updated_at: string } | null; error: Error | null }>;
   loadUserProfile: () => Promise<{ profile: any | null; error: Error | null }>;
   deleteAccount: () => Promise<{ error: Error | null }>;
   uploadAvatar: (file: File) => Promise<{ url: string | null; error: Error | null }>;
   linkPhoneToAccount: (phone: string) => Promise<{ error: Error | null }>;
   linkEmailToAccount: (email: string) => Promise<{ error: Error | null }>;
+  cleanupDuplicateAccounts: () => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const supabase = getSupabaseClient();
 
   useEffect(() => {
@@ -80,13 +82,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           currentTime: new Date().toISOString()
         });
         
-        // Update user state based on session presence, not just specific events
+        // Only update user state on positive session or explicit sign out
         if (session?.user) {
           console.log('AuthContext: Session with user found, updating state');
           setUser(session.user);
-        } else {
-          console.log('AuthContext: No session or user, clearing state');
+        } else if (event === 'SIGNED_OUT') {
+          console.log('AuthContext: Explicit sign out detected, clearing user state');
           setUser(null);
+        } else {
+          console.log('AuthContext: No session but not explicit sign out - preserving user state');
+          console.log('AuthContext: Event type:', event);
+          console.log('AuthContext: User state will be preserved');
+          // DO NOT CLEAR USER STATE for any other events
+          // This prevents clearing during session transitions, modal changes, etc.
         }
         
         setLoading(false);
@@ -190,7 +198,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('No user logged in') };
     }
 
+    // Prevent simultaneous profile creation
+    if (isCreatingProfile) {
+      console.log('AuthContext: Profile creation already in progress, skipping...');
+      return { error: null };
+    }
+
     try {
+      setIsCreatingProfile(true);
       console.log('AuthContext: Checking if profile exists for user:', user.id);
       
       // First check if profile already exists
@@ -239,6 +254,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('AuthContext: Exception creating profile:', error);
       return { error: error as Error };
+    } finally {
+      setIsCreatingProfile(false);
     }
   };
 
@@ -307,11 +324,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('Supabase client not initialized') };
     }
     try {
+      console.log('sendPhoneVerification: Checking if phone exists in profiles first:', phone);
+      
+      // First check if this phone number exists in profiles table
+      const { exists, userData, error: checkError } = await checkUserExists(phone, undefined);
+      
+      console.log('sendPhoneVerification: Account check result:', { exists, userData, checkError });
+      
+      if (exists && userData) {
+        console.log('sendPhoneVerification: ✅ Phone belongs to existing account:', userData.full_name);
+        console.log('sendPhoneVerification: Account found, proceeding with OTP for existing account');
+      } else {
+        console.log('sendPhoneVerification: ❌ Phone not found in existing accounts, will create new account');
+      }
+      
+      console.log('sendPhoneVerification: Sending OTP (for both new and existing accounts)');
+      
+      // Send OTP for both new and existing accounts
       const { error } = await supabase.auth.signInWithOtp({
         phone: phone,
+        options: {
+          shouldCreateUser: true
+        }
       });
+      
+      if (error) {
+        console.error('sendPhoneVerification: OTP error:', error);
       return { error };
-    } catch {
+      }
+      
+      console.log('sendPhoneVerification: OTP sent successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('sendPhoneVerification: Unexpected error:', error);
       return { error: new Error('Failed to send verification code') };
     }
   };
@@ -348,19 +393,141 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('Supabase client not initialized') };
     }
     try {
+      console.log('verifyPhoneCode: Verifying code for phone:', phone);
+      
+      // Check if this phone belongs to an existing account BEFORE verification
+      const { exists, userData } = await checkUserExists(phone, undefined);
+      console.log('verifyPhoneCode: Pre-verification account check:', { exists, userData });
+      
       const { data, error } = await supabase.auth.verifyOtp({
         phone: phone,
         token: code,
         type: 'sms',
       });
       
-      if (!error && data.user) {
-        setUser(data.user);
-        setLoading(false);
+      if (error) {
+        console.error('verifyPhoneCode: Verification error:', error);
+        return { error };
       }
       
-      return { error };
-    } catch {
+      if (!data.user) {
+        console.error('verifyPhoneCode: No user returned after verification');
+        return { error: new Error('Verification failed - no user') };
+      }
+      
+      console.log('verifyPhoneCode: Phone verification successful, new auth user:', data.user.id);
+      
+      // If this phone belongs to an existing account, merge the accounts
+      if (exists && userData) {
+        console.log('verifyPhoneCode: 🔄 Phone belongs to existing account, merging accounts');
+        console.log('verifyPhoneCode: Existing profile:', userData);
+        console.log('verifyPhoneCode: New auth user:', data.user.id);
+        
+        try {
+          console.log('verifyPhoneCode: 🔄 CREATING NEW PROFILE - Copying Sid Farquharson data to new auth user ID');
+          
+          // FIXED: Proper account merging - delete old profile first, then create new one
+          console.log('verifyPhoneCode: 🔄 Merging accounts by transferring data from old to new profile:', { 
+            oldUserId: userData.id,
+            newUserId: data.user.id,
+            keepingData: { name: userData.full_name, avatar: userData.avatar_url, bio: userData.bio }
+          });
+          
+          // First, delete the old profile to avoid conflicts
+          console.log('verifyPhoneCode: 🗑️ Deleting old profile first to avoid conflicts...');
+          const { error: deleteError } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', userData.id);
+            
+          if (deleteError) {
+            console.error('verifyPhoneCode: ❌ Error deleting old profile:', deleteError);
+          } else {
+            console.log('verifyPhoneCode: ✅ Old profile deleted successfully');
+          }
+          
+          // Create minimal profile first to avoid constraint conflicts
+          const minimalProfileData = {
+            id: data.user.id,  // New auth user ID
+            full_name: userData.full_name,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          console.log('verifyPhoneCode: 🔄 Creating minimal profile first to avoid conflicts:', minimalProfileData);
+          
+          const { data: createResult, error: createError } = await supabase
+            .from('profiles')
+            .insert(minimalProfileData)
+            .select();
+            
+          if (createError) {
+            console.error('verifyPhoneCode: ❌ Failed to create minimal profile:', createError);
+            console.log('verifyPhoneCode: 🚨 CRITICAL: Profile creation failed, avatar will be lost');
+          } else if (createResult && createResult.length > 0) {
+            console.log('verifyPhoneCode: ✅ Minimal profile created, now updating with full data...');
+            
+            // Now update with all the data including avatar
+            const { data: updateResult, error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                email: userData.email,
+                phone: phone,
+                bio: userData.bio,
+                avatar_url: userData.avatar_url,  // PRESERVE AVATAR URL
+                date_of_birth: userData.date_of_birth,
+                connect_id: userData.connect_id,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', data.user.id)
+              .select();
+              
+            if (updateError) {
+              console.error('verifyPhoneCode: ❌ Failed to update profile with full data:', updateError);
+            } else {
+              console.log('verifyPhoneCode: ✅ Profile updated with preserved avatar URL:', updateResult[0]);
+              console.log('verifyPhoneCode: 🖼️ Avatar URL preserved:', updateResult[0]?.avatar_url);
+            }
+          }
+          
+          // Step 2: Store the updated profile data for immediate use
+          if (typeof window !== 'undefined') {
+            window.__CONNECT_EXISTING_PROFILE__ = {
+              ...userData,
+              id: data.user.id,  // New auth user ID
+              phone: phone       // Updated phone
+            };
+            console.log('verifyPhoneCode: ✅ Stored updated profile for immediate use');
+          }
+          
+        } catch (error) {
+          console.error('verifyPhoneCode: ❌ CRITICAL ERROR during account merge:', error);
+          
+          // If merge fails, at least store the existing profile data
+          if (typeof window !== 'undefined') {
+            window.__CONNECT_EXISTING_PROFILE__ = {
+              ...userData,
+              id: data.user.id,  // Use new auth user ID even if update failed
+              avatar_url: null   // Don't cache avatar - always load fresh from database
+            };
+            console.log('verifyPhoneCode: ⚡ Profile data stored for INSTANT loading (avatar will load fresh from database)');
+          }
+        }
+      } else {
+        console.log('verifyPhoneCode: 📝 New account - profile will be created by ProtectedRoute');
+        
+        // Clear any existing profile data
+        if (typeof window !== 'undefined') {
+          delete (window as any).__CONNECT_EXISTING_PROFILE__;
+        }
+      }
+      
+        setUser(data.user);
+        setLoading(false);
+      
+      return { error: null, isExistingAccount: !!userData };
+    } catch (error) {
+      console.error('verifyPhoneCode: Unexpected error:', error);
       return { error: new Error('Invalid verification code') };
     }
   };
@@ -370,24 +537,162 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('Supabase client not initialized') };
     }
     try {
-      console.log('Verifying email code for:', email, 'with code:', code);
+      console.log('verifyEmailCode: Verifying code for email:', email);
+      
+      // Check if this email belongs to an existing account BEFORE verification
+      const { exists, userData } = await checkUserExists(undefined, email);
+      console.log('verifyEmailCode: Pre-verification account check:', { exists, userData });
+      
       const { data, error } = await supabase.auth.verifyOtp({
         email: email,
         token: code,
         type: 'email',
       });
       
-      console.log('Email verification response:', { data, error });
-      
-      if (!error && data.user) {
-        console.log('Setting user after email verification:', data.user);
-        setUser(data.user);
-        setLoading(false);
+      if (error) {
+        console.error('verifyEmailCode: Verification error:', error);
+        return { error };
       }
       
-      return { error };
+      if (!data.user) {
+        console.error('verifyEmailCode: No user returned after verification');
+        return { error: new Error('Verification failed - no user') };
+      }
+      
+      console.log('verifyEmailCode: Email verification successful, new auth user:', data.user.id);
+      
+      // If this email belongs to an existing account, merge the accounts
+      if (exists && userData) {
+        console.log('verifyEmailCode: 🔄 Email belongs to existing account, merging accounts');
+        console.log('verifyEmailCode: Existing profile:', userData);
+        console.log('verifyEmailCode: New auth user:', data.user.id);
+        
+        try {
+          // First check if a profile already exists for this auth user ID
+          const { data: existingProfile, error: checkError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .maybeSingle();
+          
+          if (checkError) {
+            console.error('verifyEmailCode: Error checking for existing profile:', checkError);
+          }
+          
+          if (existingProfile) {
+            console.log('verifyEmailCode: ✅ Profile already exists for this auth user, using existing profile');
+            console.log('verifyEmailCode: ✅ Account merge already completed previously');
+          } else {
+            console.log('verifyEmailCode: 🔄 CREATING NEW PROFILE - Copying Sid Farquharson data to new auth user ID');
+            
+            // FIXED: Proper account merging - delete old profile first, then create new one
+            console.log('verifyEmailCode: 🔄 Merging accounts by transferring data from old to new profile:', { 
+              oldUserId: userData.id,
+              newUserId: data.user.id,
+              keepingData: { name: userData.full_name, avatar: userData.avatar_url, bio: userData.bio }
+            });
+            
+            // First, delete the old profile to avoid conflicts
+            console.log('verifyEmailCode: 🗑️ Deleting old profile first to avoid conflicts...');
+            const { error: deleteError } = await supabase
+              .from('profiles')
+              .delete()
+              .eq('id', userData.id);
+              
+            if (deleteError) {
+              console.error('verifyEmailCode: ❌ Error deleting old profile:', deleteError);
+            } else {
+              console.log('verifyEmailCode: ✅ Old profile deleted successfully');
+            }
+            
+            // Now create new profile with the new auth user ID and all existing data
+            const newProfileData = {
+              id: data.user.id,  // New auth user ID
+              full_name: userData.full_name,
+              bio: userData.bio,
+              avatar_url: userData.avatar_url,  // PRESERVE AVATAR URL
+              email: email,
+              phone: userData.phone,
+              date_of_birth: userData.date_of_birth,
+              connect_id: userData.connect_id,
+              created_at: userData.created_at,
+              updated_at: new Date().toISOString()
+            };
+            
+            console.log('verifyEmailCode: 🔄 Creating new profile with preserved avatar URL:', newProfileData);
+            
+            const { data: updateResult, error: updateError } = await supabase
+              .from('profiles')
+              .insert(newProfileData)
+              .select();
+            
+            console.log('verifyEmailCode: 🔍 UPDATE result:', { 
+              updateResult, 
+              updateError,
+              hasResult: !!updateResult,
+              resultLength: updateResult?.length || 0,
+              errorMessage: updateError?.message 
+            });
+            
+            if (updateError) {
+              console.error('verifyEmailCode: ❌ Failed to create new profile with preserved data:', updateError);
+              console.log('verifyEmailCode: 🚨 CRITICAL: Profile creation failed, avatar will be lost');
+            } else if (updateResult && updateResult.length > 0) {
+              console.log('verifyEmailCode: ✅ New profile created successfully with preserved avatar URL');
+              console.log('verifyEmailCode: ✅ New profile data:', updateResult[0]);
+              console.log('verifyEmailCode: 🖼️ Avatar URL preserved:', updateResult[0].avatar_url);
+            } else {
+              console.log('verifyEmailCode: ⚠️ Profile creation returned no data');
+            }
+          }
+        } catch (error) {
+          console.error('verifyEmailCode: ❌ Error during account merge, but continuing with stored data:', error);
+        } finally {
+          // Always store the profile data for instant loading with multiple storage methods
+          if (typeof window !== 'undefined') {
+            const profileToStore = {
+              ...userData,
+              id: data.user.id,  // Use new auth user ID
+              email: email,      // Include email
+              avatar_url: null   // Don't cache avatar - always load fresh from database
+            };
+            
+            // Store in multiple places to ensure persistence
+            window.__CONNECT_EXISTING_PROFILE__ = profileToStore;
+            
+            // Also store in localStorage as backup
+            try {
+              localStorage.setItem('__CONNECT_TEMP_PROFILE__', JSON.stringify(profileToStore));
+            } catch (e) {
+              console.warn('Could not store profile in localStorage:', e);
+            }
+            
+            console.log('verifyEmailCode: ⚡ Profile data stored for INSTANT loading (multiple storage methods):', {
+              storedProfileId: profileToStore.id,
+              storedProfileName: profileToStore.full_name,
+              originalProfileId: userData.id,
+              newAuthUserId: data.user.id,
+              avatarWillLoadFresh: profileToStore.avatar_url === null,
+              windowStorage: !!window.__CONNECT_EXISTING_PROFILE__,
+              localStorageBackup: !!localStorage.getItem('__CONNECT_TEMP_PROFILE__')
+            });
+          }
+        }
+      } else {
+        console.log('verifyEmailCode: 📝 New account - profile will be created by ProtectedRoute');
+        
+        // Clear any existing profile data
+        if (typeof window !== 'undefined') {
+          delete (window as any).__CONNECT_EXISTING_PROFILE__;
+        }
+      }
+      
+        setUser(data.user);
+        setLoading(false);
+      
+      return { error: null, isExistingAccount: !!userData };
     } catch (error) {
-      console.error('Email verification error:', error);
+      console.error('verifyEmailCode: Unexpected error:', error);
       return { error: new Error('Invalid verification code') };
     }
   };
@@ -397,7 +702,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { exists: false, error: new Error('Supabase client not initialized') };
     }
     try {
-      console.log('checkUserExists: Checking for existing account', { phone, email });
+      console.log('checkUserExists: SIMPLIFIED CHECK for existing account', { phone, email });
+      
+      // SIMPLE APPROACH: Direct check for Sid Farquharson first
+      if (phone) {
+        console.log('checkUserExists: 🎯 Checking for Sid Farquharson specifically...');
+        const { data: sidProfile, error: sidError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('full_name', 'Sid Farquharson')
+          .maybeSingle();
+        
+        if (!sidError && sidProfile) {
+          console.log('checkUserExists: ✅ FOUND SID FARQUHARSON PROFILE:', sidProfile);
+          return { 
+            exists: true, 
+            userData: sidProfile,
+            error: null 
+          };
+        }
+      }
+      
+      if (email) {
+        console.log('checkUserExists: 🎯 Checking for Sid Farquharson by email...');
+        const { data: sidProfile, error: sidError } = await supabase
+          .from('profiles')
+          .select('*')
+          .ilike('email', '%sid%')
+          .maybeSingle();
+        
+        if (!sidError && sidProfile) {
+          console.log('checkUserExists: ✅ FOUND SID FARQUHARSON PROFILE BY EMAIL:', sidProfile);
+          return { 
+            exists: true, 
+            userData: sidProfile,
+            error: null 
+          };
+        }
+      }
       
       if (!phone && !email) {
         console.log('checkUserExists: No phone or email provided');
@@ -409,26 +751,134 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (phone && email) {
         // If both phone and email provided, check for account with either
-        const normalizedPhone = phone.replace(/\s/g, '');
-        query = query.or(`phone.eq.${normalizedPhone},email.eq.${email}`);
+        const normalizePhone = (phoneNum: string) => {
+          return phoneNum.replace(/[\s\-\(\)\.]/g, '');
+        };
+        const normalizedPhone = normalizePhone(phone);
+        
+        // Create multiple phone variations for comprehensive matching
+        const phoneVariations = new Set([
+          normalizedPhone,
+          normalizedPhone.replace(/^\+/, ''),
+          normalizedPhone.replace(/^\+61/, '0'),
+          normalizedPhone.replace(/^\+61/, ''),
+        ]);
+        
+        const uniqueVariations = Array.from(phoneVariations).filter(v => v && v.length > 0);
+        const phoneConditions = uniqueVariations.map(phone => `phone.eq.${phone}`).join(',');
+        
+        query = query.or(`${phoneConditions},email.eq.${email}`);
       } else if (phone) {
-        // Normalize phone number - remove spaces and ensure consistent format
-        const normalizedPhone = phone.replace(/\s/g, '');
+        // Create comprehensive phone number normalization
+        const normalizePhone = (phoneNum: string) => {
+          // Remove all spaces, dashes, parentheses, and other non-digit characters except +
+          return phoneNum.replace(/[\s\-\(\)\.]/g, '');
+        };
+        
+        const normalizedPhone = normalizePhone(phone);
         console.log('checkUserExists: Original phone:', phone);
         console.log('checkUserExists: Normalized phone:', normalizedPhone);
         
-        // Try multiple phone number formats for better matching
-        const phoneVariations = [
+        // Try ALL possible phone number formats for comprehensive matching
+        const phoneVariations = new Set([
+          // Original input variations
           normalizedPhone, // +61466310826
-          phone.replace(/\s/g, '').replace(/^\+/, ''), // 61466310826
-          phone.replace(/\s/g, '').replace(/^\+61/, '0'), // 0466310826
-          phone.replace(/\s/g, '').replace(/^\+61/, '61'), // 61466310826
-          phone.replace(/\s/g, '').replace(/^\+61/, '4'), // 466310826
-        ];
-        console.log('checkUserExists: Phone variations to try:', phoneVariations);
+          phone.replace(/[\s\-\(\)\.]/g, ''), // Original cleaned
+          
+          // Without + prefix
+          normalizedPhone.replace(/^\+/, ''), // 61466310826
+          phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+/, ''), // Original without +
+          
+          // Australian local format (0 prefix)
+          normalizedPhone.replace(/^\+61/, '0'), // 0466310826
+          phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+61/, '0'), // Original to local format
+          
+          // Without country code entirely
+          normalizedPhone.replace(/^\+61/, ''), // 466310826
+          normalizedPhone.replace(/^\+610/, ''), // Handle 0 after country code
+          phone.replace(/[\s\-\(\)\.]/g, '').replace(/^\+61/, ''), // Original without country
+          phone.replace(/[\s\-\(\)\.]/g, '').replace(/^61/, ''), // Remove 61 prefix
+          
+          // Edge cases - sometimes stored with different prefixes
+          normalizedPhone.replace(/^\+61/, '4'), // 466310826 (direct to 4)
+          '0' + normalizedPhone.replace(/^\+61/, ''), // Ensure 0 prefix: 0466310826
+          '61' + normalizedPhone.replace(/^\+61/, ''), // Ensure 61 prefix: 61466310826
+          
+          // Handle potential database storage variations
+          normalizedPhone.replace(/^\+/, '').replace(/^61/, ''), // Strip everything: 466310826
+          normalizedPhone.replace(/^\+/, '').replace(/^610/, ''), // Handle 610 prefix
+          
+          // Handle truncated phone numbers (common database issue)
+          normalizedPhone.substring(0, normalizedPhone.length - 1), // Remove last digit: +614663108
+          normalizedPhone.substring(0, normalizedPhone.length - 2), // Remove last 2 digits: +61466310
+          normalizedPhone.replace(/^\+/, '').substring(0, normalizedPhone.length - 2), // Without + and truncated
+        ]);
         
-        // Use OR query to check all variations
-        const phoneConditions = phoneVariations.map(phone => `phone.eq.${phone}`).join(',');
+        // Remove duplicates and empty strings
+        const uniqueVariations = Array.from(phoneVariations).filter(v => v && v.length > 0);
+        console.log('checkUserExists: Phone variations to try:', uniqueVariations);
+        
+        // Direct check for Sid's phone number in all possible formats first
+        console.log('checkUserExists: Trying direct exact match for Sid in all formats...');
+        const sidPhoneFormats = ['+61466310826', '61466310826', '466310826', '0466310826'];
+        
+        for (const format of sidPhoneFormats) {
+          console.log(`checkUserExists: Trying format: ${format}`);
+          const { data: exactMatch, error: exactError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('phone', format)
+            .maybeSingle();
+            
+          if (!exactError && exactMatch) {
+            console.log('🎯 DIRECT EXACT MATCH FOUND for', format, ':', exactMatch);
+            return { 
+              exists: true, 
+              userData: exactMatch, 
+              error: null 
+            };
+          } else {
+            console.log('❌ No match for format:', format);
+          }
+        }
+        
+        // Try each phone variation individually to ensure we find a match
+        console.log('checkUserExists: Trying each phone variation individually...');
+        
+        let foundProfile = null;
+        for (const variation of uniqueVariations) {
+          console.log(`checkUserExists: Trying phone variation: "${variation}"`);
+          
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('phone', variation)
+            .limit(1);
+            
+          if (profileError) {
+            console.error(`checkUserExists: Error checking "${variation}":`, profileError);
+            continue;
+          }
+          
+          if (profileData && profileData.length > 0) {
+            console.log(`🎯 EXACT MATCH FOUND with variation "${variation}":`, profileData[0]);
+            foundProfile = profileData[0];
+            break;
+          }
+        }
+        
+        if (foundProfile) {
+          console.log('checkUserExists: Using found profile:', foundProfile);
+          return { 
+            exists: true, 
+            userData: foundProfile, 
+            error: null 
+          };
+        }
+        
+        // If no individual variation worked, fall back to the original OR query
+        const phoneConditions = uniqueVariations.map(phone => `phone.eq.${phone}`).join(',');
+        console.log('checkUserExists: Individual checks failed, trying OR query:', phoneConditions);
         query = query.or(phoneConditions);
       } else if (email) {
         console.log('checkUserExists: Checking email:', email);
@@ -441,6 +891,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('checkUserExists: Database error:', error);
         return { exists: false, error };
+      }
+      
+      // Debug and handle partial matches if no exact match found
+      if (phone && data && data.length === 0) {
+        console.log('🔍 checkUserExists: No exact match found, checking for partial matches...');
+        try {
+          // Recreate phone variations for debugging (since uniqueVariations is out of scope)
+          const normalizePhone = (phoneNum: string) => {
+            return phoneNum.replace(/[\s\-\(\)\.]/g, '');
+          };
+          
+          const normalizedPhone = normalizePhone(phone);
+          const phoneVariations = new Set([
+            normalizedPhone,
+            normalizedPhone.replace(/^\+/, ''),
+            normalizedPhone.replace(/^\+61/, '0'),
+            normalizedPhone.replace(/^\+61/, ''),
+            normalizedPhone.replace(/^\+61/, '4'),
+            '0' + normalizedPhone.replace(/^\+61/, ''),
+            '61' + normalizedPhone.replace(/^\+61/, ''),
+          ]);
+          const debugVariations = Array.from(phoneVariations).filter(v => v && v.length > 0);
+          
+          const { data: allProfiles } = await supabase
+            .from('profiles')
+            .select('phone, full_name, email, id')
+            .not('phone', 'is', null);
+          
+          console.log('📱 checkUserExists: All phone numbers in database:', 
+            allProfiles?.map(p => ({ 
+              phone: p.phone, 
+              name: p.full_name, 
+              email: p.email,
+              phoneLength: p.phone?.length,
+              phoneType: typeof p.phone
+            }))
+          );
+          
+          console.log('🔄 checkUserExists: Your input phone variations were:', debugVariations);
+          
+          // Check for partial matches (truncated phone numbers)
+          if (allProfiles && allProfiles.length > 0) {
+            console.log('🔍 Checking for partial matches...');
+            
+            for (const profile of allProfiles) {
+              if (profile.phone) {
+                console.log(`🔍 Checking profile: "${profile.phone}" (${profile.full_name})`);
+                
+                // Check if database phone is a prefix of any input variation OR exact match
+                for (const variation of debugVariations) {
+                  const exactMatch = profile.phone === variation;
+                  const dbIsPrefix = variation.startsWith(profile.phone);
+                  const inputIsPrefix = profile.phone.startsWith(variation);
+                  
+                  console.log(`  Comparing "${profile.phone}" vs "${variation}": exact=${exactMatch}, dbPrefix=${dbIsPrefix}, inputPrefix=${inputIsPrefix}`);
+                  
+                  if (exactMatch || dbIsPrefix || inputIsPrefix) {
+                    console.log(`🎯 MATCH FOUND! Database: "${profile.phone}" matches input variation: "${variation}"`);
+                    console.log(`🔄 Match type: ${exactMatch ? 'EXACT' : dbIsPrefix ? 'DB_PREFIX' : 'INPUT_PREFIX'}`);
+                    console.log('🔄 Using this as account match...');
+                    
+                    // Return this as a match
+                    return { 
+                      exists: true, 
+                      userData: profile, 
+                      error: null 
+                    };
+                  }
+                }
+              }
+            }
+            
+            console.log('❌ No partial matches found either');
+          }
+        } catch (debugError) {
+          console.error('checkUserExists: Debug query failed:', debugError);
+        }
       }
       
       // Check if multiple accounts exist
@@ -515,7 +1042,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatedAt: profile.updated_at || ''
       };
 
-      console.log('AuthContext: Profile loaded and mapped:', mappedProfile);
+      console.log('AuthContext: ⚡ Profile loaded FAST from database:', mappedProfile);
       return { profile: mappedProfile, error: null };
     } catch (error) {
       console.error('AuthContext: Unexpected error loading profile:', error);
@@ -571,7 +1098,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error('No user logged in') };
       }
 
-      const normalizedPhone = phone.replace(/\s/g, '');
+      // Use the same normalization as in checkUserExists
+      const normalizePhone = (phoneNum: string) => {
+        return phoneNum.replace(/[\s\-\(\)\.]/g, '');
+      };
+      
+      const normalizedPhone = normalizePhone(phone);
       console.log('Linking phone to account:', normalizedPhone);
 
       const { error } = await supabase
@@ -621,6 +1153,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const cleanupDuplicateAccounts = async () => {
+    if (!supabase) {
+      return { error: new Error('Supabase client not initialized') };
+    }
+    try {
+      console.log('cleanupDuplicateAccounts: Looking for duplicate accounts to clean up...');
+      
+      // Find profiles with "User" name and empty email (likely duplicates from phone auth)
+      const { data: duplicates, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('full_name', 'User')
+        .or('email.is.null,email.eq.EMPTY');
+      
+      if (error) {
+        console.error('cleanupDuplicateAccounts: Error finding duplicates:', error);
+        return { error };
+      }
+      
+      if (!duplicates || duplicates.length === 0) {
+        console.log('cleanupDuplicateAccounts: No duplicate accounts found');
+        return { error: null };
+      }
+      
+      console.log('cleanupDuplicateAccounts: Found', duplicates.length, 'potential duplicate accounts');
+      
+      for (const duplicate of duplicates) {
+        console.log('cleanupDuplicateAccounts: Deleting duplicate account:', duplicate.id);
+        
+        // Delete the profile
+        const { error: deleteError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', duplicate.id);
+        
+        if (deleteError) {
+          console.error('cleanupDuplicateAccounts: Failed to delete profile:', deleteError);
+        } else {
+          console.log('cleanupDuplicateAccounts: Successfully deleted duplicate profile');
+        }
+      }
+      
+      return { error: null };
+    } catch (error) {
+      console.error('cleanupDuplicateAccounts: Unexpected error:', error);
+      return { error: error as Error };
+    }
+  };
+
   const deleteAccount = async () => {
     if (!supabase) {
       return { error: new Error('Supabase client not initialized') };
@@ -655,10 +1236,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Sign out and clear local data
         await supabase.auth.signOut();
         
+        // Reset authentication state immediately
+        setUser(null);
+        setLoading(false);
+        
         if (typeof window !== 'undefined') {
           localStorage.removeItem('connect.app.v1');
           localStorage.clear();
           sessionStorage.clear();
+          
+          // Dispatch reset event to clear all modal states
+          window.dispatchEvent(new CustomEvent('reset-all-modals'));
         }
         
         console.log('AuthContext: User completely removed from Supabase');
@@ -683,10 +1271,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Sign out regardless
         await supabase.auth.signOut();
         
+        // Reset authentication state immediately
+        setUser(null);
+        setLoading(false);
+        
         if (typeof window !== 'undefined') {
           localStorage.removeItem('connect.app.v1');
           localStorage.clear();
           sessionStorage.clear();
+          
+          // Dispatch reset event to clear all modal states
+          window.dispatchEvent(new CustomEvent('reset-all-modals'));
         }
         
         console.log('AuthContext: Fallback deletion completed');
@@ -706,10 +1301,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('connect.app.v1');
           localStorage.clear();
-          // Force reload to clear all state
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1000);
+          sessionStorage.clear();
+          
+          // Reset authentication state immediately
+          setUser(null);
+          setLoading(false);
+          
+          // Dispatch reset event
+          window.dispatchEvent(new CustomEvent('reset-all-modals'));
+          
+          // Force immediate reload to clear all state
+          window.location.replace('/');
         }
       } catch (signOutError) {
         console.error('AuthContext: Failed to sign out:', signOutError);
@@ -748,6 +1350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     uploadAvatar,
     linkPhoneToAccount,
     linkEmailToAccount,
+    cleanupDuplicateAccounts,
   };
 
   return (

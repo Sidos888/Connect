@@ -21,14 +21,35 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { signOut } = useAuth();
 
+  // Listen for reset events to clear all modal states
+  React.useEffect(() => {
+    const handleResetModals = () => {
+      console.log('ModalProvider: Resetting all modal states');
+      setIsLoginOpen(false);
+      setIsSignUpOpen(false);
+    };
+
+    window.addEventListener('reset-all-modals', handleResetModals);
+    
+    return () => {
+      window.removeEventListener('reset-all-modals', handleResetModals);
+    };
+  }, []);
+
   const showLogin = () => {
+    console.log('ModalProvider: showLogin called');
+    console.log('ModalProvider: Current modal states:', { isLoginOpen, isSignUpOpen });
     setIsLoginOpen(true);
     setIsSignUpOpen(false);
+    console.log('ModalProvider: Login modal should now be open');
   };
 
   const showSignUp = () => {
+    console.log('ModalProvider: showSignUp called');
+    console.log('ModalProvider: Current modal states:', { isLoginOpen, isSignUpOpen });
     setIsSignUpOpen(true);
     setIsLoginOpen(false);
+    console.log('ModalProvider: SignUp modal should now be open');
   };
 
   const hideModals = () => {
@@ -44,12 +65,8 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={async () => {
-          // Sign out to clean up any partial authentication
-          try {
-            await signOut();
-          } catch (error) {
-            console.error('Error signing out during modal close:', error);
-          }
+          // NOT signing out - preserving user state
+          console.log('ModalContext: Closing modal but preserving user authentication');
           setIsLoginOpen(false);
         }}
         onProfileSetup={() => {
@@ -61,12 +78,8 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       <SignUpModal
         isOpen={isSignUpOpen}
         onClose={async () => {
-          // Sign out to clean up any partial authentication
-          try {
-            await signOut();
-          } catch (error) {
-            console.error('Error signing out during modal close:', error);
-          }
+          // NOT signing out - preserving user state
+          console.log('ModalContext: Closing modal but preserving user authentication');
           setIsSignUpOpen(false);
         }}
         onProfileSetup={() => {

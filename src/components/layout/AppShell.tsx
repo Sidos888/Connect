@@ -104,14 +104,14 @@ export default function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Desktop: Top Navigation Bar */}
       <div className="hidden lg:block">
         <TopNavigation />
       </div>
       
       {/* Main Content Area with proper mobile safe area */}
-      <main className="w-full pb-20 lg:pb-0">
+      <main className="flex-1 w-full overflow-hidden">
         <ProtectedRoute>
           {children}
         </ProtectedRoute>

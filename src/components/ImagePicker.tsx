@@ -24,20 +24,36 @@ export default function ImagePicker({
   const [preview, setPreview] = React.useState<string | null>(initialPreviewUrl);
 
   function handleSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    console.log('ImagePicker: File selection started');
     const file = e.target.files?.[0] ?? null;
     if (!file) {
+      console.log('ImagePicker: No file selected');
       setPreview(null);
       onChange(null, null);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = typeof reader.result === "string" ? reader.result : null;
-      setPreview(url);
-      onChange(file, url);
-    };
-    reader.readAsDataURL(file);
+    console.log('ImagePicker: File selected:', { name: file.name, size: file.size, type: file.type });
+
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        console.log('ImagePicker: File read successfully');
+        const url = typeof reader.result === "string" ? reader.result : null;
+        setPreview(url);
+        onChange(file, url);
+      };
+      reader.onerror = () => {
+        console.error('ImagePicker: Error reading file');
+        setPreview(null);
+        onChange(null, null);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('ImagePicker: Exception reading file:', error);
+      setPreview(null);
+      onChange(null, null);
+    }
   }
 
   const radiusClass = shape === "circle" ? "rounded-full" : "rounded-md";
@@ -59,13 +75,30 @@ export default function ImagePicker({
         </div>
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            console.log('ImagePicker: Button clicked, opening file picker');
+            try {
+              inputRef.current?.click();
+              console.log('ImagePicker: File picker opened successfully');
+            } catch (error) {
+              console.error('ImagePicker: Error opening file picker:', error);
+            }
+          }}
           className="text-sm text-gray-600 hover:text-gray-800 transition-colors underline"
         >
           {preview ? 'Edit' : 'Add'}
         </button>
       </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleSelect} />
+      
+      {/* Single input with both camera and library options */}
+      <input 
+        ref={inputRef} 
+        type="file" 
+        accept="image/*" 
+        className="hidden" 
+        onChange={handleSelect} 
+      />
+      
       {helperText && <div className="text-xs text-gray-500 text-center">{helperText}</div>}
     </div>
   );

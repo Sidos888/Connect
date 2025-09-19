@@ -27,10 +27,15 @@ export default function PersonalChatPage() {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex-shrink-0 px-4 py-3 bg-white border-b border-gray-200 safe-top">
-        <div className="relative flex items-center justify-center">
-          <Link href="/chat" className="absolute left-0 p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <ChevronLeftIcon className="h-5 w-5 text-gray-700" />
+      <div className="flex-shrink-0 bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center justify-center relative">
+          <Link 
+            href="/chat" 
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          >
+            <span className="back-btn-circle">
+              <ChevronLeftIcon className="h-5 w-5" />
+            </span>
           </Link>
           <div className="flex items-center gap-3">
             <Avatar 

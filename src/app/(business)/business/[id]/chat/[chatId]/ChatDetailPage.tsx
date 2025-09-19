@@ -29,39 +29,35 @@ export default function ChatDetailPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center space-x-3">
+      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center justify-center relative">
           <Link 
             href={backHref} 
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors lg:hidden"
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Back to chat"
           >
-            <ChevronLeftIcon className="w-5 h-5" />
+            <span className="back-btn-circle">
+              <ChevronLeftIcon className="h-5 w-5" />
+            </span>
           </Link>
-          
-          <Avatar
-            src={conv.avatarUrl}
-            name={conv.title}
-            size={40}
-            className="lg:w-10 lg:h-10"
-          />
-          
-          <div>
-            <h1 className="font-semibold text-gray-900 text-sm lg:text-base">
-              {conv.title}
-            </h1>
-            <p className="text-xs text-gray-500">
-              {conv.isGroup ? `${conv.messages.length} members` : "Direct Message"}
-            </p>
+          <div className="flex items-center gap-3">
+            <Avatar
+              src={conv.avatarUrl}
+              name={conv.title}
+              size={40}
+              className="lg:w-10 lg:h-10"
+            />
+            
+            <div>
+              <h1 className="font-semibold text-gray-900 text-sm lg:text-base">
+                {conv.title}
+              </h1>
+              <p className="text-xs text-gray-500">
+                {conv.isGroup ? `${conv.messages.length} members` : "Direct Message"}
+              </p>
+            </div>
           </div>
         </div>
-        
-        {/* Desktop back button */}
-        <Link 
-          href={backHref}
-          className="hidden lg:block px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          ← Back to chats
-        </Link>
       </div>
 
       {/* Messages */}

@@ -13,6 +13,8 @@ interface VerificationModalProps {
   phoneOrEmail: string;
   loading?: boolean;
   error?: string;
+  verificationSuccess?: boolean;
+  accountRecognized?: boolean;
 }
 
 export default function VerificationModal({ 
@@ -24,7 +26,9 @@ export default function VerificationModal({
   verificationMethod,
   phoneOrEmail,
   loading = false,
-  error = ''
+  error = '',
+  verificationSuccess = false,
+  accountRecognized = false
 }: VerificationModalProps) {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -61,9 +65,9 @@ export default function VerificationModal({
       
       // Auto-verify if all 6 digits are filled
       if (newCode.every(digit => digit !== '') && newCode.length === 6) {
-        console.log('VerificationModal: All digits entered via autofill, auto-verifying');
+        console.log('VerificationModal: All digits entered via autofill, auto-verifying instantly');
         setIsVerifying(true);
-        setTimeout(() => onVerify(newCode.join('')), 500); // Half second delay for smooth transition
+        onVerify(newCode.join('')); // Instant verification
       } else {
         // Focus the appropriate input after autofill
         setTimeout(() => {
@@ -91,9 +95,9 @@ export default function VerificationModal({
 
     // Auto-verify when all digits are entered
     if (newCode.every(digit => digit !== '') && newCode.length === 6) {
-      console.log('VerificationModal: All digits entered, auto-verifying');
+      console.log('VerificationModal: All digits entered, auto-verifying instantly');
       setIsVerifying(true);
-      setTimeout(() => onVerify(newCode.join('')), 500); // Half second delay for smooth transition
+      onVerify(newCode.join('')); // Instant verification
     }
   };
 
@@ -198,15 +202,39 @@ export default function VerificationModal({
         {/* Content */}
         <div className="p-6">
           <div className="text-center mb-8">
-            <p className="text-sm text-gray-600 mb-1">Code sent to</p>
-            <p className="text-sm text-gray-900 font-medium">
-              {verificationMethod === 'phone' ? `+61 ${phoneOrEmail.slice(0, 3)} ${phoneOrEmail.slice(3, 6)} ${phoneOrEmail.slice(6, 9)}` : phoneOrEmail}
-            </p>
+            {verificationSuccess && accountRecognized ? (
+              <>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-lg font-semibold text-gray-900 mb-2">Account recognized!</p>
+                <p className="text-sm text-gray-600">Preparing your account...</p>
+              </>
+            ) : verificationSuccess ? (
+              <>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-lg font-semibold text-gray-900 mb-2">Verification successful!</p>
+                <p className="text-sm text-gray-600">Setting up your account...</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-1">Code sent to</p>
+                <p className="text-sm text-gray-900 font-medium">
+                  {verificationMethod === 'phone' ? `+61 ${phoneOrEmail.slice(0, 3)} ${phoneOrEmail.slice(3, 6)} ${phoneOrEmail.slice(6, 9)}` : phoneOrEmail}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-6">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
@@ -236,9 +264,9 @@ export default function VerificationModal({
                 
                 // Auto-verify if all 6 digits are filled
                 if (newCode.every(digit => digit !== '') && newCode.length === 6) {
-                  console.log('VerificationModal: All digits entered via SMS autofill, auto-verifying');
+                  console.log('VerificationModal: All digits entered via SMS autofill, auto-verifying instantly');
                   setIsVerifying(true);
-                  setTimeout(() => onVerify(newCode.join('')), 500); // Half second delay for smooth transition
+                  onVerify(newCode.join('')); // Instant verification
                 }
                 
                 // Clear the hidden input
@@ -247,8 +275,9 @@ export default function VerificationModal({
             }}
           />
 
-          {/* 6 Digit Input Boxes */}
-          <div className="flex justify-center gap-2 md:gap-4 mb-8 px-4">
+          {/* 6 Digit Input Boxes - Hide when verification successful */}
+          {!verificationSuccess && (
+          <div className="flex justify-center gap-3 md:gap-4 mb-8 px-2">
             {code.map((digit, index) => (
               <input
                 key={index}
@@ -265,7 +294,7 @@ export default function VerificationModal({
                 onFocus={() => setActiveIndex(index)}
                 className={`
                   w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-2 rounded-xl
-                  focus:outline-none focus:ring-0 transition-all duration-150 bg-white
+                  focus:outline-none focus:ring-0 transition-all duration-75 bg-white
                   ${isVerifying
                     ? 'border-green-500 bg-green-50'
                     : activeIndex === index
@@ -275,18 +304,21 @@ export default function VerificationModal({
                     : 'border-gray-200'
                   }
                 `}
+                style={{ caretColor: 'transparent' }}
               />
             ))}
           </div>
+          )}
 
-          {/* Action Buttons */}
+          {/* Action Buttons - Hide when verification successful */}
+          {!verificationSuccess && (
           <div className="space-y-3">
             {/* Verify Button */}
             <button
               onClick={handleVerify}
               disabled={loading || isVerifying || code.join('').length !== 6}
               className={`
-                w-full h-14 rounded-lg font-semibold text-white transition-all
+                w-full h-14 rounded-lg font-semibold text-white transition-all duration-75
                 ${code.join('').length === 6 && !loading && !isVerifying
                   ? 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'
                   : 'bg-gray-300 cursor-not-allowed'
@@ -307,6 +339,7 @@ export default function VerificationModal({
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

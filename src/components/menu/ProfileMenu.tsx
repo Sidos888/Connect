@@ -144,16 +144,18 @@ function ProfileView({
     <SimpleCard>
       <div className="space-y-4">
         {/* Header with back button */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <button
             onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Back to menu"
           >
-            <ChevronLeft size={20} className="text-gray-700" />
+            <span className="back-btn-circle">
+              <ChevronLeft size={20} className="text-gray-700" />
+            </span>
           </button>
-          <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
-            </div>
+          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Profile</h2>
+        </div>
 
         {/* Profile Card */}
         <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-6 relative">
@@ -162,7 +164,7 @@ function ProfileView({
             onClick={onEditProfile}
             className="absolute top-4 right-4 text-sm font-medium text-gray-900 hover:text-gray-700 underline transition-colors"
           >
-            Edit Profile
+            Edit
           </button>
           
           <div className="flex flex-col items-center text-center space-y-4">
@@ -260,15 +262,17 @@ function EditProfileView({
     <SimpleCard>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <button
             onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Back to profile"
           >
-            <ChevronLeft size={18} className="text-gray-600" />
+            <span className="back-btn-circle">
+              <ChevronLeft size={20} className="text-gray-700" />
+            </span>
           </button>
-          <h2 className="text-lg font-semibold text-gray-900">Edit Profile</h2>
+          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Edit Profile</h2>
         </div>
 
         {/* Profile Picture Section */}
@@ -487,15 +491,17 @@ function SettingsView({
         ) : (
           <>
             {/* Header with back button */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
                 aria-label="Back to menu"
               >
-                <ChevronLeft size={20} className="text-gray-700" />
+                <span className="back-btn-circle">
+                  <ChevronLeft size={20} className="text-gray-700" />
+                </span>
               </button>
-              <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
+              <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Settings</h2>
             </div>
             
             {/* Settings content - empty space for future settings */}
@@ -545,12 +551,22 @@ export default function ProfileMenu() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Get current account info for avatar
+  // Get current account info for avatar with debugging
   const currentAccount = { 
     name: personalProfile?.name, 
     avatarUrl: personalProfile?.avatarUrl,
     bio: personalProfile?.bio
   };
+  
+  // Debug profile loading in menu
+  useEffect(() => {
+    console.log('ProfileMenu: Profile data updated:', {
+      hasProfile: !!personalProfile,
+      name: personalProfile?.name,
+      hasAvatar: !!personalProfile?.avatarUrl,
+      avatarUrl: personalProfile?.avatarUrl
+    });
+  }, [personalProfile]);
 
 
   // Close menu when navigating - immediate hide
@@ -671,9 +687,26 @@ export default function ProfileMenu() {
     setShowProfile(false);
     
     try {
+      console.log('ProfileMenu: Starting sign out...');
       await signOut();
+      console.log('ProfileMenu: Sign out completed');
+      
+      // Clear all local state
+      clearAll();
+      
+      // Force a page reload to ensure clean state
+      console.log('ProfileMenu: Forcing page reload after sign out');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
+      
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('ProfileMenu: Sign out error:', error);
+      // Even if there's an error, try to clear state and reload
+      clearAll();
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     } finally {
       setIsLoading(false);
       setLoadingMessage('');

@@ -21,7 +21,7 @@ export default function TopNavigation() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navigationItems = [
-    { href: "/", label: "Explore", icon: Search },
+    { href: "/explore", label: "Explore", icon: Search },
     { 
       href: "/my-life", 
       label: context.type === "business" ? "My Business" : "My Life", 
@@ -31,7 +31,7 @@ export default function TopNavigation() {
   ];
 
   const isActive = (href: string) => {
-    if (href === "/") {
+    if (href === "/explore") {
       return pathname === "/" || pathname.startsWith("/explore");
     }
     return pathname === href || (href !== "/" && pathname.startsWith(href));

@@ -18,6 +18,7 @@ import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
+// FORCE RECOMPILE 2025-09-18
 export default function Page() {
   const router = useRouter();
   const { personalProfile, context, resetMenuState } = useAppStore();
@@ -159,18 +160,20 @@ export default function Page() {
     };
 
     return (
-      <div className="lg:hidden min-h-screen bg-white flex flex-col">
+      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
         {/* Header */}
-        <div className="bg-white px-4 pt-safe-top pt-3 pb-4">
-          <div className="flex items-center gap-3">
+        <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+          <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
             <button
-              onClick={() => setCurrentView('menu')}
-              className="p-2 rounded-md hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 ring-brand"
-              aria-label="Go back"
+              onClick={() => setCurrentView('profile')}
+              className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+              aria-label="Back to profile"
             >
-              <ChevronLeftIcon className="h-5 w-5" />
+              <span className="back-btn-circle">
+                <ChevronLeftIcon className="h-5 w-5" />
+              </span>
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Edit Profile</h1>
+            <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Edit Profile</h1>
           </div>
         </div>
 
@@ -237,11 +240,11 @@ export default function Page() {
             )}
 
             {/* Action Buttons */}
-            <div className="text-center space-y-3 pt-4">
+            <div className="flex flex-col items-center space-y-3 pt-4">
               <button
                 onClick={handleSave}
                 disabled={loading || !formData.name.trim()}
-                className="w-full px-6 py-2.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="px-8 py-2.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -272,20 +275,20 @@ export default function Page() {
       return () => document.body.classList.remove('no-scroll');
     }, []);
     return (
-      <div className="lg:hidden h-screen overflow-hidden bg-white flex flex-col">
+      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
         {/* Header */}
-        <div className="bg-white px-4 pt-safe-top pt-5 pb-0">
-          <div className="flex items-center gap-3">
+        <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+          <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
             <button
               onClick={() => setCurrentView('menu')}
-              className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+              className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
               aria-label="Back to menu"
             >
               <span className="back-btn-circle">
                 <ChevronLeftIcon className="h-5 w-5" />
               </span>
             </button>
-            <h1 className="text-2xl font-semibold text-gray-900">Profile</h1>
+            <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Profile</h1>
           </div>
         </div>
 
@@ -347,6 +350,17 @@ export default function Page() {
 
   // Settings Component
   const SettingsView = () => {
+    // Immediately add settings-mode class to prevent nav bar flash
+    React.useLayoutEffect(() => {
+      document.body.classList.add('settings-mode');
+      document.body.classList.add('no-scroll');
+      
+      return () => {
+        document.body.classList.remove('settings-mode');
+        document.body.classList.remove('no-scroll');
+      };
+    }, []);
+
     // Hide bottom nav when in settings mode
     React.useEffect(() => {
       const hideBottomNav = () => {
@@ -444,20 +458,20 @@ export default function Page() {
     }, []);
 
     return (
-    <div className="lg:hidden h-screen overflow-hidden bg-white flex flex-col settings-mode" style={{ paddingBottom: '0' }}>
+    <div className="fixed inset-0 z-50 h-screen overflow-hidden flex flex-col settings-mode" style={{ paddingBottom: '0', backgroundColor: 'yellow' }}>
       {/* Header */}
-      <div className="bg-white px-4 pt-safe-top pt-3 pb-4">
-        <div className="flex items-center gap-3">
+      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <button
             onClick={() => setCurrentView('menu')}
-            className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Back to menu"
           >
             <span className="back-btn-circle">
               <ChevronLeftIcon className="h-5 w-5" />
             </span>
           </button>
-          <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block', backgroundColor: 'magenta', color: 'white', fontSize: '48px' }}>🚀 SETTINGS v{Date.now()} 🚀</h1>
         </div>
       </div>
 
@@ -623,14 +637,6 @@ export default function Page() {
         </div>
           </div>
         </div>      )}
-      
-      {/* Desktop message */}
-      <div className="hidden lg:flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Menu</h1>
-          <p className="text-gray-600">Use the profile menu in the top right to access settings and account options.</p>
-        </div>
-      </div>
 
       {/* Account Switcher Modal */}
       <AccountSwitcherSwipeModal 

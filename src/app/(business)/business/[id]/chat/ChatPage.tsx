@@ -66,7 +66,7 @@ export default function ChatPage() {
   }, [conversations, filter, query]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       <MobileTitle title="Chat" />
       
       <div className="flex-1 p-4 lg:p-6 space-y-4">
@@ -81,8 +81,8 @@ export default function ChatPage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search conversations..."
-            className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+            placeholder="Search"
+            className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent placeholder:text-neutral-400"
           />
         </div>
 
@@ -102,19 +102,19 @@ export default function ChatPage() {
               <button
                 key={filterType}
                 onClick={() => setFilter(filterType)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full transition-all duration-200 whitespace-nowrap border ${
                   filter === filterType
-                    ? 'bg-neutral-200 text-neutral-800'
-                    : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
-                }`}
+                    ? 'bg-neutral-100 border-neutral-300 text-neutral-900'
+                    : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                } shadow-sm`}
               >
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium leading-none">
                   {filterType === "all" ? "All" : filterType === "unread" ? "Unread" : "DM"}
                 </span>
                 {getCount() !== null && (
-                  <span className={`ml-1 text-xs ${
+                  <span className={`ml-2 text-xs leading-none ${
                     filter === filterType 
-                      ? 'text-white text-opacity-70' 
+                      ? 'text-neutral-700' 
                       : 'text-neutral-500'
                   }`}>
                     {getCount()}

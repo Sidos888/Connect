@@ -10,6 +10,7 @@ import { LogOut, Trash2 } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
+// FORCE RECOMPILE SETTINGS 2025-09-18
 export default function SettingsPage() {
   const router = useRouter();
   const { clearAll, personalProfile } = useAppStore();
@@ -86,16 +87,35 @@ export default function SettingsPage() {
         return;
       }
       
-      console.log('Settings: Account deleted successfully, waiting 2 seconds...');
+      console.log('Settings: Account deleted successfully, clearing state...');
       
-      // Wait 2 seconds to show the loading state
-      setTimeout(() => {
-        console.log('Settings: Clearing local data and redirecting...');
-        clearAll();
-        localStorage.clear();
-        sessionStorage.clear();
-        router.replace("/");
-      }, 2000);
+      // Clear all local state immediately
+      console.log('Settings: Clearing all application state...');
+      clearAll();
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear any stuck React states
+      if (typeof window !== 'undefined') {
+        // Clear any stuck modal states
+        window.dispatchEvent(new CustomEvent('reset-all-modals'));
+        
+        // Clear any React Query cache if it exists
+        if ((window as any).__REACT_QUERY_STATE__) {
+          delete (window as any).__REACT_QUERY_STATE__;
+        }
+        
+        // Clear any other potential state caches
+        Object.keys(window).forEach(key => {
+          if (key.startsWith('__CONNECT_') || key.startsWith('__AUTH_')) {
+            delete (window as any)[key];
+          }
+        });
+      }
+      
+      // Force a full page reload to ensure completely clean state
+      console.log('Settings: Forcing immediate page reload...');
+      window.location.replace('/');  // Use replace instead of href for immediate effect
       
     } catch (error) {
       console.error('Settings: Unexpected error during account deletion:', error);
@@ -175,9 +195,10 @@ export default function SettingsPage() {
               <div className="flex flex-col gap-3">
                 <button
                   onClick={confirmDeleteAccount}
-                  className="w-full px-6 py-4 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                  disabled={isDeletingAccount}
+                  className="w-full px-6 py-4 text-base font-medium text-white bg-red-500 hover:bg-red-600 disabled:bg-red-400 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
                 >
-                  Delete Account
+                  {isDeletingAccount ? 'Deleting...' : 'Delete Account'}
                 </button>
                 <button
                   onClick={cancelDeleteAccount}
@@ -224,21 +245,21 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="lg:hidden h-screen overflow-hidden bg-white flex flex-col">
+    <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
       {/* Header */}
-      <div className="bg-white px-4 pt-safe-top pt-5 pb-4">
-        <div className="flex items-center gap-3">
+      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
           aria-label="Go back"
         >
           <span className="back-btn-circle">
           <ChevronLeftIcon className="h-5 w-5" />
           </span>
         </button>
-          <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block', backgroundColor: 'cyan', color: 'black', fontSize: '48px' }}>🎯 REAL SETTINGS 🎯</h1>
         </div>
       </div>
 

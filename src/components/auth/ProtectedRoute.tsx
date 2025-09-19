@@ -65,74 +65,145 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   const { title: displayTitle, description: displayDescription, buttonText: displayButtonText } = getCustomMessages();
 
-  // Load profile when user signs in - always fetch fresh data from Supabase
+  // Load profile IMMEDIATELY when user is authenticated - no delays
   useEffect(() => {
-    const loadProfileIfNeeded = async () => {
-      if (user && !isLoadingProfile && isHydrated) {
-        console.log('ProtectedRoute: User authenticated, fetching fresh profile from Supabase...');
+    console.log('ProtectedRoute: INSTANT profile loading triggered:', {
+      hasUser: !!user,
+      userId: user?.id,
+      isLoadingProfile,
+      isHydrated,
+      hasPersonalProfile: !!personalProfile,
+      personalProfileId: personalProfile?.id
+    });
+    
+    const loadProfileInstantly = async () => {
+      if (!user || !isHydrated) {
+        return;
+      }
+
+      // Check if we have a valid profile (not just matching ID, but actual data)
+      if (personalProfile && personalProfile.id === user.id && personalProfile.name && personalProfile.name !== 'User') {
+        console.log('ProtectedRoute: ✅ Valid profile already loaded for user, skipping reload');
+        return;
+      }
+      
+      if (personalProfile && personalProfile.id === user.id && (!personalProfile.name || personalProfile.name === 'User')) {
+        console.log('ProtectedRoute: ⚠️ Profile ID matches but data is incomplete - will reload');
+      }
+
+      // Don't start loading if already in progress
+      if (isLoadingProfile) {
+        console.log('ProtectedRoute: Already loading, skipping...');
+        return;
+      }
+      
+      console.log('ProtectedRoute: 🚀 INSTANT profile loading - no delays!');
+      setIsLoadingProfile(true);
+      
+      try {
+        // Check for stored profile data FIRST (check multiple storage locations)
+        let existingProfile = typeof window !== 'undefined' ? (window as any).__CONNECT_EXISTING_PROFILE__ : null;
         
-        setIsLoadingProfile(true);
-        
-        // Set a timeout to prevent infinite loading
-        const timeout = setTimeout(() => {
-          console.warn('ProtectedRoute: Profile loading timeout, forcing stop');
-          setForceStopLoading(true);
-          setIsLoadingProfile(false);
-        }, 5000); // 5 second timeout
-        
-        setProfileLoadTimeout(timeout);
-        
-        try {
-          // Clear any cached profile data to ensure we get fresh data
-          clearProfileCache();
-          
-          const { profile, error } = await loadUserProfile();
-          if (error) {
-            console.error('ProtectedRoute: Error loading profile:', error);
-            // Don't block the UI if profile loading fails - user can still use the app
-          } else if (profile) {
-            console.log('ProtectedRoute: Fresh profile loaded from Supabase:', profile);
-            setPersonalProfile(profile);
-          } else {
-            console.log('ProtectedRoute: No profile found for user - attempting to create one...');
-            // Try to create a basic profile if none exists
-            const { error: createError } = await createProfileIfNeeded();
-            if (createError) {
-              console.error('ProtectedRoute: Error creating profile:', createError);
-            } else {
-              console.log('ProtectedRoute: Profile created, reloading...');
-              // Try to load the profile again after creating it
-              const { profile: newProfile, error: reloadError } = await loadUserProfile();
-              if (!reloadError && newProfile) {
-                console.log('ProtectedRoute: New profile loaded successfully:', newProfile);
-                setPersonalProfile(newProfile);
-              }
+        // If not found in window, check localStorage backup
+        if (!existingProfile && typeof window !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('__CONNECT_TEMP_PROFILE__');
+            if (stored) {
+              existingProfile = JSON.parse(stored);
+              console.log('ProtectedRoute: 📦 Found profile in localStorage backup');
+              // Clean up localStorage after using it
+              localStorage.removeItem('__CONNECT_TEMP_PROFILE__');
             }
+          } catch (e) {
+            console.warn('ProtectedRoute: Error reading localStorage backup:', e);
           }
-        } catch (error) {
-          console.error('ProtectedRoute: Unexpected error loading profile:', error);
-        } finally {
-          // Clear timeout and stop loading
-          if (profileLoadTimeout) {
-            clearTimeout(profileLoadTimeout);
-            setProfileLoadTimeout(null);
-          }
-          setIsLoadingProfile(false);
         }
+        
+        console.log('ProtectedRoute: 🔍 Checking for stored profile data:', {
+          hasWindow: typeof window !== 'undefined',
+          hasStoredProfile: !!existingProfile,
+          storedProfileId: existingProfile?.id,
+          storedProfileName: existingProfile?.full_name,
+          currentUserId: user?.id,
+          foundInWindow: !!(typeof window !== 'undefined' && (window as any).__CONNECT_EXISTING_PROFILE__),
+          foundInLocalStorage: !!existingProfile && !(typeof window !== 'undefined' && (window as any).__CONNECT_EXISTING_PROFILE__)
+        });
+        
+        if (existingProfile) {
+          console.log('ProtectedRoute: ⚡ INSTANT profile from stored data (will load fresh avatar):', existingProfile);
+          
+          // Set profile IMMEDIATELY with stored data, but load fresh avatar
+          const profile = {
+            id: existingProfile.id,
+            name: existingProfile.full_name || '',
+            bio: existingProfile.bio || '',
+            avatarUrl: existingProfile.avatar_url, // Will be null, so avatar loads fresh
+            email: existingProfile.email || '',
+            phone: existingProfile.phone || '',
+            dateOfBirth: existingProfile.date_of_birth || '',
+            connectId: existingProfile.connect_id || '',
+            createdAt: existingProfile.created_at,
+            updatedAt: existingProfile.updated_at
+          };
+          
+          setPersonalProfile(profile);
+          delete (window as any).__CONNECT_EXISTING_PROFILE__;
+          console.log('ProtectedRoute: ⚡ Profile set INSTANTLY from stored data');
+          
+          // Load fresh profile from database to ensure data consistency
+          console.log('ProtectedRoute: 🖼️ Loading fresh profile from database to ensure consistency...');
+          try {
+            const { profile: freshProfile, error: avatarError } = await loadUserProfile();
+            console.log('ProtectedRoute: 🔍 Fresh profile result:', { 
+              hasProfile: !!freshProfile, 
+              hasAvatar: !!freshProfile?.avatarUrl,
+              avatarUrl: freshProfile?.avatarUrl,
+              error: avatarError?.message 
+            });
+            
+            if (!avatarError && freshProfile) {
+              console.log('ProtectedRoute: ✅ Fresh profile loaded, updating with database data');
+              setPersonalProfile(freshProfile);
+            } else {
+              console.log('ProtectedRoute: ⚠️ Fresh profile loading failed, using stored data as fallback');
+              // Keep the stored profile as fallback
+            }
+          } catch (error) {
+            console.error('ProtectedRoute: ❌ Exception loading fresh profile:', error);
+            console.log('ProtectedRoute: 🔄 Using stored data as fallback');
+          }
+        } else {
+          // Load from database (but make it fast)
+          console.log('ProtectedRoute: 🔍 Loading profile from database for user:', user?.id);
+          const { profile, error } = await loadUserProfile();
+          
+          if (profile) {
+            console.log('ProtectedRoute: ✅ Profile loaded from database:', profile);
+            setPersonalProfile(profile);
+          } else if (error) {
+            console.error('ProtectedRoute: ❌ Error loading profile:', error);
+          } else {
+            console.log('ProtectedRoute: ❌ No profile found for user:', user?.id);
+            console.log('ProtectedRoute: 🔍 This might be due to account merging - checking if profile exists elsewhere...');
+            
+            // Don't create a profile immediately - this might be a timing issue
+            // Let the user proceed and the profile might load on next navigation
+            console.log('ProtectedRoute: ⚠️ Skipping profile creation to avoid duplicates');
+          }
+        }
+      } catch (error) {
+        console.error('ProtectedRoute: Error in instant profile loading:', error);
+      } finally {
+        setIsLoadingProfile(false);
+        console.log('ProtectedRoute: ⚡ INSTANT profile loading completed');
       }
     };
 
-    loadProfileIfNeeded();
-  }, [user, isHydrated]); // Removed isLoadingProfile from dependencies to prevent loops
+    // Load immediately - no setTimeout or delays
+    loadProfileInstantly();
+  }, [user, isHydrated]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (profileLoadTimeout) {
-        clearTimeout(profileLoadTimeout);
-      }
-    };
-  }, [profileLoadTimeout]);
+  // Profile loading is now handled naturally without timeouts
 
   // Debug logging to see what's happening (reduced to prevent spam)
   if (user && !personalProfile) {
@@ -173,7 +244,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
     return (
       <>
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="login-screen flex flex-col items-center justify-center h-screen bg-gray-50 p-4 overflow-hidden">
           <div className="text-center w-full max-w-sm">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
               {displayTitle}
@@ -184,7 +255,57 @@ export default function ProtectedRoute({ children, fallback, title, description,
               </p>
             </div>
             <div className="mt-6 w-full flex justify-center">
-              <AuthButton onClick={() => showLogin()}>
+              <AuthButton onClick={() => {
+                console.log('ProtectedRoute: Continue button clicked, calling showLogin');
+                console.log('ProtectedRoute: Modal context available:', !!showLogin);
+                console.log('ProtectedRoute: Current user state:', !!user);
+                console.log('ProtectedRoute: Loading state:', loading);
+                
+                try {
+                  // First check if we're in a broken state
+                  if (!showLogin || typeof showLogin !== 'function') {
+                    console.error('ProtectedRoute: showLogin is not available or not a function:', typeof showLogin);
+                    console.log('ProtectedRoute: Forcing immediate page reload to reset state');
+                    window.location.replace('/');
+                    return;
+                  }
+                  
+                  // Try to call showLogin
+                  showLogin();
+                  console.log('ProtectedRoute: showLogin called successfully');
+                  
+                  // Give modal more time to open and check for different modal selectors
+                  setTimeout(() => {
+                    const modalExists = document.querySelector('[role="dialog"]') || 
+                                     document.querySelector('.modal') ||
+                                     document.querySelector('[data-modal]') ||
+                                     document.querySelector('.fixed.inset-0') ||
+                                     document.querySelector('.z-50');
+                    
+                    if (!modalExists) {
+                      console.warn('ProtectedRoute: Modal did not open after 3 seconds, checking if we should reload');
+                      
+                      // Only reload if we're still in a bad state (no user and no modal)
+                      if (!user && !loading) {
+                        console.log('ProtectedRoute: Still in bad state, forcing reload');
+                        window.location.replace('/');
+                      } else {
+                        console.log('ProtectedRoute: State seems OK, not reloading');
+                      }
+                    } else {
+                      console.log('ProtectedRoute: Modal opened successfully');
+                    }
+                  }, 3000); // Increased from 1 second to 3 seconds
+                  
+                } catch (error) {
+                  console.error('ProtectedRoute: Error calling showLogin:', error);
+                  console.error('ProtectedRoute: Error stack:', error?.stack);
+                  
+                  // Force immediate page reload as fallback
+                  console.log('ProtectedRoute: Forcing immediate page reload due to error');
+                  window.location.replace('/');
+                }
+              }}>
                 Continue
               </AuthButton>
             </div>

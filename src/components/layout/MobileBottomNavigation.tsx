@@ -10,7 +10,7 @@ export default function MobileBottomNavigation() {
   const { user } = useAuth();
   
   const navigationItems = [
-    { href: "/", label: "Explore", icon: <Search size={24} /> },
+    { href: "/explore", label: "Explore", icon: <Search size={24} /> },
     { 
       href: user ? "/my-life" : "/my-life", 
       label: context.type === "business" ? "My Business" : "My Life", 
