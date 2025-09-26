@@ -10,7 +10,6 @@ type Props = {
 };
 
 export default function Avatar({ src, name = "?", size = 32, className }: Props) {
-  console.log('Avatar component:', { src, name, size });
   
   const [imageError, setImageError] = React.useState(false);
   
@@ -31,7 +30,7 @@ export default function Avatar({ src, name = "?", size = 32, className }: Props)
             setImageError(true);
           }}
           onLoad={() => {
-            console.log('Avatar image loaded successfully:', src);
+            // Image loaded successfully
           }}
         />
       ) : (

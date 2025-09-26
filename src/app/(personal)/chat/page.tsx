@@ -13,7 +13,7 @@ import { useModal } from "@/lib/modalContext";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function MessagesPage() {
-  const { conversations, seedConversations, clearAll } = useAppStore();
+  const { conversations, seedConversations, clearAll, isHydrated } = useAppStore();
   const router = useRouter();
   const { user, loading } = useAuth();
   
@@ -25,9 +25,11 @@ export default function MessagesPage() {
   const { showLogin } = useModal();
 
   useEffect(() => {
-    console.log('Seeding conversations...');
-    seedConversations();
-  }, [seedConversations]);
+    if (isHydrated) {
+      console.log('Store hydrated, seeding conversations...');
+      seedConversations();
+    }
+  }, [isHydrated, seedConversations]);
 
   // Add another effect to log when conversations change
   useEffect(() => {
@@ -108,8 +110,30 @@ export default function MessagesPage() {
     { id: "group", label: "Groups", count: mobileGroupCount },
   ];
 
-  // Show loading state
-  // Don't show loading animation - let content render immediately
+  // Show loading state while store is hydrating - with timeout
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!isHydrated) {
+        console.log('Chat page: Loading timeout reached');
+        setLoadingTimeout(true);
+      }
+    }, 8000); // 8 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isHydrated]);
+
+  if (!isHydrated && !loadingTimeout) {
+    return (
+      <div className="flex h-screen bg-white items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-gray-500">Loading chats...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show login prompt if not authenticated
   if (!user) {
@@ -150,7 +174,7 @@ export default function MessagesPage() {
         {/* Mobile Title */}
         <MobileTitle title="Chat" />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
           {/* Mobile Search */}
           <div className="relative mb-6 lg:mb-8">
             <input

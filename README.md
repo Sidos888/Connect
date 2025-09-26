@@ -1,121 +1,185 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# connect - Next.js + TypeScript + Capacitor Mobile App
 
-## Getting Started
+A modern mobile-first web application built with Next.js, TypeScript, Tailwind CSS, and Capacitor for cross-platform deployment (Web, iOS, Android).
 
-First, run the development server:
+## 🚀 Features
 
+- **Next.js 15** with App Router and TypeScript
+- **Tailwind CSS v4** for modern styling
+- **Capacitor 7** for native mobile functionality
+- **Responsive design** optimized for mobile and desktop
+- **iOS and Android** native app support
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS v4
+- **Mobile**: Capacitor 7 with iOS/Android support
+- **Icons**: Lucide React
+
+## 📱 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- iOS development: Xcode (for iOS builds)
+- Android development: Android Studio (for Android builds)
+
+### Installation
+
+1. **Install dependencies**:
+```bash
+npm install
+```
+
+2. **Start development server**:
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the web version.
 
-## Airbnb-Style Layout System
+### Mobile Development
 
-This app features a clean, modern layout inspired by Airbnb's design:
+#### For iOS Development:
 
-### Layout Features:
-- **Top Navigation Bar**: Horizontal navigation with logo, main sections, and user menu
-- **Full-Width Content**: Clean, spacious content areas with consistent max-width constraints
-- **Responsive Design**: Adapts seamlessly from mobile to desktop
-- **Unified Navigation**: Same navigation pattern across all screen sizes
-
-### Navigation Structure:
-- **Main Sections**: Explore, My Life, Chat accessible from top nav
-- **User Menu**: Dropdown with account settings, help, and logout
-- **Menu Page**: Accessible via top nav menu button or user dropdown
-
-### Adding Navigation Items
-
-To add a new main navigation item:
-
-1. Update the `navigationItems` array in `/src/components/layout/TopNavigation.tsx`:
-
-```tsx
-import { NewIcon } from "lucide-react";
-
-const navigationItems = [
-  // ... existing items
-  { href: "/new-section", label: "New Section", icon: NewIcon },
-];
+1. **Build the web app**:
+```bash
+npm run build
 ```
 
-2. The new item will automatically appear in both desktop and mobile navigation
-
-### Page Layout Structure
-
-All pages follow this consistent structure:
-
-```tsx
-export default function MyPage() {
-  return (
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6">Page Title</h1>
-      </div>
-      
-      {/* Page content */}
-      <div className="space-y-6">
-        {/* Content sections */}
-      </div>
-    </div>
-  );
-}
+2. **Sync with iOS**:
+```bash
+npx cap sync ios
 ```
 
-This ensures consistent spacing, typography, and responsive behavior across the entire app.
-
-### Supabase (optional)
-
-1. Create a Supabase project and copy the project URL and anon key.
-2. Create `.env.local` with:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=YOUR_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+3. **Open in Xcode**:
+```bash
+npx cap open ios
 ```
 
-3. Future DB schema (not required in this MVP):
+4. **Run on iOS Simulator** or device through Xcode
 
-```
--- profiles
--- id uuid primary key references auth.users(id)
--- name text, bio text, avatar_url text
+#### For Android Development:
 
--- orgs (businesses)
--- id uuid primary key, owner_id uuid references auth.users(id)
--- name text, bio text, logo_url text, created_at timestamptz default now()
+1. **Build the web app**:
+```bash
+npm run build
 ```
 
-When env vars are present, the client will be available via `lib/supabaseClient.ts`.
+2. **Sync with Android**:
+```bash
+npx cap sync android
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Open in Android Studio**:
+```bash
+npx cap open android
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. **Run on Android Emulator** or device through Android Studio
 
-## Learn More
+### Available Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npx cap sync` - Sync web assets with native projects
+- `npx cap run ios` - Run on iOS device/simulator
+- `npx cap run android` - Run on Android device/emulator
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📱 Mobile Features & Capacitor Plugins
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project includes essential Capacitor plugins for mobile functionality:
 
-## Deploy on Vercel
+### Installed Plugins:
+- **@capacitor/app** - App lifecycle events and state management
+- **@capacitor/haptics** - Haptic feedback for touch interactions
+- **@capacitor/keyboard** - Keyboard management and events
+- **@capacitor/status-bar** - Status bar styling and control
+- **@capacitor/splash-screen** - Custom splash screen management
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Using Capacitor Plugins:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-Deploy test on Thu Sep 11 09:11:07 ACST 2025
+```typescript
+import { App } from '@capacitor/app';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Keyboard } from '@capacitor/keyboard';
 
+// App lifecycle
+App.addListener('appStateChange', ({ isActive }) => {
+  console.log('App state changed. Is active?', isActive);
+});
 
-## Deployment Test
-This is a test commit to verify GitHub → Vercel connection.
+// Haptic feedback
+const triggerHaptic = async () => {
+  await Haptics.impact({ style: ImpactStyle.Medium });
+};
 
+// Keyboard events
+Keyboard.addListener('keyboardWillShow', info => {
+  console.log('Keyboard will show with height:', info.keyboardHeight);
+});
+```
+
+### Mobile-Specific Styling:
+
+The app includes mobile-optimized CSS with:
+- Safe area insets for notched devices
+- Touch-friendly interactions
+- Responsive breakpoints
+- Mobile-first design approach
+
+## 🎨 Development
+
+### Project Structure
+
+```
+src/
+├── app/                 # Next.js App Router pages
+├── components/          # Reusable React components
+└── lib/                 # Utility functions and configurations
+
+android/                 # Android native project
+ios/                     # iOS native project
+out/                     # Static export for mobile
+public/                  # Static assets
+```
+
+### Key Files
+
+- `capacitor.config.ts` - Capacitor configuration
+- `next.config.ts` - Next.js config with static export for mobile
+- `tailwind.config.ts` - Tailwind CSS configuration
+- `src/app/globals.css` - Global styles with mobile optimizations
+
+## 🚀 Deployment
+
+### Web Deployment
+The app can be deployed to any static hosting service like Vercel, Netlify, or GitHub Pages.
+
+### Mobile App Store Deployment
+1. Build the web assets: `npm run build`
+2. Sync with native projects: `npx cap sync`
+3. Open in Xcode/Android Studio: `npx cap open ios/android`
+4. Build and submit through the respective app stores
+
+## 📝 Notes
+
+- The project uses static export for mobile compatibility
+- Capacitor requires the web assets to be in the `out` directory
+- iOS and Android projects are automatically generated and can be customized
+- All mobile-specific features are handled through Capacitor plugins
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test on both web and mobile
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.

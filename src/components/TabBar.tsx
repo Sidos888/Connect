@@ -27,13 +27,11 @@ export default function TabBar({ items }: Props) {
     return pathname === href || pathname.startsWith(href + "/");
   };
 
-  const handleMenuClick = (e: React.MouseEvent, href: string) => {
+  const handleMenuClick = (href: string) => {
     if (href === "/menu") {
-      e.preventDefault();
+      // Reset any local menu state but allow the Link to navigate normally
       resetMenuState();
-      router.push("/menu");
     }
-    // For other tabs, let the Link component handle navigation normally
   };
   
   return (
@@ -46,7 +44,7 @@ export default function TabBar({ items }: Props) {
               <Link 
                 href={item.href} 
                 className={`block py-2 px-1 text-xs ${active ? "text-brand" : "text-black"}`}
-                onClick={item.href === "/menu" ? (e) => handleMenuClick(e, item.href) : undefined}
+                onClick={item.href === "/menu" ? () => handleMenuClick(item.href) : undefined}
               >
                 <div className="flex flex-col items-center gap-0.5">
                   <span aria-hidden className="h-6 w-6">

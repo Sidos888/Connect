@@ -1,42 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable static export for Capacitor mobile app
+  // Only use static export for production builds
   ...(process.env.NODE_ENV === 'production' && {
     output: 'export',
-    distDir: 'out'
+    distDir: 'out',
+    trailingSlash: true,
   }),
-  trailingSlash: true,
   images: {
     unoptimized: true
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
+    // Allow mobile asset builds even if there are stray type errors in debug pages
     ignoreBuildErrors: true,
-  },
-  // Disable caching for development to ensure mobile gets latest version
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
-          },
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-          {
-            key: 'Expires',
-            value: '0',
-          },
-        ],
-      },
-    ];
   },
 };
 

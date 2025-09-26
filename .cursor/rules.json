@@ -1,0 +1,14 @@
+{
+  "rules": [
+    "Use Tailwind utility classes and approved components from src/components/ only; no inline styles or custom CSS.",
+    "Reuse design tokens from src/styles/tokens.json and CSS custom properties from src/app/globals.css; do not hardcode colors (#FF6600), radii, or shadows.",
+    "Meet WCAG AA standards: visible focus rings (focus-visible:ring-2 ring-brand), keyboard navigation, contrast ≥ 4.5:1 for all text/background pairs.",
+    "Do not change navigation structure (MobileBottomNavigation.tsx) or product scope unless explicitly requested.",
+    "Auth & secrets: never hardcode; use environment variables via src/lib/supabaseClient.ts helpers (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY).",
+    "All database schema changes via SQL migration files in root directory; no ad-hoc SQL in app code.",
+    "Prefer server components; limit client components with 'use client'; use ImagePicker component for images, not next/image.",
+    "Use import alias @/* for src/ paths; follow 8px spacing grid (space-y-*, gap-*) and approved radius/shadow tokens.",
+    "Mobile-first design: test on iOS simulator, use safe area utilities (pt-safe-top, pb-safe-bottom), maintain 44px minimum touch targets.",
+    "Preserve existing auth flow (LoginModal, AccountCheckModal, ProtectedRoute) and data patterns (useAuth, useAppStore) unless explicitly requested to change."
+  ]
+}

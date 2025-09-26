@@ -93,7 +93,7 @@ export default function MyLifeLayout(): JSX.Element {
       <div className="lg:hidden min-h-screen bg-white">
         <MobileTitle title="My Life" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
           {/* Profile */}
           <div className="mb-6 lg:mb-8">
             <div className="max-w-lg mx-auto lg:max-w-xl">

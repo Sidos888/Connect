@@ -8,13 +8,12 @@ const createMobileCompatibleStorage = () => {
   
   // Check if we're in a Capacitor environment (mobile)
   const isCapacitor = !!(window as any).Capacitor;
-  console.log('🔧 Supabase Storage: Environment detected:', isCapacitor ? 'Mobile (Capacitor)' : 'Web');
   
   return {
     getItem: (key: string) => {
       try {
         const item = window.localStorage.getItem(key);
-        console.log(`🔧 Storage GET [${key}]:`, item ? 'Found' : 'Not found');
+        // Storage GET
         return Promise.resolve(item);
       } catch (error) {
         console.error('🔧 Storage GET error:', error);
@@ -24,7 +23,7 @@ const createMobileCompatibleStorage = () => {
     setItem: (key: string, value: string) => {
       try {
         window.localStorage.setItem(key, value);
-        console.log(`🔧 Storage SET [${key}]:`, 'Success');
+        // Storage SET
         return Promise.resolve();
       } catch (error) {
         console.error('🔧 Storage SET error:', error);
@@ -34,7 +33,7 @@ const createMobileCompatibleStorage = () => {
     removeItem: (key: string) => {
       try {
         window.localStorage.removeItem(key);
-        console.log(`🔧 Storage REMOVE [${key}]:`, 'Success');
+        // Storage REMOVE
         return Promise.resolve();
       } catch (error) {
         console.error('🔧 Storage REMOVE error:', error);
@@ -62,7 +61,16 @@ export function getSupabaseClient(): SupabaseClient | null {
       storage: storage,
       autoRefreshToken: true,
       detectSessionInUrl: false, // Disable for mobile to avoid URL-based session detection issues
-      flowType: 'pkce' // Use PKCE flow for better mobile security
+      flowType: 'pkce', // Use PKCE flow for better mobile security
+      debug: process.env.NODE_ENV === 'development'
+    }
+  });
+
+  // Add error handling for auth state changes
+  client.auth.onAuthStateChange((event, session) => {
+    console.log('🔐 Auth state change:', event, session ? 'Session exists' : 'No session');
+    if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      console.log('🔐 Auth event:', event);
     }
   });
   console.log('Supabase client created successfully with mobile-compatible persistence');
@@ -70,5 +78,23 @@ export function getSupabaseClient(): SupabaseClient | null {
 }
 
 export const supabase = getSupabaseClient();
+
+// Function to clear invalid sessions
+export async function clearInvalidSession() {
+  if (typeof window !== 'undefined') {
+    try {
+      // Clear all auth-related localStorage
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      console.log('🧹 Cleared invalid auth session data');
+    } catch (error) {
+      console.error('🧹 Error clearing session:', error);
+    }
+  }
+}
 
 

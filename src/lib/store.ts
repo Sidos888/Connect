@@ -182,6 +182,9 @@ if (typeof window !== "undefined") {
   } else {
     useAppStore.setState({ isHydrated: true, conversations: [] });
   }
+} else {
+  // Server-side: set hydrated to false initially
+  useAppStore.setState({ isHydrated: false });
 }
 
 export function useCurrentBusiness() {

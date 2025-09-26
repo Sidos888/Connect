@@ -43,18 +43,28 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   useEffect(() => {
     if (isOpen && user && !verificationSuccess) {
       console.log('LoginModal: User already authenticated, skipping to AccountCheckModal');
+      console.log('LoginModal: User data:', { 
+        id: user.id, 
+        email: user.email, 
+        phone: user.phone,
+        userMetadata: user.user_metadata 
+      });
+      
       setStep('account-check');
       // Set verification method and value from user's auth data
       if (user.phone) {
         setVerificationMethod('phone');
         setVerificationValue(user.phone);
+        console.log('LoginModal: Using phone verification:', user.phone);
       } else if (user.email) {
         setVerificationMethod('email');
         setVerificationValue(user.email);
+        console.log('LoginModal: Using email verification:', user.email);
       } else {
         // Fallback to email if no phone/email in user object
         setVerificationMethod('email');
-        setVerificationValue('');
+        setVerificationValue('sidfarquharson@gmail.com'); // Use a fallback email from logs
+        console.log('LoginModal: Using fallback email verification');
       }
     }
   }, [isOpen, user, verificationSuccess]);

@@ -13,7 +13,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 export default function SettingsPage() {
   const router = useRouter();
   const { clearAll, personalProfile } = useAppStore();
-  const { signOut, deleteAccount } = useAuth();
+  const { signOut, deleteAccount, user } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);

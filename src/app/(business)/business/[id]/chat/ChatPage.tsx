@@ -69,7 +69,7 @@ export default function ChatPage() {
     <div className="flex flex-col h-full bg-white">
       <MobileTitle title="Chat" />
       
-      <div className="flex-1 p-4 lg:p-6 space-y-4">
+      <div className="flex-1 p-4 lg:p-6 space-y-4 pt-[120px] lg:pt-4">
         {/* Desktop Title */}
         <div className="hidden lg:block">
           <h1 className="text-2xl font-bold mb-6">Chat</h1>

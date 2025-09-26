@@ -134,6 +134,33 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Enhanced scrollbar hiding for mobile */
+.no-scrollbar {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar::-webkit-scrollbar-track {
+  display: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar-thumb {
+  display: none !important;
+}
+
+/* Ensure sticky positioning works properly */
+.sticky {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+}
+
 /* Force Vercel rebuild - working version */
 
 /* Remove any potential borders from navigation, except TabBar */

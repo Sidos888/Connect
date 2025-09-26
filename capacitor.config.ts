@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.sidfarquharson.connect',
-  appName: 'Connect',
+  appId: 'com.connect.app',
+  appName: 'connect',
   webDir: 'out'
 };
 

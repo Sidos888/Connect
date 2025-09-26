@@ -535,7 +535,7 @@ function SettingsView({
 
 export default function ProfileMenu() {
   const { personalProfile, clearAll, setPersonalProfile } = useAppStore();
-  const { signOut, deleteAccount, updateProfile, uploadAvatar, supabase } = useAuth();
+  const { signOut, deleteAccount, updateProfile, uploadAvatar, supabase, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [showDim, setShowDim] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -554,18 +554,13 @@ export default function ProfileMenu() {
   // Get current account info for avatar with debugging
   const currentAccount = { 
     name: personalProfile?.name, 
-    avatarUrl: personalProfile?.avatarUrl,
+    avatarUrl: personalProfile?.avatarUrl ?? undefined,
     bio: personalProfile?.bio
   };
   
-  // Debug profile loading in menu
+  // Profile data updated
   useEffect(() => {
-    console.log('ProfileMenu: Profile data updated:', {
-      hasProfile: !!personalProfile,
-      name: personalProfile?.name,
-      hasAvatar: !!personalProfile?.avatarUrl,
-      avatarUrl: personalProfile?.avatarUrl
-    });
+    // Profile data has been updated
   }, [personalProfile]);
 
 
@@ -726,8 +721,19 @@ export default function ProfileMenu() {
     setIsDeletingAccount(true);
     
     try {
-      // Store the profile ID before we clear local data
-      const accountId = personalProfile?.id;
+      // CRITICAL FIX: Use the authenticated user's ID, not the potentially fallback profile ID
+      const authenticatedUserId = user?.id;
+      const profileId = personalProfile?.id;
+      
+      console.log('🚯 DELETE: Account ID analysis:', {
+        authenticatedUserId,
+        profileId,
+        willUse: authenticatedUserId || profileId,
+        mismatch: authenticatedUserId !== profileId
+      });
+      
+      // Prioritize the authenticated user's ID over profile ID
+      const accountId = authenticatedUserId || profileId;
       
       if (accountId && supabase) {
         console.log('🚯 DATABASE: Starting database cleanup for:', accountId);
@@ -884,7 +890,19 @@ export default function ProfileMenu() {
         bioLength: updatedProfile.bio?.length || 0
       });
       
-      setPersonalProfile(updatedProfile);
+      // Coerce to PersonalProfile shape: ensure id and string avatarUrl
+      setPersonalProfile({
+        id: updatedProfile.id ?? (user?.id ?? ''),
+        name: updatedProfile.name ?? '',
+        bio: updatedProfile.bio ?? '',
+        avatarUrl: updatedProfile.avatarUrl ?? null,
+        email: personalProfile?.email ?? '',
+        phone: personalProfile?.phone ?? '',
+        dateOfBirth: personalProfile?.dateOfBirth ?? '',
+        connectId: personalProfile?.connectId ?? '',
+        createdAt: personalProfile?.createdAt ?? new Date().toISOString(),
+        updatedAt: updatedProfile.updatedAt,
+      });
       console.log('handleSaveProfile: Local state updated');
       
       // Verify local state was updated

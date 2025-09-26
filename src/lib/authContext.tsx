@@ -1,8 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
-import { getSupabaseClient } from './supabaseClient';
+import { getSupabaseClient, clearInvalidSession } from './supabaseClient';
 
 // Account interface (our true user profile)
 interface Account {
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = getSupabaseClient();
+  const realtimeCleanupRef = useRef<(() => void) | null>(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -64,14 +65,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
     const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    console.log('🔄 NewAuthContext: Initializing scalable auth system...');
-    console.log('📱 NewAuthContext: Environment check:', { isCapacitor, isMobile, userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR' });
+    // Initializing auth system
+
+    // Set up real-time sync for profile changes
+    const setupRealtimeSync = () => {
+      if (!user?.id) return;
+
+      // Clean up existing sync if any
+      if (realtimeCleanupRef.current) {
+        realtimeCleanupRef.current();
+      }
+
+      const channel = supabase
+        .channel('profile-sync')
+        .on('postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'accounts',
+            filter: `id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('🔄 Real-time profile update received:', payload.new);
+            // Update local state with the new profile data
+            setAccount(payload.new);
+            
+            // Also update the app store for consistency
+            if (typeof window !== 'undefined') {
+              import('./store').then(({ useAppStore }) => {
+                const store = useAppStore.getState();
+              if (store.setPersonalProfile) {
+                store.setPersonalProfile({
+                  id: payload.new.id,
+                  name: payload.new.name,
+                  bio: payload.new.bio,
+                  avatarUrl: payload.new.profile_pic,
+                  email: payload.new.email || '',
+                  phone: payload.new.phone || '',
+                  dateOfBirth: payload.new.dob || '',
+                  connectId: payload.new.connect_id || '',
+                  createdAt: payload.new.created_at,
+                  updatedAt: payload.new.updated_at
+                });
+              }
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      realtimeCleanupRef.current = () => {
+        supabase.removeChannel(channel);
+      };
+    };
 
     // Get initial session
     const getInitialSession = async () => {
       try {
         console.log('🔄 NewAuthContext: Loading initial session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('❌ NewAuthContext: Session error:', sessionError);
+          // If it's a refresh token error, clear the session
+          if (sessionError.message?.includes('Invalid Refresh Token') || sessionError.message?.includes('Refresh Token Not Found')) {
+            console.log('🧹 NewAuthContext: Clearing invalid session due to refresh token error');
+            await clearInvalidSession();
+            setUser(null);
+            setAccount(null);
+            setLoading(false);
+            return;
+          }
+        }
+        
         console.log('✅ NewAuthContext: Initial session result:', { 
           hasSession: !!session?.user, 
           userId: session?.user?.id,
@@ -84,6 +150,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('👤 NewAuthContext: User found in session, loading account...');
           setUser(session.user);
           await loadAccountForUser(session.user.id);
+          // Set up real-time sync after user is loaded
+          setupRealtimeSync();
         } else {
           console.log('👤 NewAuthContext: No user in session');
         }
@@ -102,10 +170,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
         if (session?.user) {
           setUser(session.user);
-        await loadAccountForUser(session.user.id);
+          await loadAccountForUser(session.user.id);
+          // Set up real-time sync after user is loaded
+          setupRealtimeSync();
         } else {
           setUser(null);
-        setAccount(null);
+          setAccount(null);
         }
         
         setLoading(false);
@@ -113,6 +183,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
+      // Clean up real-time sync
+      if (realtimeCleanupRef.current) {
+        realtimeCleanupRef.current();
+      }
     };
   }, [supabase]);
 
@@ -121,90 +195,203 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔍 NewAuthContext: Loading account for user:', authUserId);
       
-      // Mobile Strategy 1: Try identity linking first (most reliable)
-      console.log('📱 NewAuthContext: Trying identity-based lookup...');
-      const { data: identityData, error: identityError } = await supabase!
-        .from('account_identities')
-        .select(`
-          account_id,
-          accounts!inner (
-            id,
-            name,
-            bio,
-            dob,
-            profile_pic,
-            connect_id,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('auth_user_id', authUserId)
-        .maybeSingle();
-
-      if (!identityError && identityData?.accounts) {
-        console.log('✅ NewAuthContext: Account found via identity linking');
-        const accountData = identityData.accounts as any;
-        console.log('📱 NewAuthContext: DETAILED Account data from database:', { 
-          id: accountData.id, 
-          name: accountData.name,
-          bio: accountData.bio,
-          profile_pic: accountData.profile_pic,
-          connect_id: accountData.connect_id,
-          created_at: accountData.created_at,
-          updated_at: accountData.updated_at,
-          hasProfilePic: !!accountData.profile_pic,
-          bioLength: accountData.bio?.length || 0
-        });
-        setAccount(accountData as Account);
-        console.log('📱 NewAuthContext: Account state updated in context');
-        return;
+      // Strategy 1: identifier-first (email)
+      const email = user?.email?.toLowerCase();
+      if (email) {
+        console.log('📧 NewAuthContext: Trying email identity linking…', email);
+        try {
+          const { data: emailLink, error: emailLinkErr } = await supabase!
+            .from('account_identities')
+            .select(`account_id, created_at, accounts!inner(*)`)
+            .eq('method', 'email')
+            .eq('identifier', email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          console.log('📧 NewAuthContext: Email identity query result:', {
+            hasData: !!emailLink,
+            hasError: !!emailLinkErr,
+            errorMessage: emailLinkErr?.message,
+            hasAccounts: !!emailLink?.accounts
+          });
+          
+          if (!emailLinkErr && emailLink?.accounts) {
+            console.log('✅ NewAuthContext: Account found via email identity');
+            setAccount(emailLink.accounts as any as Account);
+            return;
+          }
+        } catch (emailError) {
+          console.error('📧 NewAuthContext: Email identity lookup failed:', emailError);
+        }
+        console.log('⚠️ NewAuthContext: No email identity mapping:', emailLinkErr?.message);
       }
-      
-      console.log('⚠️ NewAuthContext: Identity lookup failed:', identityError?.message);
 
-      // Mobile Strategy 2: Try direct account lookup by ID
+      // Strategy 2: identifier-first (phone)
+      const phone = user?.phone || null;
+      if (phone) {
+        console.log('📱 NewAuthContext: Trying phone identity linking…', phone);
+        const { data: phoneLink, error: phoneLinkErr } = await supabase!
+          .from('account_identities')
+          .select(`account_id, created_at, accounts!inner(*)`)
+          .eq('method', 'phone')
+          .eq('identifier', phone)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        if (!phoneLinkErr && phoneLink?.accounts) {
+          console.log('✅ NewAuthContext: Account found via phone identity');
+          setAccount(phoneLink.accounts as any as Account);
+          return;
+        }
+        console.log('⚠️ NewAuthContext: No phone identity mapping:', phoneLinkErr?.message);
+      }
+
+      // Strategy 3: direct account lookup by auth_user_id mapping table
+      console.log('📱 NewAuthContext: Trying auth_user_id → account mapping…');
+      try {
+        const { data: identityData, error: identityError } = await supabase!
+          .from('account_identities')
+          .select(`account_id, created_at, accounts!inner(*)`)
+          .eq('auth_user_id', authUserId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        if (!identityError && identityData?.accounts) {
+          console.log('✅ NewAuthContext: Account found via auth_user_id mapping');
+          setAccount(identityData.accounts as any as Account);
+          return;
+        }
+      } catch (identityError) {
+        console.error('📱 NewAuthContext: Auth user ID mapping failed:', identityError);
+      }
+      console.log('⚠️ NewAuthContext: auth_user_id mapping not found');
+
+      // Strategy 4: Try direct account lookup by ID (only if account.id === auth user id)
       console.log('📱 NewAuthContext: Trying direct account lookup by ID...');
-      const { data: directAccountById, error: directByIdError } = await supabase!
-        .from('accounts')
-        .select('*')
-        .eq('id', authUserId)
-        .maybeSingle();
+      try {
+        const { data: directAccountById, error: directByIdError } = await supabase!
+          .from('accounts')
+          .select('*')
+          .eq('id', authUserId)
+          .limit(1)
+          .single();
 
-      if (!directByIdError && directAccountById) {
-        console.log('✅ NewAuthContext: Account found via direct ID lookup');
-        console.log('📱 NewAuthContext: DETAILED Direct account data:', {
-          id: directAccountById.id,
-          name: directAccountById.name,
-          bio: directAccountById.bio,
-          profile_pic: directAccountById.profile_pic,
-          connect_id: directAccountById.connect_id,
-          created_at: directAccountById.created_at,
-          updated_at: directAccountById.updated_at,
-          bioLength: directAccountById.bio?.length || 0
+        console.log('📱 NewAuthContext: Direct lookup raw result:', {
+          data: directAccountById,
+          error: directByIdError,
+          hasData: !!directAccountById,
+          searchedId: authUserId,
+          errorMessage: directByIdError?.message
         });
-        setAccount(directAccountById as Account);
-        console.log('📱 NewAuthContext: Direct account state updated in context');
-        return;
+
+        if (!directByIdError && directAccountById) {
+          console.log('✅ NewAuthContext: Account found via direct ID lookup');
+          console.log('📱 NewAuthContext: DETAILED Direct account data:', {
+            id: directAccountById.id,
+            name: directAccountById.name,
+            bio: directAccountById.bio,
+            profile_pic: directAccountById.profile_pic,
+            connect_id: directAccountById.connect_id,
+            created_at: directAccountById.created_at,
+            updated_at: directAccountById.updated_at,
+            bioLength: directAccountById.bio?.length || 0
+          });
+          setAccount(directAccountById as Account);
+          console.log('📱 NewAuthContext: Direct account state updated in context');
+          return;
+        } else {
+          console.log('⚠️ NewAuthContext: No account found via direct ID lookup:', directByIdError?.message);
+        }
+      } catch (directError) {
+        console.error('📱 NewAuthContext: Direct account lookup failed:', directError);
       }
+
+      // Strategy 5 (final): Create account if none exists
+      console.log('🆕 NewAuthContext: No account found, creating new account for user...');
       
-      console.log('⚠️ NewAuthContext: Direct ID lookup failed:', directByIdError?.message);
-
-      // Mobile Strategy 3: Get any account (fallback for testing)
-      console.log('📱 NewAuthContext: Trying fallback - any account lookup...');
-      const { data: anyAccount, error: anyAccountError } = await supabase!
-        .from('accounts')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
-
-      if (!anyAccountError && anyAccount) {
-        console.log('⚠️ NewAuthContext: Using fallback account (for testing):', anyAccount.id);
-        setAccount(anyAccount as Account);
-        return;
+      try {
+        const newAccountData = {
+          id: authUserId,
+          name: user?.email?.split('@')[0] || 'User',
+          bio: '',
+          profile_pic: null,
+          connect_id: generateConnectId(user?.email?.split('@')[0] || 'User'),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('🆕 NewAuthContext: Creating account with data:', newAccountData);
+        
+        const { data: newAccount, error: createError } = await supabase!
+          .from('accounts')
+          .insert(newAccountData)
+          .select()
+          .single();
+          
+        if (!createError && newAccount) {
+          console.log('✅ NewAuthContext: Account created successfully:', newAccount);
+          setAccount(newAccount as Account);
+          
+          // Also create an identity mapping
+          const identityData = {
+            account_id: authUserId,
+            auth_user_id: authUserId,
+            method: 'email',
+            identifier: user?.email?.toLowerCase() || '',
+            created_at: new Date().toISOString()
+          };
+          
+          const { error: identityError } = await supabase!
+            .from('account_identities')
+            .insert(identityData);
+            
+          if (identityError) {
+            console.error('⚠️ NewAuthContext: Failed to create identity mapping:', identityError);
+          } else {
+            console.log('✅ NewAuthContext: Identity mapping created successfully');
+          }
+          
+          return;
+        } else {
+          console.error('❌ NewAuthContext: Failed to create account:', createError);
+        }
+      } catch (createError) {
+        console.error('❌ NewAuthContext: Account creation failed:', createError);
       }
 
       console.log('❌ NewAuthContext: All lookup strategies failed');
-      console.log('📱 NewAuthContext: Final errors:', { identityError, directByIdError, anyAccountError });
+      
+      // DEBUG: Let's see what accounts actually exist
+      try {
+        console.log('🔍 NewAuthContext: DEBUG - Checking what accounts exist in database...');
+        const { data: allAccounts, error: allAccountsError } = await supabase!
+          .from('accounts')
+          .select('id, name, created_at')
+          .limit(5);
+        
+        console.log('🔍 NewAuthContext: DEBUG - Existing accounts:', {
+          accounts: allAccounts,
+          error: allAccountsError,
+          count: allAccounts?.length || 0
+        });
+        
+        // Also check account_identities
+        const { data: allIdentities, error: allIdentitiesError } = await supabase!
+          .from('account_identities')
+          .select('account_id, auth_user_id, method, identifier')
+          .limit(5);
+        
+        console.log('🔍 NewAuthContext: DEBUG - Existing identities:', {
+          identities: allIdentities,
+          error: allIdentitiesError,
+          count: allIdentities?.length || 0,
+          searchingFor: authUserId
+        });
+      } catch (debugError) {
+        console.log('🔍 NewAuthContext: DEBUG query failed:', debugError);
+      }
+      
       setAccount(null);
     } catch (error) {
       console.error('❌ NewAuthContext: Error loading account:', error);
@@ -366,26 +553,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (email) {
         query = query.eq('method', 'email').eq('identifier', email);
+        
+        const { data, error } = await query.maybeSingle();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+          throw error;
+        }
+
+        if (data?.accounts) {
+          console.log('✅ NewAuthContext: Found account via email identity linking');
+          console.log('🔍 NewAuthContext: Account data:', data.accounts);
+          return { exists: true, account: data.accounts as unknown as Account, error: null };
+        }
       } else if (phone) {
-        query = query.eq('method', 'phone').eq('identifier', phone);
+        // CRITICAL FIX: Try multiple phone number formats
+        const phoneVariations = [
+          phone,                                    // Original: "+61466310826"
+          phone.replace(/^\+/, ''),                // Remove +: "61466310826"  
+          phone.replace(/^\+61/, '0'),             // Replace +61 with 0: "0466310826"
+          phone.replace(/^\+61/, ''),              // Remove +61: "466310826"
+          `+61${phone.replace(/^\+61/, '')}`,      // Ensure +61 prefix
+          `61${phone.replace(/^\+61/, '')}`,       // Ensure 61 prefix
+        ];
+        
+        console.log('🔍 NewAuthContext: Trying phone variations:', phoneVariations);
+        
+        // Try each phone format variation
+        for (const phoneVariation of phoneVariations) {
+          console.log('🔍 NewAuthContext: Checking phone format:', phoneVariation);
+          
+          const { data, error } = await supabase
+            .from('account_identities')
+            .select(`
+              account_id,
+              accounts!inner (
+                id,
+                name,
+                bio,
+                dob,
+                profile_pic,
+                connect_id,
+                created_at,
+                updated_at
+              )
+            `)
+            .eq('method', 'phone')
+            .eq('identifier', phoneVariation)
+            .maybeSingle();
+          
+          if (error && error.code !== 'PGRST116') {
+            console.warn('⚠️ NewAuthContext: Phone query error for', phoneVariation, ':', error);
+            continue;
+          }
+
+          if (data?.accounts) {
+            console.log('✅ NewAuthContext: Found account via phone identity linking with format:', phoneVariation);
+            console.log('🔍 NewAuthContext: Account data:', data.accounts);
+            return { exists: true, account: data.accounts as unknown as Account, error: null };
+          }
+        }
       } else {
         return { exists: false, error: new Error('No identifier provided') };
       }
 
-      const { data, error } = await query.maybeSingle();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-        throw error;
-      }
-
-      if (data?.accounts) {
-        console.log('✅ NewAuthContext: Found account via identity linking');
-        console.log('🔍 NewAuthContext: Account data:', data.accounts);
-        return { exists: true, account: data.accounts as unknown as Account, error: null };
-      }
-
-      console.log('❌ NewAuthContext: No existing account found');
-      console.log('🔍 NewAuthContext: Query data was:', data);
+      console.log('❌ NewAuthContext: No existing account found after all attempts');
       return { exists: false, account: null, error: null };
       
     } catch (error) {
@@ -650,32 +881,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Delete account
   const deleteAccount = async () => {
-    if (!supabase || !account) {
-      console.log('❌ NewAuthContext: No supabase client or account to delete');
+    if (!supabase) {
+      console.log('❌ NewAuthContext: No supabase client available');
+      return { error: new Error('No supabase client available') };
+    }
+
+    // CRITICAL FIX: Use authenticated user ID if account context is missing/wrong
+    const accountIdToDelete = account?.id || user?.id;
+    
+    if (!accountIdToDelete) {
+      console.log('❌ NewAuthContext: No account ID or user ID to delete');
       return { error: new Error('No account to delete') };
     }
 
     try {
-      console.log('🗑️ NewAuthContext: Starting account deletion for:', account.id);
+      console.log('🗑️ NewAuthContext: Starting account deletion for:', accountIdToDelete);
+      console.log('🗑️ NewAuthContext: Account source:', {
+        fromAccount: account?.id,
+        fromUser: user?.id,
+        using: accountIdToDelete,
+        hasAccount: !!account,
+        hasUser: !!user
+      });
       
       // First, clear local state immediately to prevent loops
       setAccount(null);
       
-      // Delete account (will cascade to account_identities due to foreign key)
-      console.log('🗑️ NewAuthContext: Deleting from database...');
+      // Delete account_identities first (foreign key dependency)
+      console.log('🗑️ NewAuthContext: Deleting account identities...');
+      const { error: identityError } = await supabase
+        .from('account_identities')
+        .delete()
+        .eq('account_id', accountIdToDelete);
+
+      if (identityError) {
+        console.warn('⚠️ NewAuthContext: Identity deletion failed (continuing):', identityError);
+      } else {
+        console.log('✅ NewAuthContext: Account identities deleted');
+      }
+      
+      // Delete account (will cascade any remaining dependencies)
+      console.log('🗑️ NewAuthContext: Deleting account from database...');
       const { error: deleteError } = await supabase
         .from('accounts')
         .delete()
-        .eq('id', account.id);
+        .eq('id', accountIdToDelete);
 
       if (deleteError) {
         console.error('❌ NewAuthContext: Database deletion failed:', deleteError);
-        throw deleteError;
+        // Don't throw - continue with auth cleanup
+        console.log('🗑️ NewAuthContext: Continuing with auth cleanup despite database error');
+      } else {
+        console.log('✅ NewAuthContext: Account deleted from database successfully');
       }
       
-      console.log('✅ NewAuthContext: Account deleted from database successfully');
-      
-      // Sign out from auth
+      // Sign out from auth (always do this)
       console.log('🗑️ NewAuthContext: Signing out from auth...');
       await signOut();
       

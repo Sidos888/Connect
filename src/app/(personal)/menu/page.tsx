@@ -12,6 +12,7 @@ import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
 import { LogOut, Trash2, ChevronRightIcon, Users } from "lucide-react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
+import { supabase as supabaseClient } from "@/lib/supabaseClient";
 import AccountSwitcherSwipeModal from "@/components/AccountSwitcherSwipeModal";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
@@ -22,7 +23,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 export default function Page() {
   const router = useRouter();
   const { personalProfile, context, resetMenuState } = useAppStore();
-  const { signOut, deleteAccount } = useAuth();
+  const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
   const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'profile' | 'edit-profile'>('menu');
   const [showAccountSwitcher, setShowAccountSwitcher] = React.useState(false);
@@ -77,12 +78,46 @@ export default function Page() {
     };
   }, [currentView]);
 
-  // Get current account info
+  // Load fresh profile data when menu loads
+  React.useEffect(() => {
+    if (user && !account) {
+      console.log('Menu: User exists but no account in auth context, loading profile...');
+      if (loadUserProfile) {
+        loadUserProfile().then(({ profile, error }) => {
+          if (error) {
+            console.error('Menu: Error loading profile:', error);
+          } else if (profile) {
+            console.log('Menu: Profile loaded successfully:', profile);
+            // The auth context should automatically update the account state
+          }
+        });
+      }
+    }
+  }, [user, account, loadUserProfile]);
+
+  // Get current account info - prioritize auth context account over local storage
   const currentAccount = context.type === "business" && currentBusiness 
     ? { name: currentBusiness.name, avatarUrl: currentBusiness.logoUrl, bio: currentBusiness.bio }
-    : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio };
+    : account 
+      ? { name: account.name, avatarUrl: account.profile_pic, bio: account.bio }
+      : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio };
 
-  // Debug logging for bio
+  // Debug logging for bio and auth context
+  console.log('Menu Debug - Auth Context:', {
+    hasUser: !!user,
+    userId: user?.id,
+    hasAccount: !!account,
+    accountId: account?.id,
+    accountName: account?.name,
+    accountBio: account?.bio,
+    accountProfilePic: account?.profile_pic
+  });
+  console.log('Menu Debug - App Store:', {
+    hasPersonalProfile: !!personalProfile,
+    personalProfileId: personalProfile?.id,
+    personalProfileName: personalProfile?.name,
+    personalProfileBio: personalProfile?.bio
+  });
   console.log('Menu Debug - currentAccount:', currentAccount);
   console.log('Menu Debug - bio exists:', !!currentAccount?.bio);
   console.log('Menu Debug - bio content:', currentAccount?.bio);
@@ -106,13 +141,30 @@ export default function Page() {
   // Edit Profile Component
   const EditProfileView = () => {
     const [formData, setFormData] = React.useState({
-      name: currentAccount?.name || '',
-      bio: currentAccount?.bio || '',
+      name: account?.name || currentAccount?.name || '',
+      bio: account?.bio || currentAccount?.bio || '',
       profilePicture: null as File | null,
-      profilePicturePreview: currentAccount?.avatarUrl || ''
+      profilePicturePreview: account?.profile_pic || currentAccount?.avatarUrl || ''
     });
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState('');
+
+    // Update form data when auth context account changes
+    React.useEffect(() => {
+      if (account) {
+        console.log('EditProfile: Auth context account changed, updating form data:', {
+          accountName: account.name,
+          accountBio: account.bio,
+          accountProfilePic: account.profile_pic
+        });
+        setFormData(prev => ({
+          ...prev,
+          name: account.name || prev.name,
+          bio: account.bio || prev.bio,
+          profilePicturePreview: account.profile_pic || prev.profilePicturePreview
+        }));
+      }
+    }, [account]);
 
     const handleInputChange = (field: string, value: string) => {
       setFormData(prev => ({
@@ -139,20 +191,119 @@ export default function Page() {
       setError('');
 
       try {
-        // Update personal profile
+        // Mobile environment detection for debugging
+        const isCapacitor = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: unknown }).Capacitor;
+        const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        console.log('EditProfile: Starting save process with data:', {
+          name: formData.name.trim(),
+          bio: formData.bio.trim(),
+          hasProfilePicture: !!formData.profilePicture,
+          currentAvatarUrl: currentAccount?.avatarUrl,
+          isMobileDevice: isCapacitor || isMobile,
+          isCapacitor,
+          isMobile,
+          userAgent: navigator.userAgent
+        });
+
+        // First handle profile picture upload if there's a new one
+        let avatarUrl = formData.profilePicturePreview;
+        if (formData.profilePicture && uploadAvatar) {
+          console.log('EditProfile: Uploading new profile picture...');
+          const { url, error: uploadError } = await uploadAvatar(formData.profilePicture);
+          if (uploadError) {
+            console.error('EditProfile: Avatar upload failed:', uploadError);
+            setError('Failed to upload profile picture');
+            return;
+          }
+          avatarUrl = url || avatarUrl;
+          console.log('EditProfile: Avatar uploaded successfully:', url);
+        }
+
+        // Update profile in database using auth context
+        if (!updateProfile) {
+          console.error('EditProfile: updateProfile method not available');
+          setError('Profile update not available');
+          return;
+        }
+
+        console.log('EditProfile: Updating profile in database...');
+        console.log('EditProfile: Update data being sent:', {
+          name: formData.name.trim(),
+          bio: formData.bio.trim(),
+          avatarUrl: avatarUrl,
+          currentAccountId: account?.id,
+          hasUpdateProfileFunction: !!updateProfile
+        });
+        
+        const { error: updateError } = await updateProfile({
+          name: formData.name.trim(),
+          bio: formData.bio.trim(),
+          avatarUrl: avatarUrl
+        });
+        
+        console.log('EditProfile: Update result:', { updateError });
+
+        if (updateError) {
+          console.warn('EditProfile: updateProfile failed, attempting direct Supabase update fallback');
+          try {
+            if (!user?.id) throw new Error('No user ID for direct update');
+            const { error: directError } = await supabaseClient
+              ?.from('accounts')
+              .update({ name: formData.name.trim(), bio: formData.bio.trim(), profile_pic: avatarUrl })
+              .eq('id', user.id);
+            if (directError) {
+              console.error('EditProfile: Direct Supabase update failed:', directError);
+              setError('Failed to save profile changes');
+              setLoading(false);
+              return;
+            }
+            console.log('EditProfile: Direct Supabase update succeeded');
+          } catch (e) {
+            console.error('EditProfile: Direct update exception:', e);
+            setError('Failed to save profile changes');
+            setLoading(false);
+            return;
+          }
+        }
+
+        console.log('EditProfile: Profile updated successfully in database');
+
+        // Refresh auth state to get the latest account data from database
+        console.log('EditProfile: Refreshing auth state to sync with database...');
+        if (refreshAuthState) {
+          await refreshAuthState();
+          console.log('EditProfile: Auth state refreshed');
+        }
+
+        // Update local app store for immediate UI update - sync with auth context account
         const { setPersonalProfile } = useAppStore.getState();
         const updatedProfile = {
           ...personalProfile,
+          id: account?.id || personalProfile?.id || user?.id || '',
           name: formData.name.trim(),
           bio: formData.bio.trim(),
-          avatarUrl: formData.profilePicturePreview
+          avatarUrl: avatarUrl,
+          email: account?.email || personalProfile?.email || user?.email || '',
+          phone: account?.phone || personalProfile?.phone || user?.phone || '',
+          dateOfBirth: account?.dob || personalProfile?.dateOfBirth || '',
+          connectId: account?.connect_id || personalProfile?.connectId || '',
+          createdAt: account?.created_at || personalProfile?.createdAt || new Date().toISOString(),
+          updatedAt: account?.updated_at || new Date().toISOString()
         };
         setPersonalProfile(updatedProfile);
         
-        // TODO: Handle profile picture upload if needed
+        console.log('EditProfile: Local store updated with auth context data, navigating back to menu');
+        
+        // Force a page refresh to ensure we're displaying the latest data
+        setTimeout(() => {
+          console.log('EditProfile: Forcing page refresh to show updated data');
+          window.location.reload();
+        }, 100);
         
         setCurrentView('menu');
       } catch (err) {
+        console.error('EditProfile: Unexpected error during save:', err);
         setError('Failed to save profile');
       } finally {
         setLoading(false);
@@ -177,8 +328,8 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 px-4 py-4">
+        {/* Content - with bottom padding for fixed button */}
+        <div className="flex-1 px-4 py-4 pb-32">
           <div className="space-y-5">
             {/* Profile Picture Section */}
             <div className="flex flex-col items-center justify-center py-1">
@@ -238,30 +389,34 @@ export default function Page() {
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col items-center space-y-3 pt-4">
-              <button
-                onClick={handleSave}
-                disabled={loading || !formData.name.trim()}
-                className="px-8 py-2.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <LoadingSpinner size="sm" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </button>
-              <button
-                onClick={() => setCurrentView('menu')}
-                className="text-sm font-medium text-gray-600 hover:text-gray-800 underline transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+        {/* Fixed Action Buttons at Bottom - Mobile Optimized */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-6" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+          <div className="flex flex-col items-center space-y-4">
+            <Button
+              onClick={handleSave}
+              disabled={loading || !formData.name.trim()}
+              className="w-full h-12 text-base font-semibold flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#3b82f6' }}
+            >
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setCurrentView('menu')}
+              className="text-base font-medium underline"
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       </div>
@@ -530,7 +685,7 @@ export default function Page() {
             }
           />
           
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
               {/* Profile and Bio Cards - Layered and Connected */}
               <div className="mb-6 lg:mb-8">
                 <div className="max-w-lg mx-auto lg:max-w-xl relative">
@@ -555,19 +710,19 @@ export default function Page() {
                           size={36} 
                         />
                       </div>
-                      <div className="text-base font-semibold text-neutral-900 text-center">
+                      <div className="text-base font-semibold text-gray-900 text-center">
                         {currentAccount?.name ?? "Your Name"}
                       </div>
                       <div className="flex justify-end">
-                        <button
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowAccountSwitcher(true);
                           }}
-                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                          className="p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
                         >
                           <Users className="h-5 w-5 text-gray-400" />
-                        </button>
+                        </div>
                       </div>
                     </button>
                   </div>

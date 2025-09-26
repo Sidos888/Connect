@@ -29,7 +29,7 @@ export default function AccountCheckModal({
   onResetToInitialLogin
 }: AccountCheckModalProps) {
   const router = useRouter();
-  const { user, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount, refreshAuthState, signOut } = useAuth();
+  const { user, account, checkUserExists, supabase, uploadAvatar, linkPhoneToAccount, linkEmailToAccount, refreshAuthState, signOut } = useAuth();
   const { setPersonalProfile, clearAll } = useAppStore();
   const [modalVisible, setModalVisible] = useState(true);
   
@@ -64,11 +64,14 @@ export default function AccountCheckModal({
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [accountCheckInProgress, setAccountCheckInProgress] = useState(false);
   const [userExists, setUserExists] = useState<boolean | null>(null);
-  const [existingUser, setExistingUser] = useState<{ id: string; name?: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; profile_pic?: string; bio?: string; date_of_birth?: string; dob?: string; created_at: string; updated_at: string } | null>(null);
+  const [initialAccountCheck, setInitialAccountCheck] = useState(true); // New state to prevent premature UI rendering
+  const [existingUser, setExistingUser] = useState<{ id: string; name?: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; profile_pic?: string; bio?: string; date_of_birth?: string; dob?: string; connect_id?: string; created_at: string; updated_at: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
+  // Prevent duplicate account checks per modal open
+  const hasCheckedRef = useRef(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -114,11 +117,41 @@ export default function AccountCheckModal({
     }
   }, [verificationValue, verificationMethod]);
 
+  // Reset initial account check state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log('AccountCheckModal: Modal opened, resetting initial account check state');
+      setInitialAccountCheck(true); // Reset to loading state when modal opens
+      hasCheckedRef.current = false; // allow one check per open
+    }
+  }, [isOpen]);
+
+  // Reset check flag when user changes (signs out/in)
+  useEffect(() => {
+    console.log('AccountCheckModal: User changed, resetting check flag', { userId: user?.id });
+    hasCheckedRef.current = false; // Reset check flag when user changes
+    setAccountCheckInProgress(false); // Reset progress flag too
+  }, [user?.id]);
+
+  // Failsafe: never stay stuck on checking longer than 5s
+  useEffect(() => {
+    if (!isOpen || !initialAccountCheck) return;
+    const t = setTimeout(() => {
+      if (initialAccountCheck) {
+        console.log('AccountCheckModal: Failsafe exiting initial check');
+        setInitialAccountCheck(false);
+      }
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [isOpen, initialAccountCheck]);
+
   const checkAccountExists = async () => {
     if (accountCheckInProgress) {
       console.log('AccountCheckModal: Account check already in progress, skipping...');
       return;
     }
+    
+    // Removed the hasCheckedRef check to allow proper account loading
     
     setAccountCheckInProgress(true);
     console.log('AccountCheckModal: Starting account check', { verificationMethod, verificationValue, user: user?.id });
@@ -128,23 +161,117 @@ export default function AccountCheckModal({
       key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
     });
     
+    // PRIORITY FIX: Check if user is already authenticated - if so, they likely have an account
+    if (user?.id) {
+      console.log('AccountCheckModal: 🚀 PRIORITY CHECK - User authenticated, checking if account exists...');
+      
+      // FIRST: Check if auth context already has the account loaded
+      if (account) {
+        // Mobile-specific logging
+        const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+        const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        console.log('AccountCheckModal: ✅ EXISTING ACCOUNT FOUND in auth context!', {
+          accountId: account.id,
+          accountName: account.name,
+          accountBio: account.bio,
+          hasProfilePic: !!account.profile_pic,
+          isMobileDevice: isCapacitor || isMobile,
+          isCapacitor,
+          isMobile
+        });
+        setUserExists(true);
+        setExistingUser({
+          id: account.id,
+          name: account.name,
+          bio: account.bio,
+          profile_pic: account.profile_pic,
+          connect_id: account.connect_id,
+          created_at: account.created_at,
+          updated_at: account.updated_at,
+          dob: account.dob || undefined
+        });
+        setInitialAccountCheck(false); // Mark initial check as complete
+        setAccountCheckInProgress(false);
+        return;
+      }
+      
+      // SECOND: Direct database lookup if auth context doesn't have account yet
+      console.log('AccountCheckModal: 🔍 Auth context has no account, checking database directly...');
+      const { data: directAccount, error: directError } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      console.log('AccountCheckModal: 🔍 Direct account lookup result:', {
+        directAccount,
+        directError,
+        hasAccount: !!directAccount
+      });
+      
+      if (!directError && directAccount) {
+        console.log('AccountCheckModal: ✅ EXISTING ACCOUNT FOUND via direct lookup!');
+        setUserExists(true);
+        setExistingUser(directAccount);
+        setInitialAccountCheck(false); // Mark initial check as complete
+        setAccountCheckInProgress(false);
+        return;
+      }
+      
+      // THIRD: Check account_identities table for this auth user
+      const { data: identityRecord, error: identityError } = await supabase
+        .from('account_identities')
+        .select('account_id, accounts!inner(*)')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+      
+      console.log('AccountCheckModal: 🔍 Identity-based lookup result:', {
+        identityRecord,
+        identityError,
+        hasIdentity: !!identityRecord
+      });
+      
+      if (!identityError && identityRecord?.accounts) {
+        console.log('AccountCheckModal: ✅ EXISTING ACCOUNT FOUND via identity lookup!');
+        setUserExists(true);
+        setExistingUser(identityRecord.accounts as any);
+        setInitialAccountCheck(false); // Mark initial check as complete
+        setAccountCheckInProgress(false);
+        return;
+      }
+    }
+    
     // Check if we have verification value, if not, assume new account
     if (!verificationValue || verificationValue.trim() === '') {
       console.log('AccountCheckModal: No verification value provided, assuming new account');
       setUserExists(false);
       setExistingUser(null);
       setCurrentPage(1);
+      setInitialAccountCheck(false); // Mark initial check as complete
+      setAccountCheckInProgress(false);
       return;
     }
     
-    // Add timeout to prevent hanging - but make it much longer since we prevent multiple calls
+    // Add timeout to prevent hanging - with mobile-specific timing
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+    const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const timeoutDuration = (isCapacitor || isMobile) ? 90000 : 60000; // 90 seconds for mobile, 60 for desktop
+    
+    console.log('AccountCheckModal: Setting timeout for account check:', { 
+      isCapacitor, 
+      isMobile, 
+      timeoutDuration: timeoutDuration / 1000 + ' seconds' 
+    });
+    
     const timeoutId = setTimeout(() => {
-      console.log('AccountCheckModal: Account check timeout after 60 seconds, assuming new account');
+      console.log('AccountCheckModal: Account check timeout after ' + (timeoutDuration / 1000) + ' seconds, assuming new account');
       setUserExists(false);
       setExistingUser(null);
       setLoading(false);
+      setInitialAccountCheck(false); // Mark initial check as complete
       setAccountCheckInProgress(false);
-    }, 60000); // Increased to 60 seconds
+    }, timeoutDuration);
 
     try {
       // FAST CHECK: Enhanced with phone format variations
@@ -158,17 +285,20 @@ export default function AccountCheckModal({
       let identifiersToTry = [verificationValue];
       if ((verificationMethod as string) === 'phone') {
         const phone = verificationValue;
-        // Based on logs, database has "466310826" but we're searching for "61466310826"
+        // ENHANCED: Try all possible phone number formats
         const phoneVariations = [
-          phone, // Original: "61466310826"
-          phone.replace(/^61/, ''), // Remove 61 prefix: "466310826" ← This should match!
-          phone.replace(/^\+61/, ''), // Remove +61 prefix
-          `+61${phone}`, // Add +61 prefix
-          `0${phone.replace(/^61/, '')}`, // Add 0 prefix to core number
-          phone.replace(/^61/, '0'), // Replace 61 with 0
+          phone,                                    // Original
+          phone.replace(/^\+/, ''),                // Remove +: "+61466310826" → "61466310826"
+          phone.replace(/^\+61/, '0'),             // Replace +61 with 0: "+61466310826" → "0466310826"
+          phone.replace(/^\+61/, ''),              // Remove +61: "+61466310826" → "466310826"
+          phone.replace(/^61/, ''),                // Remove 61: "61466310826" → "466310826"
+          phone.replace(/^61/, '0'),               // Replace 61 with 0: "61466310826" → "0466310826"
+          `+61${phone.replace(/^\+?61/, '')}`,     // Ensure +61 prefix
+          `61${phone.replace(/^\+?61/, '')}`,      // Ensure 61 prefix
+          `0${phone.replace(/^\+?61/, '')}`,       // Ensure 0 prefix
         ];
         identifiersToTry = [...new Set(phoneVariations)]; // Remove duplicates
-        console.log('AccountCheckModal: 📱 Phone format variations to try:', identifiersToTry);
+        console.log('AccountCheckModal: 📱 ENHANCED Phone format variations to try:', identifiersToTry);
       }
       
       // Try each identifier variation
@@ -207,6 +337,7 @@ export default function AccountCheckModal({
             clearTimeout(timeoutId);
             setUserExists(true);
             setExistingUser(accountData);
+            setInitialAccountCheck(false); // Mark initial check as complete
             setAccountCheckInProgress(false);
             return;
           }
@@ -279,24 +410,76 @@ export default function AccountCheckModal({
         setExistingUser(userData || null);
       }
       
+      setInitialAccountCheck(false); // Mark initial check as complete
       setAccountCheckInProgress(false); // Reset the flag
     } catch (error) {
       clearTimeout(timeoutId);
       console.error('Error checking account:', error);
       setUserExists(false);
       setExistingUser(null);
+      setInitialAccountCheck(false); // Mark initial check as complete
       setAccountCheckInProgress(false); // Reset the flag on error too
     }
   };
+
+  // Monitor auth context account changes - with mobile-specific handling
+  useEffect(() => {
+    if (isOpen && account) {
+      // Mobile environment detection
+      const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+      const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      console.log('AccountCheckModal: 🎯 Auth context account loaded!', {
+        accountId: account.id,
+        accountName: account.name,
+        hasUser: !!user,
+        userId: user?.id,
+        isMobileDevice: isCapacitor || isMobile,
+        isCapacitor,
+        isMobile
+      });
+      
+      // If we have an account in the auth context, use it immediately
+      if (account && user && account.id === user.id) {
+        console.log('AccountCheckModal: ✅ Using account from auth context (mobile optimized)');
+        setUserExists(true);
+        setExistingUser({
+          id: account.id,
+          name: account.name,
+          bio: account.bio,
+          profile_pic: account.profile_pic,
+          connect_id: account.connect_id,
+          created_at: account.created_at,
+          updated_at: account.updated_at,
+          dob: account.dob || undefined
+        });
+        setInitialAccountCheck(false); // Mark initial check as complete
+        setAccountCheckInProgress(false);
+      }
+    }
+  }, [isOpen, account?.id, user?.id]);
 
   useEffect(() => {
     console.log('AccountCheckModal: useEffect triggered', { isOpen, hasUser: !!user, userId: user?.id, verificationMethod, verificationValue });
     
     if (isOpen && user) {
+      // Always perform the check when modal opens with a user
       console.log('AccountCheckModal: Modal opened, checking account', { isOpen, verificationMethod, verificationValue, user: user.id });
       console.log('AccountCheckModal: Environment variables in browser:', {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
         key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
+      });
+      
+      // Enhanced debugging for account checking
+      console.log('🔍 AccountCheckModal: ENHANCED DEBUG - User details:', {
+        method: verificationMethod,
+        value: verificationValue,
+        hasUser: !!user,
+        userId: user?.id,
+        userEmail: user?.email,
+        userPhone: user?.phone,
+        userCreatedAt: user?.created_at,
+        userUpdatedAt: user?.updated_at
       });
       
       // Mobile environment detection
@@ -307,22 +490,33 @@ export default function AccountCheckModal({
       // Enhanced mobile debugging for account checking
       if (isCapacitor || isMobile) {
         console.log('📱 AccountCheckModal: MOBILE MODE - Enhanced debugging enabled');
-        console.log('📱 AccountCheckModal: User verification details:', {
-          method: verificationMethod,
-          value: verificationValue,
-          hasUser: !!user,
-          userId: user?.id,
-          userEmail: user?.email,
-          userPhone: user?.phone
-        });
       }
       
-      // Re-enable account checking now that Supabase is set up
+      // Run single-flight account check
       checkAccountExists();
     } else if (isOpen && !user) {
       console.log('AccountCheckModal: Modal opened but no user authenticated, waiting for user state...');
+      
+      // Detect mobile environment for longer timeouts
+      const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+      const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const mobileTimeout = (isCapacitor || isMobile) ? 4000 : 2000; // 4 seconds for mobile, 2 for desktop
+      
+      console.log('AccountCheckModal: Mobile environment detected for timeout:', { isCapacitor, isMobile, timeout: mobileTimeout });
+      
+      // Set a timeout to check again in case user state is loading
+      setTimeout(() => {
+        if (!user) {
+          console.log('AccountCheckModal: Still no user after timeout, treating as new account');
+          setUserExists(false);
+          setExistingUser(null);
+          setCurrentPage(1);
+          setInitialAccountCheck(false); // Mark initial check as complete
+          setAccountCheckInProgress(false);
+        }
+      }, mobileTimeout);
     }
-  }, [isOpen, user, verificationMethod, verificationValue]);
+  }, [isOpen, user?.id, verificationMethod, verificationValue]);
 
   const handleSignIn = async () => {
     setIsSigningIn(true);
@@ -1095,7 +1289,8 @@ export default function AccountCheckModal({
           )}
           
           <h2 className="text-xl font-semibold text-gray-900">
-            {userExists === true ? 'Welcome back!' : 
+            {initialAccountCheck ? 'Checking account...' :
+             userExists === true ? 'Welcome back!' : 
              currentPage === 1 ? 'Create Account' : 'Complete Profile'}
           </h2>
           
@@ -1103,7 +1298,13 @@ export default function AccountCheckModal({
         </div>
 
         <div className="p-6 flex-1 overflow-y-auto">
-          {userExists === true ? (
+          {initialAccountCheck ? (
+            // Loading state - prevent premature UI rendering
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+              <p className="text-sm text-gray-600">Checking your account...</p>
+            </div>
+          ) : userExists === true ? (
             // Existing Account Card
             <div className="space-y-4">
 

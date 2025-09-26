@@ -21,7 +21,7 @@ export default function Page() {
   return (
     <div>
       <MobileTitle title="Explore" />
-      <div className="space-y-5 px-4 lg:px-0">
+      <div className="space-y-5 px-4 lg:px-0 pt-[120px] lg:pt-0">
         <h1 className="hidden lg:block text-3xl font-bold">Explore</h1>
 
       <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-4">

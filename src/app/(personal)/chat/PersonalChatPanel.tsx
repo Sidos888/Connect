@@ -13,10 +13,14 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const { sendMessage, markAllRead } = useAppStore();
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const hasMarkedAsRead = useRef(false);
 
   useEffect(() => {
-    markAllRead(conversation.id);
-  }, [conversation, markAllRead]);
+    if (!hasMarkedAsRead.current) {
+      markAllRead(conversation.id);
+      hasMarkedAsRead.current = true;
+    }
+  }, [conversation.id, markAllRead]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });

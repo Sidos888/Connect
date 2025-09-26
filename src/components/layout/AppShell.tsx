@@ -23,18 +23,8 @@ export default function AppShell({ children }: AppShellProps) {
   const normalizedPath = pathname.replace(/\/$/, '') || '/';
   const isPublicRoute = publicRoutes.includes(normalizedPath);
 
-  // Debug logging for Vercel troubleshooting
-  console.log('AppShell Debug:', {
-    pathname,
-    isPublicRoute,
-    publicRoutes,
-    user: user ? 'SIGNED IN' : 'NOT SIGNED IN',
-    loading
-  });
-
   // If it's a public route, show without protection
   if (isPublicRoute) {
-    console.log('Rendering public route without protection');
     if (isChatPage) {
       // Full height layout for chat pages
       return (
@@ -43,7 +33,7 @@ export default function AppShell({ children }: AppShellProps) {
           <div className="hidden lg:block">
             <TopNavigation />
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1">
             {children}
           </div>
           {/* Mobile: Bottom Navigation */}
@@ -79,7 +69,6 @@ export default function AppShell({ children }: AppShellProps) {
   }
 
   // All other routes require authentication
-  console.log('Rendering protected route with authentication required');
   if (isChatPage) {
     // Full height layout for chat pages
     return (
@@ -88,7 +77,7 @@ export default function AppShell({ children }: AppShellProps) {
         <div className="hidden lg:block">
           <TopNavigation />
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1">
           <ProtectedRoute>
             {children}
           </ProtectedRoute>
@@ -104,14 +93,14 @@ export default function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Desktop: Top Navigation Bar */}
       <div className="hidden lg:block">
         <TopNavigation />
       </div>
       
       {/* Main Content Area with proper mobile safe area */}
-      <main className="flex-1 w-full overflow-hidden">
+      <main className="flex-1 w-full">
         <ProtectedRoute>
           {children}
         </ProtectedRoute>

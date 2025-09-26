@@ -8,7 +8,7 @@ import { useAppStore } from "@/lib/store";
 import PersonalChatPanel from "./PersonalChatPanel";
 
 export default function ChatLayout() {
-  const { conversations, seedConversations, clearAll } = useAppStore();
+  const { conversations, seedConversations, clearAll, isHydrated } = useAppStore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedChatId = searchParams.get("chat");
@@ -16,9 +16,18 @@ export default function ChatLayout() {
   const [activeCategory, setActiveCategory] = useState("all");
 
   useEffect(() => {
-    console.log('Seeding conversations...');
-    seedConversations();
-  }, [seedConversations]);
+    if (isHydrated) {
+      console.log('Store hydrated, seeding conversations...');
+      seedConversations();
+    }
+  }, [isHydrated, seedConversations]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('ChatLayout - conversations:', conversations);
+    console.log('ChatLayout - selectedChatId:', selectedChatId);
+    console.log('ChatLayout - searchParams:', searchParams.toString());
+  }, [conversations, selectedChatId, searchParams]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -82,7 +91,20 @@ export default function ChatLayout() {
 
   const { unreadCount, dmCount, groupCount } = getCategoryCounts();
 
-  const selectedConversation = conversations.find(c => c.id === selectedChatId);
+  const selectedConversation = selectedChatId ? conversations.find(c => c.id === selectedChatId) : null;
+  
+  // Debug selected conversation
+  useEffect(() => {
+    console.log('ChatLayout - selectedConversation:', selectedConversation);
+  }, [selectedConversation]);
+  
+  // Auto-select first conversation if none is selected and conversations exist
+  useEffect(() => {
+    if (conversations.length > 0 && !selectedChatId && isHydrated) {
+      console.log('Auto-selecting first conversation:', conversations[0].id);
+      router.push(`/chat?chat=${conversations[0].id}`);
+    }
+  }, [conversations, selectedChatId, router, isHydrated]);
 
   const handleSelectChat = (chatId: string) => {
     router.push(`/chat?chat=${chatId}`);
@@ -95,8 +117,20 @@ export default function ChatLayout() {
     { id: "group", label: "Groups", count: groupCount },
   ];
 
+  // Show loading state while store is hydrating
+  if (!isHydrated) {
+    return (
+      <div className="flex h-full bg-white items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-gray-500">Loading chats...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-full bg-white">
       {/* Chat List Sidebar */}
       <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col">
         {/* Header */}
@@ -239,6 +273,23 @@ export default function ChatLayout() {
               <div className="text-6xl">💬</div>
               <h2 className="text-xl font-semibold text-gray-900">Select a conversation</h2>
               <p className="text-gray-500">Choose a chat from the sidebar to start messaging</p>
+              {conversations.length === 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-400 mb-2">No conversations yet</p>
+                  <button 
+                    onClick={() => {
+                      console.log('Force clearing and reseeding...');
+                      clearAll();
+                      setTimeout(() => {
+                        seedConversations();
+                      }, 100);
+                    }}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
+                  >
+                    Load Sample Chats
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

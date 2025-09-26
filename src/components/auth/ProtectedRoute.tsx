@@ -24,6 +24,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileLoadTimeout, setProfileLoadTimeout] = useState<NodeJS.Timeout | null>(null);
   const [forceStopLoading, setForceStopLoading] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   // Get custom messages based on the current path if props are not provided
   const getCustomMessages = () => {
@@ -65,9 +66,21 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   const { title: displayTitle, description: displayDescription, buttonText: displayButtonText } = getCustomMessages();
 
-  // Load profile IMMEDIATELY when user is authenticated - no delays
+  // Add timeout to prevent infinite loading
   useEffect(() => {
-    console.log('ProtectedRoute: INSTANT profile loading triggered:', {
+    const timeout = setTimeout(() => {
+      if (!isHydrated || loading) {
+        console.log('ProtectedRoute: Loading timeout reached, forcing stop');
+        setLoadingTimeout(true);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isHydrated, loading]);
+
+  // Load profile only when user changes or when no profile exists
+  useEffect(() => {
+    console.log('ProtectedRoute: Profile loading check:', {
       hasUser: !!user,
       userId: user?.id,
       isLoadingProfile,
@@ -76,16 +89,26 @@ export default function ProtectedRoute({ children, fallback, title, description,
       personalProfileId: personalProfile?.id
     });
     
-    const loadProfileInstantly = async () => {
-      if (!user || !isHydrated) {
-        return;
-      }
+    // Add a small delay to prevent rapid-fire calls
+    const timeoutId = setTimeout(() => {
+      const loadProfileInstantly = async () => {
+        if (!user || !isHydrated) {
+          return;
+        }
 
-      // Check if we have a valid profile (not just matching ID, but actual data)
-      if (personalProfile && personalProfile.id === user.id && personalProfile.name && personalProfile.name !== 'User') {
-        console.log('ProtectedRoute: ✅ Valid profile already loaded for user, skipping reload');
-        return;
-      }
+        // Skip if already loading or if profile already exists
+        if (isLoadingProfile || personalProfile) {
+          console.log('ProtectedRoute: Skipping - already loading or profile exists');
+          return;
+        }
+
+      console.log('ProtectedRoute: Loading profile from database');
+      console.log('ProtectedRoute: Current profile state:', {
+        hasProfile: !!personalProfile,
+        profileId: personalProfile?.id,
+        profileBio: personalProfile?.bio,
+        bioLength: personalProfile?.bio?.length || 0
+      });
       
       if (personalProfile && personalProfile.id === user.id && (!personalProfile.name || personalProfile.name === 'User')) {
         console.log('ProtectedRoute: ⚠️ Profile ID matches but data is incomplete - will reload');
@@ -158,7 +181,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
                 bioLength: currentProfile?.bio?.length || 0
               });
             }, 100);
-          } else {
+          } else if (profileError) {
             console.error('ProtectedRoute: ❌ Error loading profile:', profileError);
             // Try direct database lookup as fallback
             if (user?.id && supabase) {
@@ -187,6 +210,9 @@ export default function ProtectedRoute({ children, fallback, title, description,
                 console.log('ProtectedRoute: ✅ Profile set successfully:', mappedProfile);
               }
             }
+          } else {
+            // No error but no profile data - user might not have a profile yet
+            console.log('ProtectedRoute: ℹ️ No profile found for user, this is normal for new users');
           }
         } catch (error) {
           console.error('ProtectedRoute: ❌ Error loading fresh profile:', error);
@@ -200,9 +226,12 @@ export default function ProtectedRoute({ children, fallback, title, description,
       }
     };
 
-    // Load immediately - no setTimeout or delays
-    loadProfileInstantly();
-  }, [user, isHydrated]);
+      // Load immediately - no setTimeout or delays
+      loadProfileInstantly();
+    }, 100); // Small delay to prevent rapid-fire calls
+    
+    return () => clearTimeout(timeoutId);
+  }, [user?.id, isHydrated, isLoadingProfile, personalProfile?.id]);
 
   // Profile loading is now handled naturally without timeouts
 
@@ -218,19 +247,25 @@ export default function ProtectedRoute({ children, fallback, title, description,
     });
   }
 
-  // Wait for store to hydrate
-  if (!isHydrated) {
+  // Wait for store to hydrate - but with a timeout to prevent infinite loading
+  if (!isHydrated && !loadingTimeout) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner />
+        <div className="text-center space-y-4">
+          <LoadingSpinner />
+          <p className="text-gray-500">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
+  if (loading && !loadingTimeout) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner />
+        <div className="text-center space-y-4">
+          <LoadingSpinner />
+          <p className="text-gray-500">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -317,12 +352,6 @@ export default function ProtectedRoute({ children, fallback, title, description,
     );
   }
 
-  // User is authenticated - show content (profile is optional)
-  if (user) {
-    console.log('ProtectedRoute: User authenticated, showing content');
-    return <>{children}</>;
-  }
-
-  // This should never be reached due to the !user check above
-  return null;
+  // User is authenticated, render children
+  return <>{children}</>;
 }
