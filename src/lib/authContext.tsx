@@ -185,7 +185,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('👤 NewAuthContext: User found in session, loading account...');
           setUser(session.user);
-          await loadAccountForUser(session.user.id);
+          try {
+            await loadAccountForUser(session.user.id);
+            console.log('👤 NewAuthContext: Initial account loading completed');
+          } catch (error) {
+            console.error('👤 NewAuthContext: Initial account loading failed:', error);
+          }
           // Set up real-time sync after user is loaded
           setupRealtimeSync();
         } else {
@@ -207,8 +212,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('🔐 AuthContext: User session available, loading account for:', session.user.id);
           setUser(session.user);
-          await loadAccountForUser(session.user.id);
-          console.log('🔐 AuthContext: Account loading completed, account:', account);
+          
+          // Call loadAccountForUser and wait for it to complete
+          try {
+            await loadAccountForUser(session.user.id);
+            console.log('🔐 AuthContext: Account loading completed successfully');
+          } catch (error) {
+            console.error('🔐 AuthContext: Account loading failed:', error);
+          }
+          
           // Set up real-time sync after user is loaded
           setupRealtimeSync();
         } else {
@@ -234,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔍 NewAuthContext: Loading account for user:', authUserId);
       console.log('🔍 NewAuthContext: Current user object:', user);
+      console.log('🔍 NewAuthContext: Supabase client available:', !!supabase);
       
       // Strategy 1: identifier-first (email)
       const email = user?.email?.toLowerCase();
@@ -432,11 +445,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🔍 NewAuthContext: DEBUG query failed:', debugError);
       }
       
+      console.log('🔍 NewAuthContext: No account found, setting to null');
       setAccount(null);
     } catch (error) {
       console.error('❌ NewAuthContext: Error loading account:', error);
       setAccount(null);
     }
+    
+    console.log('🔍 NewAuthContext: loadAccountForUser function completed');
   };
 
   // Send email verification

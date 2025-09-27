@@ -301,7 +301,11 @@ function AddPersonView({
         ...prev,
         [userId]: 'none'
       }));
-      console.log('Cancelled friend request for user', userId, '- status updated to none');
+      // Refresh suggested friends and search results
+      loadSuggestedFriends();
+      if (searchQuery.trim()) {
+        searchUsers();
+      }
     } else {
       console.error('Error cancelling friend request:', error);
       alert('Failed to cancel friend request: ' + error.message);
