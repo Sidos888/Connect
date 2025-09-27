@@ -62,7 +62,7 @@ export default function AppShell({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && !isOnboardingPage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -86,7 +86,7 @@ export default function AppShell({ children }: AppShellProps) {
           </ProtectedRoute>
         </div>
         {/* Mobile: Bottom Navigation */}
-        {!isSettingsPage && !isOnboardingPage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -110,7 +110,7 @@ export default function AppShell({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>
