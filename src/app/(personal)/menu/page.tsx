@@ -943,11 +943,7 @@ export default function Page() {
           ...prev,
           [userId]: 'pending_sent'
         }));
-        // Refresh suggested friends and search results
-        loadSuggestedFriends();
-        if (searchQuery.trim()) {
-          searchUsers();
-        }
+        console.log('Updated connection status for user', userId, 'to pending_sent');
       } else {
         // Show more user-friendly error messages
         if (error.message.includes('already friends')) {
@@ -982,19 +978,15 @@ export default function Page() {
     const cancelFriendRequest = async (userId: string) => {
       if (!account?.id) return;
       
-      const { error } = await connectionsService.cancelFriendRequest(account.id, userId);
-      if (!error) {
-        // Update connection status for this user back to none
-        setUserConnectionStatuses(prev => ({
-          ...prev,
-          [userId]: 'none'
-        }));
-        // Refresh suggested friends and search results
-        loadSuggestedFriends();
-        if (searchQuery.trim()) {
-          searchUsers();
-        }
-      } else {
+    const { error } = await connectionsService.cancelFriendRequest(account.id, userId);
+    if (!error) {
+      // Update connection status for this user back to none
+      setUserConnectionStatuses(prev => ({
+        ...prev,
+        [userId]: 'none'
+      }));
+      console.log('Cancelled friend request for user', userId, '- status updated to none');
+    } else {
         console.error('Error cancelling friend request:', error);
         alert('Failed to cancel friend request: ' + error.message);
       }

@@ -187,14 +187,21 @@ function AddPersonView({
   }, [searchQuery, account?.id]);
 
   const loadSuggestedFriends = async () => {
-    if (!account?.id) return;
+    if (!account?.id) {
+      console.log('loadSuggestedFriends: No account ID available');
+      return;
+    }
     
+    console.log('loadSuggestedFriends: Loading suggested friends for account:', account.id);
     setLoading(true);
     const { users, error } = await connectionsService.getSuggestedFriends(account.id);
     if (!error) {
+      console.log('loadSuggestedFriends: Got', users.length, 'suggested friends:', users.map(u => ({ id: u.id, name: u.name })));
       setSuggestedFriends(users);
       // Load connection statuses for suggested friends
       loadConnectionStatuses(users);
+    } else {
+      console.error('loadSuggestedFriends: Error loading suggested friends:', error);
     }
     setLoading(false);
   };
@@ -241,11 +248,9 @@ function AddPersonView({
         ...prev,
         [userId]: 'pending_sent'
       }));
-      // Refresh suggested friends and search results
-      loadSuggestedFriends();
-      if (searchQuery.trim()) {
-        searchUsers();
-      }
+      // Don't reload suggested friends immediately - just update the button status
+      // This prevents the user from disappearing from the list
+      console.log('Updated connection status for user', userId, 'to pending_sent');
     } else {
       console.error('Error sending friend request:', error);
       // Show more user-friendly error messages
@@ -261,10 +266,17 @@ function AddPersonView({
 
   // Load connection status for users
   const loadConnectionStatuses = async (users: ConnectionUser[]) => {
-    if (!account?.id) return;
+    if (!account?.id) {
+      console.log('loadConnectionStatuses: No account ID available');
+      return;
+    }
+    
+    console.log('loadConnectionStatuses: Loading statuses for', users.length, 'users');
+    console.log('loadConnectionStatuses: Users:', users.map(u => ({ id: u.id, name: u.name })));
     
     const statusPromises = users.map(async (user) => {
       const { status } = await connectionsService.getConnectionStatus(account.id, user.id);
+      console.log(`loadConnectionStatuses: User ${user.name} (${user.id}) status:`, status);
       return { userId: user.id, status };
     });
     
@@ -274,6 +286,7 @@ function AddPersonView({
       statusMap[userId] = status;
     });
     
+    console.log('loadConnectionStatuses: Final status map:', statusMap);
     setUserConnectionStatuses(prev => ({ ...prev, ...statusMap }));
   };
 
@@ -288,11 +301,7 @@ function AddPersonView({
         ...prev,
         [userId]: 'none'
       }));
-      // Refresh suggested friends and search results
-      loadSuggestedFriends();
-      if (searchQuery.trim()) {
-        searchUsers();
-      }
+      console.log('Cancelled friend request for user', userId, '- status updated to none');
     } else {
       console.error('Error cancelling friend request:', error);
       alert('Failed to cancel friend request: ' + error.message);
