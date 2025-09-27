@@ -65,9 +65,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
     const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
+    // Add error handling for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Auth state change:', event, session ? 'Session exists' : 'No session');
+      
+      // Handle authentication errors gracefully
+      if (event === 'SIGNED_OUT') {
+        console.log('🔐 User signed out');
+        setUser(null);
+        setAccount(null);
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('🔐 Token refreshed successfully');
+        setUser(session?.user || null);
+      } else if (event === 'SIGNED_IN') {
+        console.log('🔐 User signed in');
+        setUser(session?.user || null);
+      }
+      
+      setLoading(false);
+    });
+    
     // Initializing auth system
 
-    // Set up real-time sync for profile changes
+    // Cleanup function
+    return () => {
+      subscription.unsubscribe();
+      if (realtimeCleanupRef.current) {
+        realtimeCleanupRef.current();
+      }
+    };
+  }, [supabase]);
+
+  // Set up real-time sync for profile changes
+  useEffect(() => {
+    if (!supabase || !user?.id) return;
     const setupRealtimeSync = () => {
       if (!user?.id) return;
 

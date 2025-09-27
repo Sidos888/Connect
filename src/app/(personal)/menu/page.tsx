@@ -1008,7 +1008,10 @@ export default function Page() {
         case 'connected':
           return { text: 'Friends', className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium cursor-not-allowed' };
         case 'pending_sent':
-          return { text: 'Pending', className: 'px-4 py-2 bg-gray-400 text-white rounded-lg text-sm font-medium hover:bg-gray-500 transition-colors' };
+          return { 
+            text: 'Added', 
+            className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-1.5' 
+          };
         case 'pending_received':
           return { text: 'Accept', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
         default:
@@ -1247,7 +1250,7 @@ export default function Page() {
                                     onClick={() => {
                                       if (buttonConfig.text === 'Add') {
                                         sendFriendRequest(user.id);
-                                      } else if (buttonConfig.text === 'Pending') {
+                                      } else if (buttonConfig.text === 'Added') {
                                         cancelFriendRequest(user.id);
                                       } else if (buttonConfig.text === 'Accept') {
                                         // Handle accept logic if needed
@@ -1256,6 +1259,11 @@ export default function Page() {
                                     className={buttonConfig.className}
                                     disabled={buttonConfig.text === 'Friends'}
                                   >
+                                    {buttonConfig.text === 'Added' && (
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
                                     {buttonConfig.text}
                                   </button>
                                 );
@@ -1305,7 +1313,7 @@ export default function Page() {
                                   onClick={() => {
                                     if (buttonConfig.text === 'Add') {
                                       sendFriendRequest(user.id);
-                                    } else if (buttonConfig.text === 'Pending') {
+                                    } else if (buttonConfig.text === 'Added') {
                                       cancelFriendRequest(user.id);
                                     } else if (buttonConfig.text === 'Accept') {
                                       // Handle accept logic if needed
@@ -1314,6 +1322,11 @@ export default function Page() {
                                   className={buttonConfig.className}
                                   disabled={buttonConfig.text === 'Friends'}
                                 >
+                                  {buttonConfig.text === 'Added' && (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
                                   {buttonConfig.text}
                                 </button>
                               );
