@@ -4,6 +4,7 @@ import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X } from "lucide-react";
+import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -43,16 +44,442 @@ function LoadingOverlay({ message }: { message: string }) {
   );
 }
 
+// Connections view
+function ConnectionsView({ 
+  onBack,
+  onAddPerson
+}: { 
+  onBack: () => void;
+  onAddPerson: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
+
+  // Sample data for demonstration
+  const friends = [
+    { id: 1, name: 'Amelia Jones', avatar: '👩‍💼' },
+    { id: 2, name: 'Duy Do', avatar: '👨‍💻' },
+    { id: 3, name: 'Ellie Mcdonald', avatar: '👩‍🎨' },
+    { id: 4, name: 'Megan Markle', avatar: '👩‍🦱' },
+    { id: 5, name: 'Lebron James', avatar: '🏀' },
+    { id: 6, name: 'Brittney Smith', avatar: '👩‍⚕️' },
+  ];
+
+  const following = [
+    { id: 7, name: 'John Doe', avatar: '👨‍🚀' },
+    { id: 8, name: 'Jane Smith', avatar: '👩‍🔬' },
+  ];
+
+  return (
+    <SimpleCard>
+      <div className="flex flex-col h-full">
+        {/* Header with back button and add person */}
+        <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <button
+            onClick={onBack}
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Back to menu"
+          >
+            <span className="back-btn-circle">
+              <ChevronLeft size={20} className="text-gray-700" />
+            </span>
+          </button>
+          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Connections</h2>
+          <button
+            onClick={onAddPerson}
+            className="absolute right-0 p-2 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Add person"
+          >
+            <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Person silhouette */}
+              <circle cx="12" cy="8" r="4" strokeWidth={2} />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+              {/* Plus sign in top right */}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 5h2m0 0h2m-2 0v2m0-2V3" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="mb-4">
+          <div className="flex justify-center space-x-8">
+            <button
+              onClick={() => setActiveTab('friends')}
+              className={`py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'friends'
+                  ? 'text-gray-900 border-gray-900'
+                  : 'text-gray-500 border-transparent'
+              }`}
+            >
+              Friends
+            </button>
+            <button
+              onClick={() => setActiveTab('following')}
+              className={`py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'following'
+                  ? 'text-gray-900 border-gray-900'
+                  : 'text-gray-500 border-transparent'
+              }`}
+            >
+              Following
+            </button>
+          </div>
+        </div>
+        
+        {/* Connections content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-3">
+            {(activeTab === 'friends' ? friends : following).map((person) => (
+              <div
+                key={person.id}
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex items-center space-x-3"
+              >
+                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
+                  {person.avatar}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-gray-900">{person.name}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </SimpleCard>
+  );
+}
+
+// Add Person view
+function AddPersonView({ 
+  onBack 
+}: { 
+  onBack: () => void; 
+}) {
+  const [activeTab, setActiveTab] = useState<'requests' | 'add-friends'>('add-friends');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ConnectionUser[]>([]);
+  const [suggestedFriends, setSuggestedFriends] = useState<ConnectionUser[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const { account } = useAuth();
+
+  // Load initial data
+  useEffect(() => {
+    if (account?.id) {
+      loadSuggestedFriends();
+      loadPendingRequests();
+    }
+  }, [account?.id]);
+
+  // Search users with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim() && account?.id) {
+        searchUsers();
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, account?.id]);
+
+  const loadSuggestedFriends = async () => {
+    if (!account?.id) return;
+    
+    setLoading(true);
+    const { users, error } = await connectionsService.getSuggestedFriends(account.id);
+    if (!error) {
+      setSuggestedFriends(users);
+    }
+    setLoading(false);
+  };
+
+  const loadPendingRequests = async () => {
+    if (!account?.id) return;
+    
+    const { requests, error } = await connectionsService.getPendingRequests(account.id);
+    if (!error) {
+      setPendingRequests(requests);
+    }
+  };
+
+  const searchUsers = async () => {
+    if (!account?.id || !searchQuery.trim()) return;
+    
+    setSearchLoading(true);
+    const { users, error } = await connectionsService.searchUsers(searchQuery, account.id);
+    if (!error) {
+      setSearchResults(users);
+    }
+    setSearchLoading(false);
+  };
+
+  const sendFriendRequest = async (userId: string) => {
+    console.log('Send friend request clicked for user:', userId);
+    console.log('Current account:', account);
+    
+    if (!account?.id) {
+      console.log('No account ID available - user not logged in');
+      alert('Please log in to send friend requests');
+      return;
+    }
+    
+    console.log('Sending friend request from:', account.id, 'to:', userId);
+    const { error } = await connectionsService.sendFriendRequest(account.id, userId);
+    
+    if (!error) {
+      console.log('Friend request sent successfully');
+      // Refresh suggested friends and search results
+      loadSuggestedFriends();
+      if (searchQuery.trim()) {
+        searchUsers();
+      }
+    } else {
+      console.error('Error sending friend request:', error);
+      alert('Failed to send friend request: ' + error.message);
+    }
+  };
+
+  const acceptFriendRequest = async (requestId: string) => {
+    const { error } = await connectionsService.acceptFriendRequest(requestId);
+    if (!error) {
+      loadPendingRequests();
+    }
+  };
+
+  const rejectFriendRequest = async (requestId: string) => {
+    const { error } = await connectionsService.rejectFriendRequest(requestId);
+    if (!error) {
+      loadPendingRequests();
+    }
+  };
+
+  return (
+    <SimpleCard>
+      <div className="flex flex-col h-full">
+        {/* Header with back button */}
+        <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <button
+            onClick={onBack}
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Back to connections"
+          >
+            <span className="back-btn-circle">
+              <ChevronLeft size={20} className="text-gray-700" />
+            </span>
+          </button>
+          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Find Friends</h2>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="mb-4">
+          <div className="flex justify-center space-x-8">
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'requests'
+                  ? 'text-gray-900 border-gray-900'
+                  : 'text-gray-500 border-transparent'
+              }`}
+            >
+              Requests
+            </button>
+            <button
+              onClick={() => setActiveTab('add-friends')}
+              className={`py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'add-friends'
+                  ? 'text-gray-900 border-gray-900'
+                  : 'text-gray-500 border-transparent'
+              }`}
+            >
+              Add Friends
+            </button>
+          </div>
+        </div>
+        
+        {/* Add Person content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-4">
+            {activeTab === 'requests' && (
+              <div className="space-y-4">
+                {pendingRequests.length > 0 ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Friend Requests</h3>
+                    {pendingRequests.map((request) => (
+                      <div key={request.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                              {request.sender?.profile_pic ? (
+                                <img src={request.sender.profile_pic} alt={request.sender.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-gray-500 text-lg font-medium">
+                                  {request.sender?.name?.charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900">{request.sender?.name}</h4>
+                                  <p className="text-xs text-gray-400">
+                                    {new Date(request.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => rejectFriendRequest(request.id)}
+                              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                            >
+                              Decline
+                            </button>
+                            <button 
+                              onClick={() => acceptFriendRequest(request.id)}
+                              className="px-3 py-1 text-sm bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+                            >
+                              Accept
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📨</div>
+                    <p className="text-gray-500 text-sm">No pending requests</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'add-friends' && (
+              <div className="space-y-4">
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search for people by name..."
+                        className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      {searchLoading && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Search Results */}
+                    {searchQuery.trim() && (
+                      <div className="space-y-3">
+                        <h3 className="text-lg font-semibold text-gray-900">Search Results</h3>
+                        {searchResults.length > 0 ? (
+                          <div className="space-y-2">
+                            {searchResults.map((user) => (
+                              <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                    {user.profile_pic ? (
+                                      <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-gray-500 text-sm font-medium">
+                                        {user.name.charAt(0).toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-medium text-gray-900">{user.name}</h4>
+                                  </div>
+                                </div>
+                                <button 
+                                  onClick={() => sendFriendRequest(user.id)}
+                                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : !searchLoading ? (
+                          <div className="text-center py-4">
+                            <p className="text-gray-500 text-sm">No users found</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+
+                {/* Suggested Friends Section */}
+                {!searchQuery.trim() && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Suggested Friends</h3>
+                    {loading ? (
+                      <div className="text-center py-4">
+                        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto"></div>
+                        <p className="text-gray-500 text-sm mt-2">Loading suggestions...</p>
+                      </div>
+                    ) : suggestedFriends.length > 0 ? (
+                      <div className="space-y-2">
+                        {suggestedFriends.slice(0, 5).map((user) => (
+                          <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                {user.profile_pic ? (
+                                  <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-gray-500 text-sm font-medium">
+                                    {user.name.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-900">{user.name}</h4>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => sendFriendRequest(user.id)}
+                              className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-gray-500 text-sm">No suggested friends at the moment</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </SimpleCard>
+  );
+}
+
 // Simple menu view
 function MenuView({ 
   onSettings, 
   onShare, 
   onViewProfile,
+  onConnections,
   currentAccount 
 }: { 
   onSettings: () => void; 
   onShare: () => void; 
   onViewProfile: () => void;
+  onConnections: () => void;
   currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null; 
 }) {
   return (
@@ -84,9 +511,12 @@ function MenuView({
             <span className="font-medium">Notifications</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button 
+            onClick={onConnections}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+          >
             <Users size={20} className="text-gray-600" />
-            <span className="font-medium">My Connections</span>
+            <span className="font-medium">Connections</span>
           </button>
 
           <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
@@ -539,6 +969,8 @@ export default function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const [showDim, setShowDim] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showConnections, setShowConnections] = useState(false);
+  const [showAddPerson, setShowAddPerson] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -569,6 +1001,8 @@ export default function ProfileMenu() {
     setOpen(false);
     setShowMenu(false); // Immediately hide menu on navigation
     setShowSettings(false);
+    setShowConnections(false);
+    setShowAddPerson(false);
     setShowProfile(false);
     setShowEditProfile(false);
     setShowDeleteConfirm(false);
@@ -631,6 +1065,8 @@ export default function ProfileMenu() {
       menuRef.current.style.display = 'none';
     }
     setShowSettings(false);
+    setShowConnections(false);
+    setShowAddPerson(false);
     setShowProfile(false);
     setShowEditProfile(false);
     setShowDeleteConfirm(false);
@@ -679,32 +1115,41 @@ export default function ProfileMenu() {
     setLoadingMessage('Signing out...');
     setOpen(false);
     setShowSettings(false);
+    setShowConnections(false);
+    setShowAddPerson(false);
     setShowProfile(false);
     
     try {
       console.log('ProfileMenu: Starting sign out...');
       
-      // Clear all local state first
+      // Clear all local state immediately
       clearAll();
       
-      // Then sign out from auth
-      await signOut();
-      console.log('ProfileMenu: Sign out completed');
+      // Clear all storage immediately
+      localStorage.clear();
+      sessionStorage.clear();
       
-      // Immediate redirect to prevent hanging
-      console.log('ProfileMenu: Redirecting to home page');
+      // Try Supabase signout but don't wait for it (non-blocking)
+      supabase.auth.signOut().catch((err: any) => {
+        console.log('Supabase signout error (ignoring):', err);
+      });
+      
+      // Also try local scope signout
+      if (supabase.auth) {
+        supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
+      
+      // Immediate redirect - don't wait for anything
+      console.log('ProfileMenu: Redirecting to home page immediately');
       window.location.href = '/';
       
     } catch (error) {
       console.error('ProfileMenu: Sign out error:', error);
-      // Even if there's an error, try to clear state and reload
+      // Force clear everything and redirect
       clearAll();
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage('');
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/';
     }
   };
 
@@ -808,6 +1253,8 @@ export default function ProfileMenu() {
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
     setShowSettings(false);
+    setShowConnections(false);
+    setShowAddPerson(false);
     // Keep the menu open - don't set setOpen(false)
   };
 
@@ -971,8 +1418,8 @@ export default function ProfileMenu() {
         )}
 
         {/* Dropdown menu */}
-        {showMenu && (
-          <div ref={menuRef} role="menu" className="profile-menu-card absolute right-0 z-50 mt-2">
+      {showMenu && (
+        <div ref={menuRef} role="menu" className="profile-menu-card absolute right-0 z-50 mt-2">
             {showSettings ? (
               <SettingsView
                 onBack={() => setShowSettings(false)}
@@ -987,6 +1434,21 @@ export default function ProfileMenu() {
                 onBackToMenu={backToMenu}
                 isDeletingAccount={isDeletingAccount}
                 personalProfile={personalProfile}
+              />
+            ) : showConnections ? (
+              <ConnectionsView
+                onBack={() => setShowConnections(false)}
+                onAddPerson={() => {
+                  setShowConnections(false);
+                  setShowAddPerson(true);
+                }}
+              />
+            ) : showAddPerson ? (
+              <AddPersonView
+                onBack={() => {
+                  setShowAddPerson(false);
+                  setShowConnections(true);
+                }}
               />
             ) : showEditProfile ? (
               <EditProfileView
@@ -1012,6 +1474,7 @@ export default function ProfileMenu() {
                   setShowShareModal(true);
                 }}
                 onViewProfile={handleViewProfile}
+                onConnections={() => setShowConnections(true)}
                 currentAccount={currentAccount}
               />
             )}

@@ -1,27 +1,41 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import MobileTitle from "@/components/MobileTitle";
 import { useAppStore } from "@/lib/store";
 import { SearchIcon } from "@/components/icons";
 
 export default function ExplorePage() {
-  const { context } = useAppStore();
+  const { context, isHydrated } = useAppStore();
   const [hasError, setHasError] = useState(false);
   
-  // Hide scrollbar on mobile
+  // Prevent body scrolling on mobile for fixed layout
   useEffect(() => {
-    try {
-      document.body.classList.add('no-scrollbar');
-      document.documentElement.classList.add('no-scrollbar');
-      return () => {
-        document.body.classList.remove('no-scrollbar');
-        document.documentElement.classList.remove('no-scrollbar');
-      };
-    } catch (error) {
-      console.error('Error in explore page useEffect:', error);
-      setHasError(true);
-    }
+    // Prevent scrolling on mobile
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    
+    return () => {
+      // Restore scrolling when leaving page
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
   }, []);
+
+  // Loading state while store hydrates
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Error boundary fallback
   if (hasError) {
@@ -70,7 +84,14 @@ export default function ExplorePage() {
 
   try {
     return (
-    <div className="min-h-screen bg-white overflow-x-hidden no-scrollbar">
+    <div 
+      className="h-screen bg-white overflow-hidden" 
+      style={{ 
+        height: '100dvh',
+        touchAction: 'none',
+        WebkitOverflowScrolling: 'touch'
+      }}
+    >
       <MobileTitle 
         title="Explore" 
         action={
@@ -83,9 +104,12 @@ export default function ExplorePage() {
         }
       />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 no-scrollbar pt-[120px] lg:pt-6">
+      <div 
+        className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-[120px] lg:pt-6 flex flex-col"
+        style={{ height: '100%', minHeight: '0' }}
+      >
         {/* Desktop title with right-aligned search icon */}
-        <div className="hidden lg:block mb-8">
+        <div className="hidden lg:block mb-4 lg:mb-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-900">Explore</h1>
             <button
@@ -97,50 +121,50 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        {/* (Removed full-width search bar per spec; icon buttons above) */}
-
-        {/* Simple Location Filter */}
-        <div className="mb-6 lg:mb-8">
-          <div className="rounded-2xl border border-neutral-200 bg-white p-4 lg:p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-lg">📍</span>
-                <span className="text-base font-semibold text-neutral-900">Adelaide</span>
+        {/* Location Filter - matches ProfileStrip styling */}
+        <div className="mb-4 lg:mb-6">
+          <div className="max-w-lg mx-auto lg:max-w-xl">
+            <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">📍</span>
+                  <span className="text-base font-semibold text-neutral-900">Adelaide</span>
+                </div>
+                <span className="text-sm text-neutral-500">Anytime</span>
               </div>
-              <span className="text-sm text-neutral-500">Anytime</span>
             </div>
           </div>
         </div>
 
-        {/* Categories Section - Mobile 2x6 layout */}
-        <div className="mb-6">
-          <h2 className="hidden md:block text-xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8 text-center">Explore by category</h2>
+        {/* Categories Section - Mobile optimized layout */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <h2 className="hidden sm:block text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6 text-center">Explore by category</h2>
           
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6">
+          <div className="flex-1 grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 content-start">
             {categories.map((category, index) => {
               // For business categories, center the last item (Open Invitations) if it's alone
               const isLastItem = index === categories.length - 1;
               const isBusinessMode = context.type === "business";
-              const shouldCenter = isBusinessMode && isLastItem && categories.length % 2 === 1;
+              const shouldCenter = isBusinessMode && isLastItem && categories.length % 3 === 1;
               
               return (
                 <button
                   key={category.title}
                   className={`
-                    rounded-2xl border border-neutral-200 bg-white p-4 lg:p-6 shadow-sm
+                    rounded-2xl border border-neutral-200 bg-white shadow-sm
                     hover:shadow-md transition-shadow duration-200
                     focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1
-                    h-28 lg:h-36 xl:h-40
+                    aspect-square w-full
                     ${category.subtitle ? 'opacity-60 cursor-not-allowed' : ''}
-                    ${shouldCenter ? 'col-span-2 mx-auto max-w-xs' : ''}
+                    ${shouldCenter ? 'col-span-3 mx-auto max-w-xs' : ''}
                   `}
                   disabled={!!category.subtitle}
                 >
-                  <div className="flex flex-col items-center justify-center h-full gap-2 lg:gap-3">
-                    <div className="text-2xl lg:text-4xl xl:text-5xl">
+                  <div className="flex flex-col items-center justify-center h-full p-3 sm:p-4 lg:p-6 gap-1 sm:gap-2 lg:gap-3">
+                    <div className="text-2xl sm:text-3xl lg:text-5xl xl:text-6xl">
                       {category.icon}
                     </div>
-                    <span className="text-xs lg:text-sm font-medium text-neutral-900 text-center leading-tight">
+                    <span className="text-xs sm:text-xs lg:text-sm font-medium text-neutral-900 text-center leading-tight">
                       {category.title}
                     </span>
                     {category.subtitle && (

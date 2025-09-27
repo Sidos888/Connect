@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
 import { LogOut, Trash2, ChevronRightIcon, Users } from "lucide-react";
+import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
 import { supabase as supabaseClient } from "@/lib/supabaseClient";
@@ -25,7 +26,7 @@ export default function Page() {
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'profile' | 'edit-profile'>('menu');
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'profile' | 'edit-profile'>('menu');
   const [showAccountSwitcher, setShowAccountSwitcher] = React.useState(false);
 
   // Reset menu state when resetMenuState is called
@@ -658,14 +659,592 @@ export default function Page() {
     );
   };
 
+  // Connections Component
+  const ConnectionsView = () => {
+    const [activeTab, setActiveTab] = React.useState<'friends' | 'following'>('friends');
+
+    // Immediately add connections-mode class to prevent nav bar flash
+    React.useLayoutEffect(() => {
+      document.body.classList.add('connections-mode');
+      document.body.classList.add('no-scroll');
+      
+      return () => {
+        document.body.classList.remove('connections-mode');
+        document.body.classList.remove('no-scroll');
+      };
+    }, []);
+
+    // Hide bottom nav when in connections mode
+    React.useEffect(() => {
+      const hideBottomNav = () => {
+        // Try multiple selectors to find the bottom nav
+        const selectors = [
+          '[data-testid="mobile-bottom-nav"]',
+          '.tabbar-nav',
+          'nav[class*="bottom"]',
+          'nav[class*="fixed"]',
+          '.fixed.bottom-0'
+        ];
+        
+        let bottomNav = null;
+        for (const selector of selectors) {
+          bottomNav = document.querySelector(selector);
+          if (bottomNav) break;
+        }
+        
+        if (bottomNav) {
+          (bottomNav as HTMLElement).style.display = 'none !important';
+          (bottomNav as HTMLElement).style.visibility = 'hidden !important';
+          (bottomNav as HTMLElement).style.opacity = '0 !important';
+          (bottomNav as HTMLElement).style.transform = 'translateY(100%) !important';
+          (bottomNav as HTMLElement).style.position = 'fixed !important';
+          (bottomNav as HTMLElement).style.bottom = '-100px !important';
+          (bottomNav as HTMLElement).style.zIndex = '-1 !important';
+        }
+        
+        // Also try to hide by class
+        const navElements = document.querySelectorAll('nav');
+        navElements.forEach(nav => {
+          if (nav.className.includes('bottom') || nav.className.includes('fixed')) {
+            (nav as HTMLElement).style.display = 'none !important';
+            (nav as HTMLElement).style.visibility = 'hidden !important';
+          }
+        });
+        
+        // Add padding to prevent content from being hidden behind nav
+        document.body.style.paddingBottom = '0';
+        document.documentElement.style.setProperty('--bottom-nav-height', '0px');
+      };
+      
+      const showBottomNav = () => {
+        // Try multiple selectors to find the bottom nav
+        const selectors = [
+          '[data-testid="mobile-bottom-nav"]',
+          '.tabbar-nav',
+          'nav[class*="bottom"]',
+          'nav[class*="fixed"]',
+          '.fixed.bottom-0'
+        ];
+        
+        let bottomNav = null;
+        for (const selector of selectors) {
+          bottomNav = document.querySelector(selector);
+          if (bottomNav) break;
+        }
+        
+        if (bottomNav) {
+          (bottomNav as HTMLElement).style.display = '';
+          (bottomNav as HTMLElement).style.visibility = '';
+          (bottomNav as HTMLElement).style.opacity = '';
+          (bottomNav as HTMLElement).style.transform = '';
+          (bottomNav as HTMLElement).style.position = '';
+          (bottomNav as HTMLElement).style.bottom = '';
+          (bottomNav as HTMLElement).style.zIndex = '';
+        }
+        
+        // Restore nav elements
+        const navElements = document.querySelectorAll('nav');
+        navElements.forEach(nav => {
+          if (nav.className.includes('bottom') || nav.className.includes('fixed')) {
+            (nav as HTMLElement).style.display = '';
+            (nav as HTMLElement).style.visibility = '';
+          }
+        });
+        
+        document.body.style.paddingBottom = '';
+        document.documentElement.style.removeProperty('--bottom-nav-height');
+      };
+      
+      // Add a small delay to ensure DOM is ready
+      setTimeout(() => {
+        hideBottomNav();
+        // Also add class to body for CSS targeting
+        document.body.classList.add('connections-mode');
+        document.body.classList.add('no-scroll');
+      }, 100);
+      
+      return () => {
+        showBottomNav();
+        document.body.classList.remove('connections-mode');
+        document.body.classList.remove('no-scroll');
+      };
+    }, []);
+
+    // Sample data for demonstration
+    const friends = [
+      { id: 1, name: 'Amelia Jones', avatar: '👩‍💼' },
+      { id: 2, name: 'Duy Do', avatar: '👨‍💻' },
+      { id: 3, name: 'Ellie Mcdonald', avatar: '👩‍🎨' },
+      { id: 4, name: 'Megan Markle', avatar: '👩‍🦱' },
+      { id: 5, name: 'Lebron James', avatar: '🏀' },
+      { id: 6, name: 'Brittney Smith', avatar: '👩‍⚕️' },
+    ];
+
+    const following = [
+      { id: 7, name: 'John Doe', avatar: '👨‍🚀' },
+      { id: 8, name: 'Jane Smith', avatar: '👩‍🔬' },
+    ];
+
+    return (
+    <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-gray-50 flex flex-col" style={{ paddingBottom: '0' }}>
+      {/* Header */}
+      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <button
+            onClick={() => setCurrentView('menu')}
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Back to menu"
+          >
+            <span className="back-btn-circle">
+              <ChevronLeftIcon className="h-5 w-5" />
+            </span>
+          </button>
+          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Connections</h1>
+          <button
+            onClick={() => setCurrentView('add-person')}
+            className="absolute right-0 p-2 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Add person"
+          >
+            <svg className="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Person silhouette */}
+              <circle cx="12" cy="8" r="4" strokeWidth={2} />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+              {/* Plus sign in top right */}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 5h2m0 0h2m-2 0v2m0-2V3" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white px-4 pb-2">
+        <div className="flex justify-center space-x-8">
+          <button
+            onClick={() => setActiveTab('friends')}
+            className={`py-3 text-base font-medium border-b-2 transition-colors ${
+              activeTab === 'friends'
+                ? 'text-gray-900 border-gray-900'
+                : 'text-gray-500 border-transparent'
+            }`}
+          >
+            Friends
+          </button>
+          <button
+            onClick={() => setActiveTab('following')}
+            className={`py-3 text-base font-medium border-b-2 transition-colors ${
+              activeTab === 'following'
+                ? 'text-gray-900 border-gray-900'
+                : 'text-gray-500 border-transparent'
+            }`}
+          >
+            Following
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="space-y-3">
+          {(activeTab === 'friends' ? friends : following).map((person) => (
+            <div
+              key={person.id}
+              className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-center space-x-4"
+            >
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
+                {person.avatar}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-gray-900">{person.name}</h3>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+    );
+  };
+
+  // Add Person Component
+  const AddPersonView = () => {
+    const [activeTab, setActiveTab] = React.useState<'requests' | 'add-friends'>('add-friends');
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [searchResults, setSearchResults] = React.useState<ConnectionUser[]>([]);
+    const [suggestedFriends, setSuggestedFriends] = React.useState<ConnectionUser[]>([]);
+    const [pendingRequests, setPendingRequests] = React.useState<FriendRequest[]>([]);
+    const [loading, setLoading] = React.useState(false);
+    const [searchLoading, setSearchLoading] = React.useState(false);
+    const { account } = useAuth();
+
+    // Load initial data
+    React.useEffect(() => {
+      if (account?.id) {
+        loadSuggestedFriends();
+        loadPendingRequests();
+      }
+    }, [account?.id]);
+
+    // Search users with debounce
+    React.useEffect(() => {
+      const timeoutId = setTimeout(() => {
+        if (searchQuery.trim() && account?.id) {
+          searchUsers();
+        } else {
+          setSearchResults([]);
+        }
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }, [searchQuery, account?.id]);
+
+    const loadSuggestedFriends = async () => {
+      if (!account?.id) return;
+      
+      setLoading(true);
+      const { users, error } = await connectionsService.getSuggestedFriends(account.id);
+      if (!error) {
+        setSuggestedFriends(users);
+      }
+      setLoading(false);
+    };
+
+    const loadPendingRequests = async () => {
+      if (!account?.id) return;
+      
+      const { requests, error } = await connectionsService.getPendingRequests(account.id);
+      if (!error) {
+        setPendingRequests(requests);
+      }
+    };
+
+    const searchUsers = async () => {
+      if (!account?.id || !searchQuery.trim()) return;
+      
+      setSearchLoading(true);
+      const { users, error } = await connectionsService.searchUsers(searchQuery, account.id);
+      if (!error) {
+        setSearchResults(users);
+      }
+      setSearchLoading(false);
+    };
+
+    const sendFriendRequest = async (userId: string) => {
+      if (!account?.id) return;
+      
+      const { error } = await connectionsService.sendFriendRequest(account.id, userId);
+      if (!error) {
+        // Refresh suggested friends and search results
+        loadSuggestedFriends();
+        if (searchQuery.trim()) {
+          searchUsers();
+        }
+      }
+    };
+
+    const acceptFriendRequest = async (requestId: string) => {
+      const { error } = await connectionsService.acceptFriendRequest(requestId);
+      if (!error) {
+        loadPendingRequests();
+      }
+    };
+
+    const rejectFriendRequest = async (requestId: string) => {
+      const { error } = await connectionsService.rejectFriendRequest(requestId);
+      if (!error) {
+        loadPendingRequests();
+      }
+    };
+
+    // Hide bottom nav when in add-person mode
+    React.useLayoutEffect(() => {
+      document.body.classList.add('connections-mode');
+      document.body.classList.add('no-scroll');
+      
+      return () => {
+        document.body.classList.remove('connections-mode');
+        document.body.classList.remove('no-scroll');
+      };
+    }, []);
+
+    // Hide bottom nav when in add-person mode
+    React.useEffect(() => {
+      const hideBottomNav = () => {
+        // Try multiple selectors to find the bottom nav
+        const selectors = [
+          '[data-testid="mobile-bottom-nav"]',
+          '.tabbar-nav',
+          'nav[class*="bottom"]',
+          'nav[class*="fixed"]',
+          '.fixed.bottom-0'
+        ];
+        
+        let bottomNav = null;
+        for (const selector of selectors) {
+          bottomNav = document.querySelector(selector);
+          if (bottomNav) break;
+        }
+        
+        if (bottomNav) {
+          (bottomNav as HTMLElement).style.display = 'none';
+          (bottomNav as HTMLElement).style.visibility = 'hidden';
+        }
+      };
+      
+      const showBottomNav = () => {
+        const selectors = [
+          '[data-testid="mobile-bottom-nav"]',
+          '.tabbar-nav',
+          'nav[class*="bottom"]',
+          'nav[class*="fixed"]',
+          '.fixed.bottom-0'
+        ];
+        
+        selectors.forEach(selector => {
+          const nav = document.querySelector(selector);
+          if (nav) {
+            (nav as HTMLElement).style.display = '';
+            (nav as HTMLElement).style.visibility = '';
+          }
+        });
+        
+        document.body.style.paddingBottom = '';
+        document.documentElement.style.removeProperty('--bottom-nav-height');
+      };
+      
+      // Add a small delay to ensure DOM is ready
+      setTimeout(() => {
+        hideBottomNav();
+      }, 100);
+      
+      return () => {
+        showBottomNav();
+      };
+    }, []);
+
+    return (
+      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-gray-50 flex flex-col" style={{ paddingBottom: '0' }}>
+        {/* Header */}
+        <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+          <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+            <button
+              onClick={() => setCurrentView('connections')}
+              className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+              aria-label="Back to connections"
+            >
+              <span className="back-btn-circle">
+                <ChevronLeftIcon className="h-5 w-5" />
+              </span>
+            </button>
+            <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Find Friends</h1>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="bg-white px-4 pb-2">
+          <div className="flex justify-center space-x-8">
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`py-3 text-base font-medium border-b-2 transition-colors ${
+                activeTab === 'requests'
+                  ? 'text-gray-900 border-gray-900'
+                  : 'text-gray-500 border-transparent'
+              }`}
+            >
+              Requests
+            </button>
+            <button
+              onClick={() => setActiveTab('add-friends')}
+              className={`py-3 text-base font-medium border-b-2 transition-colors ${
+                activeTab === 'add-friends'
+                  ? 'text-gray-900 border-gray-900'
+                  : 'text-gray-500 border-transparent'
+              }`}
+            >
+              Add Friends
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="space-y-4">
+            {activeTab === 'requests' && (
+              <div className="space-y-4">
+                {pendingRequests.length > 0 ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Friend Requests</h3>
+                    {pendingRequests.map((request) => (
+                      <div key={request.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                              {request.sender?.profile_pic ? (
+                                <img src={request.sender.profile_pic} alt={request.sender.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-gray-500 text-lg font-medium">
+                                  {request.sender?.name?.charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900">{request.sender?.name}</h4>
+                                  <p className="text-xs text-gray-400">
+                                    {new Date(request.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => rejectFriendRequest(request.id)}
+                              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                            >
+                              Decline
+                            </button>
+                            <button 
+                              onClick={() => acceptFriendRequest(request.id)}
+                              className="px-3 py-1 text-sm bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+                            >
+                              Accept
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📨</div>
+                    <p className="text-gray-500 text-sm">No pending requests</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'add-friends' && (
+              <div className="space-y-4">
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search for people by name..."
+                        className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    {searchLoading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Search Results */}
+                  {searchQuery.trim() && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-900">Search Results</h3>
+                      {searchResults.length > 0 ? (
+                        <div className="space-y-2">
+                          {searchResults.map((user) => (
+                            <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                  {user.profile_pic ? (
+                                    <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-gray-500 text-sm font-medium">
+                                      {user.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div>
+                                    <h4 className="font-medium text-gray-900">{user.name}</h4>
+                                </div>
+                              </div>
+                              <button 
+                                onClick={() => sendFriendRequest(user.id)}
+                                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : !searchLoading ? (
+                        <div className="text-center py-4">
+                          <p className="text-gray-500 text-sm">No users found</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+
+                {/* Suggested Friends Section */}
+                {!searchQuery.trim() && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Suggested Friends</h3>
+                    {loading ? (
+                      <div className="text-center py-4">
+                        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto"></div>
+                        <p className="text-gray-500 text-sm mt-2">Loading suggestions...</p>
+                      </div>
+                    ) : suggestedFriends.length > 0 ? (
+                      <div className="space-y-2">
+                        {suggestedFriends.slice(0, 5).map((user) => (
+                          <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                {user.profile_pic ? (
+                                  <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-gray-500 text-sm font-medium">
+                                    {user.name.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <div>
+                                    <h4 className="font-medium text-gray-900">{user.name}</h4>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => sendFriendRequest(user.id)}
+                              className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-gray-500 text-sm">No suggested friends at the moment</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <ProtectedRoute
-      title={currentView === 'menu' ? "Menu" : "Settings"}
+      title={currentView === 'menu' ? "Menu" : currentView === 'connections' ? "Connections" : currentView === 'add-person' ? "Find Friends" : "Settings"}
       description="Log in / sign up to access your account settings and preferences"
       buttonText="Log in"
     >
       {currentView === 'settings' ? (
         <SettingsView />
+      ) : currentView === 'connections' ? (
+        <ConnectionsView />
+      ) : currentView === 'add-person' ? (
+        <AddPersonView />
       ) : currentView === 'profile' ? (
         <ProfileView />
       ) : currentView === 'edit-profile' ? (
@@ -748,7 +1327,7 @@ export default function Page() {
                 [
                   { title: "Bookings", icon: "📅", href: "/business/bookings" },
                   { title: "Financials", icon: "💰", href: "/business/financials" },
-                  { title: "Connections", icon: "👥", href: "/business/connections" },
+                  { title: "Connections", icon: "👥", onClick: () => setCurrentView('connections') },
                   { title: "Settings", icon: "⚙️", onClick: () => setCurrentView('settings') },
                 ] :
                 // Personal account menu items
@@ -756,7 +1335,7 @@ export default function Page() {
                   { title: "My Gallery", icon: "📷", href: "/gallery" },
                   { title: "Achievements", icon: "🏆", href: "/achievements" },
                   { title: "My Bookings", icon: "📅", href: "/my-life" },
-                  { title: "Connections", icon: "👥", href: "/connections" },
+                  { title: "Connections", icon: "👥", onClick: () => setCurrentView('connections') },
                   { title: "Saved", icon: "🔖", href: "/saved" },
                   { title: "Settings", icon: "⚙️", onClick: () => setCurrentView('settings') },
                 ]

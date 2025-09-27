@@ -202,10 +202,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { data: emailLink, error: emailLinkErr } = await supabase!
             .from('account_identities')
-            .select(`account_id, created_at, accounts!inner(*)`)
+            .select(`account_id, account_identities.created_at, accounts!inner(*)`)
             .eq('method', 'email')
             .eq('identifier', email)
-            .order('created_at', { ascending: false })
+            .order('account_identities.created_at', { ascending: false })
             .limit(1)
             .single();
           
@@ -233,10 +233,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('📱 NewAuthContext: Trying phone identity linking…', phone);
         const { data: phoneLink, error: phoneLinkErr } = await supabase!
           .from('account_identities')
-          .select(`account_id, created_at, accounts!inner(*)`)
+          .select(`account_id, account_identities.created_at, accounts!inner(*)`)
           .eq('method', 'phone')
           .eq('identifier', phone)
-          .order('created_at', { ascending: false })
+          .order('account_identities.created_at', { ascending: false })
           .limit(1)
           .single();
         if (!phoneLinkErr && phoneLink?.accounts) {
@@ -252,9 +252,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: identityData, error: identityError } = await supabase!
           .from('account_identities')
-          .select(`account_id, created_at, accounts!inner(*)`)
+          .select(`account_id, account_identities.created_at, accounts!inner(*)`)
           .eq('auth_user_id', authUserId)
-          .order('created_at', { ascending: false })
+          .order('account_identities.created_at', { ascending: false })
           .limit(1)
           .single();
         if (!identityError && identityData?.accounts) {
@@ -1021,16 +1021,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccount(null);
       setLoading(false);
       
-      // Then sign out from Supabase
-        await supabase.auth.signOut();
+      // Clear all storage immediately
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+      
+      // Try Supabase signout but don't wait for it
+      supabase.auth.signOut().catch(err => {
+        console.log('Supabase signout error (ignoring):', err);
+      });
       
       console.log('✅ NewAuthContext: Sign out completed successfully');
     } catch (error) {
       console.error('❌ NewAuthContext: Sign out error:', error);
-      // Even if Supabase sign out fails, clear local state
+      // Even if there's an error, clear everything
       setUser(null);
       setAccount(null);
       setLoading(false);
+      
+      // Clear all storage even on error
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
     }
   };
 

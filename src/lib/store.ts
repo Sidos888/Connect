@@ -97,7 +97,8 @@ export const useAppStore = create<FullStore>((set, get) => ({
 
   clearAll: () => {
     set({ personalProfile: null, businesses: [], context: { type: "personal" }, conversations: [] });
-    saveToLocalStorage({ personalProfile: null, businesses: [], context: { type: "personal" }, conversations: [] });
+    localStorage.removeItem('connect-store');
+    sessionStorage.clear();
   },
 
   resetMenuState: () => {
