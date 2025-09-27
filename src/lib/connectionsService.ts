@@ -109,6 +109,20 @@ export class ConnectionsService {
     try {
       console.log('ConnectionsService: Sending friend request from', senderId, 'to', receiverId);
       
+      // First check if users are already connected
+      const { connected } = await this.areConnected(senderId, receiverId);
+      if (connected) {
+        console.log('Users are already connected');
+        return { error: new Error('Users are already friends') };
+      }
+
+      // Check if a pending request already exists
+      const { exists } = await this.hasPendingRequest(senderId, receiverId);
+      if (exists) {
+        console.log('Friend request already exists');
+        return { error: new Error('Friend request already sent') };
+      }
+      
       const { data, error } = await this.supabase
         .from('friend_requests')
         .insert({
@@ -288,6 +302,69 @@ export class ConnectionsService {
     } catch (error) {
       console.error('Error in hasPendingRequest:', error);
       return { exists: false, error: error as Error };
+    }
+  }
+
+  // Get connection status between two users
+  async getConnectionStatus(currentUserId: string, otherUserId: string): Promise<{ status: 'none' | 'pending_sent' | 'pending_received' | 'connected'; error: Error | null }> {
+    try {
+      console.log('Getting connection status between:', currentUserId, 'and', otherUserId);
+      
+      // Check if already connected
+      const { connected, error: connectionError } = await this.areConnected(currentUserId, otherUserId);
+      if (connectionError) {
+        console.error('Error checking connection:', connectionError);
+        return { status: 'none', error: connectionError };
+      }
+
+      if (connected) {
+        console.log('Users are already connected');
+        return { status: 'connected', error: null };
+      }
+
+      // Check for pending request from current user to other user
+      const { data: sentRequestData, error: sentRequestError } = await this.supabase
+        .from('friend_requests')
+        .select('id')
+        .eq('sender_id', currentUserId)
+        .eq('receiver_id', otherUserId)
+        .eq('status', 'pending')
+        .single();
+
+      if (sentRequestError && sentRequestError.code !== 'PGRST116') {
+        console.error('Error checking sent request:', sentRequestError);
+        return { status: 'none', error: sentRequestError };
+      }
+
+      if (sentRequestData) {
+        console.log('Friend request already sent');
+        return { status: 'pending_sent', error: null };
+      }
+
+      // Check for pending request from other user to current user
+      const { data: receivedRequestData, error: receivedRequestError } = await this.supabase
+        .from('friend_requests')
+        .select('id')
+        .eq('sender_id', otherUserId)
+        .eq('receiver_id', currentUserId)
+        .eq('status', 'pending')
+        .single();
+
+      if (receivedRequestError && receivedRequestError.code !== 'PGRST116') {
+        console.error('Error checking received request:', receivedRequestError);
+        return { status: 'none', error: receivedRequestError };
+      }
+
+      if (receivedRequestData) {
+        console.log('Friend request received from user');
+        return { status: 'pending_received', error: null };
+      }
+
+      console.log('No existing connection or request');
+      return { status: 'none', error: null };
+    } catch (error) {
+      console.error('Error in getConnectionStatus:', error);
+      return { status: 'none', error: error as Error };
     }
   }
 }

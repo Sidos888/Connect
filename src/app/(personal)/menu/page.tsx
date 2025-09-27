@@ -874,6 +874,7 @@ export default function Page() {
     const [pendingRequests, setPendingRequests] = React.useState<FriendRequest[]>([]);
     const [loading, setLoading] = React.useState(false);
     const [searchLoading, setSearchLoading] = React.useState(false);
+    const [userConnectionStatuses, setUserConnectionStatuses] = React.useState<Record<string, 'none' | 'pending_sent' | 'pending_received' | 'connected'>>({});
     const { account } = useAuth();
 
     // Load initial data
@@ -904,6 +905,8 @@ export default function Page() {
       const { users, error } = await connectionsService.getSuggestedFriends(account.id);
       if (!error) {
         setSuggestedFriends(users);
+        // Load connection statuses for suggested friends
+        loadConnectionStatuses(users);
       }
       setLoading(false);
     };
@@ -924,6 +927,8 @@ export default function Page() {
       const { users, error } = await connectionsService.searchUsers(searchQuery, account.id);
       if (!error) {
         setSearchResults(users);
+        // Load connection statuses for search results
+        loadConnectionStatuses(users);
       }
       setSearchLoading(false);
     };
@@ -933,11 +938,59 @@ export default function Page() {
       
       const { error } = await connectionsService.sendFriendRequest(account.id, userId);
       if (!error) {
+        // Update connection status for this user
+        setUserConnectionStatuses(prev => ({
+          ...prev,
+          [userId]: 'pending_sent'
+        }));
         // Refresh suggested friends and search results
         loadSuggestedFriends();
         if (searchQuery.trim()) {
           searchUsers();
         }
+      } else {
+        // Show more user-friendly error messages
+        if (error.message.includes('already friends')) {
+          alert('You are already friends with this person');
+        } else if (error.message.includes('already sent')) {
+          alert('Friend request already sent');
+        } else {
+          alert('Failed to send friend request: ' + error.message);
+        }
+      }
+    };
+
+    // Load connection status for users
+    const loadConnectionStatuses = async (users: ConnectionUser[]) => {
+      if (!account?.id) return;
+      
+      const statusPromises = users.map(async (user) => {
+        const { status } = await connectionsService.getConnectionStatus(account.id, user.id);
+        return { userId: user.id, status };
+      });
+      
+      const statuses = await Promise.all(statusPromises);
+      const statusMap: Record<string, 'none' | 'pending_sent' | 'pending_received' | 'connected'> = {};
+      statuses.forEach(({ userId, status }) => {
+        statusMap[userId] = status;
+      });
+      
+      setUserConnectionStatuses(prev => ({ ...prev, ...statusMap }));
+    };
+
+    // Get button text and styling based on connection status
+    const getButtonConfig = (userId: string) => {
+      const status = userConnectionStatuses[userId] || 'none';
+      
+      switch (status) {
+        case 'connected':
+          return { text: 'Friends', className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium cursor-not-allowed' };
+        case 'pending_sent':
+          return { text: 'Pending', className: 'px-4 py-2 bg-gray-400 text-white rounded-lg text-sm font-medium cursor-not-allowed' };
+        case 'pending_received':
+          return { text: 'Accept', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
+        default:
+          return { text: 'Add', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
       }
     };
 
@@ -1165,12 +1218,24 @@ export default function Page() {
                                     <h4 className="font-medium text-gray-900">{user.name}</h4>
                                 </div>
                               </div>
-                              <button 
-                                onClick={() => sendFriendRequest(user.id)}
-                                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
-                              >
-                                Add
-                              </button>
+                              {(() => {
+                                const buttonConfig = getButtonConfig(user.id);
+                                return (
+                                  <button 
+                                    onClick={() => {
+                                      if (buttonConfig.text === 'Add') {
+                                        sendFriendRequest(user.id);
+                                      } else if (buttonConfig.text === 'Accept') {
+                                        // Handle accept logic if needed
+                                      }
+                                    }}
+                                    className={buttonConfig.className}
+                                    disabled={buttonConfig.text === 'Friends' || buttonConfig.text === 'Pending'}
+                                  >
+                                    {buttonConfig.text}
+                                  </button>
+                                );
+                              })()}
                             </div>
                           ))}
                         </div>
@@ -1209,12 +1274,24 @@ export default function Page() {
                                     <h4 className="font-medium text-gray-900">{user.name}</h4>
                               </div>
                             </div>
-                            <button 
-                              onClick={() => sendFriendRequest(user.id)}
-                              className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
-                            >
-                              Add
-                            </button>
+                            {(() => {
+                              const buttonConfig = getButtonConfig(user.id);
+                              return (
+                                <button 
+                                  onClick={() => {
+                                    if (buttonConfig.text === 'Add') {
+                                      sendFriendRequest(user.id);
+                                    } else if (buttonConfig.text === 'Accept') {
+                                      // Handle accept logic if needed
+                                    }
+                                  }}
+                                  className={buttonConfig.className}
+                                  disabled={buttonConfig.text === 'Friends' || buttonConfig.text === 'Pending'}
+                                >
+                                  {buttonConfig.text}
+                                </button>
+                              );
+                            })()}
                           </div>
                         ))}
                       </div>
