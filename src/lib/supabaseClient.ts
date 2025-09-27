@@ -48,14 +48,18 @@ export function getSupabaseClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   console.log('Supabase client creation:', { url: url ? 'Set' : 'Missing', anon: anon ? 'Set' : 'Missing' });
+  
+  // Fallback to Connect-Staging project if env vars are missing
+  const fallbackUrl = url || 'https://rxlqtyfhsocxnsnnnlwl.supabase.co';
+  const fallbackAnon = anon || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4bHF0eWZoc29jeG5zbm5ubHdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDE0MzEsImV4cCI6MjA3MjM3NzQzMX0.oMDgv8sj7GvoDsSw6RVt0XEezQTQj2l609JJBg43eTg';
+  
   if (!url || !anon) {
-    console.error('Missing Supabase environment variables');
-    return null;
+    console.warn('Missing Supabase environment variables, using Connect-Staging project fallback');
   }
   
   const storage = createMobileCompatibleStorage();
   
-  client = createClient(url, anon, {
+  client = createClient(fallbackUrl, fallbackAnon, {
     auth: {
       persistSession: true,
       storage: storage,
