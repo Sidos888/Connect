@@ -3,6 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
+import { useModal } from "@/lib/modalContext";
 import TopNavigation from "./TopNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -14,9 +15,11 @@ interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
+  const { isAnyModalOpen } = useModal();
   const isChatPage = pathname.startsWith('/chat');
   const isSettingsPage = pathname === '/settings';
   const isMenuPage = pathname === '/menu';
+  const isOnboardingPage = pathname === '/onboarding';
   
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test'];
@@ -59,7 +62,7 @@ export default function AppShell({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && (
+        {!isSettingsPage && !isOnboardingPage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -83,7 +86,7 @@ export default function AppShell({ children }: AppShellProps) {
           </ProtectedRoute>
         </div>
         {/* Mobile: Bottom Navigation */}
-        {!isSettingsPage && (
+        {!isSettingsPage && !isOnboardingPage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -107,7 +110,7 @@ export default function AppShell({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && (
+      {!isSettingsPage && !isOnboardingPage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>
