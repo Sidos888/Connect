@@ -53,21 +53,34 @@ function ConnectionsView({
   onAddPerson: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
+  const [connections, setConnections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { account } = useAuth();
 
-  // Sample data for demonstration
-  const friends = [
-    { id: 1, name: 'Amelia Jones', avatar: '👩‍💼' },
-    { id: 2, name: 'Duy Do', avatar: '👨‍💻' },
-    { id: 3, name: 'Ellie Mcdonald', avatar: '👩‍🎨' },
-    { id: 4, name: 'Megan Markle', avatar: '👩‍🦱' },
-    { id: 5, name: 'Lebron James', avatar: '🏀' },
-    { id: 6, name: 'Brittney Smith', avatar: '👩‍⚕️' },
-  ];
+  // Load real connections data
+  useEffect(() => {
+    const loadConnections = async () => {
+      if (!account?.id) {
+        setLoading(false);
+        return;
+      }
 
-  const following = [
-    { id: 7, name: 'John Doe', avatar: '👨‍🚀' },
-    { id: 8, name: 'Jane Smith', avatar: '👩‍🔬' },
-  ];
+      try {
+        const { connections: userConnections, error } = await connectionsService.getConnections(account.id);
+        if (!error) {
+          setConnections(userConnections || []);
+        } else {
+          console.error('Error loading connections:', error);
+        }
+      } catch (error) {
+        console.error('Error loading connections:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConnections();
+  }, [account?.id]);
 
   return (
     <SimpleCard>
@@ -128,19 +141,44 @@ function ConnectionsView({
         {/* Connections content */}
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-3">
-            {(activeTab === 'friends' ? friends : following).map((person) => (
-              <div
-                key={person.id}
-                className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex items-center space-x-3"
-              >
-                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
-                  {person.avatar}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-gray-900">{person.name}</h3>
-                </div>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-500 text-sm">Loading connections...</p>
               </div>
-            ))}
+            ) : connections.length > 0 ? (
+              connections.map((connection) => {
+                // Get the friend (not the current user) from the connection
+                const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+                if (!friend) return null;
+
+                return (
+                  <div
+                    key={connection.id}
+                    className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex items-center space-x-3"
+                  >
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                      {friend.profile_pic ? (
+                        <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-gray-500 text-sm font-medium">
+                          {friend.name?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900">{friend.name}</h3>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-4">👥</div>
+                <p className="text-gray-500 text-sm">No connections yet</p>
+                <p className="text-gray-400 text-xs mt-1">Start adding friends to see them here</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -416,23 +454,24 @@ function AddPersonView({
                             </div>
                                 <div>
                                   <h4 className="font-medium text-gray-900">{request.sender?.name}</h4>
-                                  <p className="text-xs text-gray-400">
-                                    {new Date(request.created_at).toLocaleDateString()}
-                                  </p>
                                 </div>
                           </div>
                           <div className="flex space-x-2">
                             <button 
                               onClick={() => rejectFriendRequest(request.id)}
-                              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-600 border border-gray-300 rounded-lg hover:border-red-300 transition-colors"
                             >
-                              Decline
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
                             </button>
                             <button 
                               onClick={() => acceptFriendRequest(request.id)}
-                              className="px-3 py-1 text-sm bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+                              className="w-8 h-8 flex items-center justify-center bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
                             >
-                              Accept
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
                             </button>
                           </div>
                         </div>
@@ -477,7 +516,9 @@ function AddPersonView({
                         <h3 className="text-lg font-semibold text-gray-900">Search Results</h3>
                         {searchResults.length > 0 ? (
                           <div className="space-y-2">
-                            {searchResults.map((user) => (
+                            {searchResults
+                              .filter(user => userConnectionStatuses[user.id] !== 'connected')
+                              .map((user) => (
                               <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
                                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
@@ -494,6 +535,10 @@ function AddPersonView({
                                   </div>
                                 </div>
                                 {(() => {
+                                  const status = userConnectionStatuses[user.id] || 'none';
+                                  if (status === 'connected') {
+                                    return null; // Don't show button for friends
+                                  }
                                   const buttonConfig = getButtonConfig(user.id);
                                   return (
                                     <button 
@@ -507,7 +552,6 @@ function AddPersonView({
                                         }
                                       }}
                                       className={buttonConfig.className}
-                                      disabled={buttonConfig.text === 'Friends'}
                                     >
                                       {buttonConfig.text === 'Added' && (
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -540,7 +584,10 @@ function AddPersonView({
                       </div>
                     ) : suggestedFriends.length > 0 ? (
                       <div className="space-y-2">
-                        {suggestedFriends.slice(0, 5).map((user) => (
+                        {suggestedFriends
+                          .filter(user => userConnectionStatuses[user.id] !== 'connected')
+                          .slice(0, 5)
+                          .map((user) => (
                           <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
                             <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
@@ -557,6 +604,10 @@ function AddPersonView({
                               </div>
                             </div>
                             {(() => {
+                              const status = userConnectionStatuses[user.id] || 'none';
+                              if (status === 'connected') {
+                                return null; // Don't show button for friends
+                              }
                               const buttonConfig = getButtonConfig(user.id);
                               return (
                                 <button 
@@ -570,7 +621,6 @@ function AddPersonView({
                                     }
                                   }}
                                   className={buttonConfig.className}
-                                  disabled={buttonConfig.text === 'Friends'}
                                 >
                                   {buttonConfig.text === 'Added' && (
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

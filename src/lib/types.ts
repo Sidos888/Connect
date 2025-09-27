@@ -40,6 +40,7 @@ export type AppActions = {
   switchToBusiness: (businessId: UUID) => void;
   clearAll: () => void;
   setAccountSwitching: (loading: boolean) => void;
+  resetMenuState: () => void;
 };
 
 export type AppStore = AppState & AppActions;
