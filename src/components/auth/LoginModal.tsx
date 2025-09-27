@@ -151,6 +151,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError('');
     
     try {
+      // Clear existing session to force fresh OTP verification
+      console.log('LoginModal: Clearing existing session before OTP request');
+      await signOut();
+      
       const fullPhoneNumber = normalizePhoneForBackend(phoneNumber);
       console.log('LoginModal: Normalized phone number:', { input: phoneNumber, normalized: fullPhoneNumber });
       const { error } = await sendPhoneVerification(fullPhoneNumber);
@@ -179,6 +183,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError('');
     
     try {
+      // Clear existing session to force fresh OTP verification
+      console.log('LoginModal: Clearing existing session before OTP request');
+      await signOut();
+      
       const { error } = await sendEmailVerification(email);
       
       if (error) {

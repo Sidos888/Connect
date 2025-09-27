@@ -292,22 +292,27 @@ function AddPersonView({
 
   // Cancel friend request
   const cancelFriendRequest = async (userId: string) => {
-    if (!account?.id) return;
+    console.log('🔄 ProfileMenu: Cancel friend request clicked for user:', userId);
+    console.log('🔄 ProfileMenu: Current account:', account);
     
+    if (!account?.id) {
+      console.log('🔄 ProfileMenu: No account ID available');
+      return;
+    }
+    
+    console.log('🔄 ProfileMenu: Calling connectionsService.cancelFriendRequest...');
     const { error } = await connectionsService.cancelFriendRequest(account.id, userId);
+    
     if (!error) {
+      console.log('🔄 ProfileMenu: Friend request cancelled successfully');
       // Update connection status for this user back to none
       setUserConnectionStatuses(prev => ({
         ...prev,
         [userId]: 'none'
       }));
-      // Refresh suggested friends and search results
-      loadSuggestedFriends();
-      if (searchQuery.trim()) {
-        searchUsers();
-      }
+      console.log('🔄 ProfileMenu: Status updated to none for user:', userId);
     } else {
-      console.error('Error cancelling friend request:', error);
+      console.error('🔄 ProfileMenu: Error cancelling friend request:', error);
       alert('Failed to cancel friend request: ' + error.message);
     }
   };

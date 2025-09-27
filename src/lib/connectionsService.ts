@@ -192,24 +192,33 @@ export class ConnectionsService {
   // Cancel friend request (delete pending request)
   async cancelFriendRequest(senderId: string, receiverId: string): Promise<{ error: Error | null }> {
     try {
-      console.log('Cancelling friend request from', senderId, 'to', receiverId);
+      console.log('🔍 ConnectionsService: Cancelling friend request from', senderId, 'to', receiverId);
       
-      const { error } = await this.supabase
+      const { data, error } = await this.supabase
         .from('friend_requests')
         .delete()
         .eq('sender_id', senderId)
         .eq('receiver_id', receiverId)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .select(); // Add .select() to get deleted data for debugging
+
+      console.log('🔍 ConnectionsService: Delete operation result:', { data, error });
 
       if (error) {
-        console.error('Error cancelling friend request:', error);
+        console.error('🔍 ConnectionsService: Error cancelling friend request:', error);
+        console.error('🔍 ConnectionsService: Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         return { error };
       }
 
-      console.log('Friend request cancelled successfully');
+      console.log('🔍 ConnectionsService: Friend request cancelled successfully, deleted records:', data);
       return { error: null };
     } catch (error) {
-      console.error('Error in cancelFriendRequest:', error);
+      console.error('🔍 ConnectionsService: Error in cancelFriendRequest:', error);
       return { error: error as Error };
     }
   }

@@ -276,8 +276,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (emailError) {
           console.error('📧 NewAuthContext: Email identity lookup failed:', emailError);
+          console.log('⚠️ NewAuthContext: No email identity mapping:', emailError?.message);
         }
-        console.log('⚠️ NewAuthContext: No email identity mapping:', emailLinkErr?.message);
       }
 
       // Strategy 2: identifier-first (phone)
@@ -766,19 +766,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Legacy compatibility method for components that expect this
   const refreshAuthState = async () => {
-    if (!supabase) return;
+    console.log('🔄 AuthContext: refreshAuthState called');
+    if (!supabase) {
+      console.log('🔄 AuthContext: No supabase client available');
+      return;
+    }
     
     try {
+      console.log('🔄 AuthContext: Getting current session...');
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔄 AuthContext: Session check result:', { hasSession: !!session, userId: session?.user?.id });
+      
       if (session?.user) {
+        console.log('🔄 AuthContext: User found in session, loading account for:', session.user.id);
         setUser(session.user);
         await loadAccountForUser(session.user.id);
+        console.log('🔄 AuthContext: Account loading completed');
       } else {
+        console.log('🔄 AuthContext: No user in session, clearing account');
         setUser(null);
         setAccount(null);
       }
     } catch (error) {
-      console.error('❌ Error refreshing auth state:', error);
+      console.error('🔄 AuthContext: Error refreshing auth state:', error);
     }
   };
 

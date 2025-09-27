@@ -546,6 +546,9 @@ export default function AccountCheckModal({
         setPersonalProfile(profileData);
       }
       
+      console.log('AccountCheckModal: 🚯 NUCLEAR SIGN IN: Refreshing auth state to trigger account loading');
+      await refreshAuthState();
+      
       console.log('AccountCheckModal: 🚯 NUCLEAR SIGN IN: Immediate redirect to /my-life');
       
       // NUCLEAR SIGN IN: Skip all complex validation, just redirect immediately
