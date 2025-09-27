@@ -22,6 +22,23 @@
   transition: none !important;
 }
 
+/* Force hide bottom nav in connections mode - immediate effect */
+.connections-mode nav[data-testid="mobile-bottom-nav"],
+.connections-mode .tabbar-nav,
+.connections-mode nav[class*="bottom"],
+.connections-mode nav[class*="fixed"],
+.connections-mode div[class*="bottom-"],
+.connections-mode div[class*="fixed bottom"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  transform: translateY(100%) !important;
+  position: fixed !important;
+  bottom: -100px !important;
+  z-index: -1 !important;
+  transition: none !important;
+}
+
 /* Mobile safe area support */
 .pt-safe-top {
   padding-top: env(safe-area-inset-top, 20px);
