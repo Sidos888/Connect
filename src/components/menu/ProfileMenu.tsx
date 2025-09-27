@@ -277,6 +277,28 @@ function AddPersonView({
     setUserConnectionStatuses(prev => ({ ...prev, ...statusMap }));
   };
 
+  // Cancel friend request
+  const cancelFriendRequest = async (userId: string) => {
+    if (!account?.id) return;
+    
+    const { error } = await connectionsService.cancelFriendRequest(account.id, userId);
+    if (!error) {
+      // Update connection status for this user back to none
+      setUserConnectionStatuses(prev => ({
+        ...prev,
+        [userId]: 'none'
+      }));
+      // Refresh suggested friends and search results
+      loadSuggestedFriends();
+      if (searchQuery.trim()) {
+        searchUsers();
+      }
+    } else {
+      console.error('Error cancelling friend request:', error);
+      alert('Failed to cancel friend request: ' + error.message);
+    }
+  };
+
   // Get button text and styling based on connection status
   const getButtonConfig = (userId: string) => {
     const status = userConnectionStatuses[userId] || 'none';
@@ -285,7 +307,7 @@ function AddPersonView({
       case 'connected':
         return { text: 'Friends', className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium cursor-not-allowed' };
       case 'pending_sent':
-        return { text: 'Pending', className: 'px-4 py-2 bg-gray-400 text-white rounded-lg text-sm font-medium cursor-not-allowed' };
+        return { text: 'Pending', className: 'px-4 py-2 bg-gray-400 text-white rounded-lg text-sm font-medium hover:bg-gray-500 transition-colors' };
       case 'pending_received':
         return { text: 'Accept', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
       default:
@@ -457,12 +479,14 @@ function AddPersonView({
                                       onClick={() => {
                                         if (buttonConfig.text === 'Add') {
                                           sendFriendRequest(user.id);
+                                        } else if (buttonConfig.text === 'Pending') {
+                                          cancelFriendRequest(user.id);
                                         } else if (buttonConfig.text === 'Accept') {
                                           // Handle accept logic if needed
                                         }
                                       }}
                                       className={buttonConfig.className}
-                                      disabled={buttonConfig.text === 'Friends' || buttonConfig.text === 'Pending'}
+                                      disabled={buttonConfig.text === 'Friends'}
                                     >
                                       {buttonConfig.text}
                                     </button>
@@ -513,12 +537,14 @@ function AddPersonView({
                                   onClick={() => {
                                     if (buttonConfig.text === 'Add') {
                                       sendFriendRequest(user.id);
+                                    } else if (buttonConfig.text === 'Pending') {
+                                      cancelFriendRequest(user.id);
                                     } else if (buttonConfig.text === 'Accept') {
                                       // Handle accept logic if needed
                                     }
                                   }}
                                   className={buttonConfig.className}
-                                  disabled={buttonConfig.text === 'Friends' || buttonConfig.text === 'Pending'}
+                                  disabled={buttonConfig.text === 'Friends'}
                                 >
                                   {buttonConfig.text}
                                 </button>

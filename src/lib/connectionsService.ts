@@ -187,6 +187,31 @@ export class ConnectionsService {
     }
   }
 
+  // Cancel friend request (delete pending request)
+  async cancelFriendRequest(senderId: string, receiverId: string): Promise<{ error: Error | null }> {
+    try {
+      console.log('Cancelling friend request from', senderId, 'to', receiverId);
+      
+      const { error } = await this.supabase
+        .from('friend_requests')
+        .delete()
+        .eq('sender_id', senderId)
+        .eq('receiver_id', receiverId)
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('Error cancelling friend request:', error);
+        return { error };
+      }
+
+      console.log('Friend request cancelled successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('Error in cancelFriendRequest:', error);
+      return { error: error as Error };
+    }
+  }
+
   // Get pending friend requests (received)
   async getPendingRequests(userId: string): Promise<{ requests: FriendRequest[]; error: Error | null }> {
     try {
