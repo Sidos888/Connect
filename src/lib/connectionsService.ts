@@ -35,7 +35,8 @@ export class ConnectionsService {
   // Search for users by name only
   async searchUsers(query: string, currentUserId: string): Promise<{ users: User[]; error: Error | null }> {
     try {
-      console.log('Searching users with query:', query, 'for user:', currentUserId);
+      console.log('🔍 ConnectionsService: Searching users with query:', query, 'for user:', currentUserId);
+      console.log('🔍 ConnectionsService: Supabase client available:', !!this.supabase);
       
       if (!query.trim()) {
         return { users: [], error: null };
@@ -73,7 +74,8 @@ export class ConnectionsService {
   // Get suggested friends (all users except current user)
   async getSuggestedFriends(currentUserId: string): Promise<{ users: User[]; error: Error | null }> {
     try {
-      console.log('Getting suggested friends for user:', currentUserId);
+      console.log('🔍 ConnectionsService: Getting suggested friends for user:', currentUserId);
+      console.log('🔍 ConnectionsService: Supabase client available:', !!this.supabase);
       
       // Build query - exclude current user only if we have a valid currentUserId
       let queryBuilder = this.supabase
