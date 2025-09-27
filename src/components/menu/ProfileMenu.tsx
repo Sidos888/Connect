@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/authContext";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X } from "lucide-react";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
+import FriendProfileModal from '@/components/FriendProfileModal';
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -47,13 +48,16 @@ function LoadingOverlay({ message }: { message: string }) {
 // Connections view
 function ConnectionsView({ 
   onBack,
-  onAddPerson
+  onAddPerson,
+  onFriendClick
 }: { 
   onBack: () => void;
   onAddPerson: () => void;
+  onFriendClick: (friend: ConnectionUser) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
-  const [connections, setConnections] = useState<any[]>([]);
+  const [peopleConnections, setPeopleConnections] = useState<any[]>([]);
+  const [businessConnections, setBusinessConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { account } = useAuth();
 
@@ -68,7 +72,19 @@ function ConnectionsView({
       try {
         const { connections: userConnections, error } = await connectionsService.getConnections(account.id);
         if (!error) {
-          setConnections(userConnections || []);
+          // For now, all accounts are treated as personal accounts (friends)
+          // TODO: Implement business accounts later
+          const people = userConnections || [];
+          const businesses: any[] = [];
+          
+          console.log('🔍 ConnectionsView: Separated connections:', {
+            people: people.length,
+            businesses: businesses.length,
+            total: userConnections?.length || 0
+          });
+          
+          setPeopleConnections(people);
+          setBusinessConnections(businesses);
         } else {
           console.error('Error loading connections:', error);
         }
@@ -146,42 +162,186 @@ function ConnectionsView({
                 <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-gray-500 text-sm">Loading connections...</p>
               </div>
-            ) : connections.length > 0 ? (
-              connections.map((connection) => {
-                // Get the friend (not the current user) from the connection
-                const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
-                if (!friend) return null;
+            ) : activeTab === 'friends' ? (
+              peopleConnections.length > 0 ? (
+                peopleConnections.map((connection) => {
+                  // Get the friend (not the current user) from the connection
+                  const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+                  if (!friend) return null;
 
-                return (
-                  <div
-                    key={connection.id}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex items-center space-x-3"
-                  >
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                      {friend.profile_pic ? (
-                        <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-gray-500 text-sm font-medium">
-                          {friend.name?.charAt(0).toUpperCase()}
-                        </span>
-                      )}
+                  return (
+                    <div
+                      key={connection.id}
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 py-6 relative min-h-[60px] cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => onFriendClick(friend)}
+                    >
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                        {friend.profile_pic ? (
+                          <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-gray-500 text-sm font-medium">
+                            {friend.name?.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="w-full text-center flex items-center justify-center h-full">
+                        <h3 className="text-sm font-semibold text-gray-900">{friend.name}</h3>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-gray-900">{friend.name}</h3>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">👥</div>
+                  <p className="text-gray-500 text-sm">No friends yet</p>
+                  <p className="text-gray-400 text-xs mt-1">Start adding friends to see them here</p>
+                </div>
+              )
             ) : (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">👥</div>
-                <p className="text-gray-500 text-sm">No connections yet</p>
-                <p className="text-gray-400 text-xs mt-1">Start adding friends to see them here</p>
-              </div>
+              businessConnections.length > 0 ? (
+                businessConnections.map((connection) => {
+                  // Get the business (not the current user) from the connection
+                  const business = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+                  if (!business) return null;
+
+                  return (
+                    <div
+                      key={connection.id}
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 py-6 relative min-h-[60px]"
+                    >
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                        {business.profile_pic ? (
+                          <img src={business.profile_pic} alt={business.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-gray-500 text-sm font-medium">
+                            {business.name?.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="w-full text-center flex items-center justify-center h-full">
+                        <h3 className="text-sm font-semibold text-gray-900">{business.name}</h3>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">🏢</div>
+                  <p className="text-gray-500 text-sm">No businesses followed yet</p>
+                  <p className="text-gray-400 text-xs mt-1">Start following businesses to see them here</p>
+                </div>
+              )
             )}
           </div>
         </div>
 
+      </div>
+    </SimpleCard>
+  );
+}
+
+// Friend Profile view
+function FriendProfileView({ 
+  friend,
+  onBack 
+}: { 
+  friend: ConnectionUser;
+  onBack: () => void; 
+}) {
+  const handleMessage = () => {
+    // TODO: Navigate to chat with this friend
+    console.log('Message friend:', friend.name);
+    onBack();
+  };
+
+  const handleShare = () => {
+    // TODO: Share friend's profile
+    console.log('Share friend profile:', friend.name);
+  };
+
+  return (
+    <SimpleCard>
+      <div className="flex flex-col h-full">
+        {/* Header with back button */}
+        <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <button
+            onClick={onBack}
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Back to connections"
+          >
+            <span className="back-btn-circle">
+              <ChevronLeft size={20} className="text-gray-700" />
+            </span>
+          </button>
+          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Profile</h2>
+          <div className="w-9" /> {/* Spacer for centering */}
+        </div>
+
+        {/* Profile Content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Profile Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="text-center">
+              {/* Profile Picture */}
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                  {friend.profile_pic ? (
+                    <img 
+                      src={friend.profile_pic} 
+                      alt={friend.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-gray-500 text-xl font-medium">
+                      {friend.name?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Name */}
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900">{friend.name}</h3>
+              </div>
+
+              {/* Bio */}
+              {friend.bio && (
+                <div className="mb-6">
+                  <p className="text-gray-700 text-sm leading-relaxed">{friend.bio}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons - Circular Card Style */}
+          <div className="flex space-x-6 justify-center">
+            {/* Message Button */}
+            <button
+              onClick={handleMessage}
+              className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
+            >
+              <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                <svg className="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <span className="text-xs font-medium text-gray-700">Message</span>
+            </button>
+
+            {/* Share Profile Button */}
+            <button
+              onClick={handleShare}
+              className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
+            >
+              <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                <svg className="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+              </div>
+              <span className="text-xs font-medium text-gray-700">Share</span>
+            </button>
+          </div>
+        </div>
       </div>
     </SimpleCard>
   );
@@ -205,18 +365,25 @@ function AddPersonView({
 
   // Load initial data
   useEffect(() => {
+    console.log('🔍 AddPersonView: Account state changed:', account ? { id: account.id, name: account.name } : null);
     if (account?.id) {
+      console.log('🔍 AddPersonView: Loading suggested friends and pending requests for account:', account.id);
       loadSuggestedFriends();
       loadPendingRequests();
+    } else {
+      console.log('🔍 AddPersonView: No account ID available, skipping data loading');
     }
   }, [account?.id]);
 
   // Search users with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+      console.log('🔍 AddPersonView: Search effect triggered with query:', searchQuery, 'account:', account?.id);
       if (searchQuery.trim() && account?.id) {
+        console.log('🔍 AddPersonView: Calling searchUsers with query:', searchQuery);
         searchUsers();
       } else {
+        console.log('🔍 AddPersonView: Clearing search results - no query or no account');
         setSearchResults([]);
       }
     }, 300);
@@ -254,14 +421,24 @@ function AddPersonView({
   };
 
   const searchUsers = async () => {
-    if (!account?.id || !searchQuery.trim()) return;
+    console.log('🔍 AddPersonView: searchUsers called with query:', searchQuery, 'account:', account?.id);
+    if (!account?.id || !searchQuery.trim()) {
+      console.log('🔍 AddPersonView: searchUsers early return - no account or no query');
+      return;
+    }
     
+    console.log('🔍 AddPersonView: Calling connectionsService.searchUsers...');
     setSearchLoading(true);
     const { users, error } = await connectionsService.searchUsers(searchQuery, account.id);
+    console.log('🔍 AddPersonView: searchUsers result:', { users: users?.length || 0, error });
+    
     if (!error) {
+      console.log('🔍 AddPersonView: Setting search results:', users.map(u => ({ id: u.id, name: u.name })));
       setSearchResults(users);
       // Load connection statuses for search results
       loadConnectionStatuses(users);
+    } else {
+      console.error('🔍 AddPersonView: Search error:', error);
     }
     setSearchLoading(false);
   };
@@ -1153,6 +1330,7 @@ export default function ProfileMenu() {
   const [showSettings, setShowSettings] = useState(false);
   const [showConnections, setShowConnections] = useState(false);
   const [showAddPerson, setShowAddPerson] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState<ConnectionUser | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -1249,6 +1427,7 @@ export default function ProfileMenu() {
     setShowSettings(false);
     setShowConnections(false);
     setShowAddPerson(false);
+    setSelectedFriend(null);
     setShowProfile(false);
     setShowEditProfile(false);
     setShowDeleteConfirm(false);
@@ -1333,6 +1512,11 @@ export default function ProfileMenu() {
       sessionStorage.clear();
       window.location.href = '/';
     }
+  };
+
+  const handleFriendClick = (friend: ConnectionUser) => {
+    setSelectedFriend(friend);
+    setShowConnections(false);
   };
 
   const handleDeleteAccount = async () => {
@@ -1624,11 +1808,20 @@ export default function ProfileMenu() {
                   setShowConnections(false);
                   setShowAddPerson(true);
                 }}
+                onFriendClick={handleFriendClick}
               />
             ) : showAddPerson ? (
               <AddPersonView
                 onBack={() => {
                   setShowAddPerson(false);
+                  setShowConnections(true);
+                }}
+              />
+            ) : selectedFriend ? (
+              <FriendProfileView
+                friend={selectedFriend}
+                onBack={() => {
+                  setSelectedFriend(null);
                   setShowConnections(true);
                 }}
               />
@@ -1668,6 +1861,7 @@ export default function ProfileMenu() {
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
         />
+
       </div>
     </>
   );

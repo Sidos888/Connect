@@ -138,9 +138,7 @@ export default function ExplorePage() {
 
         {/* Categories Section - Mobile optimized layout */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <h2 className="hidden sm:block text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6 text-center">Explore by category</h2>
-          
-          <div className="flex-1 grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 content-start">
+          <div className="flex-1 grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 content-start mt-4 lg:mt-6">
             {categories.map((category, index) => {
               // For business categories, center the last item (Open Invitations) if it's alone
               const isLastItem = index === categories.length - 1;

@@ -42,6 +42,15 @@ export class ConnectionsService {
         return { users: [], error: null };
       }
 
+      // First, let's test if we can query the accounts table at all
+      console.log('🔍 ConnectionsService: Testing basic accounts query...');
+      const { data: testData, error: testError } = await this.supabase
+        .from('accounts')
+        .select('id, name')
+        .limit(5);
+      
+      console.log('🔍 ConnectionsService: Test query result:', { testData, testError });
+
       // Build query - exclude current user only if we have a valid currentUserId
       let queryBuilder = this.supabase
         .from('accounts')
@@ -76,6 +85,15 @@ export class ConnectionsService {
     try {
       console.log('🔍 ConnectionsService: Getting suggested friends for user:', currentUserId);
       console.log('🔍 ConnectionsService: Supabase client available:', !!this.supabase);
+      
+      // First, let's test if we can query the accounts table at all
+      console.log('🔍 ConnectionsService: Testing basic accounts query for suggestions...');
+      const { data: testData, error: testError } = await this.supabase
+        .from('accounts')
+        .select('id, name')
+        .limit(5);
+      
+      console.log('🔍 ConnectionsService: Test query result for suggestions:', { testData, testError });
       
       // Build query - exclude current user only if we have a valid currentUserId
       let queryBuilder = this.supabase
