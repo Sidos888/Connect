@@ -51,6 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Debug account state changes
+  useEffect(() => {
+    console.log('🔍 AuthContext: Account state changed:', account ? { id: account.id, name: account.name } : null);
+  }, [account]);
   const supabase = getSupabaseClient();
   const realtimeCleanupRef = useRef<(() => void) | null>(null);
 
@@ -200,11 +205,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 NewAuthContext: Auth state change:', event, !!session?.user);
       
         if (session?.user) {
+          console.log('🔐 AuthContext: User session available, loading account for:', session.user.id);
           setUser(session.user);
           await loadAccountForUser(session.user.id);
+          console.log('🔐 AuthContext: Account loading completed, account:', account);
           // Set up real-time sync after user is loaded
           setupRealtimeSync();
         } else {
+          console.log('🔐 AuthContext: No user session, clearing account');
           setUser(null);
           setAccount(null);
         }
@@ -225,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadAccountForUser = async (authUserId: string) => {
     try {
       console.log('🔍 NewAuthContext: Loading account for user:', authUserId);
+      console.log('🔍 NewAuthContext: Current user object:', user);
       
       // Strategy 1: identifier-first (email)
       const email = user?.email?.toLowerCase();
