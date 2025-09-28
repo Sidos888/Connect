@@ -1211,94 +1211,69 @@ export default function AccountCheckModal({
   if (!isOpen || !modalVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
       {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
       <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-xl h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          {currentPage === 1 ? (
-            <button
-              onClick={async () => {
-                console.log('AccountCheckModal: ❌ X button clicked - FORCE SIGN OUT and go to explore');
-                
-                // NUCLEAR APPROACH: Clear everything immediately
-                clearAll();
-                localStorage.clear();
-                sessionStorage.clear();
-                
-                // Close modal immediately
-                onClose();
-                
-                try {
-                  // Sign out in background (don't wait)
-                  signOut().catch(err => console.log('Background signout error (ignoring):', err));
-                } catch (error) {
-                  console.log('Signout error (ignoring):', error);
-                }
-                
-                // Force navigate to explore regardless of signout result
-                router.push('/explore');
-                
-                // Also force page reload as backup
-                setTimeout(() => {
-                  if (window.location.pathname !== '/explore') {
-                    window.location.href = '/explore';
-                  }
-                }, 1000);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-600" />
-            </button>
-          ) : currentPage === 2 ? (
-            <button
-              onClick={prevPage}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-          ) : userExists === true ? (
-            <button
-              onClick={async () => {
-                console.log('AccountCheckModal: X button clicked (existing user), signing out and going to explore');
-                
-                try {
-                  // Sign out the user completely
-                  await signOut();
+        {/* Header - Show title for Welcome back, hide for other states */}
+        {userExists === true ? (
+          <div className="px-6 pt-6 pb-4">
+            <h2 className="text-xl font-semibold text-gray-900 text-center">Welcome back!</h2>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            {currentPage === 1 ? (
+              <button
+                onClick={async () => {
+                  console.log('AccountCheckModal: ❌ X button clicked - FORCE SIGN OUT and go to explore');
                   
-                  // Clear all app state
+                  // NUCLEAR APPROACH: Clear everything immediately
                   clearAll();
                   localStorage.clear();
                   sessionStorage.clear();
                   
-                  // Close modal and navigate to explore
+                  // Close modal immediately
                   onClose();
+                  
+                  try {
+                    // Sign out in background (don't wait)
+                    signOut().catch(err => console.log('Background signout error (ignoring):', err));
+                  } catch (error) {
+                    console.log('Signout error (ignoring):', error);
+                  }
+                  
+                  // Force navigate to explore regardless of signout result
                   router.push('/explore');
-                } catch (error) {
-                  console.error('Error signing out:', error);
-                  // Still close modal and navigate even if signout fails
-                  clearAll();
-                  onClose();
-                  router.push('/explore');
-                }
-              }}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Close and go to unsigned-in explore page"
-            >
-              <X className="w-5 h-5 text-gray-600" />
-            </button>
-          ) : (
+                  
+                  // Also force page reload as backup
+                  setTimeout(() => {
+                    if (window.location.pathname !== '/explore') {
+                      window.location.href = '/explore';
+                    }
+                  }, 1000);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            ) : currentPage === 2 ? (
+              <button
+                onClick={prevPage}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+            ) : (
+              <div className="w-9" />
+            )}
+            
+            <h2 className="text-xl font-semibold text-gray-900">
+              {initialAccountCheck ? 'Checking account...' :
+               currentPage === 1 ? 'Create Account' : 'Complete Profile'}
+            </h2>
+            
             <div className="w-9" />
-          )}
-          
-          <h2 className="text-xl font-semibold text-gray-900">
-            {initialAccountCheck ? 'Checking account...' :
-             userExists === true ? 'Welcome back!' : 
-             currentPage === 1 ? 'Create Account' : 'Complete Profile'}
-          </h2>
-          
-          <div className="w-9" />
-        </div>
+          </div>
+        )}
 
         <div className="p-6 flex-1 overflow-y-auto">
           {initialAccountCheck ? (

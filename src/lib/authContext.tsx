@@ -459,6 +459,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendEmailVerification = async (email: string) => {
     if (!supabase) return { error: new Error('Supabase client not initialized') };
 
+    // Rate limiting: Check if we've sent an email recently
+    const lastEmailTime = localStorage.getItem('lastEmailVerification');
+    const now = Date.now();
+    const RATE_LIMIT_MS = 30000; // 30 seconds
+
+    if (lastEmailTime && (now - parseInt(lastEmailTime)) < RATE_LIMIT_MS) {
+      const remainingSeconds = Math.ceil((RATE_LIMIT_MS - (now - parseInt(lastEmailTime))) / 1000);
+      console.log(`⏳ Rate limited: Please wait ${remainingSeconds} seconds before sending another verification email`);
+      return { error: new Error(`Please wait ${remainingSeconds} seconds before sending another verification email`) };
+    }
+
     try {
       console.log('📧 NewAuthContext: Sending email verification to:', email);
       
@@ -470,8 +481,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle rate limiting error specifically
+        if (error.message.includes('For security purposes')) {
+          localStorage.setItem('lastEmailVerification', now.toString());
+          return { error: new Error('Please wait a moment before requesting another verification email') };
+        }
+        throw error;
+      }
       
+      // Store timestamp of successful email send
+      localStorage.setItem('lastEmailVerification', now.toString());
       console.log('✅ NewAuthContext: Email verification sent successfully');
       return { error: null };
     } catch (error) {

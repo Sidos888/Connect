@@ -74,7 +74,7 @@ export default function Page() {
       document.body.style.paddingBottom = '';
     };
     
-    if (currentView === 'edit-profile' || currentView === 'profile') {
+    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile') {
       hideBottomNav();
     } else {
       showBottomNav();
@@ -494,16 +494,18 @@ export default function Page() {
                 </p>
               </div>
             )}
+          </div>
 
-            {/* Share Profile Option */}
-            <div className="mt-6 pt-4 border-t border-gray-100">
-              <button className="w-full flex items-center justify-center gap-2 py-3 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Share Profile - Circular Card Design (Outside Profile Card) */}
+          <div className="flex justify-center mt-6">
+            <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
+              <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
                 </svg>
-                <span className="font-medium">Share Profile</span>
-              </button>
-            </div>
+              </div>
+              <span className="text-xs font-medium text-gray-700">Share</span>
+            </button>
           </div>
         </div>
       </div>
@@ -961,10 +963,36 @@ export default function Page() {
 
   // Friend Profile Component
   const FriendProfileView = ({ friend }: { friend: ConnectionUser }) => {
-    const handleMessage = () => {
-      // TODO: Navigate to chat with this friend
-      console.log('Message friend:', friend.name);
-      setCurrentView('connections');
+    const { createDirectChat } = useAppStore();
+    const [isCreatingChat, setIsCreatingChat] = React.useState(false);
+
+    const handleMessage = async () => {
+      if (!account?.id || isCreatingChat) return;
+      
+      setIsCreatingChat(true);
+      try {
+        console.log('Creating direct chat with friend:', friend.name);
+        const conversation = await createDirectChat(friend.id);
+        if (conversation) {
+          // Navigate to the chat
+          router.push(`/chat/${conversation.id}`);
+        } else {
+          // Chat might already exist, try to find it
+          const { conversations } = useAppStore.getState();
+          const existingChat = conversations.find(c => 
+            c.title === friend.name && !c.isGroup
+          );
+          if (existingChat) {
+            router.push(`/chat/${existingChat.id}`);
+          } else {
+            console.error('Failed to create or find chat');
+          }
+        }
+      } catch (error) {
+        console.error('Error creating chat:', error);
+      } finally {
+        setIsCreatingChat(false);
+      }
     };
 
     const handleShare = () => {
@@ -973,7 +1001,7 @@ export default function Page() {
     };
 
     return (
-      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-gray-50 flex flex-col" style={{ paddingBottom: '0' }}>
+      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
         {/* Header */}
         <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
           <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
@@ -1027,32 +1055,39 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Action Buttons - Card Style */}
-          <div className="flex space-x-4 justify-center">
+          {/* Action Buttons - Circular Card Style */}
+          <div className="flex space-x-6 justify-center">
             {/* Message Button */}
             <button
               onClick={handleMessage}
-              className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:bg-gray-50 transition-colors flex flex-col items-center space-y-3 min-w-[120px]"
+              disabled={isCreatingChat}
+              className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+              <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                {isCreatingChat ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
+                ) : (
+                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                )}
               </div>
-              <span className="text-sm font-medium text-gray-700">Message</span>
+              <span className="text-xs font-medium text-gray-700">
+                {isCreatingChat ? 'Creating...' : 'Message'}
+              </span>
             </button>
 
             {/* Share Profile Button */}
             <button
               onClick={handleShare}
-              className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:bg-gray-50 transition-colors flex flex-col items-center space-y-3 min-w-[120px]"
+              className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
             >
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
                 <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
                 </svg>
               </div>
-              <span className="text-sm font-medium text-gray-700">Share</span>
+              <span className="text-xs font-medium text-gray-700">Share</span>
             </button>
           </div>
         </div>
@@ -1570,7 +1605,7 @@ export default function Page() {
         <ProfileView />
       ) : currentView === 'edit-profile' ? (
         <EditProfileView />
-      ) : (
+      ) : currentView === 'menu' ? (
         <div>
           <MobileTitle 
             title="Menu" 
@@ -1653,6 +1688,7 @@ export default function Page() {
                 ] :
                 // Personal account menu items
                 [
+                  { title: "Chat", icon: "💬", href: "/chat" },
                   { title: "My Gallery", icon: "📷", href: "/gallery" },
                   { title: "Achievements", icon: "🏆", href: "/achievements" },
                   { title: "My Bookings", icon: "📅", href: "/my-life" },
@@ -1691,7 +1727,30 @@ export default function Page() {
           </div>
         </div>
           </div>
-        </div>      )}
+        </div>
+      ) : (
+        // Fallback - should not happen, but show menu as default
+        <div>
+          <MobileTitle 
+            title="Menu" 
+            action={
+              <button
+                className="p-2 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 ring-brand"
+                aria-label="Notifications"
+                onClick={() => router.push("/notifications")}
+              >
+                <BellIcon className="h-5 w-5 text-black" />
+              </button>
+            }
+          />
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading...</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Account Switcher Modal */}
       <AccountSwitcherSwipeModal 

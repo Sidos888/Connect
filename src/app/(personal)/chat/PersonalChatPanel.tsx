@@ -4,6 +4,8 @@ import { useAppStore } from "@/lib/store";
 import { useEffect, useRef, useState } from "react";
 import Avatar from "@/components/Avatar";
 import type { Conversation } from "@/lib/types";
+import { useAuth } from "@/lib/authContext";
+import { simpleChatService } from "@/lib/simpleChatService";
 
 interface PersonalChatPanelProps {
   conversation: Conversation;
@@ -11,16 +13,39 @@ interface PersonalChatPanelProps {
 
 export default function PersonalChatPanel({ conversation }: PersonalChatPanelProps) {
   const { sendMessage, markAllRead } = useAppStore();
+  const { account } = useAuth();
   const [text, setText] = useState("");
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
   const hasMarkedAsRead = useRef(false);
 
+  // Load real messages from the database
   useEffect(() => {
-    if (!hasMarkedAsRead.current) {
-      markAllRead(conversation.id);
+    const loadMessages = async () => {
+      if (conversation.id && account?.id) {
+        setLoading(true);
+        console.log('PersonalChatPanel: Loading messages for chat:', conversation.id);
+        console.log('PersonalChatPanel: Conversation data:', conversation);
+        const { messages, error } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        if (!error) {
+          setMessages(messages);
+        } else {
+          console.error('Error loading messages:', error);
+        }
+        setLoading(false);
+      }
+    };
+
+    loadMessages();
+  }, [conversation.id, account?.id, conversation]);
+
+  useEffect(() => {
+    if (!hasMarkedAsRead.current && account?.id) {
+      markAllRead(conversation.id, account.id);
       hasMarkedAsRead.current = true;
     }
-  }, [conversation.id, markAllRead]);
+  }, [conversation.id, markAllRead, account?.id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,26 +55,46 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="flex-shrink-0 px-6 py-4 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <Avatar 
-            src={conversation.avatarUrl ?? undefined} 
-            name={conversation.title} 
-            size={40}
-          />
-          <div>
-            <div className="font-semibold text-gray-900">{conversation.title}</div>
-            <div className="text-sm text-gray-500">{conversation.isGroup ? "Group Chat" : "Direct Message"}</div>
+        <div className="flex justify-center">
+          {/* Profile Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex items-center gap-4 max-w-sm">
+            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+              {conversation.avatarUrl ? (
+                <img
+                  src={conversation.avatarUrl}
+                  alt={conversation.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-gray-400 text-xl font-semibold">
+                  {conversation.title.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold text-gray-900 text-lg">{conversation.title}</div>
+              <div className="text-sm text-gray-500">
+                {conversation.isGroup ? 'Group Chat' : 'Direct Message'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-        {conversation.messages.map((m) => (
-          <div key={m.id} className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}>
+      {/* Messages Container - Scrollable */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+        {loading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          messages.map((m) => {
+            const isMe = m.sender_id === account?.id;
+            return (
+          <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
             <div className={`
               max-w-[70%]
-              ${m.sender === "me" 
+              ${isMe 
                 ? "bg-blue-500 text-white" 
                 : "bg-gray-100 text-gray-900"
               }
@@ -57,14 +102,14 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             `}>
               {/* Message Content */}
               <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                {m.text}
+                {m.text || 'Message'}
               </div>
               
               {/* Message Time */}
               <div className={`text-xs mt-2 ${
-                m.sender === "me" ? "text-blue-100" : "text-gray-500"
+                isMe ? "text-blue-100" : "text-gray-500"
               }`}>
-                {new Date().toLocaleTimeString('en-US', { 
+                {new Date(m.created_at).toLocaleTimeString('en-US', { 
                   hour: 'numeric', 
                   minute: '2-digit',
                   hour12: true 
@@ -72,51 +117,49 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               </div>
             </div>
           </div>
-        ))}
+          )})
+        )}
         <div ref={endRef} />
       </div>
 
       {/* Message Input */}
       <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-200">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!text.trim()) return;
-            sendMessage(conversation.id, text.trim());
-            setText("");
-          }}
-          className="flex items-end gap-3"
-        >
+        <div className="flex items-center gap-3">
+          <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
           <div className="flex-1 relative">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Type your message..."
+              placeholder="Type a message..."
+              className="w-full px-4 py-3 bg-gray-100 rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
               rows={1}
-              className="w-full resize-none rounded-2xl border border-gray-300 px-4 py-3 text-sm
-                         bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200
-                         transition-all duration-200 max-h-32 min-h-[48px]"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter' && !e.shiftKey && text.trim() && account?.id) {
                   e.preventDefault();
-                  if (text.trim()) {
-                    sendMessage(conversation.id, text.trim());
-                    setText("");
-                  }
+                  await sendMessage(conversation.id, text.trim(), account.id);
+                  setText("");
                 }
               }}
             />
           </div>
-          <button 
-            type="submit"
-            disabled={!text.trim()}
-            className="rounded-2xl bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 
-                       text-white px-6 py-3 font-medium transition-all duration-200
-                       disabled:cursor-not-allowed flex items-center justify-center min-w-[80px] text-sm"
+          <button
+            onClick={async () => {
+              if (text.trim() && account?.id) {
+                await sendMessage(conversation.id, text.trim(), account.id);
+                setText("");
+              }
+            }}
+            className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
           >
-            Send
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

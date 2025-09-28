@@ -22,7 +22,7 @@ function SimpleCard({
   className?: string;
 }) {
   return (
-    <div className={`w-[400px] h-[640px] rounded-xl border border-neutral-200 bg-white shadow-sm p-5 ${className}`}>
+    <div className={`w-[400px] h-[640px] rounded-xl border border-neutral-200 bg-white shadow-sm p-5 ${className}`} style={{ backgroundColor: 'white' }}>
       {children}
     </div>
   );

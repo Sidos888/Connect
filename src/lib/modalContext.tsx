@@ -9,6 +9,8 @@ import { useAuth } from './authContext';
 interface ModalContextType {
   showLogin: () => void;
   showSignUp: () => void;
+  showAddChat: () => void;
+  showAddFriend: () => void;
   hideModals: () => void;
   isAnyModalOpen: boolean;
 }
@@ -18,6 +20,8 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+  const [isAddChatOpen, setIsAddChatOpen] = useState(false);
+  const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
   const router = useRouter();
   const { signOut } = useAuth();
 
@@ -27,6 +31,8 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       console.log('ModalProvider: Resetting all modal states');
       setIsLoginOpen(false);
       setIsSignUpOpen(false);
+      setIsAddChatOpen(false);
+      setIsAddFriendOpen(false);
     };
 
     window.addEventListener('reset-all-modals', handleResetModals);
@@ -52,13 +58,29 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
     console.log('ModalProvider: SignUp modal should now be open');
   };
 
+  const showAddChat = () => {
+    setIsAddChatOpen(true);
+    setIsLoginOpen(false);
+    setIsSignUpOpen(false);
+    setIsAddFriendOpen(false);
+  };
+
+  const showAddFriend = () => {
+    setIsAddFriendOpen(true);
+    setIsLoginOpen(false);
+    setIsSignUpOpen(false);
+    setIsAddChatOpen(false);
+  };
+
   const hideModals = () => {
     setIsLoginOpen(false);
     setIsSignUpOpen(false);
+    setIsAddChatOpen(false);
+    setIsAddFriendOpen(false);
   };
 
   return (
-    <ModalContext.Provider value={{ showLogin, showSignUp, hideModals, isAnyModalOpen: isLoginOpen || isSignUpOpen }}>
+    <ModalContext.Provider value={{ showLogin, showSignUp, showAddChat, showAddFriend, hideModals, isAnyModalOpen: isLoginOpen || isSignUpOpen || isAddChatOpen || isAddFriendOpen }}>
       {children}
       
       {/* Render modals at root level */}
@@ -87,6 +109,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
           // Don't redirect to onboarding - let AccountCheckModal handle profile creation
         }}
       />
+
     </ModalContext.Provider>
   );
 }

@@ -10,15 +10,28 @@ type Props = {
 
 export default function QuickActions({ onCreate, onCalendar }: Props) {
   return (
-    <div className="flex justify-center gap-2">
-      <Button variant="secondary" className="justify-self-center w-32 md:w-40 rounded-2xl py-3 shadow-sm border border-neutral-200 bg-white text-neutral-900 flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2" onClick={onCalendar}>
-        <CalendarIcon width={18} height={18} />
-        <span className="text-base font-semibold">Calendar</span>
-      </Button>
-      <Button variant="secondary" className="justify-self-center w-32 md:w-40 rounded-2xl py-3 shadow-sm border border-neutral-200 bg-white text-neutral-900 flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2" onClick={onCreate}>
-        <PlusIcon width={18} height={18} />
-        <span className="text-base font-semibold">Create</span>
-      </Button>
+    <div className="flex justify-center gap-6">
+      {/* Calendar Button - Circular Card Design */}
+      <button
+        onClick={onCalendar}
+        className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
+      >
+        <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+          <CalendarIcon width={24} height={24} className="text-gray-600" />
+        </div>
+        <span className="text-xs font-medium text-gray-700">Calendar</span>
+      </button>
+
+      {/* Create Button - Circular Card Design */}
+      <button
+        onClick={onCreate}
+        className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
+      >
+        <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+          <PlusIcon width={24} height={24} className="text-gray-600" />
+        </div>
+        <span className="text-xs font-medium text-gray-700">Create</span>
+      </button>
     </div>
   );
 }

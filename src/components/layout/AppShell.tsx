@@ -31,12 +31,12 @@ export default function AppShell({ children }: AppShellProps) {
     if (isChatPage) {
       // Full height layout for chat pages
       return (
-        <div className="min-h-screen bg-white flex flex-col">
+        <div className="h-screen bg-white flex flex-col overflow-hidden">
           {/* Desktop: Top Navigation, Mobile: No top nav */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
             <TopNavigation />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 lg:pt-20 overflow-hidden">
             {children}
           </div>
           {/* Mobile: Bottom Navigation */}
@@ -52,12 +52,12 @@ export default function AppShell({ children }: AppShellProps) {
     return (
       <div className="min-h-screen bg-white">
         {/* Desktop: Top Navigation Bar */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
           <TopNavigation />
         </div>
         
         {/* Main Content Area with proper mobile safe area */}
-        <main className="w-full pb-20 lg:pb-0">
+        <main className="w-full pb-20 lg:pb-0 lg:pt-20">
           {children}
         </main>
 
@@ -75,12 +75,12 @@ export default function AppShell({ children }: AppShellProps) {
   if (isChatPage) {
     // Full height layout for chat pages
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="h-screen bg-white flex flex-col overflow-hidden">
         {/* Desktop: Top Navigation, Mobile: No top nav */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
           <TopNavigation />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 lg:pt-20 overflow-hidden">
           <ProtectedRoute>
             {children}
           </ProtectedRoute>
@@ -98,12 +98,12 @@ export default function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Desktop: Top Navigation Bar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
         <TopNavigation />
       </div>
       
       {/* Main Content Area with proper mobile safe area */}
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full lg:pt-20">
         <ProtectedRoute>
           {children}
         </ProtectedRoute>

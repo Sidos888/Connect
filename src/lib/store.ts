@@ -2,6 +2,8 @@
 
 import { create } from "zustand";
 import { AppStore, Business, PersonalProfile, UUID, Conversation } from "./types";
+import { simpleChatService, SimpleChat, SimpleMessage } from "./simpleChatService";
+import { getSupabaseClient } from "./supabaseClient";
 
 type PersistedShape = {
   personalProfile: PersonalProfile | null;
@@ -38,10 +40,13 @@ function generateId(): UUID {
 }
 
 type ChatActions = {
-  seedConversations: () => void;
+  loadConversations: (userId: string) => Promise<void>;
   getConversations: () => Conversation[];
-  sendMessage: (conversationId: UUID, text: string) => void;
-  markAllRead: (conversationId: UUID) => void;
+  setConversations: (conversations: Conversation[]) => void;
+  sendMessage: (conversationId: UUID, text: string, userId: string) => Promise<void>;
+  markAllRead: (conversationId: UUID, userId: string) => Promise<void>;
+  createDirectChat: (otherUserId: string) => Promise<Conversation | null>;
+  clearConversations: () => void;
 };
 
 type FullStore = AppStore & ChatActions & { conversations: Conversation[] };
@@ -110,62 +115,169 @@ export const useAppStore = create<FullStore>((set, get) => ({
     }
   },
 
-  seedConversations: () => {
-    console.log('seedConversations called, current length:', get().conversations.length);
-    if (get().conversations.length) {
-      console.log('Conversations already exist, skipping seed');
+  loadConversations: async (userId: string) => {
+    console.log('loadConversations called for user:', userId);
+    
+    // Don't try to load conversations if user is not authenticated
+    if (!userId) {
+      console.log('No userId provided, skipping conversation loading');
       return;
     }
-    const seed: Conversation[] = [
-      {
-        id: generateId(),
-        title: "Alice",
-        avatarUrl: null,
-        unreadCount: 1,
-        isGroup: false,
-        messages: [
-          { id: generateId(), conversationId: "", sender: "them" as const, text: "Hey there!", createdAt: new Date().toISOString(), read: false },
-        ],
-      },
-      {
-        id: generateId(),
-        title: "Team Huddle",
-        avatarUrl: null,
-        unreadCount: 0,
-        isGroup: true,
-        messages: [
-          { id: generateId(), conversationId: "", sender: "me" as const, text: "Meeting at 3?", createdAt: new Date().toISOString(), read: true },
-          { id: generateId(), conversationId: "", sender: "them" as const, text: "Yep, see you!", createdAt: new Date().toISOString(), read: true },
-        ],
-      },
-    ].map((c) => ({ ...c, messages: c.messages.map((m) => ({ ...m, conversationId: c.id })) }));
-    console.log('Setting conversations to:', seed);
-    set({ conversations: seed });
-    console.log('Conversations after set:', get().conversations);
-    const { personalProfile, businesses, context } = get();
-    saveToLocalStorage({ personalProfile, businesses, context, conversations: seed });
+    
+    try {
+      const { chats, error } = await simpleChatService.getUserChats(userId);
+      if (error) {
+        // Only log error if it's not an authentication error
+        if (error.message !== 'User not authenticated' && 
+            error.message !== 'User ID is required' &&
+            error.message !== 'User ID mismatch') {
+          console.error('Error loading conversations:', {
+            message: error.message || 'Unknown error',
+            code: error.code || 'UNKNOWN',
+            details: error.details || null,
+            hint: error.hint || null
+          });
+        }
+        return;
+      }
+      
+      // Convert SimpleChat to Conversation format
+      const conversations: Conversation[] = chats.map(chat => {
+        console.log('Converting chat:', chat.id, 'participants:', chat.participants, 'userId:', userId);
+        console.log('All participant IDs:', chat.participants.map(p => p.id));
+        console.log('Looking for participant that is not:', userId);
+        const otherParticipant = chat.participants.find(p => p.id !== userId);
+        console.log('Other participant found:', otherParticipant);
+        
+        return {
+          id: chat.id,
+          title: chat.type === 'direct' 
+            ? otherParticipant?.name || 'Unknown User'
+            : chat.name || 'Group Chat',
+          avatarUrl: chat.type === 'direct' 
+            ? otherParticipant?.profile_pic || null
+            : null,
+          isGroup: chat.type === 'group',
+          unreadCount: 0,
+          messages: [] // SimpleChat doesn't have messages yet
+        };
+      });
+      
+      console.log('Loaded conversations:', conversations.length);
+      set({ conversations });
+      const { personalProfile, businesses, context } = get();
+      saveToLocalStorage({ personalProfile, businesses, context, conversations });
+    } catch (error) {
+      console.error('Error in loadConversations:', error);
+    }
   },
 
   getConversations: () => get().conversations,
 
-  sendMessage: (conversationId, text) => {
-    const conversations = get().conversations.map((c) =>
-      c.id === conversationId
-        ? { ...c, messages: [...c.messages, { id: generateId(), conversationId, sender: "me" as const, text, createdAt: new Date().toISOString(), read: true }] }
-        : c
-    );
+  setConversations: (conversations) => {
     set({ conversations });
     const { personalProfile, businesses, context } = get();
     saveToLocalStorage({ personalProfile, businesses, context, conversations });
   },
 
-  markAllRead: (conversationId) => {
-    const conversations = get().conversations.map((c) =>
-      c.id === conversationId ? { ...c, unreadCount: 0, messages: c.messages.map((m) => ({ ...m, read: true })) } : c
-    );
-    set({ conversations });
+  sendMessage: async (conversationId, text, userId) => {
+    try {
+      const { message, error } = await simpleChatService.sendMessage(conversationId, userId, text);
+      if (error) {
+        console.error('Error sending message:', error);
+        return;
+      }
+      
+      // Update local state with the new message
+      const conversations = get().conversations.map((c) => {
+        if (c.id === conversationId) {
+          const newMessage = {
+            id: message!.id,
+            conversationId,
+            sender: "me" as const,
+            text: message!.text || '',
+            createdAt: message!.created_at,
+            read: true
+          };
+          return { ...c, messages: [...c.messages, newMessage] };
+        }
+        return c;
+      });
+      
+      set({ conversations });
+      const { personalProfile, businesses, context } = get();
+      saveToLocalStorage({ personalProfile, businesses, context, conversations });
+    } catch (error) {
+      console.error('Error in sendMessage:', error);
+    }
+  },
+
+  markAllRead: async (conversationId, userId) => {
+    try {
+      // For now, just update local state since simpleChatService doesn't have markMessagesAsRead
+      const conversations = get().conversations.map((c) =>
+        c.id === conversationId ? { ...c, unreadCount: 0, messages: c.messages.map((m) => ({ ...m, read: true })) } : c
+      );
+      set({ conversations });
+      const { personalProfile, businesses, context } = get();
+      saveToLocalStorage({ personalProfile, businesses, context, conversations });
+    } catch (error) {
+      console.error('Error in markAllRead:', error);
+    }
+  },
+
+  createDirectChat: async (otherUserId) => {
+    try {
+      // Get current user ID for conversion
+      const { data: { user } } = await getSupabaseClient().auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return null;
+      }
+      
+      const { chat, error } = await simpleChatService.createDirectChat(otherUserId, user.id);
+      if (error) {
+        console.error('Error creating direct chat:', error);
+        return null;
+      }
+      
+      if (chat) {
+        // Convert SimpleChat to Conversation format
+        const otherParticipant = chat.participants.find(p => p.id !== user.id);
+        const conversation: Conversation = {
+          id: chat.id,
+          title: chat.type === 'direct' 
+            ? otherParticipant?.name || 'Unknown User'
+            : chat.name || 'Group Chat',
+          avatarUrl: chat.type === 'direct' 
+            ? otherParticipant?.profile_pic || null
+            : null,
+          isGroup: chat.type === 'group',
+          unreadCount: 0,
+          messages: []
+        };
+        
+        // Add to local state
+        const conversations = [...get().conversations, conversation];
+        set({ conversations });
+        const { personalProfile, businesses, context } = get();
+        saveToLocalStorage({ personalProfile, businesses, context, conversations });
+        
+        return conversation;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error in createDirectChat:', error);
+      return null;
+    }
+  },
+
+  clearConversations: () => {
+    console.log('Store: Clearing all conversations');
+    set({ conversations: [] });
     const { personalProfile, businesses, context } = get();
-    saveToLocalStorage({ personalProfile, businesses, context, conversations });
+    saveToLocalStorage({ personalProfile, businesses, context, conversations: [] });
   },
 }));
 
@@ -178,7 +290,7 @@ if (typeof window !== "undefined") {
       businesses: persisted.businesses,
       context: persisted.context,
       isHydrated: true,
-      conversations: persisted.conversations ?? [],
+      conversations: [], // Always start with empty conversations to load real data
     });
   } else {
     useAppStore.setState({ isHydrated: true, conversations: [] });

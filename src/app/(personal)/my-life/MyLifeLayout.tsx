@@ -95,14 +95,16 @@ export default function MyLifeLayout(): JSX.Element {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
           {/* Profile */}
-          <div className="mb-6 lg:mb-8">
+          <div className="mb-4 lg:mb-8">
             <div className="max-w-lg mx-auto lg:max-w-xl">
               <ProfileStrip name={personalProfile?.name ?? "Your Name"} avatarUrl={personalProfile?.avatarUrl ?? undefined} />
             </div>
           </div>
 
           {/* Quick actions */}
-          <QuickActions />
+          <div className="mb-4">
+            <QuickActions />
+          </div>
 
           {/* Stats moved to bottom as Drafts/History */}
 

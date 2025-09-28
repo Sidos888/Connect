@@ -52,7 +52,7 @@ export default function TopNavigation() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+    <header className="bg-white border-b border-gray-200">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}

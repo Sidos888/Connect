@@ -1,21 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import MobileTitle from "@/components/MobileTitle";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
+import MobileTitle from "@/components/MobileTitle";
 import { useAppStore } from "@/lib/store";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ChatLayout from "./ChatLayout";
+import PersonalChatPanel from "./PersonalChatPanel";
 import { useAuth } from "@/lib/authContext";
 import AuthButton from "@/components/auth/AuthButton";
 import { useModal } from "@/lib/modalContext";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import NewMessageModal from "@/components/chat/NewMessageModal";
+import GroupSetupModal from "@/components/chat/GroupSetupModal";
+import { Plus, ArrowLeft } from "lucide-react";
 
 export default function MessagesPage() {
-  const { conversations, seedConversations, clearAll, isHydrated } = useAppStore();
+  const { conversations, loadConversations, isHydrated } = useAppStore();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, account } = useAuth();
+  const { showAddFriend } = useModal();
+  const searchParams = useSearchParams();
+  const selectedChatId = searchParams.get("chat");
+  
+  // Find the selected conversation
+  const selectedConversation = selectedChatId ? conversations.find(c => c.id === selectedChatId) : null;
   
   // Mobile-specific state
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
@@ -23,18 +32,45 @@ export default function MessagesPage() {
   
   // Modal state
   const { showLogin } = useModal();
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [showGroupSetupModal, setShowGroupSetupModal] = useState(false);
 
   useEffect(() => {
-    if (isHydrated) {
-      console.log('Store hydrated, seeding conversations...');
-      seedConversations();
+    if (isHydrated && account?.id) {
+      console.log('Store hydrated, loading real conversations for user:', account.id);
+      // Use real chat service
+      loadConversations(account.id);
+    } else if (isHydrated && !account?.id) {
+      console.log('Store hydrated but no user authenticated, skipping conversation loading');
     }
-  }, [isHydrated, seedConversations]);
+  }, [isHydrated, account?.id, loadConversations]);
 
   // Add another effect to log when conversations change
   useEffect(() => {
     console.log('Conversations state changed:', conversations);
   }, [conversations]);
+
+
+  // Modal handlers
+  const handleNewMessageComplete = (chatId: string) => {
+    setShowNewMessageModal(false);
+    setShowGroupSetupModal(false);
+    // Refresh conversations to include the new chat
+    if (account?.id) {
+      loadConversations(account.id);
+    }
+    // Navigate to the chat within the same layout
+    router.push(`/chat?chat=${chatId}`);
+  };
+
+  const handleNewMessageClose = () => {
+    setShowNewMessageModal(false);
+    setShowGroupSetupModal(false);
+  };
+
+  const handleNewMessageClick = () => {
+    setShowNewMessageModal(true);
+  };
 
   console.log('Current conversations:', conversations);
 
@@ -163,18 +199,30 @@ export default function MessagesPage() {
 
   // Show chat content if authenticated
   return (
-    <>
+    <div className="min-h-screen bg-white">
       {/* Desktop Layout */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block h-screen">
         <ChatLayout />
       </div>
 
       {/* Mobile Layout */}
-      <div className="lg:hidden min-h-screen bg-white">
-        {/* Mobile Title */}
-        <MobileTitle title="Chat" />
+      <div className="chat-container lg:hidden min-h-screen bg-white flex flex-col" style={{ minHeight: '100vh', height: '100vh' }}>
+        {/* Mobile Header */}
+        <MobileTitle 
+          title="Chats" 
+          action={
+            <button
+              onClick={handleNewMessageClick}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <Plus className="w-5 h-5 text-gray-600" />
+            </button>
+          }
+        />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
+        {/* Mobile Content - Scrollable area below fixed header */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-6 mt-[120px]">
           {/* Mobile Search */}
           <div className="relative mb-6 lg:mb-8">
             <input
@@ -197,7 +245,7 @@ export default function MessagesPage() {
               <button
                 key={category.id}
                 onClick={() => setMobileActiveCategory(category.id)}
-                className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full transition-all duration-200 whitespace-nowrap border ${
+                className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border ${
                   mobileActiveCategory === category.id
                     ? 'bg-neutral-100 border-neutral-300 text-neutral-900'
                     : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
@@ -219,28 +267,22 @@ export default function MessagesPage() {
 
           {filteredMobileConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 space-y-4">
-              <p className="text-gray-500 text-lg">No chats here :)</p>
+              <p className="text-gray-500 text-lg">
+                {account?.id ? "No chats yet" : "Please log in to see your chats"}
+              </p>
               <BearEmoji size="6xl" />
-              <button 
-                onClick={() => {
-                  console.log('Force clearing and reseeding...');
-                  clearAll();
-                  setTimeout(() => {
-                    seedConversations();
-                  }, 100);
-                }}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-              >
-                Force Reseed Chats
-              </button>
             </div>
           ) : (
             <div className="space-y-3">
               {filteredMobileConversations.map((conversation) => (
                 <div
                   key={conversation.id}
-                  onClick={() => router.push(`/chat/${conversation.id}`)}
-                  className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98]"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    router.push(`/chat/individual?id=${conversation.id}`);
+                  }}
+                  className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md cursor-pointer"
                 >
                   <div className="p-4">
                     <div className="flex items-center gap-3">
@@ -293,9 +335,23 @@ export default function MessagesPage() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
-    </>
+
+      {/* Modals */}
+      <NewMessageModal
+        isOpen={showNewMessageModal}
+        onClose={handleNewMessageClose}
+        onComplete={handleNewMessageComplete}
+        onShowGroupSetup={() => setShowGroupSetupModal(true)}
+      />
+      <GroupSetupModal
+        isOpen={showGroupSetupModal}
+        onClose={handleNewMessageClose}
+        onComplete={handleNewMessageComplete}
+      />
+    </div>
   );
 }
 

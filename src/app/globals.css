@@ -39,6 +39,23 @@
   transition: none !important;
 }
 
+/* Force hide bottom nav on chat pages - immediate effect */
+.hide-bottom-nav nav[data-testid="mobile-bottom-nav"],
+.hide-bottom-nav .tabbar-nav,
+.hide-bottom-nav nav[class*="bottom"],
+.hide-bottom-nav nav[class*="fixed"],
+.hide-bottom-nav div[class*="bottom-"],
+.hide-bottom-nav div[class*="fixed bottom"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  transform: translateY(100%) !important;
+  position: fixed !important;
+  bottom: -100px !important;
+  z-index: -1 !important;
+  transition: none !important;
+}
+
 /* Mobile safe area support */
 .pt-safe-top {
   padding-top: env(safe-area-inset-top, 20px);
@@ -105,6 +122,8 @@
 html {
   /* Prevent zoom on mobile */
   touch-action: manipulation;
+  height: 100%;
+  min-height: 100%;
 }
 
 body {
@@ -115,6 +134,8 @@ body {
   /* Better text rendering on mobile */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  min-height: 100%;
 }
 
 
@@ -179,6 +200,45 @@ body {
 }
 
 /* Force Vercel rebuild - working version */
+
+/* Disable all transitions and animations on chat components */
+.chat-container,
+.chat-container *,
+[class*="chat"],
+[class*="Chat"],
+div[class*="chat"],
+div[class*="Chat"],
+button[class*="chat"],
+button[class*="Chat"] {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  -webkit-transition: none !important;
+  -moz-transition: none !important;
+  -o-transition: none !important;
+  -webkit-animation: none !important;
+  -moz-animation: none !important;
+  -o-animation: none !important;
+  -webkit-transform: none !important;
+  -moz-transform: none !important;
+  -o-transform: none !important;
+}
+
+/* Disable all page transitions globally */
+* {
+  transition: none !important;
+  animation: none !important;
+  -webkit-transition: none !important;
+  -moz-transition: none !important;
+  -o-transition: none !important;
+}
+
+/* Re-enable only specific transitions we want to keep */
+.hover\:bg-gray-100:hover,
+.hover\:bg-gray-200:hover,
+.hover\:shadow-md:hover {
+  transition: background-color 0.2s ease !important;
+}
 
 /* Remove any potential borders from navigation, except TabBar */
 nav:not(.tabbar-nav) {

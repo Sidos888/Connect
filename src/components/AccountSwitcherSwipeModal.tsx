@@ -86,7 +86,7 @@ export default function AccountSwitcherSwipeModal({ isOpen, onClose }: AccountSw
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden" style={{ zIndex: 9999 }}>
+    <div className="fixed inset-0 flex items-end md:items-center justify-center md:pb-0 overflow-hidden" style={{ zIndex: 99999 }}>
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
