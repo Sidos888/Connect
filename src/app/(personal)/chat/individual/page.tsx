@@ -139,7 +139,7 @@ export default function IndividualChatPage() {
       {/* Fixed Top Header - Always visible with absolute positioning */}
       <div 
         className="absolute top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-2" 
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)' }}
       >
         <div className="flex items-center gap-3">
           {/* Back Button */}
@@ -185,7 +185,7 @@ export default function IndividualChatPage() {
       <div 
         className="absolute left-0 right-0 overflow-y-auto px-4 py-4"
         style={{ 
-          top: 'calc(env(safe-area-inset-top, 0px) + 64px)', // Height of header
+          top: 'calc(env(safe-area-inset-top, 0px) + 76px)', // Height of header
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' // Height of input
         }}
       >
