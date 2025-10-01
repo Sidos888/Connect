@@ -33,7 +33,7 @@ export default function RootLayout({
         <meta name="cache-control" content="no-cache, no-store, must-revalidate" />
         <meta name="pragma" content="no-cache" />
         <meta name="expires" content="0" />
-        <meta name="version" content={Date.now().toString()} />
+        <meta name="version" content="CACHE-BUST-2025-01-29-001" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

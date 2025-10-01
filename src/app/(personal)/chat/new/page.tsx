@@ -140,9 +140,9 @@ export default function NewChatPage() {
   // Show loading or redirect if not authenticated
   if (!account?.id) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="h-full bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <p className="text-gray-500">Loading...</p>
           <p className="text-sm text-gray-400 mt-2">Please make sure you&apos;re logged in</p>
         </div>
@@ -151,7 +151,7 @@ export default function NewChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="h-full bg-white">
       {/* Mobile Title */}
       <MobileTitle 
         title="New Chat" 
@@ -183,7 +183,7 @@ export default function NewChatPage() {
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
         ) : filteredFriends.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -232,7 +232,7 @@ export default function NewChatPage() {
                   )}
                 </div>
                 {creatingChat === friend.id ? (
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                 ) : (
                   <div className="p-2 rounded-full bg-blue-50 text-blue-500">
                     <MessageCircle className="w-5 h-5" />

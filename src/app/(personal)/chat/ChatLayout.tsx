@@ -64,15 +64,15 @@ export default function ChatLayout() {
   };
 
   const getLastMessage = (conversation: { messages: Array<{ text: string }> }) => {
-    if (conversation.messages.length === 0) return "No messages yet";
+    if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return lastMessage.text;
+    return lastMessage.text || "No messages yet";
   };
 
   const getLastMessageTime = (conversation: { messages: Array<{ createdAt: string }> }) => {
-    if (conversation.messages.length === 0) return "";
+    if (!conversation.messages || conversation.messages.length === 0) return "";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return formatTime(lastMessage.createdAt);
+    return lastMessage.createdAt ? formatTime(lastMessage.createdAt) : "";
   };
 
   // Category filtering
@@ -191,7 +191,7 @@ export default function ChatLayout() {
     return (
       <div className="flex h-full bg-white items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
           <p className="text-gray-500">Loading chats...</p>
         </div>
       </div>
@@ -199,9 +199,9 @@ export default function ChatLayout() {
   }
 
   return (
-    <div className="chat-container flex h-screen bg-white overflow-hidden pt-20">
+    <div className="chat-container flex h-full bg-white overflow-hidden relative">
       {/* Chat List Sidebar */}
-      <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden">
+      <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
         {showNewMessageSelector ? (
           <InlineContactSelector
             onClose={handleNewMessageClose}
@@ -210,8 +210,8 @@ export default function ChatLayout() {
           />
         ) : (
           <>
-            {/* Header */}
-            <div className="p-6 border-b border-gray-200">
+            {/* Header - Fixed positioning */}
+            <div className="p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-10">
               <div className="flex items-center justify-between mb-4">
                      <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
                 <button
@@ -229,7 +229,7 @@ export default function ChatLayout() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search"
-                  className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent placeholder:text-neutral-400"
+                  className="w-full pl-10 pr-4 py-2 bg-white border-[1.5px] border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,10 +244,10 @@ export default function ChatLayout() {
                   <button
                     key={category.id}
                     onClick={() => setActiveCategory(category.id)}
-                    className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border ${
+                    className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
                       activeCategory === category.id
-                        ? 'bg-neutral-100 border-neutral-300 text-neutral-900'
-                        : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                        ? 'bg-white border-gray-900 text-neutral-900'
+                        : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
                     } shadow-sm`}
                   >
                     <span className="text-sm font-medium leading-none">{category.label}</span>
@@ -280,10 +280,10 @@ export default function ChatLayout() {
                     <div
                       key={conversation.id}
                       onClick={(e) => handleSelectChat(conversation.id, e)}
-                      className={`bg-white rounded-xl border cursor-pointer hover:shadow-md ${
+                      className={`bg-white rounded-xl cursor-pointer hover:shadow-md w-full ${
                         selectedChatId === conversation.id 
-                          ? 'border-blue-200 shadow-md ring-2 ring-blue-100' 
-                          : 'border-gray-200 shadow-sm hover:border-gray-300'
+                          ? 'border-[1.5px] border-gray-900 shadow-sm' 
+                          : 'border-[1.5px] border-gray-300 shadow-sm hover:border-gray-400'
                       }`}
                     >
                       <div className="p-4">

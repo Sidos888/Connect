@@ -45,6 +45,7 @@ type ChatActions = {
   setConversations: (conversations: Conversation[]) => void;
   sendMessage: (conversationId: UUID, text: string, userId: string) => Promise<void>;
   markAllRead: (conversationId: UUID, userId: string) => Promise<void>;
+  markMessagesAsRead: (conversationId: UUID, userId: string) => Promise<void>;
   createDirectChat: (otherUserId: string) => Promise<Conversation | null>;
   clearConversations: () => void;
 };
@@ -141,13 +142,17 @@ export const useAppStore = create<FullStore>((set, get) => ({
         return;
       }
       
-      // Convert SimpleChat to Conversation format
-      const conversations: Conversation[] = chats.map(chat => {
+      // Convert SimpleChat to Conversation format and load last message
+      const conversations: Conversation[] = await Promise.all(chats.map(async (chat) => {
         console.log('Converting chat:', chat.id, 'participants:', chat.participants, 'userId:', userId);
         console.log('All participant IDs:', chat.participants.map(p => p.id));
         console.log('Looking for participant that is not:', userId);
         const otherParticipant = chat.participants.find(p => p.id !== userId);
         console.log('Other participant found:', otherParticipant);
+        
+        // Load the last message for this chat
+        const { messages, error } = await simpleChatService.getChatMessages(chat.id, userId);
+        const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
         
         return {
           id: chat.id,
@@ -158,10 +163,16 @@ export const useAppStore = create<FullStore>((set, get) => ({
             ? otherParticipant?.profile_pic || null
             : null,
           isGroup: chat.type === 'group',
-          unreadCount: 0,
-          messages: [] // SimpleChat doesn't have messages yet
+          unreadCount: chat.unreadCount || 0,
+          messages: lastMessage ? [{
+            id: lastMessage.id,
+            text: lastMessage.text,
+            sender_id: lastMessage.sender_id,
+            created_at: lastMessage.created_at,
+            createdAt: lastMessage.created_at
+          }] : []
         };
-      });
+      }));
       
       console.log('Loaded conversations:', conversations.length);
       set({ conversations });
@@ -223,6 +234,27 @@ export const useAppStore = create<FullStore>((set, get) => ({
       saveToLocalStorage({ personalProfile, businesses, context, conversations });
     } catch (error) {
       console.error('Error in markAllRead:', error);
+    }
+  },
+
+  markMessagesAsRead: async (conversationId, userId) => {
+    try {
+      // Mark messages as read in the database
+      const { error } = await simpleChatService.markMessagesAsRead(conversationId, userId);
+      if (error) {
+        console.error('Error marking messages as read:', error);
+        return;
+      }
+
+      // Update local state
+      const conversations = get().conversations.map((c) =>
+        c.id === conversationId ? { ...c, unreadCount: 0 } : c
+      );
+      set({ conversations });
+      const { personalProfile, businesses, context } = get();
+      saveToLocalStorage({ personalProfile, businesses, context, conversations });
+    } catch (error) {
+      console.error('Error in markMessagesAsRead:', error);
     }
   },
 

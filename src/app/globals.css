@@ -41,11 +41,7 @@
 
 /* Force hide bottom nav on chat pages - immediate effect */
 .hide-bottom-nav nav[data-testid="mobile-bottom-nav"],
-.hide-bottom-nav .tabbar-nav,
-.hide-bottom-nav nav[class*="bottom"],
-.hide-bottom-nav nav[class*="fixed"],
-.hide-bottom-nav div[class*="bottom-"],
-.hide-bottom-nav div[class*="fixed bottom"] {
+.hide-bottom-nav .tabbar-nav {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -224,6 +220,49 @@ button[class*="Chat"] {
   -o-transform: none !important;
 }
 
+/* Ensure chat layout stays fixed and doesn't scroll with page */
+.chat-container {
+  position: relative !important;
+  /* Fill the parent flex area so borders span full height */
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Force white message bubbles */
+.chat-container .bg-white,
+.chat-container [class*="bg-white"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* Prevent chat headers from moving */
+.chat-container .flex-shrink-0 {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Ensure messages container doesn't cause layout shifts */
+.chat-container .overflow-y-auto {
+  contain: layout style paint !important;
+}
+
+/* Slim scrollbars for chat message lists */
+.chat-container .overflow-y-auto {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #d1d5db transparent; /* thumb track */
+}
+.chat-container .overflow-y-auto::-webkit-scrollbar {
+  width: 6px; /* Chrome/Safari */
+}
+.chat-container .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-container .overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* gray-300 */
+  border-radius: 9999px;
+}
+
 /* Disable all page transitions globally */
 * {
   transition: none !important;
@@ -231,6 +270,7 @@ button[class*="Chat"] {
   -webkit-transition: none !important;
   -moz-transition: none !important;
   -o-transition: none !important;
+  -webkit-tap-highlight-color: transparent; /* prevent grey tap highlight */
 }
 
 /* Re-enable only specific transitions we want to keep */
@@ -240,15 +280,150 @@ button[class*="Chat"] {
   transition: background-color 0.2s ease !important;
 }
 
+/* Force white background on active/pressed states */
+button:active,
+button.bg-white:active,
+button[class*="bg-white"]:active,
+.bg-white:active,
+.bg-white:focus,
+button.bg-white:focus,
+button[class*="bg-white"]:focus {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+/* Prevent grey tap highlights on all interactive elements */
+button,
+input,
+select,
+textarea,
+[role="button"],
+[tabindex] {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
 /* Remove any potential borders from navigation, except TabBar */
 nav:not(.tabbar-nav) {
   border: none !important;
   box-shadow: none !important;
 }
 
+/* Keep white boxes/cards white even when pressed */
+.bg-white:active,
+button.bg-white:active,
+.hover\:bg-gray-50:active {
+  background-color: white !important;
+}
+
 /* Hide bottom navigation when modal is open */
 body:has(.modal-open) .tabbar-nav {
   display: none !important;
+}
+
+/* Chat keyboard handling for both mobile and web */
+.chat-mobile-container {
+  height: 100vh; /* Fallback for older browsers */
+  height: calc(var(--vh, 1vh) * 100); /* Use custom viewport height */
+  overflow: hidden;
+  position: relative;
+}
+
+/* Keep header absolutely positioned to prevent keyboard interference */
+.chat-mobile-container .absolute.top-0 {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+}
+
+/* Keep input absolutely positioned at bottom */
+.chat-mobile-container .absolute.bottom-0 {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+}
+
+/* Ensure input area stays visible when keyboard appears */
+.chat-mobile-container input:focus,
+.chat-mobile-container textarea:focus {
+  position: relative;
+  z-index: 5;
+}
+
+/* Prevent body scroll when keyboard is open */
+.chat-mobile-container input:focus,
+.chat-mobile-container textarea:focus {
+  scroll-margin-top: 0;
+}
+
+/* Prevent viewport changes from affecting fixed elements */
+.chat-mobile-container {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+/* Prevent zoom on mobile inputs and ensure consistent behavior */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+textarea {
+  font-size: 16px !important;
+  transform: scale(1);
+  caret-color: #FF6600; /* Orange text cursor */
+  caret-shape: block; /* Make cursor more bold/block-like */
+}
+
+/* Keep input background consistent on focus */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+textarea:focus,
+select:focus {
+  background-color: #ffffff !important; /* Keep white background on focus */
+  border-color: #6b7280 !important; /* Force gray border on focus */
+  outline: none !important; /* Remove default browser outline */
+  box-shadow: none !important; /* Remove any box shadows */
+}
+
+/* Web-specific fixes for keyboard behavior - only apply to individual chat page */
+@media (min-width: 769px) {
+  .chat-mobile-container {
+    position: relative !important;
+    height: 100vh !important;
+  }
+  
+  /* Keep header fixed to prevent keyboard interference - only for individual chat */
+  .chat-mobile-container .absolute.top-0 {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 100 !important;
+  }
+  
+  /* Keep input fixed at bottom - only for individual chat */
+  .chat-mobile-container .absolute.bottom-0 {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 100 !important;
+  }
+  
+  /* Ensure messages area adjusts for fixed header and input - only for individual chat */
+  .chat-mobile-container .absolute.left-0.right-0.overflow-y-auto {
+    top: 88px !important; /* Height of header */
+    bottom: 80px !important; /* Height of input */
+  }
 }
 
 /* Prevent scrolling on login/signup screens */

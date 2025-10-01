@@ -12,6 +12,7 @@ export interface SimpleChat {
   messages: SimpleMessage[];
   last_message?: string;
   last_message_at?: string;
+  unreadCount: number;
 }
 
 export interface SimpleMessage {
@@ -55,10 +56,10 @@ class SimpleChatService {
   // Get user's chats (now loads from Supabase)
   async getUserChats(userId: string): Promise<{ chats: SimpleChat[]; error: Error | null }> {
     try {
-      // Get user's chats from Supabase
+      // Get user's chats from Supabase with last_read_at
       const { data: userChats, error: userChatsError } = await this.supabase
         .from('chat_participants')
-        .select('chat_id')
+        .select('chat_id, last_read_at')
         .eq('user_id', userId);
 
       if (userChatsError) {
@@ -113,12 +114,32 @@ class SimpleChatService {
 
         console.log('SimpleChatService: Chat participants for', chat.id, ':', participants);
 
+        // Find the user's last_read_at for this chat
+        const userChatData = userChats.find(uc => uc.chat_id === chat.id);
+        const lastReadAt = userChatData?.last_read_at;
+
+        // Calculate unread count by counting messages after last_read_at
+        let unreadCount = 0;
+        if (lastReadAt) {
+          const { count, error: unreadError } = await this.supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('chat_id', chat.id)
+            .gt('created_at', lastReadAt)
+            .neq('sender_id', userId); // Don't count own messages
+          
+          if (!unreadError && count !== null) {
+            unreadCount = count;
+          }
+        }
+
         chats.push({
           id: chat.id,
           type: chat.type,
           name: chat.name,
           participants,
-          messages: [] // Will be loaded separately
+          messages: [], // Will be loaded separately
+          unreadCount
         });
       }
 
@@ -132,6 +153,27 @@ class SimpleChatService {
     } catch (error) {
       console.error('Error in getUserChats:', error);
       return { chats: [], error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Mark messages as read for a user in a chat
+  async markMessagesAsRead(chatId: string, userId: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('chat_participants')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error marking messages as read:', error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in markMessagesAsRead:', error);
+      return { error: error instanceof Error ? error : new Error('Unknown error') };
     }
   }
 

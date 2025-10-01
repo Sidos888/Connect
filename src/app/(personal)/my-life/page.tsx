@@ -12,6 +12,7 @@ import Button from "@/components/Button";
 import { CalendarIcon, PlusIcon } from "@/components/icons";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import MyLifeLayout from "./MyLifeLayout";
+import { Suspense } from "react";
 
 export default function Page() {
   const { personalProfile, context } = useAppStore();
@@ -107,7 +108,9 @@ export default function Page() {
   // Personal account content -> new two-pane layout with sidebar tabs
   return (
     <ProtectedRoute title="My Life" description="Log in / sign up to view your personal events and activities" buttonText="Log in">
-      <MyLifeLayout />
+      <Suspense fallback={<div className="flex items-center justify-center h-64">Loading...</div>}>
+        <MyLifeLayout />
+      </Suspense>
     </ProtectedRoute>
   );
 }

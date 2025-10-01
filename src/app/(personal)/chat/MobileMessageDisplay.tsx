@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
+import MessageBubble from "@/components/chat/MessageBubble";
 
 interface MobileMessageDisplayProps {
   conversation: Conversation;
@@ -49,43 +50,35 @@ export default function MobileMessageDisplay({ conversation }: MobileMessageDisp
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   });
 
+  const handleReactionAdd = async (messageId: string, reaction: string) => {
+    // TODO: Implement reaction adding to database
+    console.log('Adding reaction:', reaction, 'to message:', messageId);
+  };
+
+  const handleReactionRemove = async (messageId: string, reaction: string) => {
+    // TODO: Implement reaction removal from database
+    console.log('Removing reaction:', reaction, 'from message:', messageId);
+  };
+
   return (
     <div className="space-y-4">
       {loading ? (
         <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
       ) : (
         messages.map((m) => {
           const isMe = m.sender_id === account?.id;
           return (
-        <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-          <div className={`
-            max-w-[70%]
-            ${isMe 
-              ? "bg-blue-500 text-white" 
-              : "bg-gray-100 text-gray-900"
-            }
-            rounded-2xl px-4 py-3 shadow-sm
-          `}>
-            {/* Message Content */}
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
-              {m.text || 'Message'}
-            </div>
-            
-            {/* Message Time */}
-            <div className={`text-xs mt-2 ${
-              isMe ? "text-blue-100" : "text-gray-500"
-            }`}>
-              {new Date(m.created_at).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit',
-                hour12: true 
-              })}
-            </div>
-          </div>
-        </div>
-        )})
+            <MessageBubble
+              key={m.id}
+              message={m}
+              isMe={isMe}
+              onReactionAdd={handleReactionAdd}
+              onReactionRemove={handleReactionRemove}
+            />
+          );
+        })
       )}
       <div ref={endRef} />
     </div>

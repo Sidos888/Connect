@@ -36,7 +36,7 @@ export default function AppShell({ children }: AppShellProps) {
           <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
             <TopNavigation />
           </div>
-          <div className="flex-1 lg:pt-20 overflow-hidden">
+          <div className="flex-1 overflow-hidden" style={{ marginTop: '5rem', height: 'calc(100vh - 5rem)' }}>
             {children}
           </div>
           {/* Mobile: Bottom Navigation */}
@@ -80,7 +80,7 @@ export default function AppShell({ children }: AppShellProps) {
         <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
           <TopNavigation />
         </div>
-        <div className="flex-1 lg:pt-20 overflow-hidden">
+        <div className="flex-1 overflow-hidden pt-20">
           <ProtectedRoute>
             {children}
           </ProtectedRoute>

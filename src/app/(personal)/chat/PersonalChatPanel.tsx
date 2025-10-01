@@ -54,11 +54,11 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex-shrink-0 px-6 py-4 bg-white border-b border-gray-200">
+      <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-200">
         <div className="flex justify-center">
           {/* Profile Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex items-center gap-4 max-w-sm">
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl">
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {conversation.avatarUrl ? (
                 <img
                   src={conversation.avatarUrl}
@@ -66,16 +66,13 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="text-gray-400 text-xl font-semibold">
+                <div className="text-gray-400 text-sm font-semibold">
                   {conversation.title.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
             <div className="flex-1">
-              <div className="font-semibold text-gray-900 text-lg">{conversation.title}</div>
-              <div className="text-sm text-gray-500">
-                {conversation.isGroup ? 'Group Chat' : 'Direct Message'}
-              </div>
+              <div className="font-semibold text-gray-900 text-base">{conversation.title}</div>
             </div>
           </div>
         </div>
@@ -85,7 +82,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
         {loading ? (
           <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
         ) : (
           messages.map((m) => {
@@ -95,20 +92,18 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             <div className={`
               max-w-[70%]
               ${isMe 
-                ? "bg-blue-500 text-white" 
-                : "bg-gray-100 text-gray-900"
+                ? "bg-white text-gray-900 border border-gray-200" 
+                : "bg-white text-gray-900 border border-gray-200"
               }
               rounded-2xl px-4 py-3 shadow-sm
-            `}>
+            `} style={{ backgroundColor: '#ffffff !important', color: '#111827 !important' }}>
               {/* Message Content */}
               <div className="text-sm leading-relaxed whitespace-pre-wrap">
                 {m.text || 'Message'}
               </div>
               
               {/* Message Time */}
-              <div className={`text-xs mt-2 ${
-                isMe ? "text-blue-100" : "text-gray-500"
-              }`}>
+              <div className="text-xs mt-2 text-gray-500">
                 {new Date(m.created_at).toLocaleTimeString('en-US', { 
                   hour: 'numeric', 
                   minute: '2-digit',
@@ -134,8 +129,8 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Type a message..."
-              className="w-full px-4 py-3 bg-gray-100 rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
+              placeholder=""
+              className="w-full px-4 py-3 bg-white rounded-full border border-gray-300 focus:outline-none focus:border-black focus:bg-white transition-colors resize-none"
               rows={1}
               onKeyDown={async (e) => {
                 if (e.key === 'Enter' && !e.shiftKey && text.trim() && account?.id) {
@@ -146,19 +141,21 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               }}
             />
           </div>
-          <button
-            onClick={async () => {
-              if (text.trim() && account?.id) {
-                await sendMessage(conversation.id, text.trim(), account.id);
-                setText("");
-              }
-            }}
-            className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
+          {text.trim() && (
+            <button
+              onClick={async () => {
+                if (text.trim() && account?.id) {
+                  await sendMessage(conversation.id, text.trim(), account.id);
+                  setText("");
+                }
+              }}
+              className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>

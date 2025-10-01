@@ -293,18 +293,23 @@ export default function VerificationModal({
                 onPaste={handlePaste}
                 onFocus={() => setActiveIndex(index)}
                 className={`
-                  w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-2 rounded-xl
+                  w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-[3px] rounded-xl
                   focus:outline-none focus:ring-0 transition-all duration-75 bg-white
                   ${isVerifying
                     ? 'border-green-500 bg-green-50'
                     : activeIndex === index
-                    ? 'border-brand ring-2 ring-brand/20'
-                    : digit
-                    ? 'border-gray-300'
-                    : 'border-gray-200'
+                    ? '!border-black'
+                    : 'border-gray-300'
                   }
                 `}
-                style={{ caretColor: 'transparent' }}
+                style={{ 
+                  caretColor: 'transparent',
+                  borderColor: isVerifying 
+                    ? '#10b981' 
+                    : activeIndex === index 
+                    ? '#000000' 
+                    : '#d1d5db'
+                }}
               />
             ))}
           </div>

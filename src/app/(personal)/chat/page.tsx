@@ -94,15 +94,15 @@ export default function MessagesPage() {
   };
 
   const getLastMessage = (conversation: { messages: Array<{ text: string }> }) => {
-    if (conversation.messages.length === 0) return "No messages yet";
+    if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return lastMessage.text;
+    return lastMessage.text || "No messages yet";
   };
 
   const getLastMessageTime = (conversation: { messages: Array<{ createdAt: string }> }) => {
-    if (conversation.messages.length === 0) return "";
+    if (!conversation.messages || conversation.messages.length === 0) return "";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return formatTime(lastMessage.createdAt);
+    return lastMessage.createdAt ? formatTime(lastMessage.createdAt) : "";
   };
 
   // Mobile category filtering
@@ -164,7 +164,7 @@ export default function MessagesPage() {
     return (
       <div className="flex h-screen bg-white items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
           <p className="text-gray-500">Loading chats...</p>
         </div>
       </div>
@@ -199,14 +199,14 @@ export default function MessagesPage() {
 
   // Show chat content if authenticated
   return (
-    <div className="min-h-screen bg-white">
+    <div className="h-full bg-white">
       {/* Desktop Layout */}
-      <div className="hidden lg:block h-screen">
+      <div className="hidden lg:block h-full">
         <ChatLayout />
       </div>
 
       {/* Mobile Layout */}
-      <div className="chat-container lg:hidden min-h-screen bg-white flex flex-col" style={{ minHeight: '100vh', height: '100vh' }}>
+      <div className="chat-container lg:hidden h-full bg-white flex flex-col">
         {/* Mobile Header */}
         <MobileTitle 
           title="Chats" 
@@ -222,15 +222,15 @@ export default function MessagesPage() {
         
         {/* Mobile Content - Scrollable area below fixed header */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-6 mt-[120px]">
-          {/* Mobile Search */}
+          <div className="px-4 py-6">
+          {/* Mobile Search - unified border system */}
           <div className="relative mb-6 lg:mb-8">
             <input
               type="text"
               value={mobileSearchQuery}
               onChange={(e) => setMobileSearchQuery(e.target.value)}
               placeholder="Search"
-              className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent placeholder:text-neutral-400"
+              className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,16 +239,16 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Mobile Category Filter Pills - cleaner, cohesive */}
+          {/* Mobile Category Filter Pills - unified border system */}
           <div className="flex gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar">
             {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
               <button
                 key={category.id}
                 onClick={() => setMobileActiveCategory(category.id)}
-                className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border ${
+                className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
                   mobileActiveCategory === category.id
-                    ? 'bg-neutral-100 border-neutral-300 text-neutral-900'
-                    : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                    ? 'bg-white border-gray-900 text-neutral-900'
+                    : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
                 } shadow-sm`}
               >
                 <span className="text-sm font-medium leading-none">{category.label}</span>
