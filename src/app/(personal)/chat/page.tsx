@@ -224,7 +224,7 @@ export default function MessagesPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-6">
           {/* Mobile Search - unified border system */}
-          <div className="relative mb-6 lg:mb-8">
+          <div className="relative mb-6 lg:mb-8 mt-4">
             <input
               type="text"
               value={mobileSearchQuery}
