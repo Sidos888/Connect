@@ -14,13 +14,17 @@ interface MessageBubbleProps {
   isMe: boolean;
   onReactionAdd: (messageId: string, reaction: string) => void;
   onReactionRemove: (messageId: string, reaction: string) => void;
+  avatarUrl?: string | null;
+  senderName?: string;
 }
 
 export default function MessageBubble({ 
   message, 
   isMe, 
   onReactionAdd, 
-  onReactionRemove 
+  onReactionRemove,
+  avatarUrl,
+  senderName
 }: MessageBubbleProps) {
   const [showReactionBar, setShowReactionBar] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -81,12 +85,29 @@ export default function MessageBubble({
   };
 
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"} relative`}>
+    <div className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2 relative`}>
+      {/* Profile picture for received messages */}
+      {!isMe && (
+        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={senderName || 'Sender'}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-gray-400 text-sm font-semibold">
+              {(senderName || 'U').charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      )}
+      
       <div className="relative group">
         {/* Message bubble */}
         <div 
           className={`
-            max-w-[70%] relative
+            max-w-[90%] relative
             ${isMe 
               ? "text-gray-900 bg-white border border-gray-200" 
               : "text-gray-900 bg-white border border-gray-200"

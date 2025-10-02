@@ -70,6 +70,11 @@ export default function AccountCheckModal({
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
+  // Scroll-to-dismiss state
+  const [scrollY, setScrollY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState(0);
+  const [currentY, setCurrentY] = useState(0);
   // Prevent duplicate account checks per modal open
   const hasCheckedRef = useRef(false);
   const [formData, setFormData] = useState({
@@ -1208,15 +1213,88 @@ export default function AccountCheckModal({
     };
   }, [isOpen]);
 
+  // Handle dismiss - sign out and go to explore page
+  const handleDismiss = async () => {
+    console.log('AccountCheckModal: Dismissing modal - going to explore page');
+    
+    // Sign out the user to ensure they're not signed in
+    try {
+      await supabase.auth.signOut();
+      console.log('AccountCheckModal: User signed out for dismiss');
+    } catch (error) {
+      console.error('AccountCheckModal: Error signing out on dismiss:', error);
+    }
+
+    // Clear local state
+    clearAll();
+
+    // Close modal and redirect to explore page
+    onClose();
+    router.push('/explore');
+  };
+
+  // Touch handlers for scroll-to-dismiss
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (userExists === true) { // Only for welcome back page
+      setIsDragging(true);
+      setStartY(e.touches[0].clientY);
+      setCurrentY(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging && userExists === true) {
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchY - startY;
+      setCurrentY(touchY);
+      // Limit scroll to first third of screen height and make it much slower
+      const maxScroll = window.innerHeight / 3;
+      const slowScrollFactor = 0.3; // Much slower scrolling
+      setScrollY(Math.max(0, Math.min(deltaY * slowScrollFactor, maxScroll)));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isDragging && userExists === true) {
+      setIsDragging(false);
+      
+      // If scrolled down more than half of the first third, close the modal
+      const dismissThreshold = (window.innerHeight / 3) * 0.5;
+      if (scrollY > dismissThreshold) {
+        handleDismiss();
+      } else {
+        // Snap back to original position
+        setScrollY(0);
+        setCurrentY(0);
+      }
+    }
+  };
+
   if (!isOpen || !modalVisible) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
       {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-xl h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden flex flex-col">
+      <div 
+        className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-xl h-[85vh] md:h-auto md:max-h-[95vh] md:mx-auto overflow-hidden flex flex-col transition-transform duration-200 ease-out"
+        style={{
+          transform: userExists === true ? `translateY(${scrollY}px)` : 'translateY(0)'
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Header - Show title for Welcome back, hide for other states */}
         {userExists === true ? (
-          <div className="px-6 pt-6 pb-4">
+          <div className="px-6 pt-6 pb-4 relative">
+            <button
+              onClick={handleDismiss}
+              className="absolute right-6 top-6 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <h2 className="text-xl font-semibold text-gray-900 text-center">Welcome back!</h2>
           </div>
         ) : (
@@ -1283,39 +1361,39 @@ export default function AccountCheckModal({
               <p className="text-sm text-gray-600">Checking your account...</p>
             </div>
           ) : userExists === true ? (
-            // Existing Account Card - Mobile optimized layout
-            <div className="flex flex-col h-full">
+            // Existing Account Card - Perfectly centered layout
+            <div className="flex flex-col items-center justify-center h-full px-6 md:px-8 py-8">
               {/* Centered Profile Card */}
-              <div className="flex-1 flex items-center justify-center">
-                <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-6 w-full max-w-sm">
-                  <div className="flex items-center space-x-4">
-                    {/* Profile Picture - Left */}
-                    <Avatar 
-                      src={existingUser?.profile_pic ?? undefined} 
-                      name={existingUser?.name || existingUser?.full_name || 'User'} 
-                      size={64}
-                    />
-                    
-                    {/* Name - Center */}
-                    <div className="flex-1 text-center">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {existingUser?.name || existingUser?.full_name || 'User'}
-                      </h3>
-                    </div>
+              <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-8 py-10 w-full max-w-sm mb-8">
+                <div className="flex flex-col items-center space-y-6">
+                  {/* Profile Picture - Centered */}
+                  <Avatar 
+                    src={existingUser?.profile_pic ?? undefined} 
+                    name={existingUser?.name || existingUser?.full_name || 'User'} 
+                    size={80}
+                  />
+                  
+                  {/* Name - Centered */}
+                  <div className="text-center">
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {existingUser?.name || existingUser?.full_name || 'User'}
+                    </h3>
                   </div>
                 </div>
               </div>
 
               {/* Bottom Section - Sign In Button and Text */}
-              <div className="space-y-4 pb-6">
-                {/* Sign In Button - Mobile sized */}
-                <Button
-                  onClick={handleSignIn}
-                  disabled={isSigningIn}
-                  className="w-full max-w-xs mx-auto"
-                >
-                  {isSigningIn ? 'Signing in...' : 'Sign In'}
-                </Button>
+              <div className="space-y-4 w-full max-w-sm">
+                {/* Sign In Button - Centered */}
+                <div className="flex justify-center">
+                  <Button
+                    onClick={handleSignIn}
+                    disabled={isSigningIn}
+                    className="w-full max-w-[280px] py-4 text-base font-medium"
+                  >
+                    {isSigningIn ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                </div>
 
                 {/* Text below with create new account option */}
                 <div className="text-center">

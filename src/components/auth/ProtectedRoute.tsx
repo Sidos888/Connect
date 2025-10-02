@@ -40,7 +40,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
       case '/chat':
         return {
           title: "Chats",
-          description: "Log in / sign up to view chats",
+          description: "Log in / sign up to view your chats and messages with friends",
           buttonText: "Log in"
         };
       case '/my-life':
@@ -280,12 +280,12 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
     return (
       <>
-        <div className="login-screen flex flex-col items-center justify-center h-screen bg-gray-50 p-4 overflow-hidden">
+        <div className="login-screen flex flex-col items-center justify-center h-screen bg-white p-4 overflow-hidden">
           <div className="text-center w-full max-w-sm">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
               {displayTitle}
             </h1>
-            <div className="text-gray-600 mb-8 h-12 flex items-center justify-center">
+            <div className="text-gray-600 mb-8 flex items-center justify-center">
               <p className="text-center">
                 {displayDescription}
               </p>

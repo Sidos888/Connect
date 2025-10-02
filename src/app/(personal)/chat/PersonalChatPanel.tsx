@@ -88,7 +88,24 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           messages.map((m) => {
             const isMe = m.sender_id === account?.id;
             return (
-          <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+          <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2`}>
+            {/* Profile picture for received messages */}
+            {!isMe && (
+              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {conversation.avatarUrl ? (
+                  <img
+                    src={conversation.avatarUrl}
+                    alt={conversation.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-gray-400 text-sm font-semibold">
+                    {conversation.title.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className={`
               max-w-[70%]
               ${isMe 
@@ -100,15 +117,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               {/* Message Content */}
               <div className="text-sm leading-relaxed whitespace-pre-wrap">
                 {m.text || 'Message'}
-              </div>
-              
-              {/* Message Time */}
-              <div className="text-xs mt-2 text-gray-500">
-                {new Date(m.created_at).toLocaleTimeString('en-US', { 
-                  hour: 'numeric', 
-                  minute: '2-digit',
-                  hour12: true 
-                })}
               </div>
             </div>
           </div>
@@ -125,12 +133,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </button>
-          <div className="flex-1 relative">
+          <div className="flex-1 relative max-w-xs sm:max-w-none">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder=""
-              className="w-full px-4 py-3 bg-white rounded-full border border-gray-300 focus:outline-none focus:border-black focus:bg-white transition-colors resize-none"
+              className="w-full px-3 py-1 bg-white rounded-full border-[1.5px] border-gray-300 focus:outline-none focus:border-gray-900 focus:bg-white transition-colors resize-none text-sm shadow-sm sm:px-4 sm:py-3 sm:rounded-xl sm:border sm:border-gray-300"
               rows={1}
               onKeyDown={async (e) => {
                 if (e.key === 'Enter' && !e.shiftKey && text.trim() && account?.id) {
@@ -152,7 +160,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5l7 7-7 7" />
               </svg>
             </button>
           )}

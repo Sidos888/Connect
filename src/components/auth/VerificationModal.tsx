@@ -34,6 +34,20 @@ export default function VerificationModal({
   const [activeIndex, setActiveIndex] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  
+  // Scroll-to-dismiss state
+  const [scrollY, setScrollY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState(0);
+  const [currentY, setCurrentY] = useState(0);
+  const [initialViewportHeight, setInitialViewportHeight] = useState(0);
+
+  // Capture initial viewport height when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setInitialViewportHeight(window.innerHeight);
+    }
+  }, [isOpen]);
 
   // Focus first input when modal opens
   useEffect(() => {
@@ -175,6 +189,60 @@ export default function VerificationModal({
     };
   }, [isOpen]);
 
+  // Handle dismiss - sign out and return to original page
+  const handleDismiss = async () => {
+    console.log('VerificationModal: Dismissing modal');
+    
+    // Sign out the user to ensure they're not signed in
+    try {
+      const { default: supabase } = await import('@/lib/supabaseClient');
+      await supabase.auth.signOut();
+      console.log('VerificationModal: User signed out for dismiss');
+    } catch (error) {
+      console.error('VerificationModal: Error signing out on dismiss:', error);
+    }
+
+    // Close modal - the modal context will handle navigation back to original page
+    onClose();
+  };
+
+  // Touch handlers for scroll-to-dismiss
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    setStartY(e.touches[0].clientY);
+    setCurrentY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging) {
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchY - startY;
+      setCurrentY(touchY);
+      // Use initial viewport height for consistent scroll behavior with/without keyboard
+      const viewportHeight = initialViewportHeight || window.innerHeight;
+      const maxScroll = viewportHeight / 3;
+      const slowScrollFactor = 0.3; // Much slower scrolling
+      setScrollY(Math.max(0, Math.min(deltaY * slowScrollFactor, maxScroll)));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      
+      // Use initial viewport height for consistent scroll behavior with/without keyboard
+      const viewportHeight = initialViewportHeight || window.innerHeight;
+      const dismissThreshold = (viewportHeight / 3) * 0.5;
+      if (scrollY > dismissThreshold) {
+        handleDismiss();
+      } else {
+        // Snap back to original position
+        setScrollY(0);
+        setCurrentY(0);
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -182,11 +250,19 @@ export default function VerificationModal({
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleDismiss}
       />
       
       {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-xl">
+      <div 
+        className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-200 ease-out h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden"
+        style={{
+          transform: `translateY(${scrollY}px)`
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <button
@@ -295,19 +371,19 @@ export default function VerificationModal({
                 className={`
                   w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-[3px] rounded-xl
                   focus:outline-none focus:ring-0 transition-all duration-75 bg-white
-                  ${isVerifying
-                    ? 'border-green-500 bg-green-50'
-                    : activeIndex === index
+                  ${activeIndex === index
+                    ? '!border-black'
+                    : digit !== ''
                     ? '!border-black'
                     : 'border-gray-300'
                   }
                 `}
                 style={{ 
                   caretColor: 'transparent',
-                  borderColor: isVerifying 
-                    ? '#10b981' 
-                    : activeIndex === index 
+                  borderColor: activeIndex === index 
                     ? '#000000' 
+                    : digit !== ''
+                    ? '#000000'
                     : '#d1d5db'
                 }}
               />

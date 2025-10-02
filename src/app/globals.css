@@ -455,3 +455,26 @@ input[class*="text-transparent"]:-webkit-autofill {
   -webkit-text-fill-color: transparent !important;
   color: transparent !important;
 }
+
+/* iOS Safari VisualViewport fallback for dynamic viewport height */
+.use-vvh {
+  min-height: var(--vvh, 100dvh);
+}
+
+/* Ensure proper viewport handling for chat containers */
+.chat-container {
+  min-height: 100dvh;
+  min-height: var(--vvh, 100dvh);
+  height: 100dvh;
+  height: var(--vvh, 100dvh);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Prevent body scroll when chat is active */
+body.chat-active {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+}

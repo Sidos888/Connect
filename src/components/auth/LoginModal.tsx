@@ -30,6 +30,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [accountRecognized, setAccountRecognized] = useState(false);
   const phoneInputRef = useRef<HTMLInputElement>(null);
+  
+  // Scroll-to-dismiss state
+  const [scrollY, setScrollY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState(0);
+  const [currentY, setCurrentY] = useState(0);
 
   // Reset success states when modal opens
   useEffect(() => {
@@ -305,6 +311,56 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     onClose();
   };
 
+  const handleDismiss = async () => {
+    console.log('LoginModal: Dismissing modal');
+    
+    // Sign out the user to ensure they're not signed in
+    try {
+      await supabase.auth.signOut();
+      console.log('LoginModal: User signed out for dismiss');
+    } catch (error) {
+      console.error('LoginModal: Error signing out on dismiss:', error);
+    }
+
+    // Close modal - the modal context will handle navigation back to original page
+    handleClose();
+  };
+
+  // Touch handlers for scroll-to-dismiss
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    setStartY(e.touches[0].clientY);
+    setCurrentY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging) {
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchY - startY;
+      setCurrentY(touchY);
+      // Limit scroll to first third of screen and make it much slower
+      const maxScroll = window.innerHeight / 3;
+      const slowScrollFactor = 0.3; // Much slower scrolling
+      setScrollY(Math.max(0, Math.min(deltaY * slowScrollFactor, maxScroll)));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      
+      // If scrolled down more than half of the first third, dismiss to explore page
+      const dismissThreshold = (window.innerHeight / 3) * 0.5;
+      if (scrollY > dismissThreshold) {
+        handleDismiss();
+      } else {
+        // Snap back to original position
+        setScrollY(0);
+        setCurrentY(0);
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -364,11 +420,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={handleClose}
+            onClick={handleDismiss}
           />
           
           {/* Modal */}
-          <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden">
+          <div 
+            className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-200 ease-out h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden"
+            style={{
+              transform: `translateY(${scrollY}px)`
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="w-10" /> {/* Spacer */}
@@ -376,7 +440,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 Log in or sign up
               </h2>
               <button
-                onClick={handleClose}
+                onClick={handleDismiss}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <XMarkIcon className="h-6 w-6 text-gray-600" />

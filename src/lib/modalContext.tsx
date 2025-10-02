@@ -22,6 +22,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [isAddChatOpen, setIsAddChatOpen] = useState(false);
   const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
+  const [originalPath, setOriginalPath] = useState<string | null>(null);
   const router = useRouter();
   const { signOut } = useAuth();
 
@@ -45,6 +46,8 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   const showLogin = () => {
     console.log('ModalProvider: showLogin called');
     console.log('ModalProvider: Current modal states:', { isLoginOpen, isSignUpOpen });
+    // Capture current path before opening modal
+    setOriginalPath(window.location.pathname);
     setIsLoginOpen(true);
     setIsSignUpOpen(false);
     console.log('ModalProvider: Login modal should now be open');
@@ -53,6 +56,8 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   const showSignUp = () => {
     console.log('ModalProvider: showSignUp called');
     console.log('ModalProvider: Current modal states:', { isLoginOpen, isSignUpOpen });
+    // Capture current path before opening modal
+    setOriginalPath(window.location.pathname);
     setIsSignUpOpen(true);
     setIsLoginOpen(false);
     console.log('ModalProvider: SignUp modal should now be open');
@@ -77,6 +82,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
     setIsSignUpOpen(false);
     setIsAddChatOpen(false);
     setIsAddFriendOpen(false);
+    setOriginalPath(null);
   };
 
   return (
@@ -90,6 +96,10 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
           // NOT signing out - preserving user state
           console.log('ModalContext: Closing modal but preserving user authentication');
           setIsLoginOpen(false);
+          // Return to original page if available
+          if (originalPath && originalPath !== window.location.pathname) {
+            router.push(originalPath);
+          }
         }}
         onProfileSetup={() => {
           setIsLoginOpen(false);
@@ -103,6 +113,10 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
           // NOT signing out - preserving user state
           console.log('ModalContext: Closing modal but preserving user authentication');
           setIsSignUpOpen(false);
+          // Return to original page if available
+          if (originalPath && originalPath !== window.location.pathname) {
+            router.push(originalPath);
+          }
         }}
         onProfileSetup={() => {
           setIsSignUpOpen(false);

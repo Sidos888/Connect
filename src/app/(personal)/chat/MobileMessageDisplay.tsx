@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
-import MessageBubble from "@/components/chat/MessageBubble";
 
 interface MobileMessageDisplayProps {
   conversation: Conversation;
@@ -70,13 +69,38 @@ export default function MobileMessageDisplay({ conversation }: MobileMessageDisp
         messages.map((m) => {
           const isMe = m.sender_id === account?.id;
           return (
-            <MessageBubble
-              key={m.id}
-              message={m}
-              isMe={isMe}
-              onReactionAdd={handleReactionAdd}
-              onReactionRemove={handleReactionRemove}
-            />
+            <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2`}>
+              {/* Profile picture for received messages */}
+              {!isMe && (
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {conversation.avatarUrl ? (
+                    <img
+                      src={conversation.avatarUrl}
+                      alt={conversation.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-gray-400 text-sm font-semibold">
+                      {conversation.title.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Message bubble - white background for mobile */}
+              <div className={`
+                max-w-[70%]
+                ${isMe 
+                  ? "bg-white text-gray-900 border border-gray-200" 
+                  : "bg-white text-gray-900 border border-gray-200"
+                }
+                rounded-2xl px-4 py-3 shadow-sm
+              `}>
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {m.text || 'Message'}
+                </div>
+              </div>
+            </div>
           );
         })
       )}
