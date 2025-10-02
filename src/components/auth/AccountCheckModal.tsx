@@ -1283,73 +1283,77 @@ export default function AccountCheckModal({
               <p className="text-sm text-gray-600">Checking your account...</p>
             </div>
           ) : userExists === true ? (
-            // Existing Account Card
-            <div className="space-y-4">
-
-              {/* Profile Card - Cool Design */}
-              <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-6">
-                <div className="flex items-center space-x-4">
-                  {/* Profile Picture - Left */}
-                  <Avatar 
-                    src={existingUser?.profile_pic ?? undefined} 
-                    name={existingUser?.name || existingUser?.full_name || 'User'} 
-                    size={64}
-                  />
-                  
-                  {/* Name - Center */}
-                  <div className="flex-1 text-center">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {existingUser?.name || existingUser?.full_name || 'User'}
-                    </h3>
+            // Existing Account Card - Mobile optimized layout
+            <div className="flex flex-col h-full">
+              {/* Centered Profile Card */}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-6 w-full max-w-sm">
+                  <div className="flex items-center space-x-4">
+                    {/* Profile Picture - Left */}
+                    <Avatar 
+                      src={existingUser?.profile_pic ?? undefined} 
+                      name={existingUser?.name || existingUser?.full_name || 'User'} 
+                      size={64}
+                    />
+                    
+                    {/* Name - Center */}
+                    <div className="flex-1 text-center">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {existingUser?.name || existingUser?.full_name || 'User'}
+                      </h3>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Sign In Button */}
-              <Button
-                onClick={handleSignIn}
-                disabled={isSigningIn}
-                className="w-full"
-              >
-                {isSigningIn ? 'Signing in...' : 'Sign In'}
-              </Button>
+              {/* Bottom Section - Sign In Button and Text */}
+              <div className="space-y-4 pb-6">
+                {/* Sign In Button - Mobile sized */}
+                <Button
+                  onClick={handleSignIn}
+                  disabled={isSigningIn}
+                  className="w-full max-w-xs mx-auto"
+                >
+                  {isSigningIn ? 'Signing in...' : 'Sign In'}
+                </Button>
 
-              {/* Text below with create new account option */}
-              <div className="text-center">
-                {resetMessage ? (
-                  <p className={`text-sm ${resetMessage.includes('sent') ? 'text-green-600' : 'text-red-600'}`}>
-                    {resetMessage}
-                  </p>
-                ) : (
-                  <p className="text-gray-500 text-sm">
-                    Not my account?{' '}
-                    <button
-                      onClick={async () => {
-                        // Sign out the user first to ensure they're unsigned in
-                        try {
-                          await supabase.auth.signOut();
-                        } catch (error) {
-                          console.error('Error signing out:', error);
-                        }
+                {/* Text below with create new account option */}
+                <div className="text-center">
+                  {resetMessage ? (
+                    <p className={`text-sm ${resetMessage.includes('sent') ? 'text-green-600' : 'text-red-600'}`}>
+                      {resetMessage}
+                    </p>
+                  ) : (
+                    <p className="text-gray-500 text-sm">
+                      Not my account?{' '}
+                      <button
+                        onClick={async () => {
+                          // Sign out the user first to ensure they're unsigned in
+                          try {
+                            await supabase.auth.signOut();
+                          } catch (error) {
+                            console.error('Error signing out:', error);
+                          }
 
-                        // Clear local state
-                        clearAll();
+                          // Clear local state
+                          clearAll();
 
-                        // Reset to initial login state if callback provided
-                        if (onResetToInitialLogin) {
-                          onResetToInitialLogin();
-                        } else {
-                          // Fallback: close modal and redirect
-                          onClose();
-                          router.push('/');
-                        }
-                      }}
-                      className="text-gray-400 underline hover:text-gray-600 transition-colors"
-                    >
-                      Create new one
-                    </button>
-                  </p>
-                )}
+                          // Reset to initial login state if callback provided
+                          if (onResetToInitialLogin) {
+                            onResetToInitialLogin();
+                          } else {
+                            // Fallback: close modal and redirect
+                            onClose();
+                            router.push('/');
+                          }
+                        }}
+                        className="text-gray-400 underline hover:text-gray-600 transition-colors"
+                      >
+                        Create new one
+                      </button>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
