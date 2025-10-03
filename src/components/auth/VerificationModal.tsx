@@ -373,8 +373,6 @@ export default function VerificationModal({
                   focus:outline-none focus:ring-0 transition-all duration-75 bg-white
                   ${activeIndex === index
                     ? '!border-black'
-                    : digit !== ''
-                    ? '!border-black'
                     : 'border-gray-300'
                   }
                 `}
@@ -382,8 +380,6 @@ export default function VerificationModal({
                   caretColor: 'transparent',
                   borderColor: activeIndex === index 
                     ? '#000000' 
-                    : digit !== ''
-                    ? '#000000'
                     : '#d1d5db'
                 }}
               />

@@ -117,7 +117,7 @@ export class NewMessageFlow {
     const formattedContacts = contacts.map(contact => ({
       id: contact.id,
       name: contact.name,
-      profilePic: contact.profile_pic,
+      profile_pic: contact.profile_pic,
       type: 'person' as const
     }));
     
@@ -187,7 +187,7 @@ export class NewMessageFlow {
   getPrimaryButtonText(): string {
     const count = this.context.selectedContacts.length;
     if (count === 0) return 'Select contacts';
-    if (count === 1) return 'Start DM';
+    if (count === 1) return 'Chat';
     return 'Continue';
   }
 
@@ -371,7 +371,23 @@ export class NewMessageFlow {
       // Use the current session user ID (exists in REST API accounts table)
       const correctUserId = user.id; // 4f04235f-d166-48d9-ae07-a97a6421a328
       
-          const { chat, error } = await simpleChatService.createDirectChat(contact.id, correctUserId);
+      // First, check if a chat already exists
+      const { chat: existingChat, error: findError } = await simpleChatService.findExistingDirectChat(correctUserId, contact.id);
+      
+      if (findError) {
+        console.error('Error finding existing chat:', findError);
+        // Continue to create new chat if finding fails
+      } else if (existingChat) {
+        console.log('Found existing chat:', existingChat.id);
+        this.updateContext({
+          state: 'completed',
+          isLoading: false
+        });
+        return existingChat;
+      }
+      
+      // No existing chat found, create a new one
+      const { chat, error } = await simpleChatService.createDirectChat(contact.id, correctUserId);
 
       if (error) {
         throw error;

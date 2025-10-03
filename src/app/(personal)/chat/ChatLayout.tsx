@@ -9,7 +9,7 @@ import PersonalChatPanel from "./PersonalChatPanel";
 import { useAuth } from "@/lib/authContext";
 import { useModal } from "@/lib/modalContext";
 import InlineContactSelector from "@/components/chat/InlineContactSelector";
-import GroupSetupModal from "@/components/chat/GroupSetupModal";
+import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus } from "lucide-react";
 import { simpleChatService } from "@/lib/simpleChatService";
 
@@ -23,8 +23,9 @@ export default function ChatLayout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [showNewMessageSelector, setShowNewMessageSelector] = useState(false);
-  const [showGroupSetupModal, setShowGroupSetupModal] = useState(false);
+  const [showGroupSetup, setShowGroupSetup] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [selectedContactsForGroup, setSelectedContactsForGroup] = useState<any[]>([]);
 
   useEffect(() => {
     if (isHydrated && account?.id) {
@@ -152,7 +153,7 @@ export default function ChatLayout() {
   const handleNewMessageComplete = (chatId: string) => {
     console.log('ChatLayout: handleNewMessageComplete called with chatId:', chatId);
     setShowNewMessageSelector(false);
-    setShowGroupSetupModal(false);
+    setShowGroupSetup(false);
     // Refresh conversations to include the new chat
     if (account?.id) {
       loadConversations(account.id);
@@ -164,11 +165,22 @@ export default function ChatLayout() {
 
   const handleNewMessageClose = () => {
     setShowNewMessageSelector(false);
-    setShowGroupSetupModal(false);
+    setShowGroupSetup(false);
   };
 
   const handleNewMessageClick = () => {
     setShowNewMessageSelector(true);
+  };
+
+  const handleGroupSetup = (selectedContacts: any[]) => {
+    setSelectedContactsForGroup(selectedContacts);
+    setShowNewMessageSelector(false);
+    setShowGroupSetup(true);
+  };
+
+  const handleGroupSetupClose = () => {
+    setShowGroupSetup(false);
+    setSelectedContactsForGroup([]);
   };
 
   const handleSelectChat = (chatId: string, e?: React.MouseEvent) => {
@@ -176,7 +188,17 @@ export default function ChatLayout() {
       e.preventDefault();
       e.stopPropagation();
     }
-    router.push(`/chat?chat=${chatId}`);
+    
+    // Check if we're on mobile (screen width < 768px)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    
+    if (isMobile) {
+      // On mobile, navigate to individual chat page
+      router.push(`/chat/individual?chat=${chatId}`);
+    } else {
+      // On desktop, stay on the main chat page with selected chat
+      router.push(`/chat?chat=${chatId}`);
+    }
   };
 
   const categories = [
@@ -206,7 +228,13 @@ export default function ChatLayout() {
           <InlineContactSelector
             onClose={handleNewMessageClose}
             onComplete={handleNewMessageComplete}
-            onShowGroupSetup={() => setShowGroupSetupModal(true)}
+            onShowGroupSetup={handleGroupSetup}
+          />
+        ) : showGroupSetup ? (
+          <InlineGroupSetup
+            selectedContacts={selectedContactsForGroup}
+            onClose={handleGroupSetupClose}
+            onComplete={handleNewMessageComplete}
           />
         ) : (
           <>
@@ -488,12 +516,6 @@ export default function ChatLayout() {
         )}
       </div>
 
-      {/* Group Setup Modal */}
-      <GroupSetupModal
-        isOpen={showGroupSetupModal}
-        onClose={handleNewMessageClose}
-        onComplete={handleNewMessageComplete}
-      />
     </div>
   );
 }

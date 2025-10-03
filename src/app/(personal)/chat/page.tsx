@@ -107,14 +107,17 @@ export default function MessagesPage() {
 
   // Modal handlers
   const handleNewMessageComplete = (chatId: string) => {
+    console.log('handleNewMessageComplete called with chatId:', chatId);
     setShowNewMessageModal(false);
     setShowGroupSetupModal(false);
     // Refresh conversations to include the new chat
     if (account?.id) {
+      console.log('Loading conversations for account:', account.id);
       loadConversations(account.id);
     }
-    // Navigate to the chat within the same layout
-    router.push(`/chat?chat=${chatId}`);
+    // Navigate to the individual chat page
+    console.log('Navigating to individual chat:', `/chat/individual?chat=${chatId}`);
+    router.push(`/chat/individual?chat=${chatId}`);
   };
 
   const handleNewMessageClose = () => {
@@ -355,7 +358,7 @@ export default function MessagesPage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      router.push(`/chat/individual?id=${conversation.id}`);
+                      router.push(`/chat/individual?chat=${conversation.id}`);
                     }}
                     className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
                       selectedChatId === conversation.id

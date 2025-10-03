@@ -177,6 +177,57 @@ class SimpleChatService {
     }
   }
 
+  // Find existing direct chat between two users
+  async findExistingDirectChat(userId1: string, userId2: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
+    try {
+      console.log('SimpleChatService: Looking for existing direct chat between:', userId1, 'and', userId2);
+
+      // Query for direct chats where both users are participants
+      const { data: chats, error } = await this.supabase
+        .from('chats')
+        .select(`
+          id,
+          type,
+          name,
+          created_at,
+          chat_participants!inner(user_id)
+        `)
+        .eq('type', 'direct')
+        .in('chat_participants.user_id', [userId1, userId2]);
+
+      if (error) {
+        console.error('Error finding existing chats:', error);
+        return { chat: null, error };
+      }
+
+      // Find a chat that has both users as participants
+      for (const chat of chats || []) {
+        const { data: participants, error: participantsError } = await this.supabase
+          .from('chat_participants')
+          .select('user_id')
+          .eq('chat_id', chat.id);
+
+        if (participantsError) continue;
+
+        const participantIds = participants?.map(p => p.user_id) || [];
+        if (participantIds.includes(userId1) && participantIds.includes(userId2)) {
+          // Found existing chat, convert to SimpleChat format
+          const { chat: fullChat, error: chatError } = await this.getChatById(chat.id);
+          if (!chatError && fullChat) {
+            console.log('SimpleChatService: Found existing chat:', chat.id);
+            return { chat: fullChat, error: null };
+          }
+        }
+      }
+
+      console.log('SimpleChatService: No existing chat found');
+      return { chat: null, error: null };
+    } catch (error) {
+      console.error('Error in findExistingDirectChat:', error);
+      return { chat: null, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
   // Create a direct chat (now saves to Supabase)
   async createDirectChat(otherUserId: string, currentUserId: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
@@ -256,6 +307,7 @@ class SimpleChatService {
           type: 'group',
           name: name,
           created_by: participantIds[0] // Use first participant as creator
+          // Note: Photo storage will be implemented later
         })
         .select()
         .single();
@@ -369,6 +421,31 @@ class SimpleChatService {
     } catch (error) {
       console.error('Error in getChatMessages:', error);
       return { messages: [], error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Delete a chat
+  async deleteChat(chatId: string): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      // Delete from Supabase
+      const { error: deleteError } = await this.supabase
+        .from('chats')
+        .delete()
+        .eq('id', chatId);
+
+      if (deleteError) {
+        console.error('Error deleting chat from Supabase:', deleteError);
+        return { success: false, error: deleteError };
+      }
+
+      // Remove from in-memory cache
+      this.chats.delete(chatId);
+      
+      console.log('SimpleChatService: Chat deleted:', chatId);
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in deleteChat:', error);
+      return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
     }
   }
 

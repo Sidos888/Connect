@@ -1688,7 +1688,6 @@ export default function Page() {
                 ] :
                 // Personal account menu items
                 [
-                  { title: "Chat", icon: "💬", href: "/chat" },
                   { title: "My Gallery", icon: "📷", href: "/gallery" },
                   { title: "Achievements", icon: "🏆", href: "/achievements" },
                   { title: "My Bookings", icon: "📅", href: "/my-life" },

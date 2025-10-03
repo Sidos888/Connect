@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/authContext";
 import { useAppStore } from "@/lib/store";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Avatar from "@/components/Avatar";
-import MobileTitle from "@/components/MobileTitle";
 import { ArrowLeft, Search, MessageCircle, Users } from "lucide-react";
 
 interface ConnectionUser {
@@ -151,22 +150,26 @@ export default function NewChatPage() {
   }
 
   return (
-    <div className="h-full bg-white">
-      {/* Mobile Title */}
-      <MobileTitle 
-        title="New Chat" 
-        action={
-          <button
-            onClick={() => router.back()}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </button>
-        }
-      />
+    <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
+      {/* Header */}
+      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 44px) + 20px)' }}>
+        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          aria-label="Go back"
+        >
+          <span className="back-btn-circle">
+          <ArrowLeft className="h-5 w-5" />
+          </span>
+        </button>
+          <h1 className="text-xl font-semibold text-center" style={{ textAlign: 'center', width: '100%', display: 'block', color: '#ef4444' }}>New Chat</h1>
+        </div>
+      </div>
 
       {/* Search */}
-      <div className="p-4 border-b border-gray-200 pt-[120px] lg:pt-4">
+      <div className="p-4 border-b border-gray-200">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input

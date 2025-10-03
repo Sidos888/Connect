@@ -59,25 +59,56 @@ export default function NewMessageModal({
 
   const handleProceed = async () => {
     if (context.selectedContacts.length === 1) {
-      // Create direct message
+      // Handle single user - check if chat exists first
       try {
+        console.log('Starting handleProceed with contact:', context.selectedContacts[0]);
+        
         // Get current user ID
         const { data: { user } } = await getSupabaseClient().auth.getUser();
         if (!user) {
           console.error('User not authenticated');
           return;
         }
+        console.log('User authenticated:', user.id);
         
-        const { chat, error } = await simpleChatService.createDirectChat(context.selectedContacts[0].id, user.id);
-        if (error) {
-          console.error('Error creating direct chat:', error);
+        // First, try to find existing chat
+        console.log('Getting conversations...');
+        const { chats, error: chatsError } = await simpleChatService.getUserChats(user.id);
+        if (chatsError) {
+          console.error('Error getting chats:', chatsError);
           return;
         }
-        if (chat) {
-          onComplete(chat.id);
+        console.log('Found chats:', chats.length);
+        
+        const existingChat = chats.find(chat => 
+          chat.participants.length === 2 && 
+          chat.participants.some(p => p.id === context.selectedContacts[0].id)
+        );
+        
+        if (existingChat) {
+          // Chat exists, go to it
+          console.log('Found existing chat:', existingChat.id);
+          console.log('Calling onComplete with chat ID:', existingChat.id);
+          onComplete(existingChat.id);
+        } else {
+          // No existing chat, create new one
+          console.log('Creating new chat with:', context.selectedContacts[0].name);
+          const { chat, error } = await simpleChatService.createDirectChat(context.selectedContacts[0].id, user.id);
+          if (error) {
+            console.error('Error creating direct chat:', error);
+            return;
+          }
+          if (chat) {
+            console.log('Created new chat:', chat.id);
+            console.log('Calling onComplete with new chat ID:', chat.id);
+            onComplete(chat.id);
+          } else {
+            console.error('No chat returned from createDirectChat');
+          }
         }
       } catch (error) {
-        console.error('Error creating direct chat:', error);
+        console.error('Error handling direct chat:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
       }
     } else if (context.selectedContacts.length > 1) {
       // Show group setup
@@ -98,71 +129,74 @@ export default function NewMessageModal({
   const hasContacts = friends.length > 0 || businesses.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-white">
-      {/* Modal */}
-      <div className="h-full w-full flex flex-col">
-        {/* Header */}
-        <div className="relative flex items-center justify-center p-6 border-b border-gray-200">
+    <div className="fixed inset-0 z-[1000] h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
+      {/* Header */}
+      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <button
             onClick={handleClose}
-            className="absolute left-6 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            aria-label="Go back"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <span className="back-btn-circle">
+              <X className="h-5 w-5" />
+            </span>
           </button>
-          <h2 className="text-xl font-semibold text-gray-900">New Chat</h2>
+          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>New Chat</h2>
           {context.selectedContacts.length > 0 && (
             <button
               onClick={handleProceed}
               disabled={!newMessageFlow.canProceed() || context.isLoading}
-              className="absolute right-6 text-orange-500 hover:text-orange-600 disabled:text-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
+              className="absolute right-0 text-orange-500 hover:text-orange-600 disabled:text-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
             >
               {context.isLoading ? 'Processing...' : 
-               context.selectedContacts.length === 1 ? 'Create' : 'Continue'}
+               context.selectedContacts.length === 1 ? 'Chat' : 'Continue'}
             </button>
           )}
         </div>
+      </div>
 
-        {/* Search */}
-        <div className="p-6 pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search contacts..."
-              value={context.searchQuery}
-              onChange={handleSearchChange}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-            />
+      {/* Search */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search contacts..."
+            value={context.searchQuery}
+            onChange={handleSearchChange}
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+          />
+        </div>
+      </div>
+
+      {/* Selected Contacts */}
+      {context.selectedContacts.length > 0 && (
+        <div className="px-6 py-6 pb-4">
+          <div className="flex flex-wrap gap-2">
+            {context.selectedContacts.map((contact) => (
+              <AvatarChip
+                key={contact.id}
+                contact={contact}
+                onRemove={handleRemoveContact}
+                size="sm"
+              />
+            ))}
           </div>
         </div>
+      )}
 
-        {/* Selected Contacts */}
-        {context.selectedContacts.length > 0 && (
-          <div className="px-6 pb-4">
-            <div className="flex flex-wrap gap-2">
-              {context.selectedContacts.map((contact) => (
-                <AvatarChip
-                  key={contact.id}
-                  contact={contact}
-                  onRemove={handleRemoveContact}
-                  size="sm"
-                />
-              ))}
-            </div>
+      {/* Error Message */}
+      {context.error && (
+        <div className="px-6 pb-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-700">{context.error}</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Error Message */}
-        {context.error && (
-          <div className="px-6 pb-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-700">{context.error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Contact List */}
-        <div className="flex-1 overflow-y-auto px-6">
+      {/* Contact List */}
+      <div className="flex-1 overflow-y-auto px-6">
           {context.isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-black"></div>
@@ -230,8 +264,6 @@ export default function NewMessageModal({
             </div>
           )}
         </div>
-
-      </div>
     </div>
   );
 }

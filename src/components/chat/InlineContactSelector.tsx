@@ -11,7 +11,7 @@ import { simpleChatService } from '@/lib/simpleChatService';
 interface InlineContactSelectorProps {
   onClose: () => void;
   onComplete: (chatId: string) => void;
-  onShowGroupSetup?: () => void;
+  onShowGroupSetup?: (selectedContacts: any[]) => void;
 }
 
 export default function InlineContactSelector({ 
@@ -62,7 +62,7 @@ export default function InlineContactSelector({
       const friendsList: Contact[] = contacts.map(contact => ({
         id: contact.id,
         name: contact.name,
-        profilePic: contact.profile_pic,
+        profile_pic: contact.profile_pic,
         type: 'person' as const,
       }));
       
@@ -92,11 +92,12 @@ export default function InlineContactSelector({
       onClose();
       newMessageFlow.reset();
     } else if (context.state === 'group_setup') {
-      // Navigate to group creation page
-      const participantIds = context.selectedContacts.map(c => c.id).join(',');
-      window.location.href = `/chat/create-group?participants=${participantIds}`;
+      // Show inline group setup
+      if (onShowGroupSetup) {
+        onShowGroupSetup(context.selectedContacts);
+      }
     }
-  }, [context.state, onClose, context.selectedContacts]);
+  }, [context.state, onClose, context.selectedContacts, onShowGroupSetup]);
 
   const handleSearchChange = (query: string) => {
     newMessageFlow.updateSearchQuery(query);
@@ -117,7 +118,7 @@ export default function InlineContactSelector({
     console.log('Can proceed:', newMessageFlow.canProceed());
     
     if (context.selectedContacts.length === 1) {
-      // Create direct message
+      // Check for existing direct message or create new one
       try {
         // Get current user ID
         const { data: { user } } = await getSupabaseClient().auth.getUser();
@@ -129,8 +130,23 @@ export default function InlineContactSelector({
         // Use the current session user ID (exists in REST API accounts table)
         const correctUserId = user.id; // 4f04235f-d166-48d9-ae07-a97a6421a328
         
-        console.log('Creating direct chat between:', correctUserId, 'and', context.selectedContacts[0].id);
-             const { chat, error } = await simpleChatService.createDirectChat(context.selectedContacts[0].id, correctUserId);
+        console.log('Looking for existing chat between:', correctUserId, 'and', context.selectedContacts[0].id);
+        
+        // First, check if a chat already exists
+        const { chat: existingChat, error: findError } = await simpleChatService.findExistingDirectChat(correctUserId, context.selectedContacts[0].id);
+        
+        if (findError) {
+          console.error('Error finding existing chat:', findError);
+          // Continue to create new chat if finding fails
+        } else if (existingChat) {
+          console.log('Found existing chat:', existingChat.id);
+          onComplete(existingChat.id);
+          return;
+        }
+        
+        // No existing chat found, create a new one
+        console.log('Creating new direct chat between:', correctUserId, 'and', context.selectedContacts[0].id);
+        const { chat, error } = await simpleChatService.createDirectChat(context.selectedContacts[0].id, correctUserId);
         
         if (error) {
           console.error('Error creating direct chat:', error);
@@ -149,10 +165,12 @@ export default function InlineContactSelector({
         console.error('Error creating direct chat:', error);
       }
     } else if (context.selectedContacts.length > 1) {
-      // Navigate to group setup page
-      console.log('Navigating to group setup for', context.selectedContacts.length, 'contacts');
-      const contactIds = context.selectedContacts.map(contact => contact.id).join(',');
-      window.location.href = `/chat/group-setup?contacts=${contactIds}`;
+      // Show inline group setup
+      console.log('Showing group setup for', context.selectedContacts.length, 'contacts');
+      console.log('InlineContactSelector: selectedContacts being passed:', context.selectedContacts);
+      if (onShowGroupSetup) {
+        onShowGroupSetup(context.selectedContacts);
+      }
     }
   };
 
@@ -174,7 +192,7 @@ export default function InlineContactSelector({
 
   const getButtonText = () => {
     if (context.selectedContacts.length === 0) return 'Select contacts';
-    if (context.selectedContacts.length === 1) return 'Start DM';
+    if (context.selectedContacts.length === 1) return 'Chat';
     return 'Continue';
   };
 
@@ -199,7 +217,7 @@ export default function InlineContactSelector({
               className="absolute right-0 text-orange-500 hover:text-orange-600 disabled:text-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
             >
               {context.isLoading ? 'Processing...' : 
-               context.selectedContacts.length === 1 ? 'Create' : 'Continue'}
+               context.selectedContacts.length === 1 ? 'Chat' : 'Continue'}
             </button>
           )}
         </div>
@@ -314,7 +332,7 @@ export default function InlineContactSelector({
         >
           {context.isLoading ? (
             <div className="flex items-center justify-center">
-              {context.selectedContacts.length === 1 ? 'Creating DM...' : 'Creating Group...'}
+              {context.selectedContacts.length === 1 ? 'Starting chat...' : 'Creating Group...'}
             </div>
           ) : (
             getButtonText()

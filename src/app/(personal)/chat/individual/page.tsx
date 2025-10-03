@@ -6,11 +6,13 @@ import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { useAppStore } from "@/lib/store";
 import { ArrowLeft } from "lucide-react";
+import UserProfileModal from "@/components/chat/UserProfileModal";
+import GroupProfileModal from "@/components/chat/GroupProfileModal";
 
 export default function IndividualChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const chatId = searchParams.get('id');
+  const chatId = searchParams.get('chat');
   const { account } = useAuth();
   const { sendMessage } = useAppStore();
   const [conversation, setConversation] = useState<any>(null);
@@ -24,6 +26,9 @@ export default function IndividualChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [startX, setStartX] = useState<number | null>(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showGroupProfile, setShowGroupProfile] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   // Load conversation and messages
   useEffect(() => {
@@ -114,6 +119,7 @@ export default function IndividualChatPage() {
     const touch = e.targetTouches[0];
     const currentX = touch.clientX;
     const deltaX = currentX - startX;
+    const screenWidth = window.innerWidth;
     
     // Only allow rightward movement (positive deltaX) - dragging from left to right
     if (deltaX > 0) {
@@ -178,7 +184,6 @@ export default function IndividualChatPage() {
     <div 
       className="h-screen bg-white relative" 
       style={{ 
-        height: '100vh',
         height: '100dvh', // Use dynamic viewport height for mobile
         transform: `translateX(${dragOffset}px)`,
         transition: isDragging ? 'none' : 'transform 0.2s ease-out',
@@ -222,7 +227,20 @@ export default function IndividualChatPage() {
           </button>
           
           {/* Profile Card */}
-          <div className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm">
+          <button 
+            onClick={() => {
+              if (conversation.type === 'direct') {
+                const otherParticipant = conversation.participants?.find((p: any) => p.id !== account?.id);
+                if (otherParticipant) {
+                  setProfileUserId(otherParticipant.id);
+                  setShowUserProfile(true);
+                }
+              } else if (conversation.type === 'group') {
+                setShowGroupProfile(true);
+              }
+            }}
+            className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm hover:bg-gray-50 transition-colors"
+          >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {conversation.avatarUrl ? (
                 <img
@@ -236,10 +254,10 @@ export default function IndividualChatPage() {
                 </div>
               )}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 text-left">
               <div className="font-semibold text-gray-900">{conversation.title}</div>
             </div>
-          </div>
+          </button>
           
           {/* Menu Button */}
           <button className="p-2 rounded-full hover:bg-gray-100">
@@ -350,6 +368,29 @@ export default function IndividualChatPage() {
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Profile Modals */}
+      {profileUserId && (
+        <UserProfileModal
+          isOpen={showUserProfile}
+          onClose={() => {
+            setShowUserProfile(false);
+            setProfileUserId(null);
+          }}
+          userId={profileUserId}
+          onStartChat={(chatId) => {
+            router.push(`/chat?chat=${chatId}`);
+          }}
+        />
+      )}
+
+      {chatId && (
+        <GroupProfileModal
+          isOpen={showGroupProfile}
+          onClose={() => setShowGroupProfile(false)}
+          chatId={chatId}
+        />
+      )}
     </div>
   );
 }

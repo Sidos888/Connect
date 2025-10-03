@@ -6,6 +6,9 @@ import Avatar from "@/components/Avatar";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
+import { useRouter } from "next/navigation";
+import UserProfileModal from "@/components/chat/UserProfileModal";
+import GroupProfileModal from "@/components/chat/GroupProfileModal";
 
 interface PersonalChatPanelProps {
   conversation: Conversation;
@@ -14,11 +17,15 @@ interface PersonalChatPanelProps {
 export default function PersonalChatPanel({ conversation }: PersonalChatPanelProps) {
   const { sendMessage, markAllRead } = useAppStore();
   const { account } = useAuth();
+  const router = useRouter();
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
   const hasMarkedAsRead = useRef(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showGroupProfile, setShowGroupProfile] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   // Load real messages from the database
   useEffect(() => {
@@ -57,7 +64,20 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-200">
         <div className="flex justify-center">
           {/* Profile Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl">
+          <button 
+            onClick={() => {
+              if (conversation.type === 'direct') {
+                const otherParticipant = conversation.participants?.find((p: any) => p.id !== account?.id);
+                if (otherParticipant) {
+                  setProfileUserId(otherParticipant.id);
+                  setShowUserProfile(true);
+                }
+              } else if (conversation.type === 'group') {
+                setShowGroupProfile(true);
+              }
+            }}
+            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl hover:bg-gray-50 transition-colors"
+          >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {conversation.avatarUrl ? (
                 <img
@@ -71,10 +91,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 </div>
               )}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 text-left">
               <div className="font-semibold text-gray-900 text-base">{conversation.title}</div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -166,6 +186,29 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           )}
         </div>
       </div>
+
+      {/* Profile Modals */}
+      {profileUserId && (
+        <UserProfileModal
+          isOpen={showUserProfile}
+          onClose={() => {
+            setShowUserProfile(false);
+            setProfileUserId(null);
+          }}
+          userId={profileUserId}
+          onStartChat={(chatId) => {
+            router.push(`/chat?chat=${chatId}`);
+          }}
+        />
+      )}
+
+      {conversation.id && (
+        <GroupProfileModal
+          isOpen={showGroupProfile}
+          onClose={() => setShowGroupProfile(false)}
+          chatId={conversation.id}
+        />
+      )}
     </div>
   );
 }
