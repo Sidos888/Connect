@@ -28,27 +28,66 @@ class SimpleChatService {
   private supabase = getSupabaseClient();
   private chats: Map<string, SimpleChat> = new Map();
 
-  // Get user's contacts (hardcoded for now)
+  // Get user's contacts from the database (only actual connections)
   async getContacts(userId: string): Promise<{ contacts: any[]; error: Error | null }> {
     try {
-      // Return hardcoded contacts that exist in the accounts table
-      const contacts = [
-        {
-          id: '569b346c-3e6e-48cd-a432-190dbfe78120',
-          name: 'Chandan Saddi',
-          profile_pic: 'https://rxlqtyfhsocxnsnnnlwl.supabase.co/storage/v1/object/public/avatars/avatars/569b346c-3e6e-48cd-a432-190dbfe78120.jpeg',
-          is_blocked: false
-        },
-        {
-          id: 'd5943fed-3a45-45a9-a871-937bad29cedb',
-          name: 'Frizzy Valiyff',
-          profile_pic: 'https://rxlqtyfhsocxnsnnnlwl.supabase.co/storage/v1/object/public/avatars/avatars/d5943fed-3a45-45a9-a871-937bad29cedb.jpeg',
-          is_blocked: false
-        }
-      ];
+      console.log('SimpleChatService: Getting connections for user:', userId);
+      
+          // Get connections where the user is either user1 or user2
+          const { data: connections, error: connectionsError } = await this.supabase
+            .from('connections')
+            .select(`
+              id,
+              user1_id,
+              user2_id,
+              user1:user1_id(id, name, profile_pic, connect_id, bio),
+              user2:user2_id(id, name, profile_pic, connect_id, bio)
+            `)
+            .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
 
+      if (connectionsError) {
+        console.error('Error fetching connections:', connectionsError);
+        return { contacts: [], error: connectionsError };
+      }
+
+      console.log('SimpleChatService: Found connections:', connections?.length || 0);
+
+      // Extract the connected users (not the current user)
+      const connectedUsers = new Map();
+      
+      (connections || []).forEach(connection => {
+        if (connection.user1_id === userId && connection.user2) {
+          // Current user is user1, so user2 is the connection
+          connectedUsers.set(connection.user2.id, {
+            id: connection.user2.id,
+            name: connection.user2.name,
+            profile_pic: connection.user2.profile_pic,
+            connect_id: connection.user2.connect_id,
+            bio: connection.user2.bio,
+            is_blocked: false
+          });
+        } else if (connection.user2_id === userId && connection.user1) {
+          // Current user is user2, so user1 is the connection
+          connectedUsers.set(connection.user1.id, {
+            id: connection.user1.id,
+            name: connection.user1.name,
+            profile_pic: connection.user1.profile_pic,
+            connect_id: connection.user1.connect_id,
+            bio: connection.user1.bio,
+            is_blocked: false
+          });
+        }
+      });
+
+      // Convert map to array and sort by name
+      const contacts = Array.from(connectedUsers.values()).sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
+
+      console.log('SimpleChatService: Returning connected users:', contacts.length);
       return { contacts, error: null };
     } catch (error) {
+      console.error('Error in getContacts:', error);
       return { contacts: [], error: error instanceof Error ? error : new Error('Unknown error') };
     }
   }
@@ -375,10 +414,65 @@ class SimpleChatService {
   // Get a specific chat by ID
   async getChatById(chatId: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
-      const chat = this.chats.get(chatId);
-      console.log('SimpleChatService: getChatById for:', chatId, 'found:', !!chat);
-      return { chat: chat || null, error: null };
+      // First check local cache
+      const cachedChat = this.chats.get(chatId);
+      if (cachedChat) {
+        console.log('SimpleChatService: getChatById from cache for:', chatId);
+        return { chat: cachedChat, error: null };
+      }
+
+      // If not in cache, query the database
+      console.log('SimpleChatService: getChatById from database for:', chatId);
+      
+      // Get chat details
+      const { data: chatData, error: chatError } = await this.supabase
+        .from('chats')
+        .select('*')
+        .eq('id', chatId)
+        .single();
+
+      if (chatError || !chatData) {
+        console.error('Error fetching chat:', chatError);
+        return { chat: null, error: new Error('Chat not found') };
+      }
+
+      // Get participants
+      const { data: participantsData, error: participantsError } = await this.supabase
+        .from('chat_participants')
+        .select(`
+          user_id,
+          accounts!inner(id, name, profile_pic)
+        `)
+        .eq('chat_id', chatId);
+
+      if (participantsError) {
+        console.error('Error fetching participants:', participantsError);
+        return { chat: null, error: participantsError };
+      }
+
+      const participants = (participantsData || []).map((p: any) => ({
+        id: p.accounts.id,
+        name: p.accounts.name,
+        profile_pic: p.accounts.profile_pic
+      }));
+
+      // Convert to SimpleChat format
+      const simpleChat: SimpleChat = {
+        id: chatData.id,
+        type: chatData.type,
+        name: chatData.name,
+        created_by: chatData.created_by,
+        created_at: chatData.created_at,
+        participants: participants
+      };
+
+      // Cache the result
+      this.chats.set(chatId, simpleChat);
+
+      console.log('SimpleChatService: getChatById found chat:', simpleChat.id);
+      return { chat: simpleChat, error: null };
     } catch (error) {
+      console.error('Error in getChatById:', error);
       return { chat: null, error: error instanceof Error ? error : new Error('Unknown error') };
     }
   }

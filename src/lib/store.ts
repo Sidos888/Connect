@@ -225,7 +225,14 @@ export const useAppStore = create<FullStore>((set, get) => ({
 
   markAllRead: async (conversationId, userId) => {
     try {
-      // For now, just update local state since simpleChatService doesn't have markMessagesAsRead
+      // Mark messages as read in the database
+      const { error } = await simpleChatService.markMessagesAsRead(conversationId, userId);
+      if (error) {
+        console.error('Error marking messages as read:', error);
+        return;
+      }
+
+      // Update local state
       const conversations = get().conversations.map((c) =>
         c.id === conversationId ? { ...c, unreadCount: 0, messages: c.messages.map((m) => ({ ...m, read: true })) } : c
       );

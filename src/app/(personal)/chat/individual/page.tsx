@@ -6,15 +6,13 @@ import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { useAppStore } from "@/lib/store";
 import { ArrowLeft } from "lucide-react";
-import UserProfileModal from "@/components/chat/UserProfileModal";
-import GroupProfileModal from "@/components/chat/GroupProfileModal";
 
 export default function IndividualChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const chatId = searchParams.get('chat');
   const { account } = useAuth();
-  const { sendMessage } = useAppStore();
+  const { sendMessage, markMessagesAsRead } = useAppStore();
   const [conversation, setConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,9 +24,8 @@ export default function IndividualChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [startX, setStartX] = useState<number | null>(null);
-  const [showUserProfile, setShowUserProfile] = useState(false);
-  const [showGroupProfile, setShowGroupProfile] = useState(false);
-  const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const hasMarkedAsRead = useRef(false);
 
   // Load conversation and messages
   useEffect(() => {
@@ -47,6 +44,9 @@ export default function IndividualChatPage() {
           setLoading(false);
           return;
         }
+
+        // Store participants for profile modal
+        setParticipants(chat.participants || []);
 
         // Convert to conversation format
         const otherParticipant = chat.participants.find(p => p.id !== account.id);
@@ -84,6 +84,14 @@ export default function IndividualChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Mark messages as read when chat is loaded
+  useEffect(() => {
+    if (!hasMarkedAsRead.current && account?.id && chatId && conversation) {
+      markMessagesAsRead(chatId, account.id);
+      hasMarkedAsRead.current = true;
+    }
+  }, [conversation, chatId, account?.id, markMessagesAsRead]);
 
 
   // Handle sending messages
@@ -229,15 +237,16 @@ export default function IndividualChatPage() {
           {/* Profile Card */}
           <button 
             onClick={() => {
-              if (conversation.type === 'direct') {
-                const otherParticipant = conversation.participants?.find((p: any) => p.id !== account?.id);
-                if (otherParticipant) {
-                  setProfileUserId(otherParticipant.id);
-                  setShowUserProfile(true);
-                }
-              } else if (conversation.type === 'group') {
-                setShowGroupProfile(true);
-              }
+                     if (!conversation.isGroup) {
+                       // Direct message - find the other participant
+                       const otherParticipant = participants.find((p: any) => p.id !== account?.id);
+                       if (otherParticipant) {
+                         router.push(`/chat/profile?userId=${otherParticipant.id}`);
+                       }
+                     } else {
+                       // Group chat
+                       router.push(`/chat/profile?chatId=${conversation.id}`);
+                     }
             }}
             className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm hover:bg-gray-50 transition-colors"
           >
@@ -369,28 +378,6 @@ export default function IndividualChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Profile Modals */}
-      {profileUserId && (
-        <UserProfileModal
-          isOpen={showUserProfile}
-          onClose={() => {
-            setShowUserProfile(false);
-            setProfileUserId(null);
-          }}
-          userId={profileUserId}
-          onStartChat={(chatId) => {
-            router.push(`/chat?chat=${chatId}`);
-          }}
-        />
-      )}
-
-      {chatId && (
-        <GroupProfileModal
-          isOpen={showGroupProfile}
-          onClose={() => setShowGroupProfile(false)}
-          chatId={chatId}
-        />
-      )}
     </div>
   );
 }

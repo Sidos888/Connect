@@ -13,10 +13,11 @@ import { useModal } from "@/lib/modalContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NewMessageModal from "@/components/chat/NewMessageModal";
 import GroupSetupModal from "@/components/chat/GroupSetupModal";
+import { simpleChatService } from "@/lib/simpleChatService";
 import { Plus, ArrowLeft } from "lucide-react";
 
 export default function MessagesPage() {
-  const { conversations, loadConversations, isHydrated } = useAppStore();
+  const { conversations, loadConversations, isHydrated, setConversations, getConversations } = useAppStore();
   const router = useRouter();
   const { account } = useAuth();
   const { showAddFriend } = useModal();
@@ -34,6 +35,40 @@ export default function MessagesPage() {
   const { showLogin } = useModal();
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showGroupSetupModal, setShowGroupSetupModal] = useState(false);
+
+  // Load specific chat if requested but not in conversations list
+  useEffect(() => {
+    const loadSpecificChat = async () => {
+      if (selectedChatId && !selectedConversation && account?.id && isHydrated) {
+        console.log('Loading specific chat:', selectedChatId);
+        try {
+          const { chat, error } = await simpleChatService.getChatById(selectedChatId);
+          if (chat && !error) {
+            // Add the chat to conversations if it's not already there
+            const currentConversations = getConversations();
+            const existingChat = currentConversations.find(c => c.id === selectedChatId);
+            if (!existingChat) {
+              const newConversation = {
+                id: chat.id,
+                title: chat.name || 'Unknown Chat',
+                avatarUrl: null,
+                isGroup: chat.type === 'group',
+                unreadCount: 0,
+                messages: []
+              };
+              setConversations([...currentConversations, newConversation]);
+            }
+          } else {
+            console.error('Error loading specific chat:', error);
+          }
+        } catch (error) {
+          console.error('Error in loadSpecificChat:', error);
+        }
+      }
+    };
+
+    loadSpecificChat();
+  }, [selectedChatId, selectedConversation, account?.id, isHydrated, setConversations, getConversations]);
 
   useEffect(() => {
     if (isHydrated && account?.id) {

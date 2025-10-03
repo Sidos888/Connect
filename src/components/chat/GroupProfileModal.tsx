@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Camera, Users, MoreVertical, Edit3, Settings } from 'lucide-react';
+import { X, Camera, Users, MoreVertical, Edit3, Settings, Images, MessageCircle, Share } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
@@ -131,21 +131,32 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Group Info</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Dimming overlay with smooth transition */}
+      <div 
+        className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          opacity: isOpen ? 1 : 0
+        }}
+        onClick={onClose}
+      />
+      
+      {/* Modal content */}
+      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">Group Info</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <X className="w-6 h-6 text-gray-600" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
@@ -162,76 +173,117 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
             </div>
           ) : (
             <>
-              {/* Group Profile Section */}
-              <div className="text-center mb-6">
-                <div className="relative inline-block mb-4">
-                  <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
-                    {groupProfile.photo ? (
-                      <img
-                        src={groupProfile.photo}
-                        alt="Group photo"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Users className="w-12 h-12 text-gray-400" />
+              {/* Group Profile Card Section */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
+                <div className="text-center">
+                  <div className="relative inline-block mb-4">
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
+                      {groupProfile.photo ? (
+                        <img
+                          src={groupProfile.photo}
+                          alt="Group photo"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Users className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    {isAdmin && (
+                      <button
+                        onClick={handlePhotoChange}
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white hover:bg-orange-600 transition-colors"
+                      >
+                        <Camera className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
-                  {isAdmin && (
-                    <button
-                      onClick={handlePhotoChange}
-                      className="absolute bottom-0 right-0 w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white hover:bg-orange-600 transition-colors"
-                    >
-                      <Camera className="w-5 h-5" />
-                    </button>
-                  )}
+                  
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-orange-500 outline-none text-center"
+                        autoFocus
+                        onBlur={handleSaveName}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSaveName()}
+                      />
+                    ) : (
+                      <h3 className="text-xl font-bold text-gray-900">{groupProfile.name}</h3>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={handleEditToggle}
+                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4 text-gray-600" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  <p className="text-gray-600 mb-4">{groupProfile.participants.length} members</p>
+                  
+                  <button className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-200 transition-colors text-sm font-medium">
+                    View Group Info
+                  </button>
                 </div>
-                
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="text-2xl font-bold text-gray-900 bg-transparent border-b-2 border-orange-500 outline-none text-center"
-                      autoFocus
-                      onBlur={handleSaveName}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSaveName()}
-                    />
-                  ) : (
-                    <h3 className="text-2xl font-bold text-gray-900">{groupProfile.name}</h3>
-                  )}
-                  {isAdmin && (
-                    <button
-                      onClick={handleEditToggle}
-                      className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <Edit3 className="w-4 h-4 text-gray-600" />
-                    </button>
-                  )}
-                </div>
-                
-                <p className="text-gray-600 mb-6">{groupProfile.participants.length} members</p>
               </div>
 
-              {/* Participants Section */}
+              {/* Action Buttons - Circular Card Style */}
+              <div className="flex space-x-6 justify-center mb-8">
+                {/* Message Button */}
+                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <MessageCircle className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Message</span>
+                </button>
+
+                {/* Share Profile Button */}
+                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <Share className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Share</span>
+                </button>
+              </div>
+
+              {/* Media Section */}
+              <div className="mb-4">
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Images className="w-5 h-5" />
+                  View Media
+                </button>
+              </div>
+
+              {/* Settings Section */}
+              <div className="mb-6">
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Settings className="w-5 h-5" />
+                  Group Settings
+                </button>
+              </div>
+
+              {/* Members Section */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-semibold text-gray-900">Members</h4>
                   {isAdmin && (
                     <button className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
-                      <Settings className="w-4 h-4" />
+                      <Users className="w-4 h-4" />
                       Manage
                     </button>
                   )}
                 </div>
 
                 <div className="space-y-3">
-                  {groupProfile.participants.map((participant) => (
+                  {groupProfile.participants.slice(0, 3).map((participant) => (
                     <div key={participant.id} className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
                       <Avatar
                         src={participant.profile_pic}
                         name={participant.name}
-                        size={48}
+                        size={40}
                       />
                       <div className="flex-1">
                         <h5 className="font-semibold text-gray-900">
@@ -247,6 +299,11 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
                       )}
                     </div>
                   ))}
+                  {groupProfile.participants.length > 3 && (
+                    <div className="text-center text-gray-600 text-sm">
+                      +{groupProfile.participants.length - 3} more members
+                    </div>
+                  )}
                 </div>
               </div>
 

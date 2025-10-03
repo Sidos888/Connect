@@ -26,25 +26,35 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showGroupProfile, setShowGroupProfile] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
 
-  // Load real messages from the database
+
+  // Load participants and messages from the database
   useEffect(() => {
-    const loadMessages = async () => {
+    const loadData = async () => {
       if (conversation.id && account?.id) {
         setLoading(true);
-        console.log('PersonalChatPanel: Loading messages for chat:', conversation.id);
-        console.log('PersonalChatPanel: Conversation data:', conversation);
-        const { messages, error } = await simpleChatService.getChatMessages(conversation.id, account.id);
-        if (!error) {
+        
+        // Load chat details to get participants
+        const { chat, error: chatError } = await simpleChatService.getChatById(conversation.id);
+        if (!chatError && chat) {
+          setParticipants(chat.participants || []);
+        } else {
+          console.error('Error loading chat:', chatError);
+        }
+        
+        // Load messages
+        const { messages, error: messagesError } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        if (!messagesError) {
           setMessages(messages);
         } else {
-          console.error('Error loading messages:', error);
+          console.error('Error loading messages:', messagesError);
         }
         setLoading(false);
       }
     };
 
-    loadMessages();
+    loadData();
   }, [conversation.id, account?.id, conversation]);
 
   useEffect(() => {
@@ -65,18 +75,23 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         <div className="flex justify-center">
           {/* Profile Card */}
           <button 
-            onClick={() => {
-              if (conversation.type === 'direct') {
-                const otherParticipant = conversation.participants?.find((p: any) => p.id !== account?.id);
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              if (!conversation.isGroup) {
+                // Direct message - find the other participant
+                const otherParticipant = participants.find((p: any) => p.id !== account?.id);
                 if (otherParticipant) {
                   setProfileUserId(otherParticipant.id);
                   setShowUserProfile(true);
                 }
-              } else if (conversation.type === 'group') {
+              } else {
+                // Group chat
                 setShowGroupProfile(true);
               }
             }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl hover:bg-gray-50 transition-colors"
+            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {conversation.avatarUrl ? (

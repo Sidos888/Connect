@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Phone, MessageCircle, MoreVertical } from 'lucide-react';
+import { X, Share, MessageCircle, MoreVertical, Settings, Images } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
@@ -45,9 +45,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             id: userProfile.id,
             name: userProfile.name,
             profile_pic: userProfile.profile_pic,
-            bio: 'Bio not available',
-            phone: 'Phone not available',
-            email: 'Email not available'
+            bio: userProfile.bio || 'Bio not available'
           });
         } else {
           setError('User profile not found');
@@ -89,21 +87,32 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Profile</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Dimming overlay with smooth transition */}
+      <div 
+        className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          opacity: isOpen ? 1 : 0
+        }}
+        onClick={onClose}
+      />
+      
+      {/* Modal content */}
+      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <X className="w-6 h-6 text-gray-600" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
@@ -120,51 +129,62 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             </div>
           ) : (
             <>
-              {/* Profile Section */}
-              <div className="text-center mb-6">
-                <div className="relative inline-block mb-4">
-                  <Avatar
-                    src={profile.profile_pic}
-                    name={profile.name}
-                    size={120}
-                  />
-                </div>
-                
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{profile.name}</h3>
-                <p className="text-gray-600 mb-6">{profile.bio}</p>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={handleStartChat}
-                    className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Message
-                  </button>
-                  <button className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
-                    <Phone className="w-4 h-4" />
-                    Call
+              {/* Profile Card Section */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
+                <div className="text-center">
+                  <div className="relative inline-block mb-4">
+                    <Avatar
+                      src={profile.profile_pic}
+                      name={profile.name}
+                      size={120}
+                    />
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{profile.name}</h3>
+                  <p className="text-gray-600 mb-4">{profile.bio}</p>
+                  
+                  <button className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-200 transition-colors text-sm font-medium">
+                    View Profile
                   </button>
                 </div>
               </div>
 
-              {/* Details Section */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Phone</h4>
-                  <p className="text-gray-900">{profile.phone}</p>
-                </div>
-                
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Email</h4>
-                  <p className="text-gray-900">{profile.email}</p>
-                </div>
+              {/* Action Buttons - Circular Card Style */}
+              <div className="flex space-x-6 justify-center mb-8">
+                {/* Message Button */}
+                <button
+                  onClick={handleStartChat}
+                  className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
+                >
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <MessageCircle className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Message</span>
+                </button>
 
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Connect ID</h4>
-                  <p className="text-gray-900 text-sm font-mono">{profile.id}</p>
-                </div>
+                {/* Share Profile Button */}
+                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <Share className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Share</span>
+                </button>
+              </div>
+
+              {/* Media Section */}
+              <div className="mb-4">
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Images className="w-5 h-5" />
+                  View Media
+                </button>
+              </div>
+
+              {/* Settings Section */}
+              <div>
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Settings className="w-5 h-5" />
+                  Chat Settings
+                </button>
               </div>
             </>
           )}
