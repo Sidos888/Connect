@@ -259,18 +259,27 @@ export default function ChatLayout() {
 
                 {/* Category Pills */}
                 <div className="mb-4">
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                     {categories.map((category) => (
                       <button
                         key={category.id}
                         onClick={() => setActiveCategory(category.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                        className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
                           activeCategory === category.id
-                            ? 'bg-gray-900 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                            ? 'bg-white border-gray-900 text-neutral-900'
+                            : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
+                        } shadow-sm`}
                       >
-                        {category.label}
+                        <span className="text-sm font-medium leading-none">{category.label}</span>
+                        {category.count !== null && (
+                          <span className={`ml-2 text-xs leading-none ${
+                            activeCategory === category.id 
+                              ? 'text-neutral-700' 
+                              : 'text-neutral-500'
+                          }`}>
+                            {category.count}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -284,7 +293,7 @@ export default function ChatLayout() {
                       onClick={() => handleSelectChat(conversation.id)}
                       className={`p-4 rounded-xl cursor-pointer transition-colors ${
                         selectedChatId === conversation.id
-                          ? 'bg-gray-100 border-2 border-gray-900'
+                          ? 'bg-gray-100 border-[1.5px] border-gray-900'
                           : 'bg-white border border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -335,7 +344,7 @@ export default function ChatLayout() {
               </div>
 
               {/* Search Section - Desktop */}
-              <div className="px-4 py-2 lg:py-3 bg-white flex-shrink-0 relative z-10">
+              <div className="px-4 py-2 lg:py-3 bg-white flex-shrink-0 relative z-10 mb-4">
                 <div className="relative">
                   <input
                     type="text"
@@ -353,8 +362,8 @@ export default function ChatLayout() {
               </div>
 
               {/* Filter Pills Section - Desktop */}
-              <div className="px-4 py-3 bg-white flex-shrink-0">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              <div className="px-4 py-3 bg-white flex-shrink-0 mb-8">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                 {categories.map((category) => (
                   <button
                     key={category.id}
@@ -381,7 +390,7 @@ export default function ChatLayout() {
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto min-h-0 bg-white">
+            <div className="flex-1 overflow-y-auto min-h-0 bg-white mt-2">
               {filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
                   <p className="text-gray-500 text-lg">

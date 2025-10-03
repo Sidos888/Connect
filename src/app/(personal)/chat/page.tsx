@@ -204,33 +204,33 @@ export default function MessagesPage() {
                 </div>
               </div>
             </div>
+            {/* Horizontal line below title section */}
+            <div className="absolute left-0 right-0 border-b border-gray-200" style={{ bottom: '0px' }}></div>
           </div>
 
-          {/* Content Area - Same structure as My Life */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
-            {/* Search Bar - Same position as My Life profile card */}
-            <div className="mb-4 lg:mb-8">
-              <div className="max-w-lg mx-auto lg:max-w-xl">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search"
-                    className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
+          {/* Content Area - Full width mobile layout */}
+          <div className="py-6 pt-[120px] px-4">
+            {/* Search Bar - Full width */}
+            <div className="mb-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search"
+                  className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
               </div>
             </div>
 
-            {/* Category Pills - Below search bar */}
-            <div className="mb-6">
-              <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {/* Category Pills - Full width with proper shadow space */}
+            <div className="mb-8">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                 {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
                   <button
                     key={category.id}
@@ -256,7 +256,7 @@ export default function MessagesPage() {
               </div>
             </div>
 
-            {/* Chat List - Below category pills */}
+            {/* Chat List - Full width */}
             <div className="space-y-2">
               {filteredMobileConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 space-y-4">
@@ -276,7 +276,7 @@ export default function MessagesPage() {
                     }}
                     className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
                       selectedChatId === conversation.id
-                        ? 'bg-white border-2 border-gray-900 shadow-lg'
+                        ? 'bg-white border-[1.5px] border-gray-900 shadow-lg'
                         : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
                     }`}
                   >

@@ -199,31 +199,24 @@ export default function IndividualChatPage() {
       )}
       {/* Fixed Header */}
       <div 
-        className="bg-white px-4 lg:px-6 flex items-center gap-3 absolute left-0 right-0 z-20"
+        className="bg-white absolute left-0 right-0 z-20"
         style={{ 
-          height: '60px',
-          paddingTop: '100px',
-          paddingBottom: '12px',
+          paddingTop: '50px',
           top: '0px'
         }}
       >
-        {/* Horizontal line below profile section */}
-        <div 
-          className="absolute left-4 lg:left-6 right-4 lg:right-6 border-b border-gray-200"
-          style={{ 
-            bottom: '0px'
-          }}
-        ></div>
-        <button
-          onClick={() => router.push('/chat')}
-          className="p-2 rounded-full hover:bg-gray-100"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        
-        {/* Profile Card */}
-        <div className="flex-1 flex justify-center">
-          <div className="bg-white border border-gray-200 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm">
+        {/* Header Row - All elements on same horizontal line */}
+        <div className="px-4 lg:px-6 py-3 flex items-center gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => router.push('/chat')}
+            className="p-2 rounded-full hover:bg-gray-100"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          
+          {/* Profile Card */}
+          <div className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm">
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {conversation.avatarUrl ? (
                 <img
@@ -237,17 +230,26 @@ export default function IndividualChatPage() {
                 </div>
               )}
             </div>
-            <div>
+            <div className="flex-1">
               <div className="font-semibold text-gray-900">{conversation.title}</div>
             </div>
           </div>
+          
+          {/* Menu Button */}
+          <button className="p-2 rounded-full hover:bg-gray-100">
+            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </button>
         </div>
-
-        <button className="p-2 rounded-full hover:bg-gray-100">
-          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-          </svg>
-        </button>
+        
+        {/* Horizontal line below header */}
+        <div 
+          className="absolute left-0 right-0 border-b border-gray-200"
+          style={{ 
+            bottom: '0px'
+          }}
+        ></div>
       </div>
 
       {/* Fixed Input */}
@@ -301,7 +303,7 @@ export default function IndividualChatPage() {
       <div 
         className="px-4 overflow-y-auto space-y-3 absolute left-0 right-0"
         style={{
-          top: '172px',
+          top: '130px',
           bottom: '80px'
         }}
       >
