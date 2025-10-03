@@ -45,6 +45,26 @@ export default function MessagesPage() {
     }
   }, [isHydrated, account?.id, loadConversations]);
 
+  // Prevent body scroll on mobile to fix keyboard behavior
+  useEffect(() => {
+    const isMobile = window.innerWidth < 1024;
+    if (isMobile) {
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+      
+      return () => {
+        // Restore body scroll when component unmounts
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.height = '';
+      };
+    }
+  }, []);
+
   // Add another effect to log when conversations change
   useEffect(() => {
     console.log('Conversations state changed:', conversations);
@@ -181,17 +201,32 @@ export default function MessagesPage() {
           <ChatLayout />
         </div>
 
-        {/* Mobile Layout - Same structure as My Life */}
-        <div className="lg:hidden h-screen bg-white relative overflow-hidden" style={{ height: '100dvh' }}>
-          {/* Mobile Title - Fixed header */}
+        {/* Mobile Layout - Locked viewport to prevent keyboard scroll */}
+        <div 
+          className="lg:hidden bg-white"
+          style={{ 
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: '100vh',
+            height: '100dvh',
+            overflow: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'none'
+          }}
+        >
+          {/* Mobile Title - Absolutely positioned header */}
           <div 
-            className="fixed top-0 left-0 right-0 z-50"
+            className="absolute top-0 left-0 right-0 z-50"
             style={{
               zIndex: 60,
-              backgroundColor: 'white'
+              backgroundColor: 'white',
+              height: '96px'
             }}
           >
-            <div className="pt-safe-top px-4 pb-2 pt-8 bg-white h-[96px] flex items-end">
+            <div className="pt-safe-top px-4 pb-2 pt-8 bg-white h-full flex items-end">
               <div className="flex items-center justify-between w-full h-full">
                 <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
                 <div className="flex items-center justify-center h-full min-w-[40px] relative z-10">
@@ -208,16 +243,13 @@ export default function MessagesPage() {
             <div className="absolute left-0 right-0 border-b border-gray-200" style={{ bottom: '0px' }}></div>
           </div>
 
-          {/* Spacer for fixed header */}
-          <div style={{ height: '96px' }}></div>
-
-          {/* Content Area - Scrollable with proper height calculation */}
+          {/* Content Area - Scrollable within fixed container */}
           <div 
-            className="px-4 overflow-y-auto"
+            className="absolute left-0 right-0 overflow-y-auto"
             style={{
-              height: 'calc(100dvh - 96px)',
-              paddingTop: '24px',
-              paddingBottom: '24px'
+              top: '96px',
+              bottom: '0px',
+              padding: '24px 16px'
             }}
           >
             {/* Search Bar - Full width */}
