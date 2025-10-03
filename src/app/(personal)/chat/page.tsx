@@ -45,41 +45,56 @@ export default function MessagesPage() {
     }
   }, [isHydrated, account?.id, loadConversations]);
 
-  // Prevent body scroll on mobile to fix keyboard behavior
+  // Handle keyboard behavior on mobile
   useEffect(() => {
     const isMobile = window.innerWidth < 1024;
     if (isMobile) {
-      // Store original styles
-      const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
-      const originalHeight = document.body.style.height;
-      
-      // Lock body scroll
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.height = '100%';
-      document.body.style.width = '100%';
-      document.body.style.top = '0';
-      document.body.style.left = '0';
-      
-      // Prevent touch scrolling on the body
-      const preventTouch = (e: TouchEvent) => {
-        if (e.target === document.body) {
-          e.preventDefault();
-        }
+      // Prevent the page from sliding up when keyboard appears
+      const preventPageSlide = () => {
+        // Lock the body in place
+        document.body.style.position = 'fixed';
+        document.body.style.top = '0';
+        document.body.style.left = '0';
+        document.body.style.width = '100%';
+        document.body.style.height = '100%';
+        document.body.style.overflow = 'hidden';
       };
-      
-      document.addEventListener('touchmove', preventTouch, { passive: false });
-      
-      return () => {
-        // Restore body scroll when component unmounts
-        document.body.style.overflow = originalOverflow;
-        document.body.style.position = originalPosition;
-        document.body.style.height = originalHeight;
-        document.body.style.width = '';
+
+      // Restore normal behavior when keyboard hides
+      const restorePageSlide = () => {
+        document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.left = '';
-        document.removeEventListener('touchmove', preventTouch);
+        document.body.style.width = '';
+        document.body.style.height = '';
+        document.body.style.overflow = '';
+      };
+
+      // Listen for focus events on input elements
+      const handleInputFocus = () => {
+        console.log('Input focused - preventing page slide');
+        preventPageSlide();
+      };
+
+      const handleInputBlur = () => {
+        console.log('Input blurred - restoring page slide');
+        // Delay to ensure keyboard is fully hidden
+        setTimeout(restorePageSlide, 300);
+      };
+
+      // Add event listeners to all input elements
+      const inputs = document.querySelectorAll('input, textarea');
+      inputs.forEach(input => {
+        input.addEventListener('focus', handleInputFocus);
+        input.addEventListener('blur', handleInputBlur);
+      });
+
+      // Cleanup
+      return () => {
+        inputs.forEach(input => {
+          input.removeEventListener('focus', handleInputFocus);
+          input.removeEventListener('blur', handleInputBlur);
+        });
       };
     }
   }, []);
