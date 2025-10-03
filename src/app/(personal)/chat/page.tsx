@@ -49,18 +49,37 @@ export default function MessagesPage() {
   useEffect(() => {
     const isMobile = window.innerWidth < 1024;
     if (isMobile) {
+      // Store original styles
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      const originalHeight = document.body.style.height;
+      
       // Lock body scroll
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
       document.body.style.height = '100%';
+      document.body.style.width = '100%';
+      document.body.style.top = '0';
+      document.body.style.left = '0';
+      
+      // Prevent touch scrolling on the body
+      const preventTouch = (e: TouchEvent) => {
+        if (e.target === document.body) {
+          e.preventDefault();
+        }
+      };
+      
+      document.addEventListener('touchmove', preventTouch, { passive: false });
       
       return () => {
         // Restore body scroll when component unmounts
-        document.body.style.overflow = '';
-        document.body.style.position = '';
+        document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.height = originalHeight;
         document.body.style.width = '';
-        document.body.style.height = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.removeEventListener('touchmove', preventTouch);
       };
     }
   }, []);
@@ -203,18 +222,20 @@ export default function MessagesPage() {
 
         {/* Mobile Layout - Locked viewport to prevent keyboard scroll */}
         <div 
-          className="lg:hidden bg-white"
+          className="lg:hidden bg-white chat-mobile-container"
           style={{ 
-            position: 'fixed',
+            position: 'fixed !important',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
             height: '100vh',
             height: '100dvh',
-            overflow: 'hidden',
+            overflow: 'hidden !important',
             WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'none'
+            overscrollBehavior: 'none',
+            transform: 'translateZ(0)',
+            willChange: 'transform'
           }}
         >
           {/* Mobile Title - Absolutely positioned header */}

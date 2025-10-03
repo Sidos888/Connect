@@ -6,9 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'out',
   plugins: {
     Keyboard: {
-      resize: 'none', // Disable automatic resizing completely
+      resize: 'body', // Allow body resizing for proper keyboard behavior
       style: 'dark', // Dark keyboard style
-      resizeOnFullScreen: false,
+      resizeOnFullScreen: true,
       accessoryBarVisible: false // Remove the keyboard toolbar
     }
   },

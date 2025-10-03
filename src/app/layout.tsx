@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes, interactive-widget=resizes-content" />
         <meta name="cache-control" content="no-cache, no-store, must-revalidate" />
         <meta name="pragma" content="no-cache" />
         <meta name="expires" content="0" />
