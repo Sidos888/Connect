@@ -179,8 +179,11 @@ export default function IndividualChatPage() {
       className="h-screen bg-white relative" 
       style={{ 
         height: '100vh',
+        height: '100dvh', // Use dynamic viewport height for mobile
         transform: `translateX(${dragOffset}px)`,
-        transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+        transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+        position: 'relative',
+        overflow: 'hidden'
       }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -197,9 +200,12 @@ export default function IndividualChatPage() {
           }}
         />
       )}
+      
+      {/* Spacer for fixed header */}
+      <div style={{ height: '130px' }}></div>
       {/* Fixed Header */}
       <div 
-        className="bg-white absolute left-0 right-0 z-20"
+        className="bg-white fixed left-0 right-0 z-20"
         style={{ 
           paddingTop: '50px',
           top: '0px'
@@ -254,7 +260,7 @@ export default function IndividualChatPage() {
 
       {/* Fixed Input */}
       <div 
-        className="bg-white border-t border-gray-200 px-4 absolute left-0 right-0 z-20"
+        className="bg-white border-t border-gray-200 px-4 fixed left-0 right-0 z-20"
         style={{ 
           height: '80px', 
           paddingTop: '8px', 
@@ -301,10 +307,11 @@ export default function IndividualChatPage() {
 
       {/* Chat Section - Scrollable messages area */}
       <div 
-        className="px-4 overflow-y-auto space-y-3 absolute left-0 right-0"
+        className="px-4 overflow-y-auto space-y-3"
         style={{
-          top: '130px',
-          bottom: '80px'
+          height: 'calc(100dvh - 210px)',
+          paddingBottom: '80px',
+          position: 'relative'
         }}
       >
         {messages.map((message) => {
