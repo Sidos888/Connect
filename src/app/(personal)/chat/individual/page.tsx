@@ -19,6 +19,11 @@ export default function IndividualChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [startX, setStartX] = useState<number | null>(null);
 
   // Load conversation and messages
   useEffect(() => {
@@ -75,13 +80,6 @@ export default function IndividualChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Hide bottom navigation on individual chat page
-  useEffect(() => {
-    document.body.classList.add('hide-bottom-nav');
-    return () => {
-      document.body.classList.remove('hide-bottom-nav');
-    };
-  }, []);
 
   // Handle sending messages
   const handleSendMessage = async () => {
@@ -89,6 +87,66 @@ export default function IndividualChatPage() {
       await sendMessage(conversation.id, messageText.trim(), account.id);
       setMessageText("");
     }
+  };
+
+  // Handle swipe gestures - RIGHT swipe (drag from left to right)
+  const minSwipeDistance = 100;
+  const edgeThreshold = 50; // Only trigger on edges
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const touch = e.targetTouches[0];
+    const startX = touch.clientX;
+    const screenWidth = window.innerWidth;
+    
+    // Only start swipe if touch is near the left edge
+    if (startX <= edgeThreshold) {
+      setStartX(startX);
+      setTouchStart(startX);
+      setTouchEnd(null);
+      setIsDragging(true);
+      setDragOffset(0);
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !startX) return;
+    
+    const touch = e.targetTouches[0];
+    const currentX = touch.clientX;
+    const deltaX = currentX - startX;
+    
+    // Only allow rightward movement (positive deltaX) - dragging from left to right
+    if (deltaX > 0) {
+      setDragOffset(Math.min(deltaX, screenWidth * 0.3)); // Limit to 30% of screen width
+      setTouchEnd(currentX);
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (!isDragging || !touchStart || !touchEnd) {
+      setIsDragging(false);
+      setDragOffset(0);
+      return;
+    }
+    
+    const distance = touchEnd - touchStart;
+    const isRightSwipe = distance > minSwipeDistance;
+
+    if (isRightSwipe) {
+      // Complete the swipe animation and navigate back
+      setDragOffset(window.innerWidth);
+      setTimeout(() => {
+        router.push('/chat');
+      }, 200);
+    } else {
+      // Snap back to original position
+      setDragOffset(0);
+    }
+    
+    setIsDragging(false);
+    setTouchStart(null);
+    setTouchEnd(null);
+    setStartX(null);
   };
 
   if (loading) {
@@ -117,9 +175,45 @@ export default function IndividualChatPage() {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 pt-12 pb-2 flex items-center gap-3">
+    <div 
+      className="h-screen bg-white relative" 
+      style={{ 
+        height: '100vh',
+        transform: `translateX(${dragOffset}px)`,
+        transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+      }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Swipe indicator */}
+      {isDragging && (
+        <div 
+          className="absolute top-1/2 left-0 w-1 bg-orange-500 rounded-r-full z-30"
+          style={{ 
+            height: '60px',
+            transform: 'translateY(-50%)',
+            opacity: Math.min(dragOffset / 50, 1)
+          }}
+        />
+      )}
+      {/* Fixed Header */}
+      <div 
+        className="bg-white px-4 flex items-center gap-3 absolute left-0 right-0 z-20"
+        style={{ 
+          height: '60px',
+          paddingTop: '100px',
+          paddingBottom: '12px',
+          top: '0px'
+        }}
+      >
+        {/* Horizontal line below profile section */}
+        <div 
+          className="absolute left-0 right-0 border-b border-gray-200"
+          style={{ 
+            bottom: '0px'
+          }}
+        ></div>
         <button
           onClick={() => router.push('/chat')}
           className="p-2 rounded-full hover:bg-gray-100"
@@ -156,8 +250,61 @@ export default function IndividualChatPage() {
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      {/* Fixed Input */}
+      <div 
+        className="bg-white border-t border-gray-200 px-4 absolute left-0 right-0 z-20"
+        style={{ 
+          height: '80px', 
+          paddingTop: '8px', 
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          bottom: '0px'
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <button className="p-2 rounded-full hover:bg-gray-100">
+            <svg className="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+          
+          {/* Input field */}
+          <div className="flex-1 relative max-w-xs">
+            <input
+              type="text"
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              className="w-full px-3 py-1 bg-white border-[1.5px] border-gray-300 rounded-full focus:outline-none focus:border-gray-900 transition-colors duration-200 text-sm shadow-sm"
+              placeholder=""
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && messageText.trim()) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+          </div>
+          
+          {messageText.trim() && (
+            <button
+              onClick={handleSendMessage}
+              className="p-2 rounded-full bg-orange-500 text-white hover:opacity-90"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Chat Section - Scrollable messages area */}
+      <div 
+        className="px-4 overflow-y-auto space-y-3 absolute left-0 right-0"
+        style={{
+          top: '172px',
+          bottom: '80px'
+        }}
+      >
         {messages.map((message) => {
           const isMe = message.sender_id === account?.id;
           return (
@@ -193,45 +340,6 @@ export default function IndividualChatPage() {
           );
         })}
         <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="bg-white border-t border-gray-200 px-4 pb-8 pt-2">
-        <div className="flex items-center gap-3">
-          <button className="p-2 rounded-full hover:bg-gray-100">
-            <svg className="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
-          
-          {/* Input field - cursor height only */}
-          <div className="flex-1 relative max-w-xs">
-            <input
-              type="text"
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              className="w-full px-3 py-1 bg-white border-[1.5px] border-gray-300 rounded-full focus:outline-none focus:border-gray-900 transition-colors duration-200 text-sm shadow-sm"
-              placeholder=""
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && messageText.trim()) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-          </div>
-          
-          {messageText.trim() && (
-            <button
-              onClick={handleSendMessage}
-              className="p-2 rounded-full bg-orange-500 text-white hover:opacity-90"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

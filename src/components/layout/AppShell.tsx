@@ -17,6 +17,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isAnyModalOpen } = useModal();
   const isChatPage = pathname.startsWith('/chat');
+  const isIndividualChatPage = pathname.startsWith('/chat/individual');
   const isSettingsPage = pathname === '/settings';
   const isMenuPage = pathname === '/menu';
   const isOnboardingPage = pathname === '/onboarding';
@@ -29,22 +30,18 @@ export default function AppShell({ children }: AppShellProps) {
   // If it's a public route, show without protection
   if (isPublicRoute) {
     if (isChatPage) {
-      // Full height layout for chat pages
+      // Desktop: Show top nav, Mobile: No constraints
       return (
-        <div className="h-screen bg-white flex flex-col overflow-hidden">
-          {/* Desktop: Top Navigation, Mobile: No top nav */}
+        <div className="min-h-screen bg-white">
+          {/* Desktop: Top Navigation Bar */}
           <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
             <TopNavigation />
           </div>
-          <div className="flex-1 overflow-hidden" style={{ marginTop: '5rem', height: 'calc(100vh - 5rem)' }}>
+          
+          {/* Main Content Area - Mobile has no constraints, Desktop has top nav offset */}
+          <main className="w-full lg:pt-20">
             {children}
-          </div>
-          {/* Mobile: Bottom Navigation */}
-          {!isSettingsPage && (
-            <div className="lg:hidden">
-              <MobileBottomNavigation />
-            </div>
-          )}
+          </main>
         </div>
       );
     }
@@ -73,26 +70,46 @@ export default function AppShell({ children }: AppShellProps) {
 
   // All other routes require authentication
   if (isChatPage) {
-    // Full height layout for chat pages
-    return (
-      <div className="h-screen bg-white flex flex-col overflow-hidden">
-        {/* Desktop: Top Navigation, Mobile: No top nav */}
-        <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
-          <TopNavigation />
+    if (isIndividualChatPage) {
+      // Individual chat: Desktop top nav, Mobile no bottom nav
+      return (
+        <div className="h-screen bg-white flex flex-col">
+          {/* Desktop: Top Navigation Bar */}
+          <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
+            <TopNavigation />
+          </div>
+          
+          {/* Main Content Area - No bottom nav for individual chats */}
+          <main className="w-full flex-1 lg:pt-20 lg:h-[calc(100vh-4.5rem)]">
+            <ProtectedRoute>
+              {children}
+            </ProtectedRoute>
+          </main>
         </div>
-        <div className="flex-1 overflow-hidden pt-20">
-          <ProtectedRoute>
-            {children}
-          </ProtectedRoute>
-        </div>
-        {/* Mobile: Bottom Navigation */}
-        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAnyModalOpen && (
+      );
+    } else {
+      // Chat list: Desktop top nav, Mobile bottom nav
+      return (
+        <div className="h-screen bg-white flex flex-col">
+          {/* Desktop: Top Navigation Bar */}
+          <div className="hidden lg:block fixed top-0 left-0 right-0 z-50">
+            <TopNavigation />
+          </div>
+          
+          {/* Main Content Area - Mobile has bottom nav, Desktop has top nav offset */}
+          <main className="w-full flex-1 lg:pt-20 lg:h-[calc(100vh-4.5rem)] pb-20 lg:pb-0">
+            <ProtectedRoute>
+              {children}
+            </ProtectedRoute>
+          </main>
+
+          {/* Mobile: Bottom Navigation Bar */}
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
-        )}
-      </div>
-    );
+        </div>
+      );
+    }
   }
 
   return (

@@ -1363,19 +1363,19 @@ export default function AccountCheckModal({
           ) : userExists === true ? (
             // Existing Account Card - Perfectly centered layout
             <div className="flex flex-col items-center justify-center h-full px-6 md:px-8 py-8">
-              {/* Centered Profile Card */}
-              <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-8 py-10 w-full max-w-sm mb-8">
-                <div className="flex flex-col items-center space-y-6">
-                  {/* Profile Picture - Centered */}
+              {/* Profile Card - Left profile pic, right text */}
+              <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-6 py-6 w-full max-w-sm mb-8">
+                <div className="flex items-center space-x-4">
+                  {/* Profile Picture - Left */}
                   <Avatar 
                     src={existingUser?.profile_pic ?? undefined} 
                     name={existingUser?.name || existingUser?.full_name || 'User'} 
-                    size={80}
+                    size={60}
                   />
                   
-                  {/* Name - Centered */}
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold text-gray-900">
+                  {/* Name - Right */}
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900">
                       {existingUser?.name || existingUser?.full_name || 'User'}
                     </h3>
                   </div>

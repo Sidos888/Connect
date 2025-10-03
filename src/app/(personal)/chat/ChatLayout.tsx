@@ -201,7 +201,7 @@ export default function ChatLayout() {
   return (
     <div className="chat-container flex h-full bg-white overflow-hidden relative">
       {/* Chat List Sidebar */}
-      <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+      <div className="w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
         {showNewMessageSelector ? (
           <InlineContactSelector
             onClose={handleNewMessageClose}
@@ -210,10 +210,10 @@ export default function ChatLayout() {
           />
         ) : (
           <>
-            {/* Header - Fixed positioning */}
-            <div className="p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                     <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
+            {/* Top Section - Chats Title */}
+            <div className="px-4 py-4 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20">
+              <div className="flex items-center justify-between">
+                     <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
                 <button
                   onClick={handleNewMessageClick}
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -221,9 +221,11 @@ export default function ChatLayout() {
                   <Plus className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
-              
-              {/* Search */}
-              <div className="relative mb-4">
+            </div>
+
+            {/* Search Section - Visible on all devices */}
+            <div className="px-4 py-4 bg-white flex-shrink-0 relative z-10" style={{ marginTop: '60px' }}>
+              <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
@@ -237,9 +239,11 @@ export default function ChatLayout() {
                   </svg>
                 </div>
               </div>
+            </div>
 
-              {/* Category Filter Pills - cleaner, cohesive style */}
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+            {/* Filter Pills Section - Separate */}
+            <div className="px-4 py-3 bg-white flex-shrink-0">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar">
                 {categories.map((category) => (
                   <button
                     key={category.id}
@@ -266,7 +270,7 @@ export default function ChatLayout() {
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0 bg-white">
               {filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
                   <p className="text-gray-500 text-lg">
@@ -340,8 +344,8 @@ export default function ChatLayout() {
         )}
       </div>
 
-      {/* Chat Panel */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Chat Panel - Hidden on mobile */}
+      <div className="hidden lg:flex flex-1 flex-col h-full overflow-hidden">
         {selectedConversation ? (
           <PersonalChatPanel conversation={selectedConversation} />
         ) : (

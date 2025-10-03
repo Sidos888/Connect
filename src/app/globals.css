@@ -5,6 +5,13 @@
   --foreground: #111827; /* Neutral-900 */
 }
 
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* Force hide bottom nav in settings mode - immediate effect */
 .settings-mode nav[data-testid="mobile-bottom-nav"],
 .settings-mode .tabbar-nav,
@@ -229,6 +236,13 @@ button[class*="Chat"] {
   overflow: hidden !important;
 }
 
+/* Mobile-specific: Allow scrolling on mobile devices */
+@media (max-width: 1023px) {
+  .chat-container {
+    overflow: visible !important;
+  }
+}
+
 /* Force white message bubbles */
 .chat-container .bg-white,
 .chat-container [class*="bg-white"] {
@@ -236,8 +250,8 @@ button[class*="Chat"] {
   color: #111827 !important;
 }
 
-/* Prevent chat headers from moving */
-.chat-container .flex-shrink-0 {
+/* Prevent chat headers from moving - only apply to specific sections */
+.chat-container .flex-shrink-0.bg-white {
   position: relative !important;
   z-index: 10 !important;
 }
@@ -477,4 +491,29 @@ body.chat-active {
   position: fixed !important;
   width: 100% !important;
   height: 100% !important;
+}
+
+/* Individual chat page - NO CONSTRAINTS */
+.chat-mobile-container {
+  height: 100vh !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Force fixed elements to stay in place regardless of viewport changes */
+.chat-mobile-container [style*="position: fixed"] {
+  position: fixed !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
+/* Prevent iOS from moving fixed elements */
+@supports (-webkit-touch-callout: none) {
+  .chat-mobile-container [style*="position: fixed"] {
+    position: fixed !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
 }
