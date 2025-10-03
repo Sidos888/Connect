@@ -182,8 +182,8 @@ export default function MessagesPage() {
         </div>
 
         {/* Mobile Layout - Same structure as My Life */}
-        <div className="lg:hidden min-h-screen bg-white">
-          {/* Mobile Title - Same as My Life */}
+        <div className="lg:hidden h-screen bg-white relative overflow-hidden" style={{ height: '100dvh' }}>
+          {/* Mobile Title - Fixed header */}
           <div 
             className="fixed top-0 left-0 right-0 z-50"
             style={{
@@ -208,8 +208,18 @@ export default function MessagesPage() {
             <div className="absolute left-0 right-0 border-b border-gray-200" style={{ bottom: '0px' }}></div>
           </div>
 
-          {/* Content Area - Full width mobile layout */}
-          <div className="py-6 pt-[120px] px-4">
+          {/* Spacer for fixed header */}
+          <div style={{ height: '96px' }}></div>
+
+          {/* Content Area - Scrollable with proper height calculation */}
+          <div 
+            className="px-4 overflow-y-auto"
+            style={{
+              height: 'calc(100dvh - 96px)',
+              paddingTop: '24px',
+              paddingBottom: '24px'
+            }}
+          >
             {/* Search Bar - Full width */}
             <div className="mb-2">
               <div className="relative">
@@ -219,6 +229,11 @@ export default function MessagesPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search"
                   className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
+                  style={{
+                    fontSize: '16px', // Prevents zoom on iOS
+                    WebkitAppearance: 'none',
+                    WebkitTapHighlightColor: 'transparent'
+                  }}
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
