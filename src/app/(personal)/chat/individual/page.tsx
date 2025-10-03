@@ -199,7 +199,7 @@ export default function IndividualChatPage() {
       )}
       {/* Fixed Header */}
       <div 
-        className="bg-white px-4 flex items-center gap-3 absolute left-0 right-0 z-20"
+        className="bg-white px-4 lg:px-6 flex items-center gap-3 absolute left-0 right-0 z-20"
         style={{ 
           height: '60px',
           paddingTop: '100px',
@@ -209,7 +209,7 @@ export default function IndividualChatPage() {
       >
         {/* Horizontal line below profile section */}
         <div 
-          className="absolute left-0 right-0 border-b border-gray-200"
+          className="absolute left-4 lg:left-6 right-4 lg:right-6 border-b border-gray-200"
           style={{ 
             bottom: '0px'
           }}

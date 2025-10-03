@@ -28,6 +28,7 @@ export default function MessagesPage() {
   
   // Mobile-specific state
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Modal state
   const { showLogin } = useModal();
@@ -107,7 +108,7 @@ export default function MessagesPage() {
   // Mobile category filtering
   const getMobileFilteredConversations = () => {
     const filtered = conversations.filter(conv => 
-      conv.title.toLowerCase().includes(mobileSearchQuery.toLowerCase())
+      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     switch (mobileActiveCategory) {
@@ -180,61 +181,92 @@ export default function MessagesPage() {
           <ChatLayout />
         </div>
 
-        {/* Mobile Layout */}
-        <div className="chat-container lg:hidden h-full bg-white flex flex-col">
-          {/* Mobile Header */}
-          <MobileTitle 
-            title="Chats" 
-            action={
-              <button
-                onClick={handleNewMessageClick}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <Plus className="w-5 h-5 text-gray-600" />
-              </button>
-            }
-          />
-          
-          {/* Mobile Content - Scrollable area below fixed header */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[60px] lg:pt-6">
+        {/* Mobile Layout - Same structure as My Life */}
+        <div className="lg:hidden min-h-screen bg-white">
+          {/* Mobile Title - Same as My Life */}
+          <div 
+            className="fixed top-0 left-0 right-0 z-50"
+            style={{
+              zIndex: 60,
+              backgroundColor: 'white'
+            }}
+          >
+            <div className="pt-safe-top px-4 pb-2 pt-8 bg-white h-[96px] flex items-end">
+              <div className="flex items-center justify-between w-full h-full">
+                <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
+                <div className="flex items-center justify-center h-full min-w-[40px] relative z-10">
+                  <button
+                    onClick={handleNewMessageClick}
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <Plus className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-            {/* Mobile Category Filter Pills - unified border system */}
-            <div className="flex gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar">
-              {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setMobileActiveCategory(category.id)}
-                  className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
-                    mobileActiveCategory === category.id
-                      ? 'bg-white border-gray-900 text-neutral-900'
-                      : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
-                  } shadow-sm`}
-                >
-                  <span className="text-sm font-medium leading-none">{category.label}</span>
-                  {category.count !== null && (
-                    <span className={`ml-2 text-xs leading-none ${
-                      mobileActiveCategory === category.id 
-                        ? 'text-neutral-700' 
-                        : 'text-neutral-500'
-                    }`}>
-                      {category.count}
-                    </span>
-                  )}
-                </button>
-              ))}
+          {/* Content Area - Same structure as My Life */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
+            {/* Search Bar - Same position as My Life profile card */}
+            <div className="mb-4 lg:mb-8">
+              <div className="max-w-lg mx-auto lg:max-w-xl">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search"
+                    className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {filteredMobileConversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                <p className="text-gray-500 text-lg">
-                  {account?.id ? "No chats yet" : "Please log in to see your chats"}
-                </p>
-                <BearEmoji size="6xl" />
+            {/* Category Pills - Below search bar */}
+            <div className="mb-6">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setMobileActiveCategory(category.id)}
+                    className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
+                      mobileActiveCategory === category.id
+                        ? 'bg-white border-gray-900 text-neutral-900'
+                        : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
+                    } shadow-sm`}
+                  >
+                    <span className="text-sm font-medium leading-none">{category.label}</span>
+                    {category.count !== null && (
+                      <span className={`ml-2 text-xs leading-none ${
+                        mobileActiveCategory === category.id 
+                          ? 'text-neutral-700' 
+                          : 'text-neutral-500'
+                      }`}>
+                        {category.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredMobileConversations.map((conversation) => (
+            </div>
+
+            {/* Chat List - Below category pills */}
+            <div className="space-y-2">
+              {filteredMobileConversations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                  <p className="text-gray-500 text-lg">
+                    {account?.id ? "No chats yet" : "Please log in to see your chats"}
+                  </p>
+                  <BearEmoji size="6xl" />
+                </div>
+              ) : (
+                filteredMobileConversations.map((conversation) => (
                   <div
                     key={conversation.id}
                     onClick={(e) => {
@@ -242,59 +274,40 @@ export default function MessagesPage() {
                       e.stopPropagation();
                       router.push(`/chat/individual?id=${conversation.id}`);
                     }}
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md cursor-pointer"
+                    className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
+                      selectedChatId === conversation.id
+                        ? 'bg-white border-2 border-gray-900 shadow-lg'
+                        : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
+                    }`}
                   >
-                    <div className="p-4">
-                      <div className="flex items-center gap-3">
-                        {/* Avatar */}
-                        <div className="relative flex-shrink-0">
-                          <Avatar 
-                            src={conversation.avatarUrl ?? undefined} 
-                            name={conversation.title} 
-                            size={48}
-                          />
-                          {conversation.unreadCount > 0 && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                              <span className="text-xs text-white font-medium">
-                                {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
-                              </span>
-                            </div>
-                          )}
+                    <div className="flex items-center space-x-3">
+                      <Avatar
+                        src={conversation.avatarUrl}
+                        name={conversation.title}
+                        size={48}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-gray-900 truncate">
+                            {conversation.title}
+                          </h3>
+                          <span className="text-xs text-gray-500">
+                            {getLastMessageTime(conversation)}
+                          </span>
                         </div>
-
-                        {/* Conversation Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-1">
-                            <div className="min-w-0 flex-1 mr-2">
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-base font-semibold text-gray-900 truncate">
-                                  {conversation.title}
-                                </h3>
-                                {conversation.isGroup && (
-                                  <div className="flex items-center justify-center w-4 h-4 bg-gray-100 rounded-full">
-                                    <svg className="w-2.5 h-2.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-xs text-gray-500 flex-shrink-0">
-                              {getLastMessageTime(conversation)}
-                            </span>
-                          </div>
-                          <p className={`text-sm truncate leading-relaxed ${
-                            conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'
-                          }`}>
-                            {getLastMessage(conversation)}
-                          </p>
-                        </div>
+                        <p className="text-sm text-gray-500 truncate mt-1">
+                          {getLastMessage(conversation) || 'No messages yet'}
+                        </p>
                       </div>
+                      {conversation.unreadCount > 0 && (
+                        <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {conversation.unreadCount}
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
             </div>
           </div>
         </div>

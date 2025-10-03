@@ -210,40 +210,151 @@ export default function ChatLayout() {
           />
         ) : (
           <>
-            {/* Top Section - Chats Title */}
-            <div className="px-4 py-4 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20">
-              <div className="flex items-center justify-between">
-                     <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
-                <button
-                  onClick={handleNewMessageClick}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                >
-                  <Plus className="w-5 h-5 text-gray-600" />
-                </button>
+            {/* Mobile Layout - Similar to My Life */}
+            <div className="lg:hidden min-h-screen bg-white">
+              {/* Mobile Title - Same as My Life */}
+              <div 
+                className="fixed top-0 left-0 right-0 z-50"
+                style={{
+                  zIndex: 60,
+                  backgroundColor: 'white'
+                }}
+              >
+                <div className="pt-safe-top px-4 pb-2 pt-8 bg-white h-[96px] flex items-end">
+                  <div className="flex items-center justify-between w-full h-full">
+                    <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
+                    <div className="flex items-center justify-center h-full min-w-[40px] relative z-10">
+                      <button
+                        onClick={handleNewMessageClick}
+                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                      >
+                        <Plus className="w-5 h-5 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Search Section - Visible on all devices */}
-            <div className="px-4 py-4 bg-white flex-shrink-0 relative z-10" style={{ marginTop: '60px' }}>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search"
-                  className="w-full pl-10 pr-4 py-2 bg-white border-[1.5px] border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+              {/* Content Area - Same structure as My Life */}
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
+                {/* Search Bar - Same position as My Life profile card */}
+                <div className="mb-4 lg:mb-8">
+                  <div className="max-w-lg mx-auto lg:max-w-xl">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search"
+                        className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
+                      />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category Pills */}
+                <div className="mb-4">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => setActiveCategory(category.id)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                          activeCategory === category.id
+                            ? 'bg-gray-900 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {category.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Chat List */}
+                <div className="space-y-2">
+                  {filteredConversations.map((conversation) => (
+                    <div
+                      key={conversation.id}
+                      onClick={() => handleSelectChat(conversation.id)}
+                      className={`p-4 rounded-xl cursor-pointer transition-colors ${
+                        selectedChatId === conversation.id
+                          ? 'bg-gray-100 border-2 border-gray-900'
+                          : 'bg-white border border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Avatar
+                          src={conversation.avatarUrl}
+                          name={conversation.title}
+                          size={48}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">
+                              {conversation.title}
+                            </h3>
+                            <span className="text-xs text-gray-500">
+                              {getLastMessageTime(conversation)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 truncate mt-1">
+                            {getLastMessage(conversation) || 'No messages yet'}
+                          </p>
+                        </div>
+                        {conversation.unreadCount > 0 && (
+                          <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            {conversation.unreadCount}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Filter Pills Section - Separate */}
-            <div className="px-4 py-3 bg-white flex-shrink-0">
-              <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {/* Desktop Layout - Keep existing */}
+            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+              {/* Top Section - Chats Title */}
+              <div className="px-4 py-3 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20">
+                <div className="flex items-center justify-between">
+                       <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
+                  <button
+                    onClick={handleNewMessageClick}
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <Plus className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Section - Desktop */}
+              <div className="px-4 py-2 lg:py-3 bg-white flex-shrink-0 relative z-10">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search"
+                    className="w-full pl-10 pr-4 py-2 bg-white border-[1.5px] border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Pills Section - Desktop */}
+              <div className="px-4 py-3 bg-white flex-shrink-0">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
                 {categories.map((category) => (
                   <button
                     key={category.id}
@@ -339,6 +450,7 @@ export default function ChatLayout() {
                   ))}
                 </div>
               )}
+            </div>
             </div>
           </>
         )}
