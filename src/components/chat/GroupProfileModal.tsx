@@ -121,17 +121,28 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
   };
 
   const handleSaveChanges = async () => {
-    if (!groupProfile || !editName.trim()) return;
+    console.log('Save changes clicked');
+    console.log('Group profile:', groupProfile);
+    console.log('Edit name:', editName);
+    console.log('Selected image:', selectedImage);
+    
+    if (!groupProfile || !editName.trim()) {
+      console.log('Missing required data');
+      return;
+    }
 
     try {
       let photoUrl = groupProfile.photo;
       
       // Upload new image if selected
       if (selectedImage) {
+        console.log('Uploading selected image...');
         const uploadedUrl = await uploadGroupPhoto(selectedImage);
         if (uploadedUrl) {
           photoUrl = uploadedUrl;
+          console.log('Image uploaded successfully:', photoUrl);
         } else {
+          console.log('Image upload failed');
           alert('Failed to upload image. Please try again.');
           return;
         }
@@ -146,6 +157,8 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
         updateData.photo = photoUrl;
       }
 
+      console.log('Updating database with:', updateData);
+
       const { error } = await simpleChatService.getSupabaseClient()
         .from('chats')
         .update(updateData)
@@ -157,6 +170,8 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
         return;
       }
 
+      console.log('Database updated successfully');
+
       // Update local state
       setGroupProfile(prev => prev ? { 
         ...prev, 
@@ -164,10 +179,14 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
         photo: photoUrl || prev.photo
       } : null);
       
+      console.log('Local state updated');
+      
       // Reset editing state
       setIsEditing(false);
       setSelectedImage(null);
       setImagePreview(null);
+      
+      console.log('Edit state reset');
     } catch (error) {
       console.error('Error saving group changes:', error);
       alert('Failed to save changes. Please try again.');
@@ -180,39 +199,51 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
   };
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('Image select triggered:', event.target.files);
     const file = event.target.files?.[0];
     if (file) {
+      console.log('File selected:', file.name, file.type, file.size);
+      
       // Validate file type
       if (!file.type.startsWith('image/')) {
+        console.log('Invalid file type:', file.type);
         alert('Please select an image file');
         return;
       }
       
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
+        console.log('File too large:', file.size);
         alert('Image size must be less than 5MB');
         return;
       }
       
+      console.log('Setting selected image and preview');
       setSelectedImage(file);
       
       // Create preview URL
       const reader = new FileReader();
       reader.onload = (e) => {
+        console.log('Preview URL created:', e.target?.result);
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
+    } else {
+      console.log('No file selected');
     }
   };
 
   const uploadGroupPhoto = async (file: File): Promise<string | null> => {
     try {
+      console.log('Starting upload for file:', file.name);
       setUploading(true);
       
       // Create a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${chatId}-${Date.now()}.${fileExt}`;
       const filePath = `group-photos/${fileName}`;
+      
+      console.log('Uploading to path:', filePath);
       
       // Upload to Supabase Storage
       const { data, error } = await simpleChatService.getSupabaseClient().storage
@@ -227,11 +258,14 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
         throw error;
       }
       
+      console.log('Upload successful:', data);
+      
       // Get public URL
       const { data: { publicUrl } } = simpleChatService.getSupabaseClient().storage
         .from('avatars')
         .getPublicUrl(filePath);
       
+      console.log('Public URL generated:', publicUrl);
       return publicUrl;
     } catch (error) {
       console.error('Error uploading group photo:', error);
