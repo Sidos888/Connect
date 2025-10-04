@@ -6,6 +6,7 @@ import { X, MoreVertical, Share, MessageCircle, Settings, Images, UserPlus, User
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
+import ConnectionsModal from './ConnectionsModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -30,6 +31,10 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDetailedView, setShowDetailedView] = useState(false);
+  const [showConnectionsModal, setShowConnectionsModal] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<string>('none');
+  const [mutualConnections, setMutualConnections] = useState<any[]>([]);
+  const [mutualCount, setMutualCount] = useState(0);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -54,6 +59,18 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             profile_pic: userProfile.profile_pic,
             bio: userProfile.bio || 'Bio not available'
           });
+
+          // Load connection status and mutual connections
+          if (account?.id) {
+            const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
+            setConnectionStatus(status);
+
+            const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
+            setMutualCount(count);
+
+            const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
+            setMutualConnections(connections);
+          }
         } else {
           console.log('UserProfileModal: Profile not found');
           setError('User profile not found');
@@ -101,6 +118,17 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
 
   const handleBackToSummary = () => {
     setShowDetailedView(false);
+  };
+
+  const handleConnectionsClick = () => {
+    setShowConnectionsModal(true);
+  };
+
+  const handleRemoveFriend = (removedUserId: string) => {
+    // Update connection status
+    setConnectionStatus('none');
+    setMutualConnections([]);
+    setMutualCount(0);
   };
 
   if (!isOpen) return null;
@@ -203,21 +231,38 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
               </div>
 
               {/* Connection Status */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
+              <div 
+                className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={handleConnectionsClick}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
                       <Users className="w-5 h-5 text-black" />
                     </div>
-                    <span className="text-black font-medium">Me: Friends</span>
+                    <span className="text-black font-medium">
+                      {connectionStatus === 'accepted' ? 'Me: Friends' : 
+                       connectionStatus === 'pending' ? 'Friend Request Sent' : 
+                       'Add Friend'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
-                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
-                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
-                    </div>
-                    <span className="text-black text-sm">+20</span>
+                    {mutualConnections.length > 0 && (
+                      <div className="flex -space-x-2">
+                        {mutualConnections.slice(0, 3).map((mutual, index) => (
+                          <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                            <Avatar
+                              src={mutual.profile_pic}
+                              name={mutual.name}
+                              size={24}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {mutualCount > 3 && (
+                      <span className="text-black text-sm">+{mutualCount - 3}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -302,6 +347,14 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
           )}
         </div>
       </div>
+
+      {/* Connections Modal */}
+      <ConnectionsModal
+        isOpen={showConnectionsModal}
+        onClose={() => setShowConnectionsModal(false)}
+        userId={userId}
+        onRemoveFriend={handleRemoveFriend}
+      />
     </div>
   );
 }

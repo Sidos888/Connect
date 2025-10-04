@@ -48,7 +48,8 @@ class SimpleChatService {
               user1:user1_id(id, name, profile_pic, connect_id, bio),
               user2:user2_id(id, name, profile_pic, connect_id, bio)
             `)
-            .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
+            .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+            .eq('status', 'accepted');
 
       if (connectionsError) {
         console.error('Error fetching connections:', connectionsError);
@@ -593,6 +594,230 @@ class SimpleChatService {
     } catch (error) {
       console.error('Error in sendMessage:', error);
       return { message: null, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // ===== CONNECTION MANAGEMENT FUNCTIONS =====
+
+  // Check if two users are connected
+  async areUsersConnected(userId1: string, userId2: string): Promise<{ connected: boolean; error: Error | null }> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('are_users_connected', {
+          user1_id: userId1,
+          user2_id: userId2
+        });
+
+      if (error) {
+        console.error('Error checking connection status:', error);
+        return { connected: false, error };
+      }
+
+      return { connected: data || false, error: null };
+    } catch (error) {
+      console.error('Error in areUsersConnected:', error);
+      return { connected: false, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Get connection status between two users
+  async getConnectionStatus(userId1: string, userId2: string): Promise<{ status: string; error: Error | null }> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_connection_status', {
+          user1_id: userId1,
+          user2_id: userId2
+        });
+
+      if (error) {
+        console.error('Error getting connection status:', error);
+        return { status: 'none', error };
+      }
+
+      return { status: data || 'none', error: null };
+    } catch (error) {
+      console.error('Error in getConnectionStatus:', error);
+      return { status: 'none', error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Add a connection (send friend request)
+  async addConnection(userId: string, connectedUserId: string): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('connections')
+        .insert({
+          user1_id: userId,
+          user2_id: connectedUserId,
+          status: 'pending'
+        });
+
+      if (error) {
+        console.error('Error adding connection:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in addConnection:', error);
+      return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Accept a connection (accept friend request)
+  async acceptConnection(userId: string, connectedUserId: string): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('connections')
+        .update({ status: 'accepted' })
+        .eq('user1_id', connectedUserId)
+        .eq('user2_id', userId);
+
+      if (error) {
+        console.error('Error accepting connection:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in acceptConnection:', error);
+      return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Remove a connection (unfriend)
+  async removeConnection(userId: string, connectedUserId: string): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      // Remove both directions of the connection
+      const { error: error1 } = await this.supabase
+        .from('connections')
+        .delete()
+        .eq('user1_id', userId)
+        .eq('user2_id', connectedUserId);
+
+      const { error: error2 } = await this.supabase
+        .from('connections')
+        .delete()
+        .eq('user1_id', connectedUserId)
+        .eq('user2_id', userId);
+
+      if (error1 || error2) {
+        console.error('Error removing connection:', error1 || error2);
+        return { success: false, error: error1 || error2 };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in removeConnection:', error);
+      return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Get user's connections (friends)
+  async getUserConnections(userId: string): Promise<{ connections: any[]; error: Error | null }> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_user_connections', {
+          user_id: userId,
+          status_filter: 'accepted'
+        });
+
+      if (error) {
+        console.error('Error getting user connections:', error);
+        return { connections: [], error };
+      }
+
+      return { connections: data || [], error: null };
+    } catch (error) {
+      console.error('Error in getUserConnections:', error);
+      return { connections: [], error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Get mutual connections count
+  async getMutualConnectionsCount(userId1: string, userId2: string): Promise<{ count: number; error: Error | null }> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_mutual_connections_count', {
+          user1_id: userId1,
+          user2_id: userId2
+        });
+
+      if (error) {
+        console.error('Error getting mutual connections count:', error);
+        return { count: 0, error };
+      }
+
+      return { count: data || 0, error: null };
+    } catch (error) {
+      console.error('Error in getMutualConnectionsCount:', error);
+      return { count: 0, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Get mutual connections (up to limit)
+  async getMutualConnections(userId1: string, userId2: string, limit: number = 3): Promise<{ connections: any[]; error: Error | null }> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_mutual_connections', {
+          user1_id: userId1,
+          user2_id: userId2,
+          limit_count: limit
+        });
+
+      if (error) {
+        console.error('Error getting mutual connections:', error);
+        return { connections: [], error };
+      }
+
+      return { connections: data || [], error: null };
+    } catch (error) {
+      console.error('Error in getMutualConnections:', error);
+      return { connections: [], error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Hide a chat (for when users are no longer connected)
+  async hideChat(chatId: string, userId: string): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      // Add a hidden flag to chat_participants for this user
+      const { error } = await this.supabase
+        .from('chat_participants')
+        .update({ hidden: true })
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error hiding chat:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in hideChat:', error);
+      return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Show a chat (for when users reconnect)
+  async showChat(chatId: string, userId: string): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      // Remove the hidden flag from chat_participants for this user
+      const { error } = await this.supabase
+        .from('chat_participants')
+        .update({ hidden: false })
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error showing chat:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in showChat:', error);
+      return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
     }
   }
 }
