@@ -43,7 +43,7 @@ export default function ProfilePage() {
   const [groupProfile, setGroupProfile] = useState<GroupProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showDetailedView, setShowDetailedView] = useState(false);
+  const [showDetailedView, setShowDetailedView] = useState(true);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
@@ -220,9 +220,16 @@ export default function ProfilePage() {
         </div>
         <div className="flex items-center gap-3 pointer-events-auto">
           <h1 className="text-xl font-semibold text-gray-900">
-            {isGroupProfile ? 'Group Info' : 'Profile'}
+            {isGroupProfile ? 'Group Info' : userProfile?.name || 'Profile'}
           </h1>
         </div>
+        {isUserProfile && userProfile && (
+          <div className="flex items-center gap-3 pointer-events-auto">
+            <button onClick={() => { /* handle menu for detailed view */ }} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <MoreVertical className="w-6 h-6 text-gray-600" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -333,77 +340,8 @@ export default function ProfilePage() {
               </div>
             </>
           ) : (
-            /* Summary Profile View */
-            <>
-              {/* Profile Card Section */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
-                <div className="text-center">
-                  <div className="relative inline-block mb-4">
-                    <Avatar
-                      src={userProfile.profile_pic}
-                      name={userProfile.name}
-                      size={120}
-                    />
-                  </div>
-                  
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{userProfile.name}</h3>
-                  <p className="text-gray-600 mb-4">{userProfile.bio}</p>
-                  
-                  <button 
-                    onClick={handleViewProfile}
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-50 transition-colors text-sm font-medium shadow-md"
-                  >
-                    View Profile
-                  </button>
-                </div>
-              </div>
-
-              {/* Action Buttons - Circular Card Style */}
-              <div className="flex space-x-6 justify-center mb-8">
-                {/* Message Button */}
-                <button
-                  onClick={handleStartChat}
-                  className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
-                >
-                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                    <MessageCircle className="w-6 h-6 text-gray-600" />
-                  </div>
-                  <span className="text-xs font-medium text-gray-700">Message</span>
-                </button>
-
-                {/* Invite Button */}
-                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
-                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                    <UserPlus className="w-6 h-6 text-gray-600" />
-                  </div>
-                  <span className="text-xs font-medium text-gray-700">Invite</span>
-                </button>
-
-                {/* Share Profile Button */}
-                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
-                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                    <Share className="w-6 h-6 text-gray-600" />
-                  </div>
-                  <span className="text-xs font-medium text-gray-700">Share</span>
-                </button>
-              </div>
-
-              {/* Media Section */}
-              <div className="mb-4">
-                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                  <Images className="w-5 h-5" />
-                  View Media
-                </button>
-              </div>
-
-              {/* Settings Section */}
-              <div>
-                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                  <Settings className="w-5 h-5" />
-                  Chat Settings
-                </button>
-              </div>
-            </>
+            /* Summary Profile View - Not used since we always show detailed view */
+            <></>
           )
         ) : isGroupProfile && groupProfile ? (
           <>
