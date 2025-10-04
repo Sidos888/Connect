@@ -48,6 +48,7 @@ export default function ProfilePage() {
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
   const [mutualCount, setMutualCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
 
   const isGroupProfile = !!chatId;
   const isUserProfile = !!userId;
@@ -256,34 +257,8 @@ export default function ProfilePage() {
                     size={140}
                   />
                 </div>
+                <h3 className="text-3xl font-bold text-gray-900 mb-3">{userProfile.name}</h3>
                 <p className="text-gray-600 text-lg">{userProfile.bio}</p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex space-x-8 justify-center mb-8">
-                <button
-                  onClick={handleStartChat}
-                  className="flex flex-col items-center space-y-3"
-                >
-                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                    <MessageCircle className="w-8 h-8 text-black" />
-                  </div>
-                  <span className="text-sm font-medium text-black">Message</span>
-                </button>
-
-                <button className="flex flex-col items-center space-y-3">
-                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                    <UserPlus className="w-8 h-8 text-black" />
-                  </div>
-                  <span className="text-sm font-medium text-black">Invite</span>
-                </button>
-
-                <button className="flex flex-col items-center space-y-3">
-                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                    <Share className="w-8 h-8 text-black" />
-                  </div>
-                  <span className="text-sm font-medium text-black">Share</span>
-                </button>
               </div>
 
               {/* Connection Status */}
@@ -297,40 +272,66 @@ export default function ProfilePage() {
                       <Users className="w-5 h-5 text-black" />
                     </div>
                     <span className="text-black font-medium">
-                      {connectionStatus === 'accepted' ? 'Me: Friends' : 
+                      {connectionStatus === 'accepted' ? 'Friends' : 
                        connectionStatus === 'pending' ? 'Friend Request Sent' : 
                        'Add Friend'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {mutualConnections.length > 0 && (
-                      <div className="flex -space-x-2">
-                        {mutualConnections.slice(0, 3).map((mutual, index) => (
-                          <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                            <Avatar
-                              src={mutual.profile_pic}
-                              name={mutual.name}
-                              size={24}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {mutualCount > 3 && (
-                      <span className="text-black text-sm">+{mutualCount - 3}</span>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              {/* Content Sections */}
-              <div className="space-y-4">
-                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-                  View Photos
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200 mb-6">
+                <button
+                  onClick={() => setActiveTab('friends')}
+                  className={`flex-1 py-3 text-center font-medium ${
+                    activeTab === 'friends'
+                      ? 'text-orange-500 border-b-2 border-orange-500'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Friends ({mutualConnections.length})
                 </button>
-                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-                  View Achievements
+                <button
+                  onClick={() => setActiveTab('following')}
+                  className={`flex-1 py-3 text-center font-medium ${
+                    activeTab === 'following'
+                      ? 'text-orange-500 border-b-2 border-orange-500'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Following (0)
                 </button>
+              </div>
+
+              {/* Tab Content */}
+              <div>
+                {activeTab === 'friends' && (
+                  <div className="space-y-3">
+                    {mutualConnections.length > 0 ? (
+                      mutualConnections.map((conn) => (
+                        <div key={conn.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                          <Avatar
+                            src={conn.profile_pic}
+                            name={conn.name}
+                            size={40}
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{conn.name}</p>
+                            <p className="text-sm text-gray-600">{conn.bio || 'No bio'}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-600 py-4">No friends yet.</p>
+                    )}
+                  </div>
+                )}
+                {activeTab === 'following' && (
+                  <div className="space-y-3">
+                    <p className="text-center text-gray-600 py-4">Not following anyone yet.</p>
+                  </div>
+                )}
               </div>
             </>
           ) : (
