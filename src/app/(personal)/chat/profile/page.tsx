@@ -209,7 +209,7 @@ export default function ProfilePage() {
   return (
     <div className="h-screen flex flex-col bg-white relative">
       {/* Floating Action Buttons */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none" style={{ paddingTop: 'max(env(safe-area-inset-top), 20px)' }}>
         <button
           onClick={showDetailedView ? handleBackToSummary : () => router.back()}
           className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
@@ -225,7 +225,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingTop: 'max(env(safe-area-inset-top), 80px)' }}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
@@ -245,7 +245,7 @@ export default function ProfilePage() {
             /* Detailed Profile View */
             <>
               {/* Profile Header */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-8 px-6 pt-4">
                 <div className="relative inline-block mb-6">
                   <Avatar
                     src={userProfile.profile_pic}
@@ -259,7 +259,7 @@ export default function ProfilePage() {
 
               {/* Connection Status */}
               <div 
-                className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 mx-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={handleConnectionsClick}
               >
                 <div className="flex items-center justify-between">
@@ -277,7 +277,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Tabs */}
-              <div className="flex border-b border-gray-200 mb-6">
+              <div className="flex border-b border-gray-200 mb-6 mx-6">
                 <button
                   onClick={() => setActiveTab('friends')}
                   className={`flex-1 py-3 text-center font-medium ${
@@ -301,7 +301,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Tab Content */}
-              <div>
+              <div className="px-6">
                 {activeTab === 'friends' && (
                   <div className="space-y-3">
                     {mutualConnections.length > 0 ? (
