@@ -358,6 +358,35 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* Action Buttons - Circular Card Style */}
+              <div className="flex space-x-6 justify-center mb-8">
+                {/* Message Button */}
+                <button
+                  onClick={handleStartChat}
+                  className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
+                >
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <MessageCircle className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Message</span>
+                </button>
+
+                {/* Invite Button */}
+                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <UserPlus className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Invite</span>
+                </button>
+
+                {/* Share Profile Button */}
+                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <Share className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Share</span>
+                </button>
+              </div>
 
               {/* Media Section */}
               <div className="mb-4">
