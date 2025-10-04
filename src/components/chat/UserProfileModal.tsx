@@ -229,21 +229,21 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                   onClick={handleStartChat}
                   className="flex flex-col items-center space-y-3"
                 >
-                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center">
                     <MessageCircle className="w-8 h-8 text-black" />
                   </div>
                   <span className="text-sm font-medium text-black">Message</span>
                 </button>
 
                 <button className="flex flex-col items-center space-y-3">
-                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center">
                     <UserPlus className="w-8 h-8 text-black" />
                   </div>
                   <span className="text-sm font-medium text-black">Invite</span>
                 </button>
 
                 <button className="flex flex-col items-center space-y-3">
-                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center">
                     <Share className="w-8 h-8 text-black" />
                   </div>
                   <span className="text-sm font-medium text-black">Share</span>
@@ -252,12 +252,12 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
 
               {/* Connection Status */}
               <div 
-                className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                className="p-4 mb-6 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
                 onClick={handleConnectionsClick}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center">
                       <Users className="w-5 h-5 text-black" />
                     </div>
                     <span className="text-black font-medium">
@@ -270,7 +270,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                     {mutualConnections.length > 0 && (
                       <div className="flex -space-x-2">
                         {mutualConnections.slice(0, 3).map((mutual, index) => (
-                          <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                          <div key={mutual.id} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden">
                             <Avatar
                               src={mutual.profile_pic}
                               name={mutual.name}
@@ -287,14 +287,17 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                 </div>
               </div>
 
-              {/* Content Sections */}
-              <div className="space-y-4">
-                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-                  View Photos
-                </button>
-                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-                  View Achievements
-                </button>
+              {/* Profile Info Section */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Info</h3>
+                <div className="space-y-4">
+                  <button className="w-full text-gray-700 p-4 text-left font-medium hover:bg-gray-50 transition-colors rounded-lg">
+                    View Photos
+                  </button>
+                  <button className="w-full text-gray-700 p-4 text-left font-medium hover:bg-gray-50 transition-colors rounded-lg">
+                    View Achievements
+                  </button>
+                </div>
               </div>
             </>
           ) : (
