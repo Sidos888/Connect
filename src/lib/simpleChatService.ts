@@ -485,6 +485,9 @@ class SimpleChatService {
         participants: participants
       };
 
+      console.log('SimpleChatService: getChatById - chatData.photo:', chatData.photo);
+      console.log('SimpleChatService: getChatById - simpleChat.photo:', simpleChat.photo);
+
       // Cache the result
       this.chats.set(chatId, simpleChat);
 

@@ -91,6 +91,7 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
             }
           }
 
+          console.log('GroupProfileModal: Setting group profile with photo:', chat.photo);
           setGroupProfile({
             id: chat.id,
             name: chat.name || 'Group Chat',
@@ -432,11 +433,14 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
                           className="w-full h-full object-cover"
                         />
                       ) : groupProfile.photo ? (
-                        <img
-                          src={groupProfile.photo}
-                          alt="Group photo"
-                          className="w-full h-full object-cover"
-                        />
+                        <>
+                          {console.log('GroupProfileModal: Rendering group photo:', groupProfile.photo)}
+                          <img
+                            src={groupProfile.photo}
+                            alt="Group photo"
+                            className="w-full h-full object-cover"
+                          />
+                        </>
                       ) : (
                         <Users className="w-8 h-8 text-gray-400" />
                       )}
