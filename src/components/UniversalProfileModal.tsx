@@ -5,7 +5,7 @@ import { X, MoreVertical, Share, MessageCircle, Settings, Images, UserPlus, User
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
-import ConnectionsModal from './ConnectionsModal';
+import ConnectionsModal from './chat/ConnectionsModal';
 
 interface UniversalProfileModalProps {
   isOpen: boolean;

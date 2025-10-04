@@ -7,7 +7,7 @@ import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { useRouter } from "next/navigation";
-import UserProfileModal from "@/components/chat/UserProfileModal";
+import UniversalProfileModal from "@/components/UniversalProfileModal";
 import GroupInfoModal from "@/components/chat/GroupInfoModal";
 
 interface PersonalChatPanelProps {
@@ -231,7 +231,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
       {/* Profile Modals */}
       {profileUserId && (
-        <UserProfileModal
+        <UniversalProfileModal
           isOpen={showUserProfile}
           onClose={() => {
             setShowUserProfile(false);

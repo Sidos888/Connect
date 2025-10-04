@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { X, MessageCircle, Share, Images, Settings, Users, Camera, Edit, UserPlus, ArrowLeft, MoreVertical, UserMinus } from "lucide-react";
+import { X, MessageCircle, Share, Images, Settings, Users, Camera, Edit, UserPlus, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { connectionsService } from "@/lib/connectionsService";
 import Avatar from "@/components/Avatar";
 import { useRouter } from "next/navigation";
-import ConnectionsModal from './ConnectionsModal';
+import UniversalProfileModal from '../UniversalProfileModal';
 
 interface GroupInfoModalProps {
   isOpen: boolean;
@@ -38,15 +38,6 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
   const [isEditing, setIsEditing] = useState(false);
   const [showMemberProfile, setShowMemberProfile] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const [memberProfile, setMemberProfile] = useState<any>(null);
-  const [memberProfileLoading, setMemberProfileLoading] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [removingFriend, setRemovingFriend] = useState(false);
-  const [showConnectionsModal, setShowConnectionsModal] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<string>('none');
-  const [mutualConnections, setMutualConnections] = useState<any[]>([]);
-  const [mutualCount, setMutualCount] = useState(0);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Edit form state
   const [groupName, setGroupName] = useState('');
@@ -162,117 +153,17 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
     }
   };
 
-  const handleMemberClick = async (memberId: string) => {
-        try {
-          setMemberProfileLoading(true);
-          setSelectedMemberId(memberId);
-          
-          // Load member profile data
-          const { contacts } = await simpleChatService.getContacts(account?.id || '');
-          const userProfile = contacts.find(contact => contact.id === memberId);
-      
-      if (userProfile) {
-        setMemberProfile({
-          id: userProfile.id,
-          name: userProfile.name,
-          profile_pic: userProfile.profile_pic,
-          bio: userProfile.bio || 'Bio not available'
-        });
-
-        // Load connection status and mutual connections
-        if (account?.id) {
-          try {
-            const { status, error: statusError } = await connectionsService.getConnectionStatus(account.id, memberId);
-            
-            // Map connectionsService status to UserProfileModal expected status
-            const mappedStatus = status === 'connected' ? 'accepted' : status;
-            setConnectionStatus(mappedStatus);
-
-            // For now, let's set some default values for mutual connections since those functions might not exist in connectionsService
-            setMutualCount(0);
-            setMutualConnections([]);
-            
-            // If we're viewing a contact and no specific status was found, assume they're friends
-            if (userProfile && mappedStatus === 'none') {
-              setConnectionStatus('accepted');
-            }
-          } catch (connError) {
-            console.error('GroupInfoModal: Error loading connection data:', connError);
-            // Fallback: if we're viewing a contact, assume they're connected
-            if (userProfile) {
-              setConnectionStatus('accepted');
-            }
-          }
-        } else {
-          // Fallback: if we're viewing a contact, assume they're connected
-          if (userProfile) {
-            setConnectionStatus('accepted');
-          }
-        }
-
-        setShowMemberProfile(true);
-      } else {
-        console.error('Member profile not found');
-      }
-    } catch (error) {
-      console.error('Error loading member profile:', error);
-    } finally {
-      setMemberProfileLoading(false);
-    }
+  const handleMemberClick = (memberId: string) => {
+    setSelectedMemberId(memberId);
+    setShowMemberProfile(true);
   };
 
   const handleBackToGroup = () => {
     setShowMemberProfile(false);
     setSelectedMemberId(null);
-    setMemberProfile(null);
-    setConnectionStatus('none');
-    setMutualConnections([]);
-    setMutualCount(0);
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handleRemoveFriend = async () => {
-    if (!selectedMemberId || !account?.id || removingFriend) return;
-
-    try {
-      setRemovingFriend(true);
-      console.log('Removing friend:', selectedMemberId);
-      
-      const { error } = await connectionsService.removeFriend(account.id, selectedMemberId);
-      
-      if (error) {
-        console.error('Error removing friend:', error);
-        alert('Failed to remove friend. Please try again.');
-      } else {
-        console.log('Friend removed successfully');
-        // Close the member profile and return to group view
-        setShowMemberProfile(false);
-        setSelectedMemberId(null);
-        setMemberProfile(null);
-        setShowDropdown(false);
-        // Optionally show a success message
-        alert('Friend removed successfully');
-      }
-    } catch (error) {
-      console.error('Error in handleRemoveFriend:', error);
-      alert('Failed to remove friend. Please try again.');
-    } finally {
-      setRemovingFriend(false);
-    }
-  };
 
   // Debug logging
   // Check if current user is admin
@@ -305,29 +196,6 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
               <X className="w-5 h-5 text-gray-600" />
             )}
           </button>
-          {showMemberProfile && (
-            <div className="relative" ref={dropdownRef}>
-              <button 
-                onClick={() => setShowDropdown(!showDropdown)} 
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors pointer-events-auto"
-              >
-                <MoreVertical className="w-6 h-6 text-gray-600" />
-              </button>
-              
-              {showDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                  <button
-                    onClick={handleRemoveFriend}
-                    disabled={removingFriend}
-                    className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <UserMinus className="w-4 h-4" />
-                    {removingFriend ? 'Removing...' : 'Remove Friend'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Content - Scrollable */}
@@ -347,113 +215,16 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
               </button>
             </div>
           ) : showMemberProfile ? (
-            /* Member Profile View - Inside Same Modal */
-            <>
-              {memberProfileLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                </div>
-              ) : memberProfile ? (
-                <>
-                  {/* Profile Header */}
-                  <div className="text-center mb-8">
-                    <div className="relative inline-block mb-6">
-                      <Avatar
-                        src={memberProfile.profile_pic}
-                        name={memberProfile.name}
-                        size={140}
-                      />
-                    </div>
-                    <h3 className="text-3xl font-bold text-gray-900 mb-3">{memberProfile.name}</h3>
-                    <p className="text-gray-600 text-lg">{memberProfile.bio}</p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex space-x-8 justify-center mb-8">
-                    <button className="flex flex-col items-center space-y-3">
-                      <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                        <MessageCircle className="w-8 h-8 text-black" />
-                      </div>
-                      <span className="text-sm font-medium text-black">Message</span>
-                    </button>
-
-                    <button className="flex flex-col items-center space-y-3">
-                      <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                        <UserPlus className="w-8 h-8 text-black" />
-                      </div>
-                      <span className="text-sm font-medium text-black">Invite</span>
-                    </button>
-
-                    <button className="flex flex-col items-center space-y-3">
-                      <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                        <Share className="w-8 h-8 text-black" />
-                      </div>
-                      <span className="text-sm font-medium text-black">Share</span>
-                    </button>
-                  </div>
-
-        {/* Connection Status */}
-        <button 
-          onClick={() => {
-            console.log('GroupInfoModal: Connection status card clicked!', connectionStatus);
-            setShowConnectionsModal(true);
-          }}
-          className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm hover:bg-gray-50 transition-colors text-left"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                <Users className="w-5 h-5 text-black" />
-              </div>
-              <span className="text-black font-medium">
-                {connectionStatus === 'accepted' ? 'Me: Friends' : 
-                 connectionStatus === 'pending' ? 'Friend Request Sent' : 
-                 'Add Friend'}
-              </span>
+            /* Member Profile View - Using UniversalProfileModal */
+            <div className="w-full h-full">
+              <UniversalProfileModal
+                isOpen={true}
+                onClose={handleBackToGroup}
+                userId={selectedMemberId || ''}
+                showInMenu={true}
+                onBack={handleBackToGroup}
+              />
             </div>
-            <div className="flex items-center gap-2">
-              {mutualConnections.length > 0 && (
-                <div className="flex -space-x-2">
-                  {mutualConnections.slice(0, 3).map((mutual, index) => (
-                    <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                      <Avatar
-                        src={mutual.profile_pic}
-                        name={mutual.name}
-                        size={24}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-              {mutualCount > 3 && (
-                <span className="text-black text-sm">+{mutualCount - 3}</span>
-              )}
-            </div>
-          </div>
-        </button>
-
-                  {/* Content Sections */}
-                  <div className="space-y-4">
-                    <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-                      View Photos
-                    </button>
-                    <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-                      View Achievements
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-red-600 mb-4">Member profile not found</p>
-                  <button
-                    onClick={handleBackToGroup}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                  >
-                    Back to Group
-                  </button>
-                </div>
-              )}
-            </>
           ) : isEditing ? (
             /* Edit Mode - Direct Modal Content (no card wrapper) */
             <>
@@ -628,24 +399,6 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
         </div>
       </div>
 
-      {/* Connections Modal */}
-      {selectedMemberId && (
-        <ConnectionsModal
-          isOpen={showConnectionsModal}
-          onClose={() => setShowConnectionsModal(false)}
-          userId={selectedMemberId}
-          onRemoveFriend={(removedUserId) => {
-            console.log('GroupInfoModal: Friend removed:', removedUserId);
-            setShowConnectionsModal(false);
-            setShowMemberProfile(false);
-            setSelectedMemberId(null);
-            setMemberProfile(null);
-            setConnectionStatus('none');
-            setMutualConnections([]);
-            setMutualCount(0);
-          }}
-        />
-      )}
     </div>
   );
 }
