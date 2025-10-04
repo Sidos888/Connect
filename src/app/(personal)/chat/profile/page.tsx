@@ -210,21 +210,17 @@ export default function ProfilePage() {
     <div className="h-screen flex flex-col bg-white relative">
       {/* Floating Action Buttons */}
       <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
-        <div className="flex items-center gap-3 pointer-events-auto">
-          <button
-            onClick={showDetailedView ? handleBackToSummary : () => router.back()}
-            className="p-2 hover:bg-gray-100 transition-colors rounded-full"
-            aria-label="Go back"
-          >
-            <ChevronLeftIcon className="h-5 w-5" />
-          </button>
-        </div>
+        <button
+          onClick={showDetailedView ? handleBackToSummary : () => router.back()}
+          className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
+          aria-label="Go back"
+        >
+          <ChevronLeftIcon className="h-5 w-5" />
+        </button>
         {isUserProfile && userProfile && (
-          <div className="flex items-center gap-3 pointer-events-auto">
-            <button onClick={() => { /* handle menu for detailed view */ }} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <MoreVertical className="w-6 h-6 text-gray-600" />
-            </button>
-          </div>
+          <button onClick={() => { /* handle menu for detailed view */ }} className="p-2 rounded-full hover:bg-gray-100 transition-colors pointer-events-auto">
+            <MoreVertical className="w-6 h-6 text-gray-600" />
+          </button>
         )}
       </div>
 
