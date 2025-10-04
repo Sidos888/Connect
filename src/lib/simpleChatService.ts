@@ -716,11 +716,15 @@ class SimpleChatService {
   // Get user's connections (friends)
   async getUserConnections(userId: string): Promise<{ connections: any[]; error: Error | null }> {
     try {
+      console.log('SimpleChatService: Getting user connections for:', userId);
+      
       const { data, error } = await this.supabase
         .rpc('get_user_connections', {
           user_id: userId,
           status_filter: 'accepted'
         });
+
+      console.log('SimpleChatService: getUserConnections result:', { data, error });
 
       if (error) {
         console.error('Error getting user connections:', error);

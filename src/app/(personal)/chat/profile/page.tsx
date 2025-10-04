@@ -293,6 +293,8 @@ export default function ProfilePage() {
                        connectionStatus === 'pending' ? 'Friend Request Sent' : 
                        'Add Friend'}
                     </span>
+                    {/* Debug info */}
+                    <span className="text-xs text-gray-500 ml-2">({connectionStatus})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {mutualConnections.length > 0 && (

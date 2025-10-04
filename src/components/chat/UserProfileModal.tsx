@@ -62,13 +62,18 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
 
           // Load connection status and mutual connections
           if (account?.id) {
+            console.log('UserProfileModal: Loading connection data for:', account.id, 'and', userId);
+            
             const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
+            console.log('UserProfileModal: Connection status:', status);
             setConnectionStatus(status);
 
             const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
+            console.log('UserProfileModal: Mutual count:', count);
             setMutualCount(count);
 
             const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
+            console.log('UserProfileModal: Mutual connections:', connections);
             setMutualConnections(connections);
           }
         } else {
@@ -245,6 +250,8 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                        connectionStatus === 'pending' ? 'Friend Request Sent' : 
                        'Add Friend'}
                     </span>
+                    {/* Debug info */}
+                    <span className="text-xs text-gray-500 ml-2">({connectionStatus})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {mutualConnections.length > 0 && (

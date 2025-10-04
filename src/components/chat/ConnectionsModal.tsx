@@ -59,10 +59,12 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
 
         // Load connection status
         const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
+        console.log('ConnectionsModal: Connection status:', status);
         setConnectionStatus(status);
 
-        // Load connections (friends)
-        const { connections: friendsData } = await simpleChatService.getUserConnections(userId);
+        // Load connections (friends) - get current user's friends, not profile user's friends
+        const { connections: friendsData } = await simpleChatService.getUserConnections(account.id);
+        console.log('ConnectionsModal: Friends data:', friendsData);
         setConnections(friendsData);
 
         // Load following (placeholder for now)
@@ -230,7 +232,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
               </div>
 
               {/* Tabs */}
-              <div className="flex border-b border-gray-200 mb-6">
+              <div className="flex border-b border-gray-200 mb-6 justify-center">
                 <button
                   onClick={() => setActiveTab('friends')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
