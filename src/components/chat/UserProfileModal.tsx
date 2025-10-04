@@ -174,7 +174,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
               <ArrowLeft className="w-6 h-6 text-gray-600" />
             </button>
           ) : (
-            <div className="w-6 h-6" /> {/* Spacer for alignment */}
+            <div className="w-6 h-6" />
           )}
           <h2 className="text-xl font-semibold text-gray-900">
             {showDetailedView ? profile?.name : "Profile Info"}
