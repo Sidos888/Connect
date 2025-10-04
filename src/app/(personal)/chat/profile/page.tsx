@@ -218,11 +218,6 @@ export default function ProfilePage() {
             <ChevronLeftIcon className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex items-center gap-3 pointer-events-auto">
-          <h1 className="text-xl font-semibold text-gray-900">
-            {isGroupProfile ? 'Group Info' : userProfile?.name || 'Profile'}
-          </h1>
-        </div>
         {isUserProfile && userProfile && (
           <div className="flex items-center gap-3 pointer-events-auto">
             <button onClick={() => { /* handle menu for detailed view */ }} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
