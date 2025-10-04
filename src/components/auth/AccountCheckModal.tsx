@@ -64,7 +64,6 @@ export default function AccountCheckModal({
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [accountCheckInProgress, setAccountCheckInProgress] = useState(false);
   const [userExists, setUserExists] = useState<boolean | null>(null);
-  const [initialAccountCheck, setInitialAccountCheck] = useState(true); // New state to prevent premature UI rendering
   const [existingUser, setExistingUser] = useState<{ id: string; name?: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; profile_pic?: string; bio?: string; date_of_birth?: string; dob?: string; connect_id?: string; created_at: string; updated_at: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -125,8 +124,7 @@ export default function AccountCheckModal({
   // Reset initial account check state when modal opens
   useEffect(() => {
     if (isOpen) {
-      console.log('AccountCheckModal: Modal opened, resetting initial account check state');
-      setInitialAccountCheck(true); // Reset to loading state when modal opens
+      console.log('AccountCheckModal: Modal opened');
       hasCheckedRef.current = false; // allow one check per open
     }
   }, [isOpen]);
@@ -138,17 +136,6 @@ export default function AccountCheckModal({
     setAccountCheckInProgress(false); // Reset progress flag too
   }, [user?.id]);
 
-  // Failsafe: never stay stuck on checking longer than 5s
-  useEffect(() => {
-    if (!isOpen || !initialAccountCheck) return;
-    const t = setTimeout(() => {
-      if (initialAccountCheck) {
-        console.log('AccountCheckModal: Failsafe exiting initial check');
-        setInitialAccountCheck(false);
-      }
-    }, 5000);
-    return () => clearTimeout(t);
-  }, [isOpen, initialAccountCheck]);
 
   const checkAccountExists = async () => {
     if (accountCheckInProgress) {
@@ -196,7 +183,6 @@ export default function AccountCheckModal({
           updated_at: account.updated_at,
           dob: account.dob || undefined
         });
-        setInitialAccountCheck(false); // Mark initial check as complete
         setAccountCheckInProgress(false);
         return;
       }
@@ -219,7 +205,6 @@ export default function AccountCheckModal({
         console.log('AccountCheckModal: ✅ EXISTING ACCOUNT FOUND via direct lookup!');
         setUserExists(true);
         setExistingUser(directAccount);
-        setInitialAccountCheck(false); // Mark initial check as complete
         setAccountCheckInProgress(false);
         return;
       }
@@ -241,7 +226,6 @@ export default function AccountCheckModal({
         console.log('AccountCheckModal: ✅ EXISTING ACCOUNT FOUND via identity lookup!');
         setUserExists(true);
         setExistingUser(identityRecord.accounts as any);
-        setInitialAccountCheck(false); // Mark initial check as complete
         setAccountCheckInProgress(false);
         return;
       }
@@ -342,7 +326,6 @@ export default function AccountCheckModal({
             clearTimeout(timeoutId);
             setUserExists(true);
             setExistingUser(accountData);
-            setInitialAccountCheck(false); // Mark initial check as complete
             setAccountCheckInProgress(false);
             return;
           }
@@ -458,7 +441,6 @@ export default function AccountCheckModal({
           updated_at: account.updated_at,
           dob: account.dob || undefined
         });
-        setInitialAccountCheck(false); // Mark initial check as complete
         setAccountCheckInProgress(false);
       }
     }
@@ -516,7 +498,6 @@ export default function AccountCheckModal({
           setUserExists(false);
           setExistingUser(null);
           setCurrentPage(1);
-          setInitialAccountCheck(false); // Mark initial check as complete
           setAccountCheckInProgress(false);
         }
       }, mobileTimeout);
@@ -1345,8 +1326,7 @@ export default function AccountCheckModal({
             )}
             
             <h2 className="text-xl font-semibold text-gray-900">
-              {initialAccountCheck ? 'Checking account...' :
-               currentPage === 1 ? 'Create Account' : 'Complete Profile'}
+              {currentPage === 1 ? 'Create Account' : 'Complete Profile'}
             </h2>
             
             <div className="w-9" />
@@ -1354,13 +1334,7 @@ export default function AccountCheckModal({
         )}
 
         <div className="p-6 flex-1 overflow-y-auto">
-          {initialAccountCheck ? (
-            // Loading state - prevent premature UI rendering
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
-              <p className="text-sm text-gray-600">Checking your account...</p>
-            </div>
-          ) : userExists === true ? (
+          {userExists === true ? (
             // Existing Account Card - Perfectly centered layout
             <div className="flex flex-col items-center justify-center h-full px-6 md:px-8 py-8">
               {/* Profile Card - Left profile pic, right text */}

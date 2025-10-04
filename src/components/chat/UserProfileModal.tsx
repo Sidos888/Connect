@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Share, MessageCircle, MoreVertical, Settings, Images } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { X, MoreVertical, Share, MessageCircle, Settings, Images, UserPlus, Users, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
@@ -24,13 +25,18 @@ interface UserProfile {
 
 export default function UserProfileModal({ isOpen, onClose, userId, onStartChat }: UserProfileModalProps) {
   const { account } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDetailedView, setShowDetailedView] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!userId || !isOpen) return;
+
+      console.log('UserProfileModal: Loading profile for userId:', userId);
+      console.log('UserProfileModal: isOpen:', isOpen);
 
       try {
         setLoading(true);
@@ -41,6 +47,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
         const userProfile = contacts.find(contact => contact.id === userId);
 
         if (userProfile) {
+          console.log('UserProfileModal: Found profile:', userProfile);
           setProfile({
             id: userProfile.id,
             name: userProfile.name,
@@ -48,6 +55,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             bio: userProfile.bio || 'Bio not available'
           });
         } else {
+          console.log('UserProfileModal: Profile not found');
           setError('User profile not found');
         }
       } catch (err) {
@@ -84,6 +92,17 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
     }
   };
 
+  const handleViewProfile = () => {
+    console.log('View Profile clicked!');
+    console.log('Current showDetailedView:', showDetailedView);
+    console.log('Profile:', profile);
+    setShowDetailedView(true);
+  };
+
+  const handleBackToSummary = () => {
+    setShowDetailedView(false);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -99,15 +118,28 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
       />
       
       {/* Modal content */}
-      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
+      <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
         {/* Header - Fixed */}
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
+          <div className="flex items-center gap-3">
+            {showDetailedView && (
+              <button
+                onClick={handleBackToSummary}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
           >
-            <X className="w-6 h-6 text-gray-600" />
+            {showDetailedView ? (
+              <MoreVertical className="w-6 h-6 text-gray-600" />
+            ) : (
+              <X className="w-6 h-6 text-gray-600" />
+            )}
           </button>
         </div>
 
@@ -127,7 +159,81 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                 Close
               </button>
             </div>
+          ) : showDetailedView ? (
+            /* Detailed Profile View - Inside Same Modal */
+            <>
+              {/* Profile Header */}
+              <div className="text-center mb-8">
+                <div className="relative inline-block mb-6">
+                  <Avatar
+                    src={profile.profile_pic}
+                    name={profile.name}
+                    size={140}
+                  />
+                </div>
+                <h3 className="text-3xl font-bold text-gray-900 mb-3">{profile.name}</h3>
+                <p className="text-gray-600 text-lg">{profile.bio}</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-8 justify-center mb-8">
+                <button
+                  onClick={handleStartChat}
+                  className="flex flex-col items-center space-y-3"
+                >
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <MessageCircle className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Message</span>
+                </button>
+
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <UserPlus className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Invite</span>
+                </button>
+
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <Share className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Share</span>
+                </button>
+              </div>
+
+              {/* Connection Status */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                      <Users className="w-5 h-5 text-black" />
+                    </div>
+                    <span className="text-black font-medium">Me: Friends</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
+                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
+                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
+                    </div>
+                    <span className="text-black text-sm">+20</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content Sections */}
+              <div className="space-y-4">
+                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                  View Photos
+                </button>
+                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                  View Achievements
+                </button>
+              </div>
+            </>
           ) : (
+            /* Summary Profile View */
             <>
               {/* Profile Card Section */}
               <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
@@ -143,7 +249,13 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">{profile.name}</h3>
                   <p className="text-gray-600 mb-4">{profile.bio}</p>
                   
-                  <button className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-200 transition-colors text-sm font-medium">
+                  <button 
+                    onClick={(e) => {
+                      console.log('Button clicked!', e);
+                      handleViewProfile();
+                    }}
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-50 transition-colors text-sm font-medium shadow-md"
+                  >
                     View Profile
                   </button>
                 </div>

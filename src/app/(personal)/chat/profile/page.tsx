@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
-import { ArrowLeft, MessageCircle, Share, Edit, UserPlus, Trash2, Settings, Images } from "lucide-react";
+import { ArrowLeft, MessageCircle, Share, Edit, UserPlus, Trash2, Settings, Images, Users } from "lucide-react";
 import { ChevronLeftIcon } from "@/components/icons";
 import Avatar from "@/components/Avatar";
 
@@ -41,9 +41,12 @@ export default function ProfilePage() {
   const [groupProfile, setGroupProfile] = useState<GroupProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDetailedView, setShowDetailedView] = useState(false);
 
   const isGroupProfile = !!chatId;
   const isUserProfile = !!userId;
+
+  console.log('Profile page loaded:', { userId, chatId, isUserProfile, isGroupProfile });
 
   // Hide bottom nav on mobile profile page
   useEffect(() => {
@@ -156,6 +159,17 @@ export default function ProfilePage() {
     router.push(`/chat/profile?userId=${participantId}`);
   };
 
+  const handleViewProfile = () => {
+    console.log('View Profile clicked!');
+    console.log('Current showDetailedView:', showDetailedView);
+    console.log('UserProfile:', userProfile);
+    setShowDetailedView(true);
+  };
+
+  const handleBackToSummary = () => {
+    setShowDetailedView(false);
+  };
+
   const isAdmin = account?.id === groupProfile?.created_by;
 
   return (
@@ -164,7 +178,7 @@ export default function ProfilePage() {
       <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
         <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <button
-            onClick={() => router.back()}
+            onClick={showDetailedView ? handleBackToSummary : () => router.back()}
             className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Go back"
           >
@@ -195,65 +209,144 @@ export default function ProfilePage() {
             </button>
           </div>
         ) : isUserProfile && userProfile ? (
-          <>
-            {/* Profile Card Section */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
-              <div className="text-center">
-                <div className="relative inline-block mb-4">
+          showDetailedView ? (
+            /* Detailed Profile View */
+            <>
+              {/* Profile Header */}
+              <div className="text-center mb-8">
+                <div className="relative inline-block mb-6">
                   <Avatar
                     src={userProfile.profile_pic}
                     name={userProfile.name}
-                    size={120}
+                    size={140}
                   />
                 </div>
-                
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{userProfile.name}</h3>
-                <p className="text-gray-600 mb-4">{userProfile.bio}</p>
-                
-                <button className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-200 transition-colors text-sm font-medium">
-                  View Profile
+                <h3 className="text-3xl font-bold text-gray-900 mb-3">{userProfile.name}</h3>
+                <p className="text-gray-600 text-lg">{userProfile.bio}</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-8 justify-center mb-8">
+                <button
+                  onClick={handleStartChat}
+                  className="flex flex-col items-center space-y-3"
+                >
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <MessageCircle className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Message</span>
+                </button>
+
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <UserPlus className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Invite</span>
+                </button>
+
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <Share className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Share</span>
                 </button>
               </div>
-            </div>
 
-            {/* Action Buttons - Circular Card Style */}
-            <div className="flex space-x-6 justify-center mb-8">
-              {/* Message Button */}
-              <button
-                onClick={handleStartChat}
-                className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
-              >
-                <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                  <MessageCircle className="w-6 h-6 text-gray-600" />
+              {/* Connection Status */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                      <Users className="w-5 h-5 text-black" />
+                    </div>
+                    <span className="text-black font-medium">Me: Friends</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
+                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
+                      <div className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm"></div>
+                    </div>
+                    <span className="text-black text-sm">+20</span>
+                  </div>
                 </div>
-                <span className="text-xs font-medium text-gray-700">Message</span>
-              </button>
+              </div>
 
-              {/* Share Profile Button */}
-              <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
-                <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                  <Share className="w-6 h-6 text-gray-600" />
+              {/* Content Sections */}
+              <div className="space-y-4">
+                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                  View Photos
+                </button>
+                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                  View Achievements
+                </button>
+              </div>
+            </>
+          ) : (
+            /* Summary Profile View */
+            <>
+              {/* Profile Card Section */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
+                <div className="text-center">
+                  <div className="relative inline-block mb-4">
+                    <Avatar
+                      src={userProfile.profile_pic}
+                      name={userProfile.name}
+                      size={120}
+                    />
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{userProfile.name}</h3>
+                  <p className="text-gray-600 mb-4">{userProfile.bio}</p>
+                  
+                  <button 
+                    onClick={handleViewProfile}
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-50 transition-colors text-sm font-medium shadow-md"
+                  >
+                    View Profile
+                  </button>
                 </div>
-                <span className="text-xs font-medium text-gray-700">Share</span>
-              </button>
-            </div>
+              </div>
 
-            {/* Media Section */}
-            <div className="mb-4">
-              <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                <Images className="w-5 h-5" />
-                View Media
-              </button>
-            </div>
+              {/* Action Buttons - Circular Card Style */}
+              <div className="flex space-x-6 justify-center mb-8">
+                {/* Message Button */}
+                <button
+                  onClick={handleStartChat}
+                  className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
+                >
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <MessageCircle className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Message</span>
+                </button>
 
-            {/* Settings Section */}
-            <div>
-              <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                <Settings className="w-5 h-5" />
-                Chat Settings
-              </button>
-            </div>
-          </>
+                {/* Share Profile Button */}
+                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
+                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <Share className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">Share</span>
+                </button>
+              </div>
+
+              {/* Media Section */}
+              <div className="mb-4">
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Images className="w-5 h-5" />
+                  View Media
+                </button>
+              </div>
+
+              {/* Settings Section */}
+              <div>
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Settings className="w-5 h-5" />
+                  Chat Settings
+                </button>
+              </div>
+            </>
+          )
         ) : isGroupProfile && groupProfile ? (
           <>
             {/* Group Profile Section */}

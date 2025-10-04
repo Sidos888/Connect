@@ -376,11 +376,11 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               {/* Continue Button */}
               <button
                 type="submit"
-                disabled={loading || !phoneNumber}
+                disabled={!phoneNumber}
                 className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#FF6600' }}
               >
-                {loading ? 'Sending...' : 'Continue'}
+                Continue
               </button>
 
               {/* Divider */}
@@ -434,11 +434,11 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               {/* Continue Button */}
               <button
                 type="submit"
-                disabled={loading || !email}
+                disabled={!email}
                 className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#FF6600' }}
               >
-                {loading ? 'Sending...' : 'Continue'}
+                Continue
               </button>
 
               {/* Divider */}

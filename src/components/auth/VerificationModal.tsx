@@ -32,7 +32,6 @@ export default function VerificationModal({
 }: VerificationModalProps) {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   // Scroll-to-dismiss state
@@ -52,7 +51,6 @@ export default function VerificationModal({
   // Focus first input when modal opens
   useEffect(() => {
     if (isOpen && inputRefs.current[0]) {
-      setIsVerifying(false);
       inputRefs.current[0].focus();
     }
   }, [isOpen]);
@@ -80,7 +78,6 @@ export default function VerificationModal({
       // Auto-verify if all 6 digits are filled
       if (newCode.every(digit => digit !== '') && newCode.length === 6) {
         console.log('VerificationModal: All digits entered via autofill, auto-verifying instantly');
-        setIsVerifying(true);
         onVerify(newCode.join('')); // Instant verification
       } else {
         // Focus the appropriate input after autofill
@@ -110,7 +107,6 @@ export default function VerificationModal({
     // Auto-verify when all digits are entered
     if (newCode.every(digit => digit !== '') && newCode.length === 6) {
       console.log('VerificationModal: All digits entered, auto-verifying instantly');
-      setIsVerifying(true);
       onVerify(newCode.join('')); // Instant verification
     }
   };
@@ -172,7 +168,6 @@ export default function VerificationModal({
     await onResend();
     setCode(['', '', '', '', '', '']);
     setActiveIndex(0);
-    setIsVerifying(false);
     inputRefs.current[0]?.focus();
   };
 
@@ -195,9 +190,12 @@ export default function VerificationModal({
     
     // Sign out the user to ensure they're not signed in
     try {
-      const { default: supabase } = await import('@/lib/supabaseClient');
-      await supabase.auth.signOut();
-      console.log('VerificationModal: User signed out for dismiss');
+      const { getSupabaseClient } = await import('@/lib/supabaseClient');
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.auth.signOut();
+        console.log('VerificationModal: User signed out for dismiss');
+      }
     } catch (error) {
       console.error('VerificationModal: Error signing out on dismiss:', error);
     }
@@ -341,7 +339,6 @@ export default function VerificationModal({
                 // Auto-verify if all 6 digits are filled
                 if (newCode.every(digit => digit !== '') && newCode.length === 6) {
                   console.log('VerificationModal: All digits entered via SMS autofill, auto-verifying instantly');
-                  setIsVerifying(true);
                   onVerify(newCode.join('')); // Instant verification
                 }
                 
@@ -393,24 +390,23 @@ export default function VerificationModal({
             {/* Verify Button */}
             <button
               onClick={handleVerify}
-              disabled={loading || isVerifying || code.join('').length !== 6}
+              disabled={code.join('').length !== 6}
               className={`
                 w-full h-14 rounded-lg font-semibold text-white transition-all duration-75
-                ${code.join('').length === 6 && !loading && !isVerifying
+                ${code.join('').length === 6
                   ? 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'
                   : 'bg-gray-300 cursor-not-allowed'
                 }
               `}
             >
-              {isVerifying ? 'Verifying...' : loading ? 'Verifying...' : 'Continue'}
+              Continue
             </button>
 
             {/* Resend Button */}
             <div className="text-center">
               <button
                 onClick={handleResend}
-                disabled={loading}
-                className="text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 text-sm"
+                className="text-gray-600 hover:text-gray-800 transition-colors text-sm"
               >
                 Resend code
               </button>

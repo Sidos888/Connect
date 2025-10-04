@@ -28,6 +28,11 @@ class SimpleChatService {
   private supabase = getSupabaseClient();
   private chats: Map<string, SimpleChat> = new Map();
 
+  // Expose Supabase client for advanced queries from UI components when needed
+  getSupabaseClient() {
+    return this.supabase;
+  }
+
   // Get user's contacts from the database (only actual connections)
   async getContacts(userId: string): Promise<{ contacts: any[]; error: Error | null }> {
     try {

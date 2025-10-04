@@ -34,6 +34,7 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editBio, setEditBio] = useState('');
 
   useEffect(() => {
     const loadGroupProfile = async () => {
@@ -47,37 +48,54 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
         const { chat } = await simpleChatService.getChatById(chatId);
         
         if (chat && chat.type === 'group') {
-          // Get participants
-          const { data: participants } = await simpleChatService.getSupabaseClient()
-            .from('chat_participants')
-            .select(`
-              user_id,
-              accounts!inner (
-                id,
-                name,
-                profile_pic
-              )
-            `)
-            .eq('chat_id', chatId);
+          // Prefer participants from chat service (already joined)
+          let formattedParticipants: GroupParticipant[] = (chat.participants || []).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            profile_pic: p.profile_pic,
+            role: (chat as any).created_by === p.id ? 'admin' : 'member'
+          }));
 
-          if (participants) {
-            const formattedParticipants: GroupParticipant[] = participants.map((p: any) => ({
-              id: p.accounts.id,
-              name: p.accounts.name,
-              profile_pic: p.accounts.profile_pic,
-              role: p.user_id === chat.created_by ? 'admin' : 'member'
-            }));
+          // If none found, fallback to a direct query
+          if (formattedParticipants.length === 0) {
+            try {
+              const { data: participants } = await simpleChatService.getSupabaseClient()
+                .from('chat_participants')
+                .select(`
+                  user_id,
+                  accounts (
+                    id,
+                    name,
+                    profile_pic
+                  )
+                `)
+                .eq('chat_id', chatId);
 
-            setGroupProfile({
-              id: chat.id,
-              name: chat.name || 'Group Chat',
-              photo: chat.photo,
-              participants: formattedParticipants,
-              created_by: chat.created_by
-            });
-
-            setEditName(chat.name || 'Group Chat');
+              if (participants) {
+                formattedParticipants = participants
+                  .filter((p: any) => p.accounts)
+                  .map((p: any) => ({
+                    id: p.accounts.id,
+                    name: p.accounts.name,
+                    profile_pic: p.accounts.profile_pic,
+                    role: p.user_id === chat.created_by ? 'admin' : 'member'
+                  }));
+              }
+            } catch (participantsErr) {
+              console.warn('Participants load failed, continuing with empty list', participantsErr);
+            }
           }
+
+          setGroupProfile({
+            id: chat.id,
+            name: chat.name || 'Group Chat',
+            photo: chat.photo,
+            participants: formattedParticipants,
+            created_by: chat.created_by
+          });
+
+          setEditName(chat.name || 'Group Chat');
+          setEditBio('');
         } else {
           setError('Group chat not found');
         }
@@ -123,10 +141,13 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
   };
 
   const handlePhotoChange = () => {
-    alert('Photo picker coming soon!');
+    // Placeholder for image picker (upload wiring later)
+    const input = document.getElementById('group-photo-input');
+    if (input) (input as HTMLInputElement).click();
   };
 
   const isAdmin = account?.id === groupProfile?.created_by;
+  const isMember = !!groupProfile?.participants?.some(p => p.id === account?.id);
 
   if (!isOpen) return null;
 
@@ -143,7 +164,7 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
       />
       
       {/* Modal content */}
-      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
+      <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
         {/* Header - Fixed */}
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900">Group Info</h2>
@@ -174,7 +195,36 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
           ) : (
             <>
               {/* Group Profile Card Section */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm relative">
+                {/* Edit action in top-right */}
+                {(isAdmin || isMember) && (
+                  <div className="absolute right-4 top-4">
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleSaveName}
+                          className="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setIsEditing(false)}
+                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="text-center">
                   <div className="relative inline-block mb-4">
                     <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
@@ -188,45 +238,48 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
                         <Users className="w-8 h-8 text-gray-400" />
                       )}
                     </div>
-                    {isAdmin && (
-                      <button
-                        onClick={handlePhotoChange}
-                        className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white hover:bg-orange-600 transition-colors"
-                      >
-                        <Camera className="w-4 h-4" />
-                      </button>
-                    )}
+                    {/* No orange camera overlay in view mode */}
                   </div>
                   
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    {isEditing ? (
+                  {!isEditing ? (
+                    <>
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900">{groupProfile.name}</h3>
+                      </div>
+                      <p className="text-gray-600">{groupProfile.participants.length} members</p>
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <input
+                        id="group-photo-input"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={() => { /* preview or upload later */ }}
+                      />
+                      <div>
+                        <button
+                          onClick={handlePhotoChange}
+                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                        >
+                          Change image
+                        </button>
+                      </div>
                       <input
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-orange-500 outline-none text-center"
-                        autoFocus
-                        onBlur={handleSaveName}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSaveName()}
+                        className="w-full text-center text-xl font-bold text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2"
                       />
-                    ) : (
-                      <h3 className="text-xl font-bold text-gray-900">{groupProfile.name}</h3>
-                    )}
-                    {isAdmin && (
-                      <button
-                        onClick={handleEditToggle}
-                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                      >
-                        <Edit3 className="w-4 h-4 text-gray-600" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  <p className="text-gray-600 mb-4">{groupProfile.participants.length} members</p>
-                  
-                  <button className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 hover:bg-gray-200 transition-colors text-sm font-medium">
-                    View Group Info
-                  </button>
+                      <textarea
+                        value={editBio}
+                        onChange={(e) => setEditBio(e.target.value)}
+                        placeholder="Bio (optional)"
+                        className="w-full text-sm text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2"
+                        rows={3}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
