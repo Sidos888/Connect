@@ -167,29 +167,27 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
       
       {/* Modal content */}
       <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-        {/* Header - Fixed */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          {showDetailedView ? (
-            <button onClick={handleBackToSummary} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <ArrowLeft className="w-6 h-6 text-gray-600" />
-            </button>
-          ) : (
-            <div className="w-6 h-6" />
-          )}
-          <h2 className="text-xl font-semibold text-gray-900">
-            {showDetailedView ? profile?.name : "Profile Info"}
-          </h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+        {/* Floating Action Buttons */}
+        <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+          <button
+            onClick={showDetailedView ? handleBackToSummary : onClose}
+            className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
+          >
             {showDetailedView ? (
-              <MoreVertical className="w-6 h-6 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
             ) : (
-              <X className="w-6 h-6 text-gray-600" />
+              <X className="w-5 h-5 text-gray-600" />
             )}
           </button>
+          {showDetailedView && (
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors pointer-events-auto">
+              <MoreVertical className="w-6 h-6 text-gray-600" />
+            </button>
+          )}
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '80px' }}>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
