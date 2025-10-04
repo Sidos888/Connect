@@ -330,20 +330,19 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
               </div>
 
 
-              {/* Media Section */}
-              <div className="mb-4">
-                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                  <Images className="w-5 h-5" />
-                  View Media
-                </button>
-              </div>
-
-              {/* Settings Section */}
-              <div>
-                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                  <Settings className="w-5 h-5" />
-                  Chat Settings
-                </button>
+              {/* Profile Info Section */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Info</h3>
+                <div className="space-y-4">
+                  <button className="w-full flex items-center gap-3 p-4 text-gray-700 hover:bg-gray-50 transition-colors font-medium rounded-lg">
+                    <Images className="w-5 h-5" />
+                    View Media
+                  </button>
+                  <button className="w-full flex items-center gap-3 p-4 text-gray-700 hover:bg-gray-50 transition-colors font-medium rounded-lg">
+                    <Settings className="w-5 h-5" />
+                    Chat Settings
+                  </button>
+                </div>
               </div>
             </>
           )}
