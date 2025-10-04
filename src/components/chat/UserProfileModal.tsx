@@ -42,6 +42,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
 
       console.log('UserProfileModal: Loading profile for userId:', userId);
       console.log('UserProfileModal: isOpen:', isOpen);
+      console.log('UserProfileModal: account?.id:', account?.id);
 
       try {
         setLoading(true);
@@ -64,17 +65,23 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
           if (account?.id) {
             console.log('UserProfileModal: Loading connection data for:', account.id, 'and', userId);
             
-            const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
-            console.log('UserProfileModal: Connection status:', status);
-            setConnectionStatus(status);
+            try {
+              const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
+              console.log('UserProfileModal: Connection status:', status);
+              setConnectionStatus(status);
 
-            const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
-            console.log('UserProfileModal: Mutual count:', count);
-            setMutualCount(count);
+              const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
+              console.log('UserProfileModal: Mutual count:', count);
+              setMutualCount(count);
 
-            const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
-            console.log('UserProfileModal: Mutual connections:', connections);
-            setMutualConnections(connections);
+              const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
+              console.log('UserProfileModal: Mutual connections:', connections);
+              setMutualConnections(connections);
+            } catch (connError) {
+              console.error('UserProfileModal: Error loading connection data:', connError);
+            }
+          } else {
+            console.log('UserProfileModal: No account ID available, skipping connection data');
           }
         } else {
           console.log('UserProfileModal: Profile not found');
@@ -250,8 +257,6 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                        connectionStatus === 'pending' ? 'Friend Request Sent' : 
                        'Add Friend'}
                     </span>
-                    {/* Debug info */}
-                    <span className="text-xs text-gray-500 ml-2">({connectionStatus})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {mutualConnections.length > 0 && (
