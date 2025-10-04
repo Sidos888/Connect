@@ -35,6 +35,9 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const loadGroupProfile = async () => {
@@ -117,33 +120,125 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
     }
   };
 
-  const handleSaveName = async () => {
+  const handleSaveChanges = async () => {
     if (!groupProfile || !editName.trim()) return;
 
     try {
-      // Update group name in database
+      let photoUrl = groupProfile.photo;
+      
+      // Upload new image if selected
+      if (selectedImage) {
+        const uploadedUrl = await uploadGroupPhoto(selectedImage);
+        if (uploadedUrl) {
+          photoUrl = uploadedUrl;
+        } else {
+          alert('Failed to upload image. Please try again.');
+          return;
+        }
+      }
+
+      // Update group data in database
+      const updateData: any = { 
+        name: editName.trim() 
+      };
+      
+      if (photoUrl) {
+        updateData.photo = photoUrl;
+      }
+
       const { error } = await simpleChatService.getSupabaseClient()
         .from('chats')
-        .update({ name: editName.trim() })
+        .update(updateData)
         .eq('id', groupProfile.id);
 
       if (error) {
-        console.error('Error updating group name:', error);
+        console.error('Error updating group:', error);
+        alert('Failed to update group. Please try again.');
         return;
       }
 
       // Update local state
-      setGroupProfile(prev => prev ? { ...prev, name: editName.trim() } : null);
+      setGroupProfile(prev => prev ? { 
+        ...prev, 
+        name: editName.trim(),
+        photo: photoUrl || prev.photo
+      } : null);
+      
+      // Reset editing state
       setIsEditing(false);
+      setSelectedImage(null);
+      setImagePreview(null);
     } catch (error) {
-      console.error('Error saving group name:', error);
+      console.error('Error saving group changes:', error);
+      alert('Failed to save changes. Please try again.');
     }
   };
 
   const handlePhotoChange = () => {
-    // Placeholder for image picker (upload wiring later)
     const input = document.getElementById('group-photo-input');
     if (input) (input as HTMLInputElement).click();
+  };
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+      
+      setSelectedImage(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadGroupPhoto = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true);
+      
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${chatId}-${Date.now()}.${fileExt}`;
+      const filePath = `group-photos/${fileName}`;
+      
+      // Upload to Supabase Storage
+      const { data, error } = await simpleChatService.getSupabaseClient().storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (error) {
+        console.error('Error uploading image:', error);
+        throw error;
+      }
+      
+      // Get public URL
+      const { data: { publicUrl } } = simpleChatService.getSupabaseClient().storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+      
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading group photo:', error);
+      return null;
+    } finally {
+      setUploading(false);
+    }
   };
 
   const isAdmin = account?.id === groupProfile?.created_by;
@@ -202,13 +297,18 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
                     {isEditing ? (
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={handleSaveName}
-                          className="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
+                          onClick={handleSaveChanges}
+                          disabled={uploading}
+                          className="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Save
+                          {uploading ? 'Saving...' : 'Save'}
                         </button>
                         <button
-                          onClick={() => setIsEditing(false)}
+                          onClick={() => {
+                            setIsEditing(false);
+                            setSelectedImage(null);
+                            setImagePreview(null);
+                          }}
                           className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                         >
                           Cancel
@@ -228,7 +328,13 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
                 <div className="text-center">
                   <div className="relative inline-block mb-4">
                     <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
-                      {groupProfile.photo ? (
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          alt="Group photo preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : groupProfile.photo ? (
                         <img
                           src={groupProfile.photo}
                           alt="Group photo"
@@ -238,7 +344,15 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
                         <Users className="w-8 h-8 text-gray-400" />
                       )}
                     </div>
-                    {/* No orange camera overlay in view mode */}
+                    {/* Camera overlay when editing */}
+                    {isEditing && (
+                      <button
+                        onClick={handlePhotoChange}
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors"
+                      >
+                        <Camera className="w-4 h-4 text-white" />
+                      </button>
+                    )}
                   </div>
                   
                   {!isEditing ? (
@@ -255,21 +369,27 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={() => { /* preview or upload later */ }}
+                        onChange={handleImageSelect}
                       />
                       <div>
                         <button
                           onClick={handlePhotoChange}
                           className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
                         >
-                          Change image
+                          {selectedImage ? 'Change image' : 'Add image'}
                         </button>
+                        {selectedImage && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {selectedImage.name}
+                          </p>
+                        )}
                       </div>
                       <input
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         className="w-full text-center text-xl font-bold text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2"
+                        placeholder="Group name"
                       />
                       <textarea
                         value={editBio}
