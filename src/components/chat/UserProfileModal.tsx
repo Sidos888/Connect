@@ -173,7 +173,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             {showDetailedView && (
               <button
                 onClick={handleBackToSummary}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm"
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm shadow-sm"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
@@ -181,7 +181,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm pointer-events-auto"
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm pointer-events-auto shadow-sm"
           >
             {showDetailedView ? (
               <MoreVertical className="w-6 h-6 text-gray-600" />

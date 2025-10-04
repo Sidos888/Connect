@@ -148,7 +148,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
           <div className="flex items-center gap-3 pointer-events-auto">
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm shadow-sm"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
@@ -156,7 +156,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
           <div className="flex items-center gap-3 pointer-events-auto">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors relative bg-white/80 backdrop-blur-sm"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors relative bg-white/80 backdrop-blur-sm shadow-sm"
             >
               <MoreVertical className="w-6 h-6 text-gray-600" />
               
