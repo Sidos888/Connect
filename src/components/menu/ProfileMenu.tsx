@@ -1712,21 +1712,19 @@ export default function ProfileMenu() {
                 }}
               />
             ) : selectedFriend ? (
-              <div className="w-full h-full">
-                <UniversalProfileModal
-                  isOpen={true}
-                  onClose={() => {
-                    setSelectedFriend(null);
-                    setShowConnections(true);
-                  }}
-                  userId={selectedFriend.id}
-                  showInMenu={true}
-                  onBack={() => {
-                    setSelectedFriend(null);
-                    setShowConnections(true);
-                  }}
-                />
-              </div>
+              <UniversalProfileModal
+                isOpen={true}
+                onClose={() => {
+                  setSelectedFriend(null);
+                  setShowConnections(true);
+                }}
+                userId={selectedFriend.id}
+                showInMenu={true}
+                onBack={() => {
+                  setSelectedFriend(null);
+                  setShowConnections(true);
+                }}
+              />
             ) : showEditProfile ? (
               <EditProfileView
                 onBack={() => setShowEditProfile(false)}
