@@ -436,7 +436,7 @@ function AddPersonView({
       case 'pending_sent':
         return { 
           text: 'Added ✓', 
-          className: 'px-4 py-2 bg-white text-green-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5 border border-gray-200' 
+          className: 'px-4 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5 border border-gray-200' 
         };
       case 'pending_received':
         return { text: 'Accept', className: 'px-4 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors border border-gray-200' };
