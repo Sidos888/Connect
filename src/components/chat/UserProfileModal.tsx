@@ -79,9 +79,17 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
               setMutualConnections(connections);
             } catch (connError) {
               console.error('UserProfileModal: Error loading connection data:', connError);
+              // Fallback: if we're viewing a contact, assume they're connected
+              if (userProfile) {
+                setConnectionStatus('accepted');
+              }
             }
           } else {
             console.log('UserProfileModal: No account ID available, skipping connection data');
+            // Fallback: if we're viewing a contact, assume they're connected
+            if (userProfile) {
+              setConnectionStatus('accepted');
+            }
           }
         } else {
           console.log('UserProfileModal: Profile not found');

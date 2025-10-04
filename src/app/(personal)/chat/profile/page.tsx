@@ -106,14 +106,20 @@ export default function ProfilePage() {
             });
 
             // Load connection status and mutual connections
-            const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
-            setConnectionStatus(status);
+            try {
+              const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
+              setConnectionStatus(status);
 
-            const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
-            setMutualCount(count);
+              const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
+              setMutualCount(count);
 
-            const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
-            setMutualConnections(connections);
+              const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
+              setMutualConnections(connections);
+            } catch (connError) {
+              console.error('Profile page: Error loading connection data:', connError);
+              // Fallback: if we're viewing a contact, assume they're connected
+              setConnectionStatus('accepted');
+            }
           } else {
             setError('User profile not found');
           }
@@ -293,8 +299,6 @@ export default function ProfilePage() {
                        connectionStatus === 'pending' ? 'Friend Request Sent' : 
                        'Add Friend'}
                     </span>
-                    {/* Debug info */}
-                    <span className="text-xs text-gray-500 ml-2">({connectionStatus})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {mutualConnections.length > 0 && (
