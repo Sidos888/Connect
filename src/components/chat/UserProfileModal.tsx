@@ -173,7 +173,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             {showDetailedView && (
               <button
                 onClick={handleBackToSummary}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm shadow-sm"
+                className="p-2 hover:bg-gray-100 transition-colors rounded-full"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
@@ -181,7 +181,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm pointer-events-auto shadow-sm"
+            className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
           >
             {showDetailedView ? (
               <MoreVertical className="w-6 h-6 text-gray-600" />
@@ -304,8 +304,20 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             /* Summary Profile View */
             <>
               {/* Profile Card Section */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
-                <div className="text-center">
+              <div className="bg-white border border-gray-200 rounded-2xl mb-6 shadow-sm overflow-hidden">
+                {/* Title Section */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                  <h2 className="text-lg font-semibold text-gray-900">Profile info</h2>
+                  <button
+                    onClick={onClose}
+                    className="p-1 hover:bg-gray-100 transition-colors rounded-full"
+                  >
+                    <X className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+                
+                {/* Profile Content */}
+                <div className="p-6 text-center">
                   <div className="relative inline-block mb-4">
                     <Avatar
                       src={profile.profile_pic}

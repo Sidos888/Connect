@@ -212,7 +212,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-3 pointer-events-auto">
           <button
             onClick={showDetailedView ? handleBackToSummary : () => router.back()}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm shadow-sm"
+            className="p-2 hover:bg-gray-100 transition-colors rounded-full"
             aria-label="Go back"
           >
             <ChevronLeftIcon className="h-5 w-5" />
