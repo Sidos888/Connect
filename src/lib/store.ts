@@ -161,7 +161,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
             : chat.name || 'Group Chat',
           avatarUrl: chat.type === 'direct' 
             ? otherParticipant?.profile_pic || null
-            : null,
+            : chat.photo || null,
           isGroup: chat.type === 'group',
           unreadCount: chat.unreadCount || 0,
           messages: lastMessage ? [{

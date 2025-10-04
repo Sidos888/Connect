@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Camera, Users, MoreVertical, Edit3, Settings, Images, MessageCircle, Share } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
+import { useAppStore } from '@/lib/store';
 import Avatar from '@/components/Avatar';
 
 interface GroupProfileModalProps {
@@ -29,6 +30,7 @@ interface GroupProfile {
 
 export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProfileModalProps) {
   const { account } = useAuth();
+  const { loadConversations } = useAppStore();
   const [groupProfile, setGroupProfile] = useState<GroupProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -190,6 +192,64 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
       setImagePreview(null);
       
       console.log('Edit state reset');
+      
+      // Reload the group profile to get the updated data
+      const { chat } = await simpleChatService.getChatById(chatId);
+      if (chat && chat.type === 'group') {
+        // Prefer participants from chat service (already joined)
+        let formattedParticipants: GroupParticipant[] = (chat.participants || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          profile_pic: p.profile_pic,
+          role: (chat as any).created_by === p.id ? 'admin' : 'member'
+        }));
+
+        // If none found, fallback to a direct query
+        if (formattedParticipants.length === 0) {
+          try {
+            const { data: participants } = await simpleChatService.getSupabaseClient()
+              .from('chat_participants')
+              .select(`
+                user_id,
+                accounts (
+                  id,
+                  name,
+                  profile_pic
+                )
+              `)
+              .eq('chat_id', chatId);
+
+            if (participants) {
+              formattedParticipants = participants
+                .filter((p: any) => p.accounts)
+                .map((p: any) => ({
+                  id: p.accounts.id,
+                  name: p.accounts.name,
+                  profile_pic: p.accounts.profile_pic,
+                  role: p.user_id === chat.created_by ? 'admin' : 'member'
+                }));
+            }
+          } catch (participantsErr) {
+            console.warn('Participants load failed, continuing with empty list', participantsErr);
+          }
+        }
+
+        setGroupProfile({
+          id: chat.id,
+          name: chat.name || 'Group Chat',
+          photo: chat.photo,
+          participants: formattedParticipants,
+          created_by: chat.created_by
+        });
+        
+        console.log('Group profile reloaded with updated data');
+      }
+      
+      // Reload conversations to update the chat list with the new photo
+      if (account?.id) {
+        await loadConversations(account.id);
+        console.log('Conversations reloaded to show updated group photo');
+      }
     } catch (error) {
       console.error('Error saving group changes:', error);
       alert('Failed to save changes. Please try again.');
