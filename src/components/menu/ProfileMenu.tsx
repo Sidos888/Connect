@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/authContext";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X } from "lucide-react";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
-import UniversalProfileModal from '@/components/UniversalProfileModal';
+import InlineProfileView from '@/components/InlineProfileView';
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -1712,14 +1712,8 @@ export default function ProfileMenu() {
                 }}
               />
             ) : selectedFriend ? (
-              <UniversalProfileModal
-                isOpen={true}
-                onClose={() => {
-                  setSelectedFriend(null);
-                  setShowConnections(true);
-                }}
+              <InlineProfileView
                 userId={selectedFriend.id}
-                showInMenu={true}
                 onBack={() => {
                   setSelectedFriend(null);
                   setShowConnections(true);
