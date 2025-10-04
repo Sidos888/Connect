@@ -1712,13 +1712,15 @@ export default function ProfileMenu() {
                 }}
               />
             ) : selectedFriend ? (
-              <InlineProfileView
-                userId={selectedFriend.id}
-                onBack={() => {
-                  setSelectedFriend(null);
-                  setShowConnections(true);
-                }}
-              />
+              <SimpleCard>
+                <InlineProfileView
+                  userId={selectedFriend.id}
+                  onBack={() => {
+                    setSelectedFriend(null);
+                    setShowConnections(true);
+                  }}
+                />
+              </SimpleCard>
             ) : showEditProfile ? (
               <EditProfileView
                 onBack={() => setShowEditProfile(false)}
