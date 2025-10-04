@@ -172,6 +172,9 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
 
       console.log('Database updated successfully');
 
+      // Clear the chat cache so fresh data is loaded
+      simpleChatService.clearChatCache(chatId);
+
       // Update local state
       setGroupProfile(prev => prev ? { 
         ...prev, 

@@ -4,6 +4,7 @@ export interface SimpleChat {
   id: string;
   type: 'direct' | 'group';
   name?: string;
+  photo?: string;
   participants: Array<{
     id: string;
     name: string;
@@ -31,6 +32,17 @@ class SimpleChatService {
   // Expose Supabase client for advanced queries from UI components when needed
   getSupabaseClient() {
     return this.supabase;
+  }
+
+  // Clear chat cache (useful when chat data is updated)
+  clearChatCache(chatId?: string) {
+    if (chatId) {
+      this.chats.delete(chatId);
+      console.log('SimpleChatService: Cleared cache for chat:', chatId);
+    } else {
+      this.chats.clear();
+      console.log('SimpleChatService: Cleared all chat cache');
+    }
   }
 
   // Get user's contacts from the database (only actual connections)
@@ -467,6 +479,7 @@ class SimpleChatService {
         id: chatData.id,
         type: chatData.type,
         name: chatData.name,
+        photo: chatData.photo,
         created_by: chatData.created_by,
         created_at: chatData.created_at,
         participants: participants
