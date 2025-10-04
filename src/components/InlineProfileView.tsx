@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Share, Images, Settings, Users } from 'lucide-react';
+import { MessageCircle, Share, Images, Settings, Users, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
@@ -155,102 +155,107 @@ export default function InlineProfileView({
 
   // Always show the detailed view (universal profile section)
   return (
-    <>
-      {/* Profile Header */}
-      <div className="text-center mb-8">
-        <div className="relative inline-block mb-6">
-          <Avatar
-            src={profile.profile_pic}
-            name={profile.name}
-            size={140}
-          />
-        </div>
-        <h3 className="text-3xl font-bold text-gray-900 mb-3">{profile.name}</h3>
-        <p className="text-gray-600 text-lg">{profile.bio}</p>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex space-x-8 justify-center mb-8">
-        <button
-          onClick={handleStartChat}
-          className="flex flex-col items-center space-y-3"
-        >
-          <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-            <MessageCircle className="w-8 h-8 text-black" />
-          </div>
-          <span className="text-sm font-medium text-black">Message</span>
-        </button>
-
-        <button className="flex flex-col items-center space-y-3">
-          <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-            <Users className="w-8 h-8 text-black" />
-          </div>
-          <span className="text-sm font-medium text-black">Invite</span>
-        </button>
-
-        <button className="flex flex-col items-center space-y-3">
-          <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-            <Share className="w-8 h-8 text-black" />
-          </div>
-          <span className="text-sm font-medium text-black">Share</span>
-        </button>
-      </div>
-
-      {/* Connection Status */}
-      <div 
-        className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
-        onClick={handleConnectionsClick}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-              <Users className="w-5 h-5 text-black" />
-            </div>
-            <span className="text-black font-medium">
-              {connectionStatus === 'accepted' ? 'Me: Friends' : 
-               connectionStatus === 'pending' ? 'Friend Request Sent' : 
-               'Add Friend'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {mutualConnections.length > 0 && (
-              <div className="flex -space-x-2">
-                {mutualConnections.slice(0, 3).map((mutual, index) => (
-                  <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                    <Avatar
-                      src={mutual.profile_pic}
-                      name={mutual.name}
-                      size={24}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            {mutualCount > 3 && (
-              <span className="text-black text-sm">+{mutualCount - 3}</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Content Sections */}
-      <div className="space-y-4">
-        <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-          View Photos
-        </button>
-        <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
-          View Achievements
-        </button>
-      </div>
-
-      {/* Back Button */}
-      <div className="mt-8">
+    <div className="flex flex-col h-full">
+      {/* Header with Back Button */}
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
         <button
           onClick={onBack}
-          className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          className="p-2 hover:bg-gray-100 transition-colors rounded-full"
         >
-          Back to Summary
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
+        <h2 className="text-lg font-semibold text-gray-900">Profile</h2>
+        <div className="w-16"></div> {/* Spacer for centering */}
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        {/* Profile Header */}
+        <div className="text-center mb-6">
+          <div className="relative inline-block mb-4">
+            <Avatar
+              src={profile.profile_pic}
+              name={profile.name}
+              size={120}
+            />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">{profile.name}</h3>
+          <p className="text-gray-600 text-sm">{profile.bio}</p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-6 justify-center mb-6">
+          <button
+            onClick={handleStartChat}
+            className="flex flex-col items-center space-y-2"
+          >
+            <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+              <MessageCircle className="w-6 h-6 text-black" />
+            </div>
+            <span className="text-xs font-medium text-black">Message</span>
+          </button>
+
+          <button className="flex flex-col items-center space-y-2">
+            <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+              <Users className="w-6 h-6 text-black" />
+            </div>
+            <span className="text-xs font-medium text-black">Invite</span>
+          </button>
+
+          <button className="flex flex-col items-center space-y-2">
+            <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+              <Share className="w-6 h-6 text-black" />
+            </div>
+            <span className="text-xs font-medium text-black">Share</span>
+          </button>
+        </div>
+
+        {/* Connection Status */}
+        <div 
+          className="bg-white border border-gray-200 rounded-xl p-3 mb-4 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={handleConnectionsClick}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                <Users className="w-4 h-4 text-black" />
+              </div>
+              <span className="text-sm font-medium text-black">
+                {connectionStatus === 'accepted' ? 'Me: Friends' : 
+                 connectionStatus === 'pending' ? 'Friend Request Sent' : 
+                 'Add Friend'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {mutualConnections.length > 0 && (
+                <div className="flex -space-x-1">
+                  {mutualConnections.slice(0, 3).map((mutual, index) => (
+                    <div key={mutual.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                      <Avatar
+                        src={mutual.profile_pic}
+                        name={mutual.name}
+                        size={20}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {mutualCount > 3 && (
+                <span className="text-xs text-black">+{mutualCount - 3}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Content Sections */}
+        <div className="space-y-3 mb-4">
+          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-lg p-3 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm text-sm">
+            View Photos
+          </button>
+          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-lg p-3 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm text-sm">
+            View Achievements
+          </button>
+        </div>
       </div>
 
       {/* Connections Modal */}
@@ -260,6 +265,6 @@ export default function InlineProfileView({
         userId={userId}
         onRemoveFriend={handleRemoveFriend}
       />
-    </>
+    </div>
   );
 }

@@ -153,6 +153,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       return;
     }
     
+    // Prevent double-clicking
+    if (loading) {
+      return;
+    }
+    
     setLoading(true);
     setError('');
     
@@ -182,6 +187,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     e.preventDefault();
     if (!email) {
       setError('Please enter your email');
+      return;
+    }
+    
+    // Prevent double-clicking
+    if (loading) {
       return;
     }
     
@@ -517,11 +527,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               {/* Continue Button */}
               <button
                 type="submit"
-                disabled={!phoneNumber}
+                disabled={!phoneNumber || loading}
                 className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#FF6600' }}
               >
-                Continue
+                {loading ? 'Sending...' : 'Continue'}
               </button>
 
               {/* Divider */}
@@ -575,11 +585,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               {/* Continue Button */}
               <button
                 type="submit"
-                disabled={!email}
+                disabled={!email || loading}
                 className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#FF6600' }}
               >
-                Continue
+                {loading ? 'Sending...' : 'Continue'}
               </button>
 
               {/* Divider */}
