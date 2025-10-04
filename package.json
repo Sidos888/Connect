@@ -10,9 +10,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@capacitor/android": "^6.2.1",
-    "@capacitor/core": "^6.2.1",
-    "@capacitor/ios": "^6.2.1",
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.56.1",
     "@types/qrcode": "^1.5.5",
@@ -26,7 +26,7 @@
     "zustand": "5.0.8"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.1",
+    "@capacitor/cli": "^7.4.3",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
