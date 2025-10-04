@@ -256,7 +256,6 @@ export default function ProfilePage() {
                     size={140}
                   />
                 </div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-3">{userProfile.name}</h3>
                 <p className="text-gray-600 text-lg">{userProfile.bio}</p>
               </div>
 
