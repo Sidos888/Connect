@@ -432,16 +432,16 @@ function AddPersonView({
     
     switch (status) {
       case 'connected':
-        return { text: 'Friends', className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium cursor-not-allowed' };
+        return { text: 'Friends', className: 'px-4 py-2 bg-white text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed border border-gray-200' };
       case 'pending_sent':
         return { 
-          text: 'Added', 
-          className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-1.5' 
+          text: 'Added ✓', 
+          className: 'px-4 py-2 bg-white text-green-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5 border border-gray-200' 
         };
       case 'pending_received':
-        return { text: 'Accept', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
+        return { text: 'Accept', className: 'px-4 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors border border-gray-200' };
       default:
-        return { text: 'Add', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
+        return { text: 'Add +', className: 'px-4 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors border border-gray-200' };
     }
   };
 
@@ -614,9 +614,9 @@ function AddPersonView({
                                   return (
                                     <button 
                                       onClick={() => {
-                                        if (buttonConfig.text === 'Add') {
+                                        if (buttonConfig.text === 'Add +') {
                                           sendFriendRequest(user.id);
-                                        } else if (buttonConfig.text === 'Added') {
+                                        } else if (buttonConfig.text === 'Added ✓') {
                                           cancelFriendRequest(user.id);
                                         } else if (buttonConfig.text === 'Accept') {
                                           // Handle accept logic if needed
@@ -624,11 +624,6 @@ function AddPersonView({
                                       }}
                                       className={buttonConfig.className}
                                     >
-                                      {buttonConfig.text === 'Added' && (
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                      )}
                                       {buttonConfig.text}
                                     </button>
                                   );
@@ -683,9 +678,9 @@ function AddPersonView({
                               return (
                                 <button 
                                   onClick={() => {
-                                    if (buttonConfig.text === 'Add') {
+                                    if (buttonConfig.text === 'Add +') {
                                       sendFriendRequest(user.id);
-                                    } else if (buttonConfig.text === 'Added') {
+                                    } else if (buttonConfig.text === 'Added ✓') {
                                       cancelFriendRequest(user.id);
                                     } else if (buttonConfig.text === 'Accept') {
                                       // Handle accept logic if needed
@@ -693,11 +688,6 @@ function AddPersonView({
                                   }}
                                   className={buttonConfig.className}
                                 >
-                                  {buttonConfig.text === 'Added' && (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
                                   {buttonConfig.text}
                                 </button>
                               );
