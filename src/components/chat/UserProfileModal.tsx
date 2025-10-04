@@ -167,22 +167,19 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
       
       {/* Modal content */}
       <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-        {/* Floating Action Buttons */}
-        <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
-          <div className="flex items-center gap-3 pointer-events-auto">
-            {showDetailedView && (
-              <button
-                onClick={handleBackToSummary}
-                className="p-2 hover:bg-gray-100 transition-colors rounded-full"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
-          >
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          {showDetailedView ? (
+            <button onClick={handleBackToSummary} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <ArrowLeft className="w-6 h-6 text-gray-600" />
+            </button>
+          ) : (
+            <div className="w-6 h-6" /> {/* Spacer for alignment */}
+          )}
+          <h2 className="text-xl font-semibold text-gray-900">
+            {showDetailedView ? profile?.name : "Profile Info"}
+          </h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
             {showDetailedView ? (
               <MoreVertical className="w-6 h-6 text-gray-600" />
             ) : (
@@ -224,40 +221,42 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
               </div>
 
               {/* Action Buttons */}
-              <div className="flex space-x-8 justify-center mb-8">
-                <button
-                  onClick={handleStartChat}
-                  className="flex flex-col items-center space-y-3"
-                >
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center">
-                    <MessageCircle className="w-8 h-8 text-black" />
-                  </div>
-                  <span className="text-sm font-medium text-black">Message</span>
-                </button>
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
+                <div className="flex space-x-8 justify-center">
+                  <button
+                    onClick={handleStartChat}
+                    className="flex flex-col items-center space-y-3"
+                  >
+                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                      <MessageCircle className="w-8 h-8 text-black" />
+                    </div>
+                    <span className="text-sm font-medium text-black">Message</span>
+                  </button>
 
-                <button className="flex flex-col items-center space-y-3">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center">
-                    <UserPlus className="w-8 h-8 text-black" />
-                  </div>
-                  <span className="text-sm font-medium text-black">Invite</span>
-                </button>
+                  <button className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                      <UserPlus className="w-8 h-8 text-black" />
+                    </div>
+                    <span className="text-sm font-medium text-black">Invite</span>
+                  </button>
 
-                <button className="flex flex-col items-center space-y-3">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center">
-                    <Share className="w-8 h-8 text-black" />
-                  </div>
-                  <span className="text-sm font-medium text-black">Share</span>
-                </button>
+                  <button className="flex flex-col items-center space-y-3">
+                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                      <Share className="w-8 h-8 text-black" />
+                    </div>
+                    <span className="text-sm font-medium text-black">Share</span>
+                  </button>
+                </div>
               </div>
 
               {/* Connection Status */}
               <div 
-                className="p-4 mb-6 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+                className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={handleConnectionsClick}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
                       <Users className="w-5 h-5 text-black" />
                     </div>
                     <span className="text-black font-medium">
@@ -270,7 +269,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                     {mutualConnections.length > 0 && (
                       <div className="flex -space-x-2">
                         {mutualConnections.slice(0, 3).map((mutual, index) => (
-                          <div key={mutual.id} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden">
+                          <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
                             <Avatar
                               src={mutual.profile_pic}
                               name={mutual.name}
@@ -287,17 +286,14 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                 </div>
               </div>
 
-              {/* Profile Info Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Info</h3>
-                <div className="space-y-4">
-                  <button className="w-full text-gray-700 p-4 text-left font-medium hover:bg-gray-50 transition-colors rounded-lg">
-                    View Photos
-                  </button>
-                  <button className="w-full text-gray-700 p-4 text-left font-medium hover:bg-gray-50 transition-colors rounded-lg">
-                    View Achievements
-                  </button>
-                </div>
+              {/* Content Sections */}
+              <div className="space-y-4">
+                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                  View Photos
+                </button>
+                <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                  View Achievements
+                </button>
               </div>
             </>
           ) : (
@@ -342,19 +338,20 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
               </div>
 
 
-              {/* Profile Info Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Info</h3>
-                <div className="space-y-4">
-                  <button className="w-full flex items-center gap-3 p-4 text-gray-700 hover:bg-gray-50 transition-colors font-medium rounded-lg">
-                    <Images className="w-5 h-5" />
-                    View Media
-                  </button>
-                  <button className="w-full flex items-center gap-3 p-4 text-gray-700 hover:bg-gray-50 transition-colors font-medium rounded-lg">
-                    <Settings className="w-5 h-5" />
-                    Chat Settings
-                  </button>
-                </div>
+              {/* Media Section */}
+              <div className="mb-4">
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Images className="w-5 h-5" />
+                  View Media
+                </button>
+              </div>
+
+              {/* Settings Section */}
+              <div>
+                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
+                  <Settings className="w-5 h-5" />
+                  Chat Settings
+                </button>
               </div>
             </>
           )}
