@@ -48,10 +48,15 @@ export default function MessagesPage() {
             const currentConversations = getConversations();
             const existingChat = currentConversations.find(c => c.id === selectedChatId);
             if (!existingChat) {
+              const otherParticipant = chat.participants.find(p => p.id !== account.id);
               const newConversation = {
                 id: chat.id,
-                title: chat.name || 'Unknown Chat',
-                avatarUrl: null,
+                title: chat.type === 'direct' 
+                  ? otherParticipant?.name || 'Unknown User'
+                  : chat.name || 'Group Chat',
+                avatarUrl: chat.type === 'direct' 
+                  ? otherParticipant?.profile_pic || null
+                  : chat.photo || null,
                 isGroup: chat.type === 'group',
                 unreadCount: 0,
                 messages: []

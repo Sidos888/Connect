@@ -43,9 +43,11 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
 
   useEffect(() => {
     const loadGroupProfile = async () => {
+      console.log('GroupProfileModal: loadGroupProfile called with chatId:', chatId, 'isOpen:', isOpen);
       if (!chatId || !isOpen) return;
 
       try {
+        console.log('GroupProfileModal: Starting to load group profile...');
         setLoading(true);
         setError(null);
 
@@ -116,12 +118,6 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
     loadGroupProfile();
   }, [chatId, isOpen]);
 
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-    if (isEditing && groupProfile) {
-      setEditName(groupProfile.name);
-    }
-  };
 
   const handleSaveChanges = async () => {
     console.log('Save changes clicked');
@@ -175,8 +171,8 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
 
       console.log('Database updated successfully');
 
-      // Clear the chat cache so fresh data is loaded
-      simpleChatService.clearChatCache(chatId);
+        // Clear all caches so fresh data is loaded
+        simpleChatService.clearAllCaches();
 
       // Update local state
       setGroupProfile(prev => prev ? { 
@@ -187,7 +183,7 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
       
       console.log('Local state updated');
       
-      // Reset editing state
+      // Reset state
       setIsEditing(false);
       setSelectedImage(null);
       setImagePreview(null);
@@ -342,42 +338,56 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
   const isAdmin = account?.id === groupProfile?.created_by;
   const isMember = !!groupProfile?.participants?.some(p => p.id === account?.id);
 
+  console.log('GroupProfileModal: Rendering with isOpen:', isOpen, 'chatId:', chatId);
+  
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Dimming overlay with smooth transition */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      {/* Dimming overlay */}
       <div 
-        className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-        style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          opacity: isOpen ? 1 : 0
-        }}
+        className="fixed inset-0 bg-black bg-opacity-50"
         onClick={onClose}
+        style={{ zIndex: 9998 }}
       />
       
-      {/* Modal content */}
-      <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
-        {/* Header - Fixed */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900">Group Info</h2>
+      {/* Modal content - Simple Edit Profile style */}
+      <div className="bg-white rounded-2xl w-full max-w-md mx-auto shadow-2xl relative" style={{ zIndex: 10000 }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
           >
-            <X className="w-6 h-6 text-gray-600" />
+            <X className="w-5 h-5 text-gray-600" />
           </button>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {isEditing ? 'Edit Profile' : 'Group Info'}
+          </h2>
+          {!isEditing && (isAdmin || isMember) && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Edit
+            </button>
+          )}
+          {isEditing && (
+            <div className="w-6" />
+          )}
         </div>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6">
+        {/* Content */}
+        <div className="px-6 py-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+              <p className="ml-3 text-gray-600">Loading group profile...</p>
             </div>
           ) : error || !groupProfile ? (
             <div className="text-center py-8">
               <p className="text-red-600 mb-4">{error || 'Group profile not found'}</p>
+              <p className="text-gray-500 text-sm mb-4">Chat ID: {chatId}</p>
               <button
                 onClick={onClose}
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
@@ -386,219 +396,176 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
               </button>
             </div>
           ) : (
-            <>
-              {/* Group Profile Card Section */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm relative">
-                {/* Edit action in top-right */}
-                {(isAdmin || isMember) && (
-                  <div className="absolute right-4 top-4">
-                    {isEditing ? (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleSaveChanges}
-                          disabled={uploading}
-                          className="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {uploading ? 'Saving...' : 'Save'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsEditing(false);
-                            setSelectedImage(null);
-                            setImagePreview(null);
-                          }}
-                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="text-sm text-gray-600 hover:text-gray-900"
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                <div className="text-center">
-                  <div className="relative inline-block mb-4">
-                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          alt="Group photo preview"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : groupProfile.photo ? (
-                        <>
-                          {console.log('GroupProfileModal: Rendering group photo:', groupProfile.photo)}
+            <div className="space-y-6">
+              {isEditing ? (
+                // Edit Form
+                <>
+                  {/* Profile Image Section */}
+                  <div className="text-center">
+                    <div className="relative inline-block">
+                      <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="Group photo preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : groupProfile.photo ? (
                           <img
                             src={groupProfile.photo}
                             alt="Group photo"
                             className="w-full h-full object-cover"
                           />
-                        </>
-                      ) : (
-                        <Users className="w-8 h-8 text-gray-400" />
-                      )}
-                    </div>
-                    {/* Camera overlay when editing */}
-                    {isEditing && (
+                        ) : (
+                          <Users className="w-8 h-8 text-gray-400" />
+                        )}
+                      </div>
+                      {/* Edit button overlay */}
                       <button
                         onClick={handlePhotoChange}
                         className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors"
                       >
                         <Camera className="w-4 h-4 text-white" />
                       </button>
+                    </div>
+                    
+                    {/* Hidden file input */}
+                    <input
+                      id="group-photo-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageSelect}
+                    />
+                    
+                    {/* Edit link */}
+                    <button
+                      onClick={handlePhotoChange}
+                      className="text-sm text-gray-600 hover:text-gray-900 mt-2 underline"
+                    >
+                      Edit
+                    </button>
+                    
+                    {/* Selected file name */}
+                    {selectedImage && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedImage.name}
+                      </p>
                     )}
                   </div>
-                  
-                  {!isEditing ? (
-                    <>
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <h3 className="text-xl font-bold text-gray-900">{groupProfile.name}</h3>
-                      </div>
-                      <p className="text-gray-600">{groupProfile.participants.length} members</p>
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      <input
-                        id="group-photo-input"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageSelect}
-                      />
-                      <div>
-                        <button
-                          onClick={handlePhotoChange}
-                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                        >
-                          {selectedImage ? 'Change image' : 'Add image'}
-                        </button>
-                        {selectedImage && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {selectedImage.name}
-                          </p>
-                        )}
-                      </div>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="w-full text-center text-xl font-bold text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2"
-                        placeholder="Group name"
-                      />
-                      <textarea
-                        value={editBio}
-                        onChange={(e) => setEditBio(e.target.value)}
-                        placeholder="Bio (optional)"
-                        className="w-full text-sm text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2"
-                        rows={3}
-                      />
+
+                  {/* Group Name Input */}
+                  <div>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full text-center text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="Group name"
+                    />
+                  </div>
+
+                  {/* Bio Input */}
+                  <div>
+                    <textarea
+                      value={editBio}
+                      onChange={(e) => setEditBio(e.target.value)}
+                      placeholder="Bio (optional)"
+                      className="w-full text-sm text-gray-900 bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                      rows={3}
+                    />
+                    <div className="text-right text-xs text-gray-500 mt-1">
+                      {editBio.length}/150
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons - Circular Card Style */}
-              <div className="flex space-x-6 justify-center mb-8">
-                {/* Message Button */}
-                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
-                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                    <MessageCircle className="w-6 h-6 text-gray-600" />
                   </div>
-                  <span className="text-xs font-medium text-gray-700">Message</span>
-                </button>
 
-                {/* Share Profile Button */}
-                <button className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105">
-                  <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
-                    <Share className="w-6 h-6 text-gray-600" />
-                  </div>
-                  <span className="text-xs font-medium text-gray-700">Share</span>
-                </button>
-              </div>
-
-              {/* Media Section */}
-              <div className="mb-4">
-                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                  <Images className="w-5 h-5" />
-                  View Media
-                </button>
-              </div>
-
-              {/* Settings Section */}
-              <div className="mb-6">
-                <button className="w-full flex items-center gap-3 p-4 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-sm">
-                  <Settings className="w-5 h-5" />
-                  Group Settings
-                </button>
-              </div>
-
-              {/* Members Section */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900">Members</h4>
-                  {isAdmin && (
-                    <button className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
-                      <Users className="w-4 h-4" />
-                      Manage
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setSelectedImage(null);
+                        setImagePreview(null);
+                      }}
+                      className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                    >
+                      Cancel
                     </button>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {groupProfile.participants.slice(0, 3).map((participant) => (
-                    <div key={participant.id} className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-                      <Avatar
-                        src={participant.profile_pic}
-                        name={participant.name}
-                        size={40}
-                      />
-                      <div className="flex-1">
-                        <h5 className="font-semibold text-gray-900">
-                          {participant.name}
-                          {participant.id === account?.id && ' (You)'}
-                        </h5>
-                        <p className="text-sm text-gray-500 capitalize">{participant.role}</p>
-                      </div>
-                      {participant.role === 'admin' && (
-                        <div className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                          Admin
-                        </div>
+                    <button
+                      onClick={handleSaveChanges}
+                      disabled={uploading || !editName.trim()}
+                      className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {uploading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                // Group Info View
+                <>
+                  {/* Group Profile Display */}
+                  <div className="text-center">
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto mb-4">
+                      {groupProfile.photo ? (
+                        <img
+                          src={groupProfile.photo}
+                          alt="Group photo"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Users className="w-8 h-8 text-gray-400" />
                       )}
                     </div>
-                  ))}
-                  {groupProfile.participants.length > 3 && (
-                    <div className="text-center text-gray-600 text-sm">
-                      +{groupProfile.participants.length - 3} more members
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Group Actions */}
-              {isAdmin && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                  <h5 className="font-semibold text-red-900 mb-2">Danger Zone</h5>
-                  <p className="text-sm text-red-700 mb-3">
-                    Leave group or delete group permanently
-                  </p>
-                  <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium">
-                      Leave Group
-                    </button>
-                    <button className="px-4 py-2 bg-gray-100 text-red-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
-                      Delete Group
-                    </button>
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">{groupProfile.name}</h3>
+                    <p className="text-gray-600 text-sm">{groupProfile.participants.length} members</p>
+                    {groupProfile.bio && (
+                      <p className="text-gray-600 text-sm mt-2">{groupProfile.bio}</p>
+                    )}
                   </div>
-                </div>
+
+                  {/* Members List */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Members</h4>
+                    <div className="space-y-2">
+                      {groupProfile.participants.slice(0, 5).map((participant) => (
+                        <div key={participant.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                            {participant.profile_pic ? (
+                              <img
+                                src={participant.profile_pic}
+                                alt={participant.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="text-gray-400 text-xs font-semibold">
+                                {participant.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {participant.name}
+                              {participant.id === account?.id && ' (You)'}
+                            </p>
+                            <p className="text-xs text-gray-500 capitalize">{participant.role}</p>
+                          </div>
+                          {participant.role === 'admin' && (
+                            <div className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                              Admin
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {groupProfile.participants.length > 5 && (
+                        <p className="text-center text-gray-500 text-sm">
+                          +{groupProfile.participants.length - 5} more members
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

@@ -12,7 +12,7 @@ export default function IndividualChatPage() {
   const searchParams = useSearchParams();
   const chatId = searchParams.get('chat');
   const { account } = useAuth();
-  const { sendMessage, markMessagesAsRead } = useAppStore();
+  const { sendMessage, markMessagesAsRead, getConversations } = useAppStore();
   const [conversation, setConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,31 +37,75 @@ export default function IndividualChatPage() {
       }
 
       try {
-        // Get chat details
-        const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
-        if (chatError || !chat) {
-          setError('Conversation not found');
-          setLoading(false);
-          return;
+        // First try to get conversation from store
+        const storeConversations = getConversations();
+        const storeConversation = storeConversations.find(c => c.id === chatId);
+        
+        if (storeConversation) {
+          console.log('Individual chat page: Using conversation from store:', storeConversation);
+          console.log('Individual chat page: Store conversation avatarUrl:', storeConversation.avatarUrl);
+          console.log('Individual chat page: Store conversation isGroup:', storeConversation.isGroup);
+          console.log('Individual chat page: Store conversation title:', storeConversation.title);
+          
+          // For group chats, always refresh from database to get latest photo
+          if (storeConversation.isGroup) {
+            console.log('Individual chat page: Group chat detected, refreshing from database for latest photo');
+            const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
+            if (!chatError && chat) {
+              setParticipants(chat.participants || []);
+              
+              // Update the conversation with fresh data
+              const updatedConversation = {
+                ...storeConversation,
+                avatarUrl: chat.photo || null
+              };
+              console.log('Individual chat page: Updated conversation with fresh photo:', updatedConversation.avatarUrl);
+              setConversation(updatedConversation);
+            } else {
+              setConversation(storeConversation);
+            }
+          } else {
+            setConversation(storeConversation);
+            
+            // Still need to load participants for profile modal
+            const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
+            if (!chatError && chat) {
+              setParticipants(chat.participants || []);
+            }
+          }
+        } else {
+          // Fallback to loading from database
+          console.log('Individual chat page: Conversation not in store, loading from database');
+          const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
+          if (chatError || !chat) {
+            setError('Conversation not found');
+            setLoading(false);
+            return;
+          }
+
+          // Store participants for profile modal
+          setParticipants(chat.participants || []);
+
+          // Convert to conversation format
+          const otherParticipant = chat.participants.find(p => p.id !== account.id);
+          const conversation = {
+            id: chat.id,
+            title: chat.type === 'direct' 
+              ? otherParticipant?.name || 'Unknown User'
+              : chat.name || 'Group Chat',
+            avatarUrl: chat.type === 'direct' 
+              ? otherParticipant?.profile_pic || null
+              : chat.photo || null,
+            isGroup: chat.type === 'group'
+          };
+
+          console.log('Individual chat page: Chat data loaded from database:', chat);
+          console.log('Individual chat page: Chat photo:', chat.photo);
+          console.log('Individual chat page: Chat type:', chat.type);
+          console.log('Individual chat page: Conversation avatarUrl:', conversation.avatarUrl);
+          console.log('Individual chat page: Conversation isGroup:', conversation.isGroup);
+          setConversation(conversation);
         }
-
-        // Store participants for profile modal
-        setParticipants(chat.participants || []);
-
-        // Convert to conversation format
-        const otherParticipant = chat.participants.find(p => p.id !== account.id);
-        const conversation = {
-          id: chat.id,
-          title: chat.type === 'direct' 
-            ? otherParticipant?.name || 'Unknown User'
-            : chat.name || 'Group Chat',
-          avatarUrl: chat.type === 'direct' 
-            ? otherParticipant?.profile_pic || null
-            : null,
-          isGroup: chat.type === 'group'
-        };
-
-        setConversation(conversation);
 
         // Load messages
         const { messages, error: messagesError } = await simpleChatService.getChatMessages(chatId, account.id);
@@ -256,6 +300,9 @@ export default function IndividualChatPage() {
                   src={conversation.avatarUrl}
                   alt={conversation.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Profile card image failed to load:', conversation.avatarUrl, e);
+                  }}
                 />
               ) : (
                 <div className="text-gray-400 text-sm font-semibold">
@@ -348,17 +395,44 @@ export default function IndividualChatPage() {
               {/* Profile picture for received messages */}
               {!isMe && (
                 <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {conversation.avatarUrl ? (
-                    <img
-                      src={conversation.avatarUrl}
-                      alt={conversation.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-gray-400 text-sm font-semibold">
-                      {conversation.title.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  {(() => {
+                    // For group chats, show the individual sender's profile picture
+                    if (conversation.isGroup) {
+                      const sender = participants.find((p: any) => p.id === message.sender_id);
+                      if (sender?.profile_pic) {
+                        return (
+                          <img
+                            src={sender.profile_pic}
+                            alt={sender.name}
+                            className="w-full h-full object-cover"
+                          />
+                        );
+                      } else {
+                        return (
+                          <div className="text-gray-400 text-sm font-semibold">
+                            {sender?.name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                        );
+                      }
+                    } else {
+                      // For direct messages, show the other participant's profile picture
+                      if (conversation.avatarUrl) {
+                        return (
+                          <img
+                            src={conversation.avatarUrl}
+                            alt={conversation.title}
+                            className="w-full h-full object-cover"
+                          />
+                        );
+                      } else {
+                        return (
+                          <div className="text-gray-400 text-sm font-semibold">
+                            {conversation.title.charAt(0).toUpperCase()}
+                          </div>
+                        );
+                      }
+                    }
+                  })()}
                 </div>
               )}
               

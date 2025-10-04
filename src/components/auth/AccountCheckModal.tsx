@@ -484,6 +484,9 @@ export default function AccountCheckModal({
     } else if (isOpen && !user) {
       console.log('AccountCheckModal: Modal opened but no user authenticated, waiting for user state...');
       
+      // Set loading state while waiting for user
+      setAccountCheckInProgress(true);
+      
       // Detect mobile environment for longer timeouts
       const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
       const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -1334,7 +1337,13 @@ export default function AccountCheckModal({
         )}
 
         <div className="p-6 flex-1 overflow-y-auto">
-          {userExists === true ? (
+          {accountCheckInProgress ? (
+            // Loading Screen - Simple black loading circle
+            <div className="flex flex-col items-center justify-center h-full py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-900 border-t-transparent"></div>
+              <p className="mt-4 text-gray-600 text-center">Setting up your account...</p>
+            </div>
+          ) : userExists === true ? (
             // Existing Account Card - Perfectly centered layout
             <div className="flex flex-col items-center justify-center h-full px-6 md:px-8 py-8">
               {/* Profile Card - Left profile pic, right text */}

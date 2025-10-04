@@ -144,11 +144,8 @@ export const useAppStore = create<FullStore>((set, get) => ({
       
       // Convert SimpleChat to Conversation format and load last message
       const conversations: Conversation[] = await Promise.all(chats.map(async (chat) => {
-        console.log('Converting chat:', chat.id, 'participants:', chat.participants, 'userId:', userId);
-        console.log('All participant IDs:', chat.participants.map(p => p.id));
-        console.log('Looking for participant that is not:', userId);
+        console.log('Converting chat:', chat.id, 'type:', chat.type, 'photo:', chat.photo);
         const otherParticipant = chat.participants.find(p => p.id !== userId);
-        console.log('Other participant found:', otherParticipant);
         
         // Load the last message for this chat
         const { messages, error } = await simpleChatService.getChatMessages(chat.id, userId);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
-import { ArrowLeft, MessageCircle, Share, Edit, UserPlus, Trash2, Settings, Images, Users, MoreVertical } from "lucide-react";
+import { ArrowLeft, MessageCircle, Share, Edit, UserPlus, Trash2, Settings, Images, Users, MoreVertical, Camera } from "lucide-react";
 import { ChevronLeftIcon } from "@/components/icons";
 import Avatar from "@/components/Avatar";
 import ConnectionsModal from "@/components/chat/ConnectionsModal";
@@ -21,7 +21,7 @@ interface UserProfile {
 interface GroupProfile {
   id: string;
   name: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   created_by: string;
   participants: Array<{
     id: string;
@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
   const chatId = searchParams.get('chatId');
+  const editMode = searchParams.get('edit') === 'true';
   const { account } = useAuth();
   
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -49,6 +50,13 @@ export default function ProfilePage() {
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
   const [mutualCount, setMutualCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
+  
+  // Group editing state
+  const [editingGroup, setEditingGroup] = useState<GroupProfile | null>(null);
+  const [groupName, setGroupName] = useState('');
+  const [groupBio, setGroupBio] = useState('');
+  const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const isGroupProfile = !!chatId;
   const isUserProfile = !!userId;
@@ -130,7 +138,7 @@ export default function ProfilePage() {
           const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
 
           if (chat && !chatError) {
-            setGroupProfile({
+            const groupData = {
               id: chat.id,
               name: chat.name || 'Group Chat',
               avatarUrl: (chat as any).avatarUrl,
@@ -141,7 +149,18 @@ export default function ProfilePage() {
                 profile_pic: p.profile_pic,
                 connect_id: (p as any).connect_id,
               })),
-            });
+              bio: (chat as any).bio || '',
+            };
+            
+            setGroupProfile(groupData);
+            
+            // If in edit mode, initialize editing state
+            if (editMode) {
+              setEditingGroup(groupData);
+              setGroupName(groupData.name);
+              setGroupBio(groupData.bio || '');
+              setGroupPhoto(groupData.avatarUrl || null);
+            }
           } else {
             setError(chatError?.message || 'Group chat not found');
           }
@@ -202,6 +221,61 @@ export default function ProfilePage() {
     setConnectionStatus('none');
     setMutualConnections([]);
     setMutualCount(0);
+  };
+
+  // Group editing handlers
+  const handleSaveGroupChanges = async () => {
+    if (!editingGroup || !chatId) return;
+    
+    try {
+      setSaving(true);
+      
+      // Update group in database
+      const { error } = await (simpleChatService as any).updateGroupProfile(chatId, {
+        name: groupName,
+        bio: groupBio,
+        photo: groupPhoto
+      });
+      
+      if (error) {
+        console.error('Error updating group:', error);
+        return;
+      }
+      
+      // Update local state
+      const updatedGroup = {
+        ...editingGroup,
+        name: groupName,
+        bio: groupBio,
+        avatarUrl: groupPhoto
+      };
+      
+      setGroupProfile(updatedGroup);
+      setEditingGroup(updatedGroup);
+      
+      // Navigate back to view mode
+      router.push(`/chat/profile?chatId=${chatId}`);
+      
+    } catch (err) {
+      console.error('Error saving group changes:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    router.push(`/chat/profile?chatId=${chatId}`);
+  };
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setGroupPhoto(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const isAdmin = account?.id === groupProfile?.created_by;
@@ -335,6 +409,90 @@ export default function ProfilePage() {
             <></>
           )
         ) : isGroupProfile && groupProfile ? (
+          editMode ? (
+            /* Group Edit Mode */
+            <div className="px-6 py-4">
+              <div className="max-w-2xl mx-auto">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Group Profile</h2>
+                
+                {/* Group Photo */}
+                <div className="text-center mb-8">
+                  <div className="relative inline-block">
+                    <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto mb-4">
+                      {groupPhoto ? (
+                        <img
+                          src={groupPhoto}
+                          alt="Group photo"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Users className="w-12 h-12 text-gray-400" />
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                      id="group-photo-upload"
+                    />
+                    <label
+                      htmlFor="group-photo-upload"
+                      className="absolute bottom-0 right-0 w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-5 h-5 text-white" />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Group Name */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Group Name
+                  </label>
+                  <input
+                    type="text"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    placeholder="Enter group name"
+                  />
+                </div>
+
+                {/* Group Bio */}
+                <div className="mb-8">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Group Bio
+                  </label>
+                  <textarea
+                    value={groupBio}
+                    onChange={(e) => setGroupBio(e.target.value)}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none"
+                    placeholder="Enter group bio"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveGroupChanges}
+                    disabled={saving || !groupName.trim()}
+                    className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Group View Mode */
           <>
             {/* Group Profile Section */}
             <div className="text-center mb-8">
@@ -344,18 +502,10 @@ export default function ProfilePage() {
                   name={groupProfile.name}
                   size={140}
                 />
-                {isAdmin && (
-                  <button className="absolute bottom-0 right-0 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 transition-colors">
-                    <Edit className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-3">{groupProfile.name}</h3>
-              {isAdmin && (
-                <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mx-auto mt-4">
-                  <Edit className="w-4 h-4" />
-                  Edit Group Name
-                </button>
+                </div>
+                <h3 className="text-3xl font-bold text-gray-900 mb-3">{groupProfile.name}</h3>
+                {groupProfile.bio && (
+                  <p className="text-gray-600 text-lg mb-4">{groupProfile.bio}</p>
               )}
             </div>
 
@@ -399,6 +549,7 @@ export default function ProfilePage() {
               </div>
             )}
           </>
+          )
         ) : null}
       </div>
 

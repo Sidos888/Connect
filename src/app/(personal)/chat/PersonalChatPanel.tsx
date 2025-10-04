@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { useRouter } from "next/navigation";
 import UserProfileModal from "@/components/chat/UserProfileModal";
-import GroupProfileModal from "@/components/chat/GroupProfileModal";
+import GroupInfoModal from "@/components/chat/GroupInfoModal";
 
 interface PersonalChatPanelProps {
   conversation: Conversation;
@@ -24,9 +24,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const endRef = useRef<HTMLDivElement>(null);
   const hasMarkedAsRead = useRef(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [showGroupProfile, setShowGroupProfile] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
+  const [refreshedConversation, setRefreshedConversation] = useState<Conversation | null>(null);
 
 
   // Load participants and messages from the database
@@ -39,8 +40,22 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         const { chat, error: chatError } = await simpleChatService.getChatById(conversation.id);
         if (!chatError && chat) {
           setParticipants(chat.participants || []);
+          
+          // For group chats, refresh the conversation data with fresh photo
+          if (conversation.isGroup) {
+            console.log('PersonalChatPanel: Group chat detected, refreshing photo from database');
+            const updatedConversation = {
+              ...conversation,
+              avatarUrl: chat.photo || null
+            };
+            console.log('PersonalChatPanel: Updated conversation with fresh photo:', updatedConversation.avatarUrl);
+            setRefreshedConversation(updatedConversation);
+          } else {
+            setRefreshedConversation(conversation);
+          }
         } else {
           console.error('Error loading chat:', chatError);
+          setRefreshedConversation(conversation);
         }
         
         // Load messages
@@ -68,6 +83,14 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   });
 
+  // Use refreshed conversation data if available, otherwise fall back to original
+  const displayConversation = refreshedConversation || conversation;
+  
+  // Debug logging
+  console.log('PersonalChatPanel - Original conversation avatarUrl:', conversation.avatarUrl);
+  console.log('PersonalChatPanel - Refreshed conversation avatarUrl:', refreshedConversation?.avatarUrl);
+  console.log('PersonalChatPanel - Display conversation avatarUrl:', displayConversation.avatarUrl);
+
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
@@ -79,7 +102,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               e.preventDefault();
               e.stopPropagation();
               
-              if (!conversation.isGroup) {
+              if (!displayConversation.isGroup) {
                 // Direct message - find the other participant
                 const otherParticipant = participants.find((p: any) => p.id !== account?.id);
                 if (otherParticipant) {
@@ -87,27 +110,31 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   setShowUserProfile(true);
                 }
               } else {
-                // Group chat
-                setShowGroupProfile(true);
+                // Group chat - show group info modal
+                console.log('PersonalChatPanel: Opening group info modal for chat:', displayConversation.id);
+                setShowGroupInfo(true);
               }
             }}
             className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-              {conversation.avatarUrl ? (
+              {displayConversation.avatarUrl ? (
                 <img
-                  src={conversation.avatarUrl}
-                  alt={conversation.title}
+                  src={displayConversation.avatarUrl}
+                  alt={displayConversation.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('PersonalChatPanel image failed to load:', displayConversation.avatarUrl, e);
+                  }}
                 />
               ) : (
                 <div className="text-gray-400 text-sm font-semibold">
-                  {conversation.title.charAt(0).toUpperCase()}
+                  {displayConversation.title.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
             <div className="flex-1 text-left">
-              <div className="font-semibold text-gray-900 text-base">{conversation.title}</div>
+              <div className="font-semibold text-gray-900 text-base">{displayConversation.title}</div>
             </div>
           </button>
         </div>
@@ -127,15 +154,15 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             {/* Profile picture for received messages */}
             {!isMe && (
               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {conversation.avatarUrl ? (
+                {displayConversation.avatarUrl ? (
                   <img
-                    src={conversation.avatarUrl}
-                    alt={conversation.title}
+                    src={displayConversation.avatarUrl}
+                    alt={displayConversation.title}
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="text-gray-400 text-sm font-semibold">
-                    {conversation.title.charAt(0).toUpperCase()}
+                    {displayConversation.title.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
@@ -218,12 +245,13 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       )}
 
       {conversation.id && (
-        <GroupProfileModal
-          isOpen={showGroupProfile}
-          onClose={() => setShowGroupProfile(false)}
+        <GroupInfoModal
+          isOpen={showGroupInfo}
+          onClose={() => setShowGroupInfo(false)}
           chatId={conversation.id}
         />
       )}
+
     </div>
   );
 }

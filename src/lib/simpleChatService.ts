@@ -45,6 +45,13 @@ class SimpleChatService {
     }
   }
 
+  // Clear all caches (chats and user chats)
+  clearAllCaches() {
+    this.chats.clear();
+    this.userChats.clear();
+    console.log('SimpleChatService: Cleared all caches');
+  }
+
   // Get user's contacts from the database (only actual connections)
   async getContacts(userId: string): Promise<{ contacts: any[]; error: Error | null }> {
     try {
@@ -134,7 +141,7 @@ class SimpleChatService {
       const { data: chatsData, error: chatsError } = await this.supabase
         .from('chats')
         .select(`
-          id, type, name, created_by, created_at, updated_at, last_message_at
+          id, type, name, photo, created_by, created_at, updated_at, last_message_at
         `)
         .in('id', chatIds)
         .order('last_message_at', { ascending: false });
@@ -190,10 +197,12 @@ class SimpleChatService {
           }
         }
 
+        console.log('SimpleChatService: Creating chat object for', chat.id, 'with photo:', chat.photo);
         chats.push({
           id: chat.id,
           type: chat.type,
           name: chat.name,
+          photo: chat.photo,
           participants,
           messages: [], // Will be loaded separately
           unreadCount
@@ -837,6 +846,38 @@ class SimpleChatService {
       return { success: true, error: null };
     } catch (error) {
       console.error('Error in showChat:', error);
+      return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Update group profile (name, bio, photo)
+  async updateGroupProfile(chatId: string, updates: {
+    name?: string;
+    bio?: string;
+    photo?: string | null;
+  }): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('chats')
+        .update({
+          name: updates.name,
+          bio: updates.bio,
+          photo: updates.photo
+        })
+        .eq('id', chatId)
+        .eq('type', 'group');
+
+      if (error) {
+        console.error('Error updating group profile:', error);
+        return { success: false, error };
+      }
+
+      // Clear cache for this chat to force refresh
+      this.clearChatCache(chatId);
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in updateGroupProfile:', error);
       return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
     }
   }

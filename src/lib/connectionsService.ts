@@ -421,6 +421,32 @@ export class ConnectionsService {
       return { status: 'none', error: error as Error };
     }
   }
+
+  // Remove friend (delete connection)
+  async removeFriend(currentUserId: string, friendId: string): Promise<{ error: Error | null }> {
+    try {
+      console.log('ConnectionsService: Removing friend connection between', currentUserId, 'and', friendId);
+      
+      const { data, error } = await this.supabase
+        .from('connections')
+        .delete()
+        .or(`and(user1_id.eq.${currentUserId},user2_id.eq.${friendId}),and(user1_id.eq.${friendId},user2_id.eq.${currentUserId})`)
+        .select();
+
+      console.log('Remove friend result:', { data, error });
+
+      if (error) {
+        console.error('Error removing friend:', error);
+        return { error };
+      }
+
+      console.log('Friend removed successfully:', data);
+      return { error: null };
+    } catch (error) {
+      console.error('Error in removeFriend:', error);
+      return { error: error as Error };
+    }
+  }
 }
 
 export const connectionsService = new ConnectionsService();
