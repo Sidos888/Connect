@@ -207,25 +207,22 @@ export default function ProfilePage() {
 
   return (
     <div className="h-screen flex flex-col bg-white relative">
-      {/* Header - Fixed */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100" style={{ paddingTop: 'max(env(safe-area-inset-top), 20px)' }}>
-        <button
-          onClick={showDetailedView ? handleBackToSummary : () => router.back()}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Go back"
-        >
-          <ChevronLeftIcon className="w-6 h-6 text-gray-600" />
-        </button>
-        <h2 className="text-xl font-semibold text-gray-900">
-          {isGroupProfile ? 'Group Info' : showDetailedView ? userProfile?.name : "Profile Info"}
-        </h2>
-        {isUserProfile && showDetailedView ? (
-          <button onClick={() => { /* handle menu for detailed view */ }} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <MoreVertical className="w-6 h-6 text-gray-600" />
+      {/* Floating Action Buttons */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <button
+            onClick={showDetailedView ? handleBackToSummary : () => router.back()}
+            className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+            aria-label="Go back"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
           </button>
-        ) : (
-          <div className="w-6 h-6" />
-        )}
+        </div>
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <h1 className="text-xl font-semibold text-gray-900">
+            {isGroupProfile ? 'Group Info' : 'Profile'}
+          </h1>
+        </div>
       </div>
 
       {/* Content */}
@@ -262,32 +259,30 @@ export default function ProfilePage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
-                <div className="flex space-x-8 justify-center">
-                  <button
-                    onClick={handleStartChat}
-                    className="flex flex-col items-center space-y-3"
-                  >
-                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <MessageCircle className="w-8 h-8 text-black" />
-                    </div>
-                    <span className="text-sm font-medium text-black">Message</span>
-                  </button>
+              <div className="flex space-x-8 justify-center mb-8">
+                <button
+                  onClick={handleStartChat}
+                  className="flex flex-col items-center space-y-3"
+                >
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <MessageCircle className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Message</span>
+                </button>
 
-                  <button className="flex flex-col items-center space-y-3">
-                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <UserPlus className="w-8 h-8 text-black" />
-                    </div>
-                    <span className="text-sm font-medium text-black">Invite</span>
-                  </button>
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <UserPlus className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Invite</span>
+                </button>
 
-                  <button className="flex flex-col items-center space-y-3">
-                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <Share className="w-8 h-8 text-black" />
-                    </div>
-                    <span className="text-sm font-medium text-black">Share</span>
-                  </button>
-                </div>
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <Share className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Share</span>
+                </button>
               </div>
 
               {/* Connection Status */}

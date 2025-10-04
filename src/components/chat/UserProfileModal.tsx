@@ -221,32 +221,30 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
               </div>
 
               {/* Action Buttons */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
-                <div className="flex space-x-8 justify-center">
-                  <button
-                    onClick={handleStartChat}
-                    className="flex flex-col items-center space-y-3"
-                  >
-                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <MessageCircle className="w-8 h-8 text-black" />
-                    </div>
-                    <span className="text-sm font-medium text-black">Message</span>
-                  </button>
+              <div className="flex space-x-8 justify-center mb-8">
+                <button
+                  onClick={handleStartChat}
+                  className="flex flex-col items-center space-y-3"
+                >
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <MessageCircle className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Message</span>
+                </button>
 
-                  <button className="flex flex-col items-center space-y-3">
-                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <UserPlus className="w-8 h-8 text-black" />
-                    </div>
-                    <span className="text-sm font-medium text-black">Invite</span>
-                  </button>
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <UserPlus className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Invite</span>
+                </button>
 
-                  <button className="flex flex-col items-center space-y-3">
-                    <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <Share className="w-8 h-8 text-black" />
-                    </div>
-                    <span className="text-sm font-medium text-black">Share</span>
-                  </button>
-                </div>
+                <button className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                    <Share className="w-8 h-8 text-black" />
+                  </div>
+                  <span className="text-sm font-medium text-black">Share</span>
+                </button>
               </div>
 
               {/* Connection Status */}
@@ -300,20 +298,8 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
             /* Summary Profile View */
             <>
               {/* Profile Card Section */}
-              <div className="bg-white border border-gray-200 rounded-2xl mb-6 shadow-sm overflow-hidden">
-                {/* Title Section */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                  <h2 className="text-lg font-semibold text-gray-900">Profile info</h2>
-                  <button
-                    onClick={onClose}
-                    className="p-1 hover:bg-gray-100 transition-colors rounded-full"
-                  >
-                    <X className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-                
-                {/* Profile Content */}
-                <div className="p-6 text-center">
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
+                <div className="text-center">
                   <div className="relative inline-block mb-4">
                     <Avatar
                       src={profile.profile_pic}
