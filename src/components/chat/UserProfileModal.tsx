@@ -166,14 +166,14 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
       />
       
       {/* Modal content */}
-      <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100">
-        {/* Header - Fixed */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <div className="flex items-center gap-3">
+      <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+        {/* Floating Action Buttons */}
+        <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+          <div className="flex items-center gap-3 pointer-events-auto">
             {showDetailedView && (
               <button
                 onClick={handleBackToSummary}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
@@ -181,7 +181,7 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm pointer-events-auto"
           >
             {showDetailedView ? (
               <MoreVertical className="w-6 h-6 text-gray-600" />

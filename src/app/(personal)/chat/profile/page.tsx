@@ -29,6 +29,7 @@ interface GroupProfile {
     profile_pic?: string;
     connect_id?: string;
   }>;
+  bio?: string;
 }
 
 export default function ProfilePage() {
@@ -131,13 +132,13 @@ export default function ProfilePage() {
             setGroupProfile({
               id: chat.id,
               name: chat.name || 'Group Chat',
-              avatarUrl: chat.avatarUrl,
-              created_by: chat.created_by,
+              avatarUrl: (chat as any).avatarUrl,
+              created_by: (chat as any).created_by,
               participants: chat.participants.map(p => ({
                 id: p.id,
                 name: p.name,
                 profile_pic: p.profile_pic,
-                connect_id: p.connect_id,
+                connect_id: (p as any).connect_id,
               })),
             });
           } else {
@@ -205,27 +206,27 @@ export default function ProfilePage() {
   const isAdmin = account?.id === groupProfile?.created_by;
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
-        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+    <div className="h-screen flex flex-col bg-white relative">
+      {/* Floating Action Buttons */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
+        <div className="flex items-center gap-3 pointer-events-auto">
           <button
             onClick={showDetailedView ? handleBackToSummary : () => router.back()}
-            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors bg-white/80 backdrop-blur-sm"
             aria-label="Go back"
           >
-            <span className="back-btn-circle">
-              <ChevronLeftIcon className="h-5 w-5" />
-            </span>
+            <ChevronLeftIcon className="h-5 w-5" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>
+        </div>
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <h1 className="text-xl font-semibold text-gray-900">
             {isGroupProfile ? 'Group Info' : 'Profile'}
           </h1>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-8">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
