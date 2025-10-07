@@ -170,10 +170,11 @@ class SimpleChatService {
           continue;
         }
 
-        const participants = (participantsData || []).map((p: any) => ({
+        type ParticipantRow = { accounts: { id: string; name: string; profile_pic?: string | null } };
+        const participants = (participantsData || []).map((p: ParticipantRow) => ({
           id: p.accounts.id,
           name: p.accounts.name,
-          profile_pic: p.accounts.profile_pic
+          profile_pic: p.accounts.profile_pic || undefined
         }));
 
         console.log('SimpleChatService: Chat participants for', chat.id, ':', participants);
@@ -372,8 +373,8 @@ class SimpleChatService {
         .insert({
           type: 'group',
           name: name,
-          created_by: participantIds[0] // Use first participant as creator
-          // Note: Photo storage will be implemented later
+          photo: photo ?? null,
+          created_by: participantIds[0]
         })
         .select()
         .single();
@@ -412,10 +413,11 @@ class SimpleChatService {
         return { chat: null, error: participantsError2 };
       }
 
-      const participants = (participantsData || []).map((p: any) => ({
+      type ParticipantRow2 = { accounts: { id: string; name: string; profile_pic?: string | null } };
+      const participants = (participantsData || []).map((p: ParticipantRow2) => ({
         id: p.accounts.id,
         name: p.accounts.name,
-        profile_pic: p.accounts.profile_pic
+        profile_pic: p.accounts.profile_pic || undefined
       }));
 
       const chat: SimpleChat = {
@@ -477,21 +479,24 @@ class SimpleChatService {
         return { chat: null, error: participantsError };
       }
 
-      const participants = (participantsData || []).map((p: any) => ({
+      type ParticipantRow3 = { accounts: { id: string; name: string; profile_pic?: string | null } };
+      const participants = (participantsData || []).map((p: ParticipantRow3) => ({
         id: p.accounts.id,
         name: p.accounts.name,
-        profile_pic: p.accounts.profile_pic
+        profile_pic: p.accounts.profile_pic || undefined
       }));
 
       // Convert to SimpleChat format
       const simpleChat: SimpleChat = {
         id: chatData.id,
         type: chatData.type,
-        name: chatData.name,
-        photo: chatData.photo,
-        created_by: chatData.created_by,
-        created_at: chatData.created_at,
-        participants: participants
+        name: chatData.name || undefined,
+        photo: chatData.photo || undefined,
+        participants: participants,
+        messages: [],
+        unreadCount: 0,
+        last_message: chatData.last_message || undefined,
+        last_message_at: chatData.last_message_at || undefined
       };
 
       console.log('SimpleChatService: getChatById - chatData.photo:', chatData.photo);
