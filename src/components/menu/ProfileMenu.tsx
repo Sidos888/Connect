@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X } from "lucide-react";
+import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X, MessageCircle, Share, MoreVertical, ChevronRight } from "lucide-react";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import InlineProfileView from '@/components/InlineProfileView';
+import ConnectionsModal from '@/components/chat/ConnectionsModal';
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -60,6 +61,7 @@ function ConnectionsView({
   const [businessConnections, setBusinessConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { account } = useAuth();
+  const { personalProfile } = useAppStore();
 
   // Load real connections data
   useEffect(() => {
@@ -99,36 +101,52 @@ function ConnectionsView({
   }, [account?.id]);
 
   return (
-    <SimpleCard>
-      <div className="flex flex-col h-full">
-        {/* Header with back button and add person */}
-        <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <button
-            onClick={onBack}
-            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
-            aria-label="Back to menu"
-          >
-            <span className="back-btn-circle">
-              <ChevronLeft size={20} className="text-gray-700" />
-            </span>
-          </button>
-          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Connections</h2>
-          <button
-            onClick={onAddPerson}
-            className="absolute right-0 p-2 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
-            aria-label="Add person"
-          >
-            <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {/* Person silhouette */}
-              <circle cx="12" cy="8" r="4" strokeWidth={2} />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-              {/* Plus sign in top right */}
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 5h2m0 0h2m-2 0v2m0-2V3" />
-            </svg>
-          </button>
-        </div>
+    <div className="flex flex-col h-full px-6 pt-6 pb-0">
+      {/* Header with close (X) and add person */}
+      <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+        <button
+          onClick={onBack}
+          className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          aria-label="Close connections"
+        >
+          <span className="back-btn-circle">
+            <X size={20} className="text-gray-700" />
+          </span>
+        </button>
+        <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Connections</h2>
+        <button
+          onClick={onAddPerson}
+          className="absolute right-0 p-2 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          aria-label="Add person"
+        >
+          <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Person silhouette */}
+            <circle cx="12" cy="8" r="4" strokeWidth={2} />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+            {/* Plus sign in top right */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 5h2m0 0h2m-2 0v2m0-2V3" />
+          </svg>
+        </button>
+      </div>
 
-        {/* Tab Navigation */}
+      {/* Large personal profile card (to match viewing another person's connections) */}
+      <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-4">
+          <Avatar
+            src={personalProfile?.avatarUrl}
+            name={personalProfile?.name}
+            size={60}
+          />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 whitespace-nowrap overflow-hidden text-ellipsis">{personalProfile?.name || 'You'}</h3>
+            <p className="text-sm text-gray-600 whitespace-nowrap overflow-hidden text-ellipsis">
+              {activeTab === 'friends' ? peopleConnections.length : businessConnections.length} {activeTab === 'friends' ? 'friends' : 'following'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
         <div className="mb-4">
           <div className="flex justify-center space-x-8">
             <button
@@ -155,8 +173,24 @@ function ConnectionsView({
         </div>
         
         {/* Connections content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="space-y-3">
+      <div 
+        className="flex-1 overflow-y-auto no-scrollbar px-2"
+          style={{
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            scrollPaddingTop: '0px'
+          }}
+          onScroll={(e) => {
+            const target = e.target as HTMLDivElement;
+            if (target.scrollTop < 0) {
+              target.scrollTop = 0;
+            }
+          }}
+        >
+          <div className="space-y-3 pb-6">
             {loading ? (
               <div className="text-center py-8">
                 <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto mb-4"></div>
@@ -172,20 +206,23 @@ function ConnectionsView({
                   return (
                     <div
                       key={connection.id}
-                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 py-6 relative min-h-[60px] cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-6 min-h-[70px] cursor-pointer hover:shadow-md hover:bg-white transition-all mx-auto max-w-md"
                       onClick={() => onFriendClick(friend)}
                     >
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                        {friend.profile_pic ? (
-                          <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-gray-500 text-sm font-medium">
-                            {friend.name?.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-full text-center flex items-center justify-center h-full">
-                        <h3 className="text-sm font-semibold text-gray-900">{friend.name}</h3>
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                          {friend.profile_pic ? (
+                            <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-gray-500 text-sm font-medium">
+                              {friend.name?.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 flex items-center justify-center min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">{friend.name}</h3>
+                        </div>
+                        <div className="w-10" />
                       </div>
                     </div>
                   );
@@ -207,9 +244,9 @@ function ConnectionsView({
                   return (
                     <div
                       key={connection.id}
-                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 py-6 relative min-h-[60px]"
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px]"
                     >
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                      <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                         {business.profile_pic ? (
                           <img src={business.profile_pic} alt={business.name} className="w-full h-full object-cover" />
                         ) : (
@@ -218,8 +255,8 @@ function ConnectionsView({
                           </span>
                         )}
                       </div>
-                      <div className="w-full text-center flex items-center justify-center h-full">
-                        <h3 className="text-sm font-semibold text-gray-900">{business.name}</h3>
+                      <div className="w-full text-center flex items-center justify-center h-full min-w-0">
+                        <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">{business.name}</h3>
                       </div>
                     </div>
                   );
@@ -232,11 +269,10 @@ function ConnectionsView({
                 </div>
               )
             )}
-          </div>
         </div>
 
       </div>
-    </SimpleCard>
+    </div>
   );
 }
 
@@ -460,10 +496,9 @@ function AddPersonView({
   };
 
   return (
-    <SimpleCard>
-      <div className="flex flex-col h-full">
-        {/* Header with back button */}
-        <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+    <div className="flex flex-col h-full p-6">
+      {/* Header with back button */}
+      <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <button
             onClick={onBack}
             className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
@@ -503,7 +538,7 @@ function AddPersonView({
         </div>
         
         {/* Add Person content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-2">
           <div className="space-y-4">
             {activeTab === 'requests' && (
               <div className="space-y-4">
@@ -511,40 +546,36 @@ function AddPersonView({
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-gray-900">Friend Requests</h3>
                     {pendingRequests.map((request) => (
-                      <div key={request.id} className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                              {request.sender?.profile_pic ? (
-                                <img src={request.sender.profile_pic} alt={request.sender.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-gray-500 text-lg font-medium">
-                                  {request.sender?.name?.charAt(0).toUpperCase()}
-                                </span>
-                              )}
-                            </div>
-                                <div>
-                                  <h4 className="font-medium text-gray-900">{request.sender?.name}</h4>
-                                </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <button 
-                              onClick={() => rejectFriendRequest(request.id)}
-                              className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-600 border border-gray-300 rounded-lg hover:border-red-300 transition-colors"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                            <button 
-                              onClick={() => acceptFriendRequest(request.id)}
-                              className="w-8 h-8 flex items-center justify-center bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </button>
-                          </div>
+                      <div key={request.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px] mx-auto max-w-md">
+                        <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                          {request.sender?.profile_pic ? (
+                            <img src={request.sender.profile_pic} alt={request.sender.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-gray-500 text-sm font-medium">
+                              {request.sender?.name?.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="w-full text-center flex items-center justify-center h-full">
+                          <h3 className="text-sm font-semibold text-gray-900">{request.sender?.name}</h3>
+                        </div>
+                        <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex space-x-2">
+                          <button 
+                            onClick={() => rejectFriendRequest(request.id)}
+                            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-600 border border-gray-300 rounded-lg hover:border-red-300 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                          <button 
+                            onClick={() => acceptFriendRequest(request.id)}
+                            className="w-8 h-8 flex items-center justify-center bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -585,25 +616,23 @@ function AddPersonView({
                     {searchQuery.trim() && (
                       <div className="space-y-3">
                         <h3 className="text-lg font-semibold text-gray-900">Search Results</h3>
-                        {searchResults.length > 0 ? (
+                                {searchResults.length > 0 ? (
                           <div className="space-y-2">
                             {searchResults
                               .filter(user => userConnectionStatuses[user.id] !== 'connected')
                               .map((user) => (
-                              <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                                    {user.profile_pic ? (
-                                      <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="text-gray-500 text-sm font-medium">
-                                        {user.name.charAt(0).toUpperCase()}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <h4 className="font-medium text-gray-900">{user.name}</h4>
-                                  </div>
+                              <div key={user.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px] mx-auto max-w-md">
+                                <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                  {user.profile_pic ? (
+                                    <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-gray-500 text-sm font-medium">
+                                      {user.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="w-full text-center flex items-center justify-center h-full min-w-0">
+                                  <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">{user.name}</h3>
                                 </div>
                                 {(() => {
                                   const status = userConnectionStatuses[user.id] || 'none';
@@ -612,20 +641,22 @@ function AddPersonView({
                                   }
                                   const buttonConfig = getButtonConfig(user.id);
                                   return (
-                                    <button 
-                                      onClick={() => {
-                                        if (buttonConfig.text === 'Add +') {
-                                          sendFriendRequest(user.id);
-                                        } else if (buttonConfig.text === 'Added ✓') {
-                                          cancelFriendRequest(user.id);
-                                        } else if (buttonConfig.text === 'Accept') {
-                                          // Handle accept logic if needed
-                                        }
-                                      }}
-                                      className={buttonConfig.className}
-                                    >
-                                      {buttonConfig.text}
-                                    </button>
+                                    <div className="absolute right-6 top-1/2 transform -translate-y-1/2">
+                                      <button 
+                                        onClick={() => {
+                                          if (buttonConfig.text === 'Add +') {
+                                            sendFriendRequest(user.id);
+                                          } else if (buttonConfig.text === 'Added ✓') {
+                                            cancelFriendRequest(user.id);
+                                          } else if (buttonConfig.text === 'Accept') {
+                                            // Handle accept logic if needed
+                                          }
+                                        }}
+                                        className={buttonConfig.className}
+                                      >
+                                        {buttonConfig.text}
+                                      </button>
+                                    </div>
                                   );
                                 })()}
                               </div>
@@ -654,20 +685,18 @@ function AddPersonView({
                           .filter(user => userConnectionStatuses[user.id] !== 'connected')
                           .slice(0, 5)
                           .map((user) => (
-                          <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                                {user.profile_pic ? (
-                                  <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="text-gray-500 text-sm font-medium">
-                                    {user.name.charAt(0).toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900">{user.name}</h4>
-                              </div>
+                          <div key={user.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px] mx-auto max-w-md">
+                            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                              {user.profile_pic ? (
+                                <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-gray-500 text-sm font-medium">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="w-full text-center flex items-center justify-center h-full min-w-0">
+                              <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">{user.name}</h3>
                             </div>
                             {(() => {
                               const status = userConnectionStatuses[user.id] || 'none';
@@ -676,20 +705,22 @@ function AddPersonView({
                               }
                               const buttonConfig = getButtonConfig(user.id);
                               return (
-                                <button 
-                                  onClick={() => {
-                                    if (buttonConfig.text === 'Add +') {
-                                      sendFriendRequest(user.id);
-                                    } else if (buttonConfig.text === 'Added ✓') {
-                                      cancelFriendRequest(user.id);
-                                    } else if (buttonConfig.text === 'Accept') {
-                                      // Handle accept logic if needed
-                                    }
-                                  }}
-                                  className={buttonConfig.className}
-                                >
-                                  {buttonConfig.text}
-                                </button>
+                                <div className="absolute right-6 top-1/2 transform -translate-y-1/2">
+                                  <button 
+                                    onClick={() => {
+                                      if (buttonConfig.text === 'Add +') {
+                                        sendFriendRequest(user.id);
+                                      } else if (buttonConfig.text === 'Added ✓') {
+                                        cancelFriendRequest(user.id);
+                                      } else if (buttonConfig.text === 'Accept') {
+                                        // Handle accept logic if needed
+                                      }
+                                    }}
+                                    className={buttonConfig.className}
+                                  >
+                                    {buttonConfig.text}
+                                  </button>
+                                </div>
                               );
                             })()}
                           </div>
@@ -707,7 +738,6 @@ function AddPersonView({
           </div>
         </div>
       </div>
-    </SimpleCard>
   );
 }
 
@@ -717,12 +747,20 @@ function MenuView({
   onShare, 
   onViewProfile,
   onConnections,
+  onNotifications,
+  onGallery,
+  onAchievements,
+  onSaved,
   currentAccount 
 }: { 
   onSettings: () => void; 
   onShare: () => void; 
   onViewProfile: () => void;
   onConnections: () => void;
+  onNotifications: () => void;
+  onGallery: () => void;
+  onAchievements: () => void;
+  onSaved: () => void;
   currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null; 
 }) {
   return (
@@ -731,7 +769,7 @@ function MenuView({
         {/* Profile Card - Clickable */}
         <button
           onClick={onViewProfile}
-          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 bg-white shadow-sm"
+          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-md hover:bg-white rounded-lg transition-all border border-gray-200 bg-white shadow-sm"
         >
           <Avatar
             src={currentAccount?.avatarUrl ?? undefined}
@@ -749,30 +787,42 @@ function MenuView({
 
         {/* Menu items */}
         <div className="space-y-3">
-          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button 
+            onClick={onNotifications}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
+          >
             <Bell size={20} className="text-gray-600" />
             <span className="font-medium">Notifications</span>
           </button>
 
           <button 
             onClick={onConnections}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
           >
             <Users size={20} className="text-gray-600" />
             <span className="font-medium">Connections</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button 
+            onClick={onGallery}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
+          >
             <Camera size={20} className="text-gray-600" />
             <span className="font-medium">Gallery</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button 
+            onClick={onAchievements}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
+          >
             <Trophy size={20} className="text-gray-600" />
             <span className="font-medium">Achievements</span>
           </button>
 
-          <button className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button 
+            onClick={onSaved}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
+          >
             <Bookmark size={20} className="text-gray-600" />
             <span className="font-medium">Saved</span>
           </button>
@@ -791,7 +841,7 @@ function MenuView({
 
         {/* Add business section */}
       <div className="space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all">
             <Plus size={20} className="text-gray-600" />
             <span className="font-medium">Add business</span>
           </button>
@@ -864,7 +914,7 @@ function ProfileView({
         <div className="space-y-1">
           <button
             onClick={onShare}
-            className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
           >
             <Share2 size={20} className="text-gray-600" />
             <span className="font-medium">Share Profile</span>
@@ -1185,7 +1235,7 @@ function SettingsView({
             <div className="space-y-3 pt-6 border-t border-gray-200">
               <button
                 onClick={onSignOut}
-                className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
               >
                 <LogOut size={20} className="text-gray-600" />
                 <span className="font-medium">Log out</span>
@@ -1213,6 +1263,8 @@ export default function ProfileMenu() {
   const [showDim, setShowDim] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showConnections, setShowConnections] = useState(false);
+  
+  console.log('🔥 ProfileMenu rendering with connections view:', showConnections);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<ConnectionUser | null>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -1223,6 +1275,17 @@ export default function ProfileMenu() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showCenteredProfile, setShowCenteredProfile] = useState(false);
+  const [showCenteredConnections, setShowCenteredConnections] = useState(false);
+  const [showCenteredAddPerson, setShowCenteredAddPerson] = useState(false);
+  const [showCenteredNotifications, setShowCenteredNotifications] = useState(false);
+  const [showCenteredGallery, setShowCenteredGallery] = useState(false);
+  const [showCenteredAchievements, setShowCenteredAchievements] = useState(false);
+  const [showCenteredSaved, setShowCenteredSaved] = useState(false);
+  const [showCenteredSettings, setShowCenteredSettings] = useState(false);
+  const [showCenteredFriendProfile, setShowCenteredFriendProfile] = useState(false);
+  const [showCenteredConnectionsModal, setShowCenteredConnectionsModal] = useState(false);
+  const [connectionsModalUserId, setConnectionsModalUserId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -1242,6 +1305,7 @@ export default function ProfileMenu() {
 
   // Close menu when navigating - immediate hide
   useEffect(() => {
+    console.log('ProfileMenu: Pathname changed to', pathname, '- Resetting all modal states');
     setOpen(false);
     setShowMenu(false); // Immediately hide menu on navigation
     setShowSettings(false);
@@ -1251,6 +1315,17 @@ export default function ProfileMenu() {
     setShowEditProfile(false);
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
+    setShowCenteredProfile(false);
+    setShowCenteredConnections(false);
+    setShowCenteredAddPerson(false);
+    setShowCenteredNotifications(false);
+    setShowCenteredGallery(false);
+    setShowCenteredAchievements(false);
+    setShowCenteredSaved(false);
+    setShowCenteredSettings(false);
+    setShowCenteredFriendProfile(false);
+    setShowCenteredConnectionsModal(false);
+    setConnectionsModalUserId(null);
   }, [pathname]);
 
   // Prevent scroll when menu is open
@@ -1266,6 +1341,24 @@ export default function ProfileMenu() {
       document.body.style.overflow = 'unset';
     };
   }, [open]);
+
+  // Cleanup on unmount - ensure all modals are closed
+  useEffect(() => {
+    return () => {
+      console.log('ProfileMenu: Component unmounting - cleaning up modal states');
+      setShowCenteredConnections(false);
+      setShowCenteredProfile(false);
+      setShowCenteredAddPerson(false);
+      setShowCenteredNotifications(false);
+      setShowCenteredGallery(false);
+      setShowCenteredAchievements(false);
+      setShowCenteredSaved(false);
+      setShowCenteredSettings(false);
+      setShowCenteredFriendProfile(false);
+      setShowCenteredConnectionsModal(false);
+      setConnectionsModalUserId(null);
+    };
+  }, []);
 
   // Handle dimming transition
   useEffect(() => {
@@ -1316,6 +1409,26 @@ export default function ProfileMenu() {
     setShowEditProfile(false);
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
+    setShowCenteredProfile(false);
+    setShowCenteredConnections(false);
+    setShowCenteredAddPerson(false);
+    setShowCenteredNotifications(false);
+    setShowCenteredGallery(false);
+    setShowCenteredAchievements(false);
+    setShowCenteredSaved(false);
+    setShowCenteredSettings(false);
+    setShowCenteredFriendProfile(false);
+    setShowCenteredConnectionsModal(false);
+    setConnectionsModalUserId(null);
+  };
+
+  // Helper: hide only the dropdown immediately (used when opening center modals)
+  const hideMenuNow = () => {
+    setOpen(false);
+    setShowMenu(false);
+    if (menuRef.current) {
+      menuRef.current.style.display = 'none';
+    }
   };
 
   // Handle ESC key to close menu
@@ -1400,7 +1513,14 @@ export default function ProfileMenu() {
 
   const handleFriendClick = (friend: ConnectionUser) => {
     setSelectedFriend(friend);
-    setShowConnections(false);
+    setShowCenteredConnections(false);
+    setShowCenteredFriendProfile(true);
+  };
+
+  const handleOpenConnections = (userId: string) => {
+    setConnectionsModalUserId(userId);
+    setShowCenteredFriendProfile(false);
+    setShowCenteredConnectionsModal(true);
   };
 
   const handleDeleteAccount = async () => {
@@ -1509,7 +1629,8 @@ export default function ProfileMenu() {
   };
 
   const handleViewProfile = () => {
-    setShowProfile(true);
+    hideMenuNow();
+    setShowCenteredProfile(true);
   };
 
   const handleEditProfile = () => {
@@ -1701,16 +1822,6 @@ export default function ProfileMenu() {
                   setShowConnections(true);
                 }}
               />
-            ) : selectedFriend ? (
-              <SimpleCard>
-                <InlineProfileView
-                  userId={selectedFriend.id}
-                  onBack={() => {
-                    setSelectedFriend(null);
-                    setShowConnections(true);
-                  }}
-                />
-              </SimpleCard>
             ) : showEditProfile ? (
               <EditProfileView
                 onBack={() => setShowEditProfile(false)}
@@ -1729,19 +1840,555 @@ export default function ProfileMenu() {
               />
             ) : (
               <MenuView
-                onSettings={() => setShowSettings(true)}
+                onSettings={() => {
+                  hideMenuNow();
+                  setShowCenteredSettings(true);
+                }}
                 onShare={() => {
-                        setOpen(false);
+                  hideMenuNow();
                   setShowShareModal(true);
                 }}
                 onViewProfile={handleViewProfile}
-                onConnections={() => setShowConnections(true)}
+                onConnections={() => {
+                  hideMenuNow();
+                  setShowCenteredConnections(true);
+                }}
+                onNotifications={() => {
+                  hideMenuNow();
+                  setShowCenteredNotifications(true);
+                }}
+                onGallery={() => {
+                  hideMenuNow();
+                  setShowCenteredGallery(true);
+                }}
+                onAchievements={() => {
+                  hideMenuNow();
+                  setShowCenteredAchievements(true);
+                }}
+                onSaved={() => {
+                  hideMenuNow();
+                  setShowCenteredSaved(true);
+                }}
                 currentAccount={currentAccount}
               />
             )}
             </div>
         )}
         
+        {/* Centered Profile Modal */}
+        {showCenteredProfile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div 
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => setShowCenteredProfile(false)}
+            />
+            
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              {/* Floating Action Buttons */}
+              <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+                <button
+                  onClick={() => setShowCenteredProfile(false)}
+                  className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+                <button className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto">
+                  <MoreVertical className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '80px' }}>
+                {/* Profile Header */}
+                <div className="text-center mb-8">
+                  <div className="relative inline-block mb-6">
+                    <Avatar
+                      src={personalProfile?.avatarUrl ?? undefined}
+                      name={personalProfile?.name ?? "User"}
+                      size={140}
+                    />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-3">{personalProfile?.name ?? "Your Name"}</h3>
+                  <p className="text-gray-600 text-lg">{personalProfile?.bio ?? "No bio available"}</p>
+                </div>
+
+                {/* About Me Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex flex-col justify-center">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">About Me</h4>
+                  <p className="text-gray-500 text-sm">No information available</p>
+                </div>
+
+                {/* My Connections Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex flex-col justify-center">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                        <Users className="w-5 h-5 text-black" />
+                      </div>
+                      <span className="text-black font-medium">My connections</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-2">
+                        {/* Placeholder for connection avatars */}
+                        <div className="w-6 h-6 bg-gray-200 rounded-full border-2 border-white"></div>
+                        <div className="w-6 h-6 bg-gray-300 rounded-full border-2 border-white"></div>
+                        <div className="w-6 h-6 bg-gray-400 rounded-full border-2 border-white"></div>
+                      </div>
+                      <span className="text-black text-sm">+20</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Sections */}
+                <div className="space-y-4">
+                  <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center justify-between">
+                    <span>View Photos</span>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </button>
+                  <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center justify-between">
+                    <span>View Achievements</span>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Connections Modal */}
+        {showCenteredConnections && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div 
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => setShowCenteredConnections(false)}
+            />
+            
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              <div className="flex flex-col h-full">
+                <ConnectionsView
+                  onBack={() => setShowCenteredConnections(false)}
+                  onAddPerson={() => {
+                    setShowCenteredConnections(false);
+                    setShowCenteredAddPerson(true);
+                  }}
+                  onFriendClick={handleFriendClick}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Add Person Modal */}
+        {showCenteredAddPerson && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => setShowCenteredAddPerson(false)}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              <div className="flex flex-col h-full">
+                <AddPersonView
+                  onBack={() => {
+                    setShowCenteredAddPerson(false);
+                    setShowCenteredConnections(true);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Notifications Modal */}
+        {showCenteredNotifications && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => setShowCenteredNotifications(false)}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              {/* Header (no bottom border) */}
+              <div className="flex items-center justify-between p-6">
+                <button
+                  onClick={() => setShowCenteredNotifications(false)}
+                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
+                <div className="w-9"></div> {/* Spacer for centering */}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 flex items-center justify-center p-6">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🔔</div>
+                  <p className="text-gray-500 text-lg">You don't have any notifications yet ;(</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Gallery Modal */}
+        {showCenteredGallery && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => setShowCenteredGallery(false)}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              {/* Header without border */}
+              <div className="flex items-center justify-between p-6">
+                <button
+                  onClick={() => setShowCenteredGallery(false)}
+                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900">Gallery</h2>
+                <div className="w-9"></div> {/* Spacer for centering */}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 flex items-center justify-center p-6">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">📸</div>
+                  <p className="text-gray-500 text-lg">You don't have any photos yet ;(</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Achievements Modal */}
+        {showCenteredAchievements && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => setShowCenteredAchievements(false)}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              {/* Header without border */}
+              <div className="flex items-center justify-between p-6">
+                <button
+                  onClick={() => setShowCenteredAchievements(false)}
+                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900">Achievements</h2>
+                <div className="w-9"></div> {/* Spacer for centering */}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 flex items-center justify-center p-6">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🏆</div>
+                  <p className="text-gray-500 text-lg">You don't have any achievements yet ;(</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Saved Modal */}
+        {showCenteredSaved && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => setShowCenteredSaved(false)}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              {/* Header without border */}
+              <div className="flex items-center justify-between p-6">
+                <button
+                  onClick={() => setShowCenteredSaved(false)}
+                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900">Saved</h2>
+                <div className="w-9"></div> {/* Spacer for centering */}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 flex items-center justify-center p-6">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🔖</div>
+                  <p className="text-gray-500 text-lg">You don't have any saved items yet ;(</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Settings Modal */}
+        {showCenteredSettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => {
+                setShowCenteredSettings(false);
+                setShowDeleteConfirm(false);
+                setShowFinalConfirm(false);
+              }}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              {/* Header without border */}
+              <div className="flex items-center justify-between p-6">
+                <button
+                  onClick={() => {
+                    setShowCenteredSettings(false);
+                    setShowDeleteConfirm(false);
+                    setShowFinalConfirm(false);
+                  }}
+                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
+                <div className="w-9"></div> {/* Spacer for centering */}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 flex flex-col p-6">
+                {showDeleteConfirm ? (
+                  <div className="w-full h-full flex flex-col">
+                    {isDeletingAccount ? (
+                      <div className="flex-1 flex flex-col justify-center items-center space-y-6">
+                        {/* Loading animation */}
+                        <div className="relative">
+                          <div className="w-16 h-16 border-4 border-gray-100 rounded-full"></div>
+                          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-red-500 rounded-full animate-spin"></div>
+                        </div>
+                        
+                        {/* Loading message */}
+                        <div className="text-center">
+                          <h3 className="text-xl font-semibold text-gray-900">Deleting Account</h3>
+                          <p className="text-gray-600 mt-2">Please wait while we remove your data...</p>
+                        </div>
+                      </div>
+                    ) : showFinalConfirm ? (
+                      <div className="flex flex-col h-full">
+                        {/* Subtext at the top */}
+                        <div className="text-center mb-6">
+                          <p className="text-base text-gray-600 leading-relaxed">
+                            This action cannot be undone and all your data will be permanently removed.
+                          </p>
+                        </div>
+                        
+                        {/* Profile card in the middle */}
+                        <div className="flex-1 flex items-center justify-center mb-6">
+                          <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-3 w-full max-w-sm">
+                            <div className="flex items-center space-x-3">
+                              <Avatar
+                                src={personalProfile?.avatarUrl ?? undefined}
+                                name={personalProfile?.name ?? "User"}
+                                size={48}
+                              />
+                              <div className="flex-1">
+                                <h3 className="text-base font-semibold text-gray-900">
+                                  {personalProfile?.name ?? "Your Name"}
+                                </h3>
+                                <p className="text-xs text-gray-500">Personal Account</p>
+                              </div>
+                              <div className="text-red-500 text-xs font-medium">
+                                Delete
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Action buttons at the bottom */}
+                        <div className="flex flex-col gap-3">
+                          <button
+                            onClick={confirmDeleteAccount}
+                            className="w-full px-6 py-4 text-base font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                          >
+                            Delete Account
+                          </button>
+                          <button
+                            onClick={backToMenu}
+                            className="w-full py-3 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors underline"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col h-full">
+                        {/* Title at the top */}
+                        <div className="text-center mb-3">
+                          <h1 className="text-2xl font-semibold text-gray-900">Delete Account</h1>
+                        </div>
+                        
+                        {/* Subtext in the middle - takes up remaining space */}
+                        <div className="flex-1 flex items-center justify-center">
+                          <p className="text-sm text-gray-600 leading-relaxed text-center max-w-sm">
+                            Are you sure you want to delete your account?
+                          </p>
+                        </div>
+                        
+                        {/* Action buttons at the bottom */}
+                        <div className="flex gap-3 mt-6">
+                          <button
+                            onClick={cancelDeleteAccount}
+                            className="flex-1 px-6 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={proceedToFinalConfirm}
+                            className="flex-1 px-6 py-3 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                          >
+                            Confirm
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Settings content - empty space for future settings */}
+                    <div className="flex-1">
+                    </div>
+                    
+                    {/* Account actions at bottom */}
+                    <div className="space-y-3 pt-6 border-t border-gray-200">
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <LogOut size={20} className="text-gray-600" />
+                        <span className="font-medium">Log out</span>
+                      </button>
+                      
+                      <button
+                        onClick={handleDeleteAccount}
+                        className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={20} className="text-red-500" />
+                        <span className="font-medium">Delete Account</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Friend Profile Modal */}
+        {showCenteredFriendProfile && selectedFriend && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => {
+                setShowCenteredFriendProfile(false);
+                setSelectedFriend(null);
+              }}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              <div className="flex flex-col h-full">
+                <InlineProfileView
+                  userId={selectedFriend.id}
+                  entryPoint="connections"
+                  onBack={() => {
+                    setShowCenteredFriendProfile(false);
+                    setSelectedFriend(null);
+                    setShowCenteredConnections(true);
+                  }}
+                  onStartChat={(chatId) => {
+                    router.push(`/chat/individual?chat=${chatId}`);
+                  }}
+                  onOpenConnections={handleOpenConnections}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Centered Connections Modal */}
+        {showCenteredConnectionsModal && connectionsModalUserId && (
+          <ConnectionsModal
+            isOpen={true}
+            onClose={() => {
+              setShowCenteredConnectionsModal(false);
+              setConnectionsModalUserId(null);
+            }}
+            onBack={() => {
+              setShowCenteredConnectionsModal(false);
+              setConnectionsModalUserId(null);
+              setShowCenteredFriendProfile(true);
+            }}
+            userId={connectionsModalUserId}
+            onRemoveFriend={(removedUserId) => {
+              // Handle friend removal if needed
+            }}
+          />
+        )}
+
         {/* Share Profile Modal */}
         <ShareProfileModal
           isOpen={showShareModal}

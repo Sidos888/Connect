@@ -124,6 +124,33 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Create function to get user's bidirectional connections (friends from both directions)
+CREATE OR REPLACE FUNCTION get_user_bidirectional_connections(user_id UUID, status_filter TEXT DEFAULT 'accepted')
+RETURNS TABLE(
+    id UUID,
+    name TEXT,
+    profile_pic TEXT,
+    bio TEXT,
+    connected_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT
+        a.id,
+        a.name,
+        a.profile_pic,
+        a.bio,
+        GREATEST(c1.created_at, c2.created_at) as connected_at
+    FROM connections c1
+    JOIN connections c2 ON c1.connected_user_id = c2.user_id AND c1.user_id = c2.connected_user_id
+    JOIN accounts a ON a.id = c1.connected_user_id
+    WHERE c1.user_id = user_id 
+    AND c1.status = status_filter
+    AND c2.status = status_filter
+    ORDER BY connected_at DESC;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Add RLS policies for connections table
 ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
 
@@ -150,3 +177,4 @@ GRANT EXECUTE ON FUNCTION get_mutual_connections(UUID, UUID, INTEGER) TO authent
 GRANT EXECUTE ON FUNCTION are_users_connected(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_connection_status(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_user_connections(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_user_bidirectional_connections(UUID, TEXT) TO authenticated;

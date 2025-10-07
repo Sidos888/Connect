@@ -738,13 +738,13 @@ class SimpleChatService {
     }
   }
 
-  // Get user's connections (friends)
+  // Get user's connections (friends) - bidirectional
   async getUserConnections(userId: string): Promise<{ connections: any[]; error: Error | null }> {
     try {
       console.log('SimpleChatService: Getting user connections for:', userId);
       
       const { data, error } = await this.supabase
-        .rpc('get_user_connections', {
+        .rpc('get_user_bidirectional_connections', {
           user_id: userId,
           status_filter: 'accepted'
         });

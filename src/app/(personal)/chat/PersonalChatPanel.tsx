@@ -7,7 +7,7 @@ import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { useRouter } from "next/navigation";
-import UniversalProfileModal from "@/components/UniversalProfileModal";
+import InlineProfileView from "@/components/InlineProfileView";
 import GroupInfoModal from "@/components/chat/GroupInfoModal";
 
 interface PersonalChatPanelProps {
@@ -115,7 +115,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 setShowGroupInfo(true);
               }
             }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl hover:bg-gray-50 transition-colors cursor-pointer"
+            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 flex items-center gap-3 max-w-2xl hover:shadow-md hover:bg-white transition-all cursor-pointer"
           >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {displayConversation.avatarUrl ? (
@@ -230,18 +230,32 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       </div>
 
       {/* Profile Modals */}
-      {profileUserId && (
-        <UniversalProfileModal
-          isOpen={showUserProfile}
-          onClose={() => {
-            setShowUserProfile(false);
-            setProfileUserId(null);
-          }}
-          userId={profileUserId}
-          onStartChat={(chatId) => {
-            router.push(`/chat?chat=${chatId}`);
-          }}
-        />
+      {profileUserId && showUserProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
+            onClick={() => {
+              setShowUserProfile(false);
+              setProfileUserId(null);
+            }}
+          />
+          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+            <div className="flex flex-col h-full">
+              <InlineProfileView
+                userId={profileUserId}
+                entryPoint="chat"
+                onBack={() => {
+                  setShowUserProfile(false);
+                  setProfileUserId(null);
+                }}
+                onStartChat={(chatId) => {
+                  router.push(`/chat?chat=${chatId}`);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {conversation.id && (

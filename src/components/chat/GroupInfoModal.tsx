@@ -7,7 +7,7 @@ import { simpleChatService } from "@/lib/simpleChatService";
 import { connectionsService } from "@/lib/connectionsService";
 import Avatar from "@/components/Avatar";
 import { useRouter } from "next/navigation";
-import UniversalProfileModal from '../UniversalProfileModal';
+import InlineProfileView from '../InlineProfileView';
 
 interface GroupInfoModalProps {
   isOpen: boolean;
@@ -215,13 +215,11 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
               </button>
             </div>
           ) : showMemberProfile ? (
-            /* Member Profile View - Using UniversalProfileModal */
+            /* Member Profile View - Using InlineProfileView */
             <div className="w-full h-full">
-              <UniversalProfileModal
-                isOpen={true}
-                onClose={handleBackToGroup}
+              <InlineProfileView
                 userId={selectedMemberId || ''}
-                showInMenu={true}
+                entryPoint="chat"
                 onBack={handleBackToGroup}
               />
             </div>

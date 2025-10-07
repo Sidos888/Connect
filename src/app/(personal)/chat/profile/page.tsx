@@ -2,566 +2,74 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/lib/authContext";
-import { simpleChatService } from "@/lib/simpleChatService";
-import { ArrowLeft, MessageCircle, Share, Edit, UserPlus, Trash2, Settings, Images, Users, MoreVertical, Camera } from "lucide-react";
-import { ChevronLeftIcon } from "@/components/icons";
-import Avatar from "@/components/Avatar";
-import ConnectionsModal from "@/components/chat/ConnectionsModal";
-
-interface UserProfile {
-  id: string;
-  name: string;
-  profile_pic?: string;
-  bio?: string;
-  phone?: string;
-  email?: string;
-}
-
-interface GroupProfile {
-  id: string;
-  name: string;
-  avatarUrl?: string | null;
-  created_by: string;
-  participants: Array<{
-    id: string;
-    name: string;
-    profile_pic?: string;
-    connect_id?: string;
-  }>;
-  bio?: string;
-}
+import InlineProfileView from "@/components/InlineProfileView";
+import GroupInfoModal from "@/components/chat/GroupInfoModal";
 
 export default function ProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
   const chatId = searchParams.get('chatId');
-  const editMode = searchParams.get('edit') === 'true';
-  const { account } = useAuth();
   
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [groupProfile, setGroupProfile] = useState<GroupProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showDetailedView, setShowDetailedView] = useState(true);
-  const [showConnectionsModal, setShowConnectionsModal] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<string>('none');
-  const [mutualConnections, setMutualConnections] = useState<any[]>([]);
-  const [mutualCount, setMutualCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
-  
-  // Group editing state
-  const [editingGroup, setEditingGroup] = useState<GroupProfile | null>(null);
-  const [groupName, setGroupName] = useState('');
-  const [groupBio, setGroupBio] = useState('');
-  const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
 
   const isGroupProfile = !!chatId;
   const isUserProfile = !!userId;
 
-  console.log('Profile page loaded:', { userId, chatId, isUserProfile, isGroupProfile });
-
-  // Hide bottom nav on mobile profile page
+  // Show the appropriate modal based on the URL parameters
   useEffect(() => {
-    const hideBottomNav = () => {
-      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
-      if (bottomNav) {
-        (bottomNav as HTMLElement).style.display = 'none';
-        (bottomNav as HTMLElement).style.visibility = 'hidden';
-        (bottomNav as HTMLElement).style.opacity = '0';
-        (bottomNav as HTMLElement).style.transform = 'translateY(100%)';
-      }
-      document.body.style.paddingBottom = '0';
-    };
-
-    const showBottomNav = () => {
-      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
-      if (bottomNav) {
-        (bottomNav as HTMLElement).style.display = '';
-        (bottomNav as HTMLElement).style.visibility = '';
-        (bottomNav as HTMLElement).style.opacity = '';
-        (bottomNav as HTMLElement).style.transform = '';
-      }
-      document.body.style.paddingBottom = '';
-    };
-    
-    hideBottomNav();
-    
-    return () => {
-      showBottomNav();
-    };
-  }, []);
-
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!account?.id) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (isUserProfile && userId) {
-          // Load user profile
-          const { contacts } = await simpleChatService.getContacts(account.id);
-          const userData = contacts.find(contact => contact.id === userId);
-
-          if (userData) {
-            setUserProfile({
-              id: userData.id,
-              name: userData.name,
-              profile_pic: userData.profile_pic,
-              bio: userData.bio || 'Bio not available'
-            });
-
-            // Load connection status and mutual connections
-            try {
-              const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
-              setConnectionStatus(status);
-
-              const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
-              setMutualCount(count);
-
-              const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
-              setMutualConnections(connections);
-            } catch (connError) {
-              console.error('Profile page: Error loading connection data:', connError);
-              // Fallback: if we're viewing a contact, assume they're connected
-              setConnectionStatus('accepted');
-            }
-          } else {
-            setError('User profile not found');
-          }
-        } else if (isGroupProfile && chatId) {
-          // Load group profile
-          const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
-
-          if (chat && !chatError) {
-            const groupData = {
-              id: chat.id,
-              name: chat.name || 'Group Chat',
-              avatarUrl: (chat as any).avatarUrl,
-              created_by: (chat as any).created_by,
-              participants: chat.participants.map(p => ({
-                id: p.id,
-                name: p.name,
-                profile_pic: p.profile_pic,
-                connect_id: (p as any).connect_id,
-              })),
-              bio: (chat as any).bio || '',
-            };
-            
-            setGroupProfile(groupData);
-            
-            // If in edit mode, initialize editing state
-            if (editMode) {
-              setEditingGroup(groupData);
-              setGroupName(groupData.name);
-              setGroupBio(groupData.bio || '');
-              setGroupPhoto(groupData.avatarUrl || null);
-            }
-          } else {
-            setError(chatError?.message || 'Group chat not found');
-          }
-        }
-      } catch (err) {
-        console.error('Error loading profile:', err);
-        setError('Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, [userId, chatId, account?.id, isUserProfile, isGroupProfile]);
-
-  const handleStartChat = async () => {
-    if (!userId || !account?.id) return;
-
-    try {
-      // Check if direct chat already exists
-      const { chat: existingChat } = await simpleChatService.findExistingDirectChat(account.id, userId);
-      
-      if (existingChat) {
-        router.push(`/chat/individual?chat=${existingChat.id}`);
-      } else {
-        // Create new direct chat
-        const { chat } = await simpleChatService.createDirectChat(userId, account.id);
-        if (chat) {
-          router.push(`/chat/individual?chat=${chat.id}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error starting chat:', error);
+    if (isUserProfile && userId) {
+      setShowUserProfile(true);
+    } else if (isGroupProfile && chatId) {
+      setShowGroupInfo(true);
     }
-  };
+  }, [isUserProfile, isGroupProfile, userId, chatId]);
 
-  const handleParticipantClick = (participantId: string) => {
-    router.push(`/chat/profile?userId=${participantId}`);
+  const handleStartChat = async (chatId: string) => {
+    router.push(`/chat/individual?chat=${chatId}`);
   };
-
-  const handleViewProfile = () => {
-    console.log('View Profile clicked!');
-    console.log('Current showDetailedView:', showDetailedView);
-    console.log('UserProfile:', userProfile);
-    setShowDetailedView(true);
-  };
-
-  const handleBackToSummary = () => {
-    setShowDetailedView(false);
-  };
-
-  const handleConnectionsClick = () => {
-    setShowConnectionsModal(true);
-  };
-
-  const handleRemoveFriend = (removedUserId: string) => {
-    // Update connection status
-    setConnectionStatus('none');
-    setMutualConnections([]);
-    setMutualCount(0);
-  };
-
-  // Group editing handlers
-  const handleSaveGroupChanges = async () => {
-    if (!editingGroup || !chatId) return;
-    
-    try {
-      setSaving(true);
-      
-      // Update group in database
-      const { error } = await (simpleChatService as any).updateGroupProfile(chatId, {
-        name: groupName,
-        bio: groupBio,
-        photo: groupPhoto
-      });
-      
-      if (error) {
-        console.error('Error updating group:', error);
-        return;
-      }
-      
-      // Update local state
-      const updatedGroup = {
-        ...editingGroup,
-        name: groupName,
-        bio: groupBio,
-        avatarUrl: groupPhoto
-      };
-      
-      setGroupProfile(updatedGroup);
-      setEditingGroup(updatedGroup);
-      
-      // Navigate back to view mode
-      router.push(`/chat/profile?chatId=${chatId}`);
-      
-    } catch (err) {
-      console.error('Error saving group changes:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    router.push(`/chat/profile?chatId=${chatId}`);
-  };
-
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setGroupPhoto(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const isAdmin = account?.id === groupProfile?.created_by;
 
   return (
-    <div className="h-screen flex flex-col bg-white relative">
-      {/* Floating Action Buttons */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none" style={{ paddingTop: 'max(env(safe-area-inset-top), 20px)' }}>
-        <button
-          onClick={showDetailedView ? handleBackToSummary : () => router.back()}
-          className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
-          aria-label="Go back"
-        >
-          <ChevronLeftIcon className="h-5 w-5" />
-        </button>
-        {isUserProfile && userProfile && (
-          <button onClick={() => { /* handle menu for detailed view */ }} className="p-2 rounded-full hover:bg-gray-100 transition-colors pointer-events-auto">
-            <MoreVertical className="w-6 h-6 text-gray-600" />
-          </button>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingTop: 'max(env(safe-area-inset-top), 80px)' }}>
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+    <>
+      {/* User Profile Modal */}
+      {isUserProfile && userId && showUserProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
+            onClick={() => {
+              setShowUserProfile(false);
+              router.back();
+            }}
+          />
+          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+            <div className="flex flex-col h-full">
+              <InlineProfileView
+                userId={userId}
+                entryPoint="chat"
+                onBack={() => {
+                  setShowUserProfile(false);
+                  router.back();
+                }}
+                onStartChat={handleStartChat}
+              />
+            </div>
           </div>
-        ) : error || (!userProfile && !groupProfile) ? (
-          <div className="text-center text-gray-600">
-            <p>{error || 'Profile data not available.'}</p>
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors mt-4"
-            >
-              Go Back
-            </button>
-          </div>
-        ) : isUserProfile && userProfile ? (
-          showDetailedView ? (
-            /* Detailed Profile View */
-            <>
-              {/* Profile Header */}
-              <div className="text-center mb-8 px-6 pt-4">
-                <div className="relative inline-block mb-6">
-                  <Avatar
-                    src={userProfile.profile_pic}
-                    name={userProfile.name}
-                    size={140}
-                  />
-                </div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-3">{userProfile.name}</h3>
-                <p className="text-gray-600 text-lg">{userProfile.bio}</p>
-              </div>
+        </div>
+      )}
 
-              {/* Connection Status */}
-              <div 
-                className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 mx-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={handleConnectionsClick}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <Users className="w-5 h-5 text-black" />
-                    </div>
-                    <span className="text-black font-medium">
-                      {connectionStatus === 'accepted' ? 'Friends' : 
-                       connectionStatus === 'pending' ? 'Friend Request Sent' : 
-                       'Add Friend'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex border-b border-gray-200 mb-6 mx-6">
-                <button
-                  onClick={() => setActiveTab('friends')}
-                  className={`flex-1 py-3 text-center font-medium ${
-                    activeTab === 'friends'
-                      ? 'text-orange-500 border-b-2 border-orange-500'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Friends ({mutualConnections.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('following')}
-                  className={`flex-1 py-3 text-center font-medium ${
-                    activeTab === 'following'
-                      ? 'text-orange-500 border-b-2 border-orange-500'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Following (0)
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="px-6">
-                {activeTab === 'friends' && (
-                  <div className="space-y-3">
-                    {mutualConnections.length > 0 ? (
-                      mutualConnections.map((conn) => (
-                        <div key={conn.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
-                          <Avatar
-                            src={conn.profile_pic}
-                            name={conn.name}
-                            size={40}
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{conn.name}</p>
-                            <p className="text-sm text-gray-600">{conn.bio || 'No bio'}</p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-gray-600 py-4">No friends yet.</p>
-                    )}
-                  </div>
-                )}
-                {activeTab === 'following' && (
-                  <div className="space-y-3">
-                    <p className="text-center text-gray-600 py-4">Not following anyone yet.</p>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            /* Summary Profile View - Not used since we always show detailed view */
-            <></>
-          )
-        ) : isGroupProfile && groupProfile ? (
-          editMode ? (
-            /* Group Edit Mode */
-            <div className="px-6 py-4">
-              <div className="max-w-2xl mx-auto">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Group Profile</h2>
-                
-                {/* Group Photo */}
-                <div className="text-center mb-8">
-                  <div className="relative inline-block">
-                    <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto mb-4">
-                      {groupPhoto ? (
-                        <img
-                          src={groupPhoto}
-                          alt="Group photo"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Users className="w-12 h-12 text-gray-400" />
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                      id="group-photo-upload"
-                    />
-                    <label
-                      htmlFor="group-photo-upload"
-                      className="absolute bottom-0 right-0 w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors cursor-pointer"
-                    >
-                      <Camera className="w-5 h-5 text-white" />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Group Name */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Group Name
-                  </label>
-                  <input
-                    type="text"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                    placeholder="Enter group name"
-                  />
-                </div>
-
-                {/* Group Bio */}
-                <div className="mb-8">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Group Bio
-                  </label>
-                  <textarea
-                    value={groupBio}
-                    onChange={(e) => setGroupBio(e.target.value)}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none"
-                    placeholder="Enter group bio"
-                  />
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-4">
-                  <button
-                    onClick={handleCancelEdit}
-                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveGroupChanges}
-                    disabled={saving || !groupName.trim()}
-                    className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Group View Mode */
-          <>
-            {/* Group Profile Section */}
-            <div className="text-center mb-8">
-              <div className="relative inline-block mb-6">
-                <Avatar
-                  src={groupProfile.avatarUrl}
-                  name={groupProfile.name}
-                  size={140}
-                />
-                </div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-3">{groupProfile.name}</h3>
-                {groupProfile.bio && (
-                  <p className="text-gray-600 text-lg mb-4">{groupProfile.bio}</p>
-              )}
-            </div>
-
-            {/* Participants Section */}
-            <div className="mb-8">
-              <h4 className="text-xl font-semibold text-gray-900 mb-4">Participants ({groupProfile.participants.length})</h4>
-              <div className="space-y-4">
-                {groupProfile.participants.map((participant) => (
-                  <button
-                    key={participant.id}
-                    onClick={() => handleParticipantClick(participant.id)}
-                    className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors w-full text-left"
-                  >
-                    <Avatar
-                      src={participant.profile_pic}
-                      name={participant.name}
-                      size={50}
-                    />
-                    <div>
-                      <p className="font-medium text-gray-900 text-lg">{participant.name}</p>
-                      <p className="text-sm text-gray-500">@{participant.connect_id}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              {isAdmin && (
-                <button className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-medium text-lg mt-6 w-full justify-center shadow-lg">
-                  <UserPlus className="w-5 h-5" />
-                  Add Participants
-                </button>
-              )}
-            </div>
-
-            {/* Admin Actions */}
-            {isAdmin && (
-              <div className="border-t border-gray-100 pt-8">
-                <button className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium text-lg w-full justify-center shadow-lg">
-                  <Trash2 className="w-5 h-5" />
-                  Delete Group
-                </button>
-              </div>
-            )}
-          </>
-          )
-        ) : null}
-      </div>
-
-      {/* Connections Modal */}
-      {isUserProfile && userProfile && (
-        <ConnectionsModal
-          isOpen={showConnectionsModal}
-          onClose={() => setShowConnectionsModal(false)}
-          userId={userProfile.id}
-          onRemoveFriend={handleRemoveFriend}
+      {/* Group Info Modal */}
+      {isGroupProfile && chatId && (
+        <GroupInfoModal
+          isOpen={showGroupInfo}
+          onClose={() => {
+            setShowGroupInfo(false);
+            router.back();
+          }}
+          chatId={chatId}
         />
       )}
-    </div>
+    </>
   );
 }

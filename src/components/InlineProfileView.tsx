@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Share, Images, Settings, Users, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Share, Images, Settings, Users, ArrowLeft, X, MoreVertical, Trash2, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
@@ -11,6 +11,8 @@ interface InlineProfileViewProps {
   userId: string;
   onBack: () => void;
   onStartChat?: (chatId: string) => void;
+  onOpenConnections?: (userId: string) => void;
+  entryPoint?: 'chat' | 'connections' | 'menu'; // Context for different back behaviors
 }
 
 interface UserProfile {
@@ -25,23 +27,40 @@ interface UserProfile {
 export default function InlineProfileView({ 
   userId, 
   onBack,
-  onStartChat
+  onStartChat,
+  onOpenConnections,
+  entryPoint = 'connections'
 }: InlineProfileViewProps) {
   const { account } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
   const [mutualCount, setMutualCount] = useState(0);
+
+  // Reset profile when userId changes to ensure proper loading behavior
+  useEffect(() => {
+    setProfile(null);
+    setConnectionStatus('none');
+    setMutualConnections([]);
+    setMutualCount(0);
+    setLoading(false);
+    setError(null);
+  }, [userId]);
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!userId) return;
 
       try {
-        setLoading(true);
+        // Only show loading on initial load, not when navigating between modals
+        if (!profile) {
+          setLoading(true);
+        }
         setError(null);
 
         // Get user profile from contacts or accounts table
@@ -121,14 +140,42 @@ export default function InlineProfileView({
 
 
   const handleConnectionsClick = () => {
-    setShowConnectionsModal(true);
+    if (onOpenConnections) {
+      onOpenConnections(userId);
+    } else {
+      setShowConnectionsModal(true);
+    }
   };
 
-  const handleRemoveFriend = (removedUserId: string) => {
-    // Update connection status
-    setConnectionStatus('none');
-    setMutualConnections([]);
-    setMutualCount(0);
+  const handleRemoveFriend = async () => {
+    if (!account?.id || !userId) return;
+
+    try {
+      // Remove connection
+      const { success, error } = await simpleChatService.removeConnection(account.id, userId);
+      
+      if (success) {
+        // Find and hide any existing chat
+        const { chat: existingChat } = await simpleChatService.findExistingDirectChat(account.id, userId);
+        if (existingChat) {
+          await simpleChatService.hideChat(existingChat.id, account.id);
+        }
+
+        // Update UI
+        setConnectionStatus('none');
+        setMutualConnections([]);
+        setMutualCount(0);
+        setShowSettingsModal(false);
+        setShowRemoveConfirm(false);
+        
+        // Close the profile modal
+        onBack();
+      } else {
+        console.error('Error removing friend:', error);
+      }
+    } catch (error) {
+      console.error('Error in handleRemoveFriend:', error);
+    }
   };
 
   if (loading) {
@@ -156,31 +203,32 @@ export default function InlineProfileView({
   // Always show the detailed view (universal profile section)
   return (
     <div className="flex flex-col h-full">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+      {/* Floating Action Buttons */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
         <button
           onClick={onBack}
-          className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+          className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
-        <h2 className="text-lg font-semibold text-gray-900">Profile</h2>
-        <div className="w-16"></div> {/* Spacer for centering */}
+        <button className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto">
+          <MoreVertical className="w-6 h-6 text-gray-600" />
+        </button>
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '80px' }}>
         {/* Profile Header */}
-        <div className="text-center mb-6">
-          <div className="relative inline-block mb-4">
+        <div className="text-center mb-8">
+          <div className="relative inline-block mb-6">
             <Avatar
               src={profile.profile_pic}
               name={profile.name}
-              size={120}
+              size={140}
             />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">{profile.name}</h3>
-          <p className="text-gray-600 text-sm">{profile.bio}</p>
+          <h3 className="text-3xl font-bold text-gray-900 mb-3">{profile.name}</h3>
+          <p className="text-gray-600 text-lg">{profile.bio}</p>
         </div>
 
         {/* Action Buttons */}
@@ -197,22 +245,25 @@ export default function InlineProfileView({
 
           <button className="flex flex-col items-center space-y-2">
             <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-              <Users className="w-6 h-6 text-black" />
-            </div>
-            <span className="text-xs font-medium text-black">Invite</span>
-          </button>
-
-          <button className="flex flex-col items-center space-y-2">
-            <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
               <Share className="w-6 h-6 text-black" />
             </div>
             <span className="text-xs font-medium text-black">Share</span>
+          </button>
+
+          <button 
+            onClick={() => setShowSettingsModal(true)}
+            className="flex flex-col items-center space-y-2"
+          >
+            <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+              <Settings className="w-6 h-6 text-black" />
+            </div>
+            <span className="text-xs font-medium text-black">Settings</span>
           </button>
         </div>
 
         {/* Connection Status */}
         <div 
-          className="bg-white border border-gray-200 rounded-xl p-3 mb-4 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+          className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:shadow-md hover:bg-white transition-all min-h-[80px] flex flex-col justify-center"
           onClick={handleConnectionsClick}
         >
           <div className="flex items-center justify-between">
@@ -249,10 +300,10 @@ export default function InlineProfileView({
 
         {/* Content Sections */}
         <div className="space-y-3 mb-4">
-          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-lg p-3 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm text-sm">
+          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center">
             View Photos
           </button>
-          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-lg p-3 text-left font-medium hover:bg-gray-50 transition-colors shadow-sm text-sm">
+          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center">
             View Achievements
           </button>
         </div>
@@ -265,6 +316,79 @@ export default function InlineProfileView({
         userId={userId}
         onRemoveFriend={handleRemoveFriend}
       />
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
+            onClick={() => {
+              setShowSettingsModal(false);
+              setShowRemoveConfirm(false);
+            }}
+          />
+          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6">
+              <button
+                onClick={() => {
+                  setShowSettingsModal(false);
+                  setShowRemoveConfirm(false);
+                }}
+                className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
+              <div className="w-9"></div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 flex flex-col p-6">
+              {showRemoveConfirm ? (
+                <div className="flex-1 flex flex-col justify-center items-center">
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Trash2 className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Remove Friend</h3>
+                    <p className="text-gray-600 mb-8">
+                      Are you sure you want to remove {profile?.name} from your friends? This action cannot be undone.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowRemoveConfirm(false)}
+                        className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleRemoveFriend}
+                        className="flex-1 px-4 py-3 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-medium"
+                      >
+                        Remove Friend
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col justify-center">
+                  {connectionStatus === 'accepted' && (
+                    <button
+                      onClick={() => setShowRemoveConfirm(true)}
+                      className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-500" />
+                      <span className="font-medium">Remove Friend</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
