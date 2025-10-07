@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { chatService } from '@/lib/chatService';
 import MobileTitle from '@/components/MobileTitle';
-import { ArrowLeft, Check } from 'lucide-react';
+// No icons used on this page
 
 export default function CreateGroupPage() {
   const router = useRouter();
@@ -16,8 +16,10 @@ export default function CreateGroupPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Get participant IDs from URL params
-  const participantIds = searchParams.get('participants')?.split(',') || [];
+  // Get participant IDs from URL params (memoized to stabilize useEffect deps)
+  const participantIds = useMemo(() => {
+    return searchParams.get('participants')?.split(',') || [];
+  }, [searchParams]);
 
   useEffect(() => {
     if (!account?.id) {
@@ -63,9 +65,7 @@ export default function CreateGroupPage() {
     }
   };
 
-  const handleBack = () => {
-    router.back();
-  };
+  // Back handler not used currently
 
   if (!account?.id || participantIds.length === 0) {
     return null;

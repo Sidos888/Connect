@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Camera, Users } from "lucide-react";
+import Image from "next/image";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { getSupabaseClient } from "@/lib/supabaseClient";
@@ -15,10 +16,12 @@ export default function GroupSetupPage() {
   const [groupName, setGroupName] = useState("");
   const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedContacts, setSelectedContacts] = useState<any[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<Array<{ id: string; name: string; profile_pic?: string | null }>>([]);
 
   // Get selected contact IDs from URL params
-  const selectedContactIds = searchParams.get('contacts')?.split(',') || [];
+  const selectedContactIds = useMemo(() => {
+    return searchParams.get('contacts')?.split(',') || [];
+  }, [searchParams]);
 
   // Load contact details
   useEffect(() => {
@@ -137,9 +140,11 @@ export default function GroupSetupPage() {
             <div className="relative inline-block">
               <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mx-auto">
                 {groupPhoto ? (
-                  <img
+                  <Image
                     src={groupPhoto}
                     alt="Group photo"
+                    width={96}
+                    height={96}
                     className="w-full h-full object-cover"
                   />
                 ) : (

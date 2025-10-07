@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
@@ -13,8 +14,12 @@ export default function IndividualChatPage() {
   const chatId = searchParams.get('chat');
   const { account } = useAuth();
   const { sendMessage, markMessagesAsRead, getConversations } = useAppStore();
-  const [conversation, setConversation] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  type Participant = { id: string; name: string; profile_pic?: string | null };
+  type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean };
+  type ChatMessage = { id: string; text: string; sender_id: string };
+
+  const [conversation, setConversation] = useState<ConversationLite | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -24,7 +29,7 @@ export default function IndividualChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [startX, setStartX] = useState<number | null>(null);
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const hasMarkedAsRead = useRef(false);
 
   // Load conversation and messages
@@ -87,7 +92,7 @@ export default function IndividualChatPage() {
           setParticipants(chat.participants || []);
 
           // Convert to conversation format
-          const otherParticipant = chat.participants.find(p => p.id !== account.id);
+          const otherParticipant = chat.participants.find((p: Participant) => p.id !== account.id);
           const conversation = {
             id: chat.id,
             title: chat.type === 'direct' 
@@ -296,13 +301,12 @@ export default function IndividualChatPage() {
           >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {conversation.avatarUrl ? (
-                <img
+                <Image
                   src={conversation.avatarUrl}
                   alt={conversation.title}
+                  width={40}
+                  height={40}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    console.error('Profile card image failed to load:', conversation.avatarUrl, e);
-                  }}
                 />
               ) : (
                 <div className="text-gray-400 text-sm font-semibold">
@@ -398,12 +402,14 @@ export default function IndividualChatPage() {
                   {(() => {
                     // For group chats, show the individual sender's profile picture
                     if (conversation.isGroup) {
-                      const sender = participants.find((p: any) => p.id === message.sender_id);
+                      const sender = participants.find((p) => p.id === message.sender_id);
                       if (sender?.profile_pic) {
                         return (
-                          <img
+                          <Image
                             src={sender.profile_pic}
                             alt={sender.name}
+                            width={32}
+                            height={32}
                             className="w-full h-full object-cover"
                           />
                         );
@@ -418,9 +424,11 @@ export default function IndividualChatPage() {
                       // For direct messages, show the other participant's profile picture
                       if (conversation.avatarUrl) {
                         return (
-                          <img
+                          <Image
                             src={conversation.avatarUrl}
                             alt={conversation.title}
+                            width={32}
+                            height={32}
                             className="w-full h-full object-cover"
                           />
                         );
