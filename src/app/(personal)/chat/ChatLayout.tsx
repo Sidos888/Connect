@@ -6,7 +6,9 @@ import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
 import { useAppStore } from "@/lib/store";
 import PersonalChatPanel from "./PersonalChatPanel";
+import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
+// Removed unused showAddFriend
 import { useModal } from "@/lib/modalContext";
 import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
@@ -16,7 +18,7 @@ import { simpleChatService } from "@/lib/simpleChatService";
 export default function ChatLayout() {
   const { conversations, loadConversations, isHydrated } = useAppStore();
   const { account } = useAuth();
-  const { showAddFriend } = useModal();
+  useModal();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedChatId = searchParams.get("chat");
@@ -24,8 +26,10 @@ export default function ChatLayout() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [showNewMessageSelector, setShowNewMessageSelector] = useState(false);
   const [showGroupSetup, setShowGroupSetup] = useState(false);
-  const [selectedConversation, setSelectedConversation] = useState<any>(null);
-  const [selectedContactsForGroup, setSelectedContactsForGroup] = useState<any[]>([]);
+  type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean; unreadCount: number; messages: Array<{ text: string; createdAt?: string }> } | null;
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  type SelectedContact = { id: string; name: string; profile_pic?: string };
+  const [selectedContactsForGroup, setSelectedContactsForGroup] = useState<SelectedContact[]>([]);
 
   useEffect(() => {
     if (isHydrated && account?.id) {
@@ -115,7 +119,7 @@ export default function ChatLayout() {
         const { chat } = await simpleChatService.getChatById(selectedChatId);
         if (chat && account?.id) {
           // Convert SimpleChat to Conversation format
-          const conversation = {
+          const conversation: Conversation = {
             id: chat.id,
             title: chat.type === 'direct' 
               ? chat.participants.find(p => p.id !== account.id)?.name || 'Unknown'

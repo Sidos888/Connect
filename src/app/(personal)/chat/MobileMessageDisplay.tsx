@@ -2,6 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
@@ -13,7 +14,8 @@ interface MobileMessageDisplayProps {
 export default function MobileMessageDisplay({ conversation }: MobileMessageDisplayProps) {
   const { sendMessage, markAllRead } = useAppStore();
   const { account } = useAuth();
-  const [messages, setMessages] = useState<any[]>([]);
+  type ChatMessage = { id: string; text: string; sender_id: string };
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
   const hasMarkedAsRead = useRef(false);
@@ -74,9 +76,11 @@ export default function MobileMessageDisplay({ conversation }: MobileMessageDisp
               {!isMe && (
                 <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {conversation.avatarUrl ? (
-                    <img
+                    <Image
                       src={conversation.avatarUrl}
                       alt={conversation.title}
+                      width={32}
+                      height={32}
                       className="w-full h-full object-cover"
                     />
                   ) : (
