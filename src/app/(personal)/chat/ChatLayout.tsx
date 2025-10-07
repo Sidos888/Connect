@@ -357,9 +357,9 @@ export default function ChatLayout() {
             </div>
 
             {/* Desktop Layout - Keep existing */}
-            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-y-auto relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
               {/* Top Section - Chats Title */}
-              <div className="px-4 py-3 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20">
+              <div className="px-4 py-3 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20 sticky top-0">
                 <div className="flex items-center justify-between">
                        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
                   <button
@@ -418,7 +418,7 @@ export default function ChatLayout() {
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto min-h-0 bg-white mt-2">
+            <div className="flex-1 min-h-0 bg-white mt-2">
               {filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
                   <p className="text-gray-500 text-lg">
