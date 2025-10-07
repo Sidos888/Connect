@@ -390,7 +390,7 @@ export default function ChatLayout() {
               </div>
 
               {/* Filter Pills Section - Desktop */}
-              <div className="px-4 py-3 bg-white flex-shrink-0 mb-8">
+              <div className="px-4 py-3 bg-white flex-shrink-0 mb-3">
                 <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                 {categories.map((category) => (
                   <button
