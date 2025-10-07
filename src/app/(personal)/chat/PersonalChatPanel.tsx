@@ -115,7 +115,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 setShowGroupInfo(true);
               }
             }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex items-center gap-3 w-full max-w-3xl lg:max-w-4xl hover:shadow-md hover:bg-white transition-all cursor-pointer"
+            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex items-center gap-3 w-full hover:shadow-md hover:bg-white transition-all cursor-pointer"
           >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {displayConversation.avatarUrl ? (
