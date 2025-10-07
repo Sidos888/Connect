@@ -354,8 +354,8 @@ export default function MessagesPage() {
               </div>
             </div>
 
-            {/* Category Pills - Full width with tighter gap */}
-            <div className="mb-3">
+            {/* Category Pills - Full width with gap matching cards */}
+            <div className="mb-2">
               <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                 {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
                   <button
