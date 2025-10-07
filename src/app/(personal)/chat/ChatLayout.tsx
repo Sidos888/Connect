@@ -357,7 +357,7 @@ export default function ChatLayout() {
             </div>
 
             {/* Desktop Layout - Keep existing */}
-            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-y-auto relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-y-auto no-scrollbar relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
               {/* Top Section - Chats Title */}
               <div className="px-4 py-3 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20 sticky top-0">
                 <div className="flex items-center justify-between">
