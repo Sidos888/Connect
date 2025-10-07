@@ -402,8 +402,8 @@ export default function MessagesPage() {
                     }}
                     className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white ${
                       selectedChatId === conversation.id
-                        ? 'shadow-md'
-                        : 'shadow-sm hover:shadow-md'
+                        ? 'shadow-lg'
+                        : 'shadow-sm hover:shadow-lg'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
