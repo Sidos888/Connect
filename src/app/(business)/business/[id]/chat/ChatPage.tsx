@@ -149,7 +149,7 @@ export default function ChatPage() {
                 <div
                   key={conversation.id}
                   onClick={() => router.push(`/business/${businessId}/chat/${conversation.id}`)}
-                  className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98] lg:hover:scale-[1.02]"
+                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98] lg:hover:scale-[1.02]"
                 >
                   <div className="flex items-center space-x-3">
                     {/* Avatar */}

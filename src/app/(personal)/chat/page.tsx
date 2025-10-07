@@ -400,10 +400,10 @@ export default function MessagesPage() {
                       e.stopPropagation();
                       router.push(`/chat/individual?chat=${conversation.id}`);
                     }}
-                    className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
+                    className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white ${
                       selectedChatId === conversation.id
-                        ? 'bg-white border-[1.5px] border-gray-900 shadow-lg'
-                        : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
+                        ? 'shadow-md'
+                        : 'shadow-sm hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
