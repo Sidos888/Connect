@@ -92,10 +92,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   console.log('PersonalChatPanel - Display conversation avatarUrl:', displayConversation.avatarUrl);
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header */}
-      <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-200">
-        <div className="flex justify-center">
+        <div className="flex flex-col h-full bg-white">
+          {/* Header - match left column; place profile card inside aligned to bottom */}
+        <div className="flex-shrink-0 px-4 py-3 lg:p-6 bg-white border-b border-gray-200 h-[85px] lg:h-[85px]">
+        <div className="flex justify-center items-center h-full">
           {/* Profile Card */}
           <button 
             onClick={(e) => {
@@ -115,27 +115,44 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 setShowGroupInfo(true);
               }
             }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex items-center gap-3 w-full hover:shadow-md hover:bg-white transition-all cursor-pointer"
+            className={`bg-white rounded-2xl shadow-sm border border-gray-200 p-3 hover:shadow-md hover:bg-white transition-all cursor-pointer w-full lg:w-1/3 relative`}
           >
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-              {displayConversation.avatarUrl ? (
-                <img
-                  src={displayConversation.avatarUrl}
-                  alt={displayConversation.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    console.error('PersonalChatPanel image failed to load:', displayConversation.avatarUrl, e);
-                  }}
-                />
-              ) : (
-                <div className="text-gray-400 text-sm font-semibold">
-                  {displayConversation.title.charAt(0).toUpperCase()}
+            {displayConversation.isGroup && /^Me:\\s*/.test(displayConversation.title) ? (
+              <div className="w-full flex items-center justify-center">
+                <div className="font-semibold text-gray-900 text-base">
+                  {displayConversation.title.replace(/^Me:\s*/, '')}
                 </div>
-              )}
-            </div>
-            <div className="flex-1 text-left">
-              <div className="font-semibold text-gray-900 text-base">{displayConversation.title}</div>
-            </div>
+                <div className="absolute right-3 text-gray-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 w-full">
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {displayConversation.avatarUrl ? (
+                    <img
+                      src={displayConversation.avatarUrl}
+                      alt={displayConversation.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('PersonalChatPanel image failed to load:', displayConversation.avatarUrl, e);
+                      }}
+                    />
+                  ) : (
+                    <div className="text-gray-400 text-sm font-semibold">
+                      {displayConversation.title.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 text-center">
+                  <div className="font-semibold text-gray-900 text-base">{displayConversation.title}</div>
+                </div>
+                {/* Spacer to balance avatar width so name is visually centered */}
+                <div className="w-10" />
+              </div>
+            )}
           </button>
         </div>
       </div>
