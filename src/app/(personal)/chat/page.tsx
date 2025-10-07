@@ -339,7 +339,7 @@ export default function MessagesPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search"
-                  className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-white rounded-xl focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors shadow-sm"
                   style={{
                     fontSize: '16px', // Prevents zoom on iOS
                     WebkitAppearance: 'none',
@@ -361,11 +361,11 @@ export default function MessagesPage() {
                   <button
                     key={category.id}
                     onClick={() => setMobileActiveCategory(category.id)}
-                    className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
+                    className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-colors focus:outline-none shadow-sm ${
                       mobileActiveCategory === category.id
-                        ? 'bg-white border-gray-900 text-neutral-900'
-                        : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
-                    } shadow-sm`}
+                        ? 'bg-white text-neutral-900'
+                        : 'bg-white text-neutral-700'
+                    }`}
                   >
                     <span className="text-sm font-medium leading-none">{category.label}</span>
                     {category.count !== null && (

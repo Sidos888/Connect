@@ -292,11 +292,11 @@ export default function ChatLayout() {
                       <button
                         key={category.id}
                         onClick={() => setActiveCategory(category.id)}
-                        className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
+                        className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-colors focus:outline-none shadow-sm ${
                           activeCategory === category.id
-                            ? 'bg-white border-gray-900 text-neutral-900'
-                            : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
-                        } shadow-sm`}
+                            ? 'bg-white text-neutral-900'
+                            : 'bg-white text-neutral-700'
+                        }`}
                       >
                         <span className="text-sm font-medium leading-none">{category.label}</span>
                         {category.count !== null && (
@@ -432,10 +432,10 @@ export default function ChatLayout() {
                     <div
                       key={conversation.id}
                       onClick={(e) => handleSelectChat(conversation.id, e)}
-                      className={`bg-white rounded-xl cursor-pointer hover:shadow-md w-full ${
+                      className={`bg-white rounded-xl cursor-pointer w-full transition-all ${
                         selectedChatId === conversation.id 
-                          ? 'border-[1.5px] border-gray-900 shadow-sm' 
-                          : 'border-[1.5px] border-gray-300 shadow-sm hover:border-gray-400'
+                          ? 'shadow-md' 
+                          : 'shadow-sm hover:shadow-md'
                       }`}
                     >
                       <div className="p-4">
