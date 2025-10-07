@@ -332,7 +332,7 @@ export default function MessagesPage() {
             }}
           >
             {/* Search Bar - Full width */}
-            <div className="mb-2">
+            <div className="mb-1">
               <div className="relative">
                 <input
                   type="text"
@@ -357,6 +357,7 @@ export default function MessagesPage() {
             {/* Category Pills - Full width with gap matching cards */}
             <div className="mb-2">
               <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
+                
                 {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
                   <button
                     key={category.id}
