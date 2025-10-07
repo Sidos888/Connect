@@ -371,8 +371,8 @@ export default function ChatLayout() {
                 </div>
               </div>
 
-              {/* Search Section - Desktop (double gap above, half gap below) */}
-              <div className="px-4 pt-4 pb-2 lg:pt-6 lg:pb-2 bg-white flex-shrink-0 relative z-10 mb-2">
+              {/* Search Section - Desktop (double gap above, quarter gap below) */}
+              <div className="px-4 pt-4 pb-1 lg:pt-6 lg:pb-1 bg-white flex-shrink-0 relative z-10 mb-1">
                 <div className="relative">
                   <input
                     type="text"
