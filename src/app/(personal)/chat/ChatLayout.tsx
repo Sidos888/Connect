@@ -432,10 +432,10 @@ export default function ChatLayout() {
                     <div
                       key={conversation.id}
                       onClick={(e) => handleSelectChat(conversation.id, e)}
-                      className={`bg-white rounded-xl cursor-pointer w-full transition-all ${
+                      className={`bg-white rounded-xl cursor-pointer w-full transition-all border border-gray-200 ${
                         selectedChatId === conversation.id 
-                          ? 'shadow-lg' 
-                          : 'shadow-sm hover:shadow-lg'
+                          ? 'shadow-md' 
+                          : 'shadow-sm hover:shadow-md'
                       }`}
                     >
                       <div className="p-4">
