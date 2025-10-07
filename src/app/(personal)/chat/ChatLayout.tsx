@@ -243,19 +243,13 @@ export default function ChatLayout() {
               {/* Mobile Title - Same as My Life */}
               <div 
                 className="fixed top-0 left-0 right-0 z-50"
-                style={{
-                  zIndex: 60,
-                  backgroundColor: 'white'
-                }}
+                style={{ zIndex: 60, backgroundColor: 'white' }}
               >
                 <div className="pt-safe-top px-4 pb-2 pt-8 bg-white h-[96px] flex items-end">
                   <div className="flex items-center justify-between w-full h-full">
                     <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
                     <div className="flex items-center justify-center h-full min-w-[40px] relative z-10">
-                      <button
-                        onClick={handleNewMessageClick}
-                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                      >
+                      <button onClick={handleNewMessageClick} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <Plus className="w-5 h-5 text-gray-600" />
                       </button>
                     </div>
@@ -269,13 +263,7 @@ export default function ChatLayout() {
                 <div className="mb-4 lg:mb-8">
                   <div className="max-w-lg mx-auto lg:max-w-xl">
                     <div className="relative">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search"
-                        className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
-                      />
+                      <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search" className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors" />
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -287,26 +275,12 @@ export default function ChatLayout() {
 
                 {/* Category Pills */}
                 <div className="mb-4">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                     {categories.map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => setActiveCategory(category.id)}
-                        className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-colors focus:outline-none shadow-sm ${
-                          activeCategory === category.id
-                            ? 'bg-white text-neutral-900'
-                            : 'bg-white text-neutral-700'
-                        }`}
-                      >
+                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-colors focus:outline-none shadow-sm ${activeCategory === category.id ? 'bg-white text-neutral-900' : 'bg-white text-neutral-700'}`}>
                         <span className="text-sm font-medium leading-none">{category.label}</span>
                         {category.count !== null && (
-                          <span className={`ml-2 text-xs leading-none ${
-                            activeCategory === category.id 
-                              ? 'text-neutral-700' 
-                              : 'text-neutral-500'
-                          }`}>
-                            {category.count}
-                          </span>
+                          <span className={`ml-2 text-xs leading-none ${activeCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
                         )}
                       </button>
                     ))}
@@ -316,38 +290,18 @@ export default function ChatLayout() {
                 {/* Chat List */}
                 <div className="space-y-2">
                   {filteredConversations.map((conversation) => (
-                    <div
-                      key={conversation.id}
-                      onClick={() => handleSelectChat(conversation.id)}
-                      className={`p-4 rounded-xl cursor-pointer transition-colors ${
-                        selectedChatId === conversation.id
-                          ? 'bg-gray-100 border-[1.5px] border-gray-900'
-                          : 'bg-white border border-gray-200 hover:bg-gray-50'
-                      }`}
-                    >
+                    <div key={conversation.id} onClick={() => handleSelectChat(conversation.id)} className={`p-4 rounded-xl cursor-pointer transition-colors ${selectedChatId === conversation.id ? 'bg-gray-100 border-[1.5px] border-gray-900' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}>
                       <div className="flex items-center space-x-3">
-                        <Avatar
-                          src={conversation.avatarUrl}
-                          name={conversation.title}
-                          size={48}
-                        />
+                        <Avatar src={conversation.avatarUrl} name={conversation.title} size={48} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-gray-900 truncate">
-                              {conversation.title}
-                            </h3>
-                            <span className="text-xs text-gray-500">
-                              {getLastMessageTime(conversation)}
-                            </span>
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.title}</h3>
+                            <span className="text-xs text-gray-500">{getLastMessageTime(conversation)}</span>
                           </div>
-                          <p className="text-sm text-gray-500 truncate mt-1">
-                            {getLastMessage(conversation) || 'No messages yet'}
-                          </p>
+                          <p className="text-sm text-gray-500 truncate mt-1">{getLastMessage(conversation) || 'No messages yet'}</p>
                         </div>
                         {conversation.unreadCount > 0 && (
-                          <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {conversation.unreadCount}
-                          </div>
+                          <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{conversation.unreadCount}</div>
                         )}
                       </div>
                     </div>
@@ -357,137 +311,93 @@ export default function ChatLayout() {
             </div>
 
             {/* Desktop Layout - Keep existing */}
-            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-y-auto no-scrollbar relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
               {/* Top Section - Chats Title */}
               <div className="px-4 py-3 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20 sticky top-0">
                 <div className="flex items-center justify-between">
-                       <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
-                  <button
-                    onClick={handleNewMessageClick}
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  >
+                  <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
+                  <button onClick={handleNewMessageClick} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
                     <Plus className="w-5 h-5 text-gray-600" />
                   </button>
                 </div>
               </div>
 
-              {/* Search Section - Desktop (double gap above, quarter gap below) */}
-              <div className="px-4 pt-4 pb-1 lg:pt-6 lg:pb-1 bg-white flex-shrink-0 relative z-10 mb-1">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search"
-                    className="w-full pl-10 pr-4 py-2 bg-white border-[1.5px] border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+              {/* Scrollable body: search + pills + conversations */}
+              <div className="flex-1 overflow-y-auto no-scrollbar">
+                {/* Search Section - Desktop (double gap above, quarter gap below) */}
+                <div className="px-4 pt-4 pb-1 lg:pt-6 lg:pb-1 bg-white relative z-10 mb-1">
+                  <div className="relative">
+                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search" className="w-full pl-10 pr-4 py-2 bg-white border-[1.5px] border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors" />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Filter Pills Section - Desktop */}
-              <div className="px-4 py-3 bg-white flex-shrink-0 mb-1">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setActiveCategory(category.id)}
-                    className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${
-                      activeCategory === category.id
-                        ? 'bg-white border-gray-900 text-neutral-900'
-                        : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'
-                    } shadow-sm`}
-                  >
-                    <span className="text-sm font-medium leading-none">{category.label}</span>
-                    {category.count !== null && (
-                      <span className={`ml-2 text-xs leading-none ${
-                        activeCategory === category.id 
-                          ? 'text-neutral-700' 
-                          : 'text-neutral-500'
-                      }`}>
-                        {category.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Conversations List */}
-            <div className="flex-1 min-h-0 bg-white mt-2">
-              {filteredConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
-                  <p className="text-gray-500 text-lg">
-                    {account?.id ? "No chats yet" : "Please log in to see your chats"}
-                  </p>
-                  <BearEmoji size="4xl" />
+                {/* Filter Pills Section - Desktop */}
+                <div className="px-4 py-3 bg-white mb-1">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
+                    {categories.map((category) => (
+                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${activeCategory === category.id ? 'bg-white border-gray-900 text-neutral-900' : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'} shadow-sm`}>
+                        <span className="text-sm font-medium leading-none">{category.label}</span>
+                        {category.count !== null && (
+                          <span className={`ml-2 text-xs leading-none ${activeCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="p-4 space-y-3">
-                  {filteredConversations.map((conversation) => (
-                    <div
-                      key={conversation.id}
-                      onClick={(e) => handleSelectChat(conversation.id, e)}
-                      className={`bg-white rounded-xl cursor-pointer w-full transition-all border border-gray-200 ${
-                        selectedChatId === conversation.id 
-                          ? 'shadow-md' 
-                          : 'shadow-sm hover:shadow-md'
-                      }`}
-                    >
-                      <div className="p-4">
-                        <div className="flex items-center gap-3">
-                          {/* Avatar */}
-                          <div className="relative flex-shrink-0">
-                            <Avatar 
-                              src={conversation.avatarUrl ?? undefined} 
-                              name={conversation.title} 
-                              size={48}
-                            />
-                            {conversation.unreadCount > 0 && (
-                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                                <span className="text-xs text-white font-medium">
-                                  {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
-                                </span>
-                              </div>
-                            )}
-                          </div>
 
-                          {/* Conversation Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-semibold text-gray-900 truncate">
-                                  {conversation.title}
-                                </h3>
-                                {conversation.isGroup && (
-                                  <div className="flex items-center justify-center w-4 h-4 bg-gray-100 rounded-full">
-                                    <svg className="w-2.5 h-2.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
+                {/* Conversations List */}
+                <div className="bg-white mt-2">
+                  {filteredConversations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
+                      <p className="text-gray-500 text-lg">{account?.id ? "No chats yet" : "Please log in to see your chats"}</p>
+                      <BearEmoji size="4xl" />
+                    </div>
+                  ) : (
+                    <div className="p-4 space-y-3">
+                      {filteredConversations.map((conversation) => (
+                        <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className={`bg-white rounded-xl cursor-pointer w-full transition-all border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-md' : 'shadow-sm hover:shadow-md'}`}>
+                          <div className="p-4">
+                            <div className="flex items-center gap-3">
+                              {/* Avatar */}
+                              <div className="relative flex-shrink-0">
+                                <Avatar src={conversation.avatarUrl ?? undefined} name={conversation.title} size={48} />
+                                {conversation.unreadCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                                    <span className="text-xs text-white font-medium">{conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}</span>
                                   </div>
                                 )}
                               </div>
-                              <span className="text-xs text-gray-500 flex-shrink-0">
-                                {getLastMessageTime(conversation)}
-                              </span>
+
+                              {/* Conversation Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.title}</h3>
+                                    {conversation.isGroup && (
+                                      <div className="flex items-center justify-center w-4 h-4 bg-gray-100 rounded-full">
+                                        <svg className="w-2.5 h-2.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-500 flex-shrink-0">{getLastMessageTime(conversation)}</span>
+                                </div>
+                                <p className={`text-xs truncate leading-relaxed ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{getLastMessage(conversation)}</p>
+                              </div>
                             </div>
-                            <p className={`text-xs truncate leading-relaxed ${
-                              conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'
-                            }`}>
-                              {getLastMessage(conversation)}
-                            </p>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
             </div>
           </>
         )}
