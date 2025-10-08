@@ -65,8 +65,8 @@ class SimpleChatService {
               id,
               user1_id,
               user2_id,
-              user1:user1_id(id, name, profile_pic, connect_id, bio),
-              user2:user2_id(id, name, profile_pic, connect_id, bio)
+              user1:user1_id(id, name, profile_pic, connect_id, bio, dob),
+              user2:user2_id(id, name, profile_pic, connect_id, bio, dob)
             `)
             .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
             .eq('status', 'accepted');
@@ -90,6 +90,7 @@ class SimpleChatService {
             profile_pic: connection.user2.profile_pic,
             connect_id: connection.user2.connect_id,
             bio: connection.user2.bio,
+            dob: connection.user2.dob,
             is_blocked: false
           });
         } else if (connection.user2_id === userId && connection.user1) {
@@ -100,6 +101,7 @@ class SimpleChatService {
             profile_pic: connection.user1.profile_pic,
             connect_id: connection.user1.connect_id,
             bio: connection.user1.bio,
+            dob: connection.user1.dob,
             is_blocked: false
           });
         }

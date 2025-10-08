@@ -75,7 +75,8 @@ export default function InlineProfileView({
           id: account?.id,
           name: account?.name || 'You',
           profile_pic: account?.profile_pic,
-          bio: account?.bio
+          bio: account?.bio,
+          dob: account?.dob
         } as any : null);
 
         if (userProfile) {
@@ -83,7 +84,8 @@ export default function InlineProfileView({
             id: userProfile.id,
             name: userProfile.name,
             profile_pic: userProfile.profile_pic,
-            bio: userProfile.bio || 'Bio not available'
+            bio: userProfile.bio || 'Bio not available',
+            dob: userProfile.dob
           });
 
           // Load connections data
@@ -331,7 +333,7 @@ export default function InlineProfileView({
         <div className="space-y-3 mb-4">
           <button 
             onClick={() => setCurrentView('about')}
-            className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center"
+            className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-center font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center justify-center"
           >
             About {formatNameForDisplay(profile.name)}
           </button>
