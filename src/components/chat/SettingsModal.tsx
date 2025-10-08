@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
+import { connectionsService } from '@/lib/connectionsService';
+import { formatNameForDisplay } from '@/lib/utils';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,7 +40,10 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
         setError(null);
 
         // Load user profile
-        const { data: userProfile, error: profileError } = await simpleChatService.getSupabaseClient()
+        const supabase = simpleChatService.getSupabaseClient();
+        if (!supabase) throw new Error('Supabase client not available');
+        
+        const { data: userProfile, error: profileError } = await supabase
           .from('accounts')
           .select('*')
           .eq('id', userId)
@@ -67,21 +72,35 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
     if (!account?.id || !userId) return;
 
     try {
-      // Remove connection
-      const { success, error } = await simpleChatService.removeConnection(account.id, userId);
+      console.log('Removing friend connection between', account.id, 'and', userId);
       
-      if (success) {
-        // Find and hide any existing chat
-        const { chat: existingChat } = await simpleChatService.findExistingDirectChat(account.id, userId);
-        if (existingChat) {
-          await simpleChatService.hideChat(existingChat.id, account.id);
-        }
-
-        // Close the modal
-        onClose();
-      } else {
-        console.error('Error removing friend:', error);
+      // Remove the friend connection from the connections table
+      const { error: removeError } = await connectionsService.removeFriend(account.id, userId);
+      
+      if (removeError) {
+        console.error('Error removing friend connection:', removeError);
+        return;
       }
+
+      // Find and hide any existing chat
+      const { chat: existingChat } = await simpleChatService.findExistingDirectChat(account.id, userId);
+      if (existingChat) {
+        console.log('Hiding existing chat:', existingChat.id);
+        const { success: hideSuccess, error: hideError } = await simpleChatService.hideChat(existingChat.id, account.id);
+        
+        if (!hideSuccess) {
+          console.error('Error hiding chat:', hideError);
+        }
+      }
+
+      console.log('Friend removed successfully');
+      
+      // Close the modal
+      onClose();
+      
+      // Optionally refresh the page to update the UI
+      window.location.reload();
+      
     } catch (error) {
       console.error('Error in handleRemoveFriend:', error);
     }
@@ -109,7 +128,7 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
             </span>
           </button>
           <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>
-            {currentView === 'settings' ? 'Settings' : 'Are you sure you want to unfriend'}
+            {currentView === 'settings' ? 'Settings' : 'Are you sure you want to unfriend?'}
           </h2>
           <div className="w-9"></div>
         </div>
@@ -124,8 +143,8 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
             <div className="flex-1 flex flex-col justify-center items-center px-6">
               {/* Profile Card - Centered */}
               <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 max-w-sm w-full">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mb-3">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
                     {profile?.profile_pic ? (
                       <img 
                         src={profile.profile_pic} 
@@ -138,9 +157,11 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
                       </span>
                     )}
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {profile?.name || userName}
-                  </h3>
+                  <div className="flex-1 flex justify-center items-center">
+                    <h3 className="text-lg font-medium text-gray-900 text-center w-full">
+                      {formatNameForDisplay(profile?.name || userName || '')}
+                    </h3>
+                  </div>
                 </div>
               </div>
               

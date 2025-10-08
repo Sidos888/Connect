@@ -7,6 +7,7 @@ import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import InlineProfileView from '@/components/InlineProfileView';
 import ConnectionsModal from '@/components/chat/ConnectionsModal';
+import SettingsModal from '@/components/chat/SettingsModal';
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -1286,6 +1287,7 @@ export default function ProfileMenu() {
   const [showCenteredFriendProfile, setShowCenteredFriendProfile] = useState(false);
   const [showCenteredConnectionsModal, setShowCenteredConnectionsModal] = useState(false);
   const [connectionsModalUserId, setConnectionsModalUserId] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -2362,6 +2364,9 @@ export default function ProfileMenu() {
                   onStartChat={(chatId) => {
                     router.push(`/chat/individual?chat=${chatId}`);
                   }}
+                  onSettingsClick={() => {
+                    setShowSettingsModal(true);
+                  }}
                   onOpenConnections={handleOpenConnections}
                 />
               </div>
@@ -2394,6 +2399,20 @@ export default function ProfileMenu() {
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
         />
+
+        {/* Settings Modal */}
+        {selectedFriend && (
+          <SettingsModal
+            isOpen={showSettingsModal}
+            onClose={() => {
+              setShowSettingsModal(false);
+            }}
+            onBack={() => {
+              setShowSettingsModal(false);
+            }}
+            userId={selectedFriend.id}
+          />
+        )}
 
       </div>
     </>

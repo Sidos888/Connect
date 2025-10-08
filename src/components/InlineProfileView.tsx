@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
 import ConnectionsModal from './chat/ConnectionsModal';
+import { formatNameForDisplay } from '@/lib/utils';
 
 interface InlineProfileViewProps {
   userId: string;
@@ -229,7 +230,7 @@ export default function InlineProfileView({
               size={140}
             />
           </div>
-          <h3 className="text-3xl font-bold text-gray-900 mb-3">{profile.name}</h3>
+          <h3 className="text-3xl font-bold text-gray-900 mb-3">{formatNameForDisplay(profile.name)}</h3>
           <p className="text-gray-600 text-lg">{profile.bio}</p>
         </div>
 

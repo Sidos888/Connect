@@ -6,6 +6,7 @@ import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import { formatNameForDisplay } from "@/lib/utils";
 import * as React from "react";
 
 export default function CreateBusinessPage() {
@@ -34,7 +35,7 @@ export default function CreateBusinessPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const biz = addBusiness({ name, bio, logoUrl: logoUrl ?? undefined });
+    const biz = addBusiness({ name: formatNameForDisplay(name), bio, logoUrl: logoUrl ?? undefined });
     // TODO: replace with Supabase org insert
     router.replace(`/business/${biz.id}/menu`);
   }

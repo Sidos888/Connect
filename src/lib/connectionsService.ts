@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './supabaseClient';
+import { formatNameForDisplay } from './utils';
 
 export interface User {
   id: string;
@@ -111,8 +112,14 @@ export class ConnectionsService {
         }
       }
 
-      console.log('🔍 ConnectionsService: Final search results:', filteredUsers.length, 'users');
-      return { users: filteredUsers, error: null };
+      // Format names for display
+      const formattedUsers = filteredUsers.map(user => ({
+        ...user,
+        name: formatNameForDisplay(user.name)
+      }));
+
+      console.log('🔍 ConnectionsService: Final search results:', formattedUsers.length, 'users');
+      return { users: formattedUsers, error: null };
     } catch (error) {
       console.error('🔍 ConnectionsService: Error in searchUsers:', error);
       return { users: [], error: error as Error };
@@ -196,8 +203,14 @@ export class ConnectionsService {
         }
       }
 
-      console.log('🔍 ConnectionsService: Successfully got suggested friends:', filteredUsers.length, 'users');
-      return { users: filteredUsers, error: null };
+      // Format names for display
+      const formattedUsers = filteredUsers.map(user => ({
+        ...user,
+        name: formatNameForDisplay(user.name)
+      }));
+
+      console.log('🔍 ConnectionsService: Successfully got suggested friends:', formattedUsers.length, 'users');
+      return { users: formattedUsers, error: null };
     } catch (error) {
       console.error('🔍 ConnectionsService: Error in getSuggestedFriends:', error);
       return { users: [], error: error as Error };

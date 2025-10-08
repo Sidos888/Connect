@@ -93,15 +93,25 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     const cleanValue = value.replace(/^\+61\s*/, '').replace(/\s/g, '');
     // Remove all non-digits
     const digits = cleanValue.replace(/[^\d]/g, '');
-    // Allow up to 10 digits (for 0466310826 format) or 9 digits (for 466310826 format)
-    const limitedDigits = digits.slice(0, 10);
+    // Smart digit limiting: 10 digits if starts with 0, 9 digits if doesn't start with 0
+    const maxDigits = digits.startsWith('0') ? 10 : 9;
+    const limitedDigits = digits.slice(0, maxDigits);
     console.log('LoginModal: Phone input change:', { value, cleanValue, digits, limitedDigits, length: limitedDigits.length });
     setPhoneNumber(limitedDigits);
   };
 
-  // Format phone number with 3-3-3 spacing for display
+  // Format phone number with smart spacing for display
   const formatPhoneNumber = (phone: string) => {
     if (phone.length <= 3) return phone;
+    
+    // If starts with 0, use 4-3-3 spacing (0466 310 826)
+    if (phone.startsWith('0')) {
+      if (phone.length <= 4) return phone;
+      if (phone.length <= 7) return `${phone.slice(0, 4)} ${phone.slice(4)}`;
+      return `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`;
+    }
+    
+    // If doesn't start with 0, use 3-3-3 spacing (466 310 826)
     if (phone.length <= 6) return `${phone.slice(0, 3)} ${phone.slice(3)}`;
     return `${phone.slice(0, 3)} ${phone.slice(3, 6)} ${phone.slice(6)}`;
   };

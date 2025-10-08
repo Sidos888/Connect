@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './supabaseClient';
+import { formatNameForDisplay } from './utils';
 
 export interface SimpleChat {
   id: string;
@@ -173,7 +174,7 @@ class SimpleChatService {
         type ParticipantRow = { accounts: { id: string; name: string; profile_pic?: string | null } };
         const participants = (participantsData || []).map((p: ParticipantRow) => ({
           id: p.accounts.id,
-          name: p.accounts.name,
+          name: formatNameForDisplay(p.accounts.name),
           profile_pic: p.accounts.profile_pic || undefined
         }));
 
@@ -416,7 +417,7 @@ class SimpleChatService {
       type ParticipantRow2 = { accounts: { id: string; name: string; profile_pic?: string | null } };
       const participants = (participantsData || []).map((p: ParticipantRow2) => ({
         id: p.accounts.id,
-        name: p.accounts.name,
+        name: formatNameForDisplay(p.accounts.name),
         profile_pic: p.accounts.profile_pic || undefined
       }));
 
@@ -482,7 +483,7 @@ class SimpleChatService {
       type ParticipantRow3 = { accounts: { id: string; name: string; profile_pic?: string | null } };
       const participants = (participantsData || []).map((p: ParticipantRow3) => ({
         id: p.accounts.id,
-        name: p.accounts.name,
+        name: formatNameForDisplay(p.accounts.name),
         profile_pic: p.accounts.profile_pic || undefined
       }));
 

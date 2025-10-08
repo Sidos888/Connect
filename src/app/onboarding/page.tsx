@@ -6,6 +6,7 @@ import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import { formatNameForDisplay } from "@/lib/utils";
 import * as React from "react";
 
 export default function OnboardingPage() {
@@ -42,7 +43,7 @@ export default function OnboardingPage() {
     try {
       setPersonalProfile({ 
         id: 'temp-id', 
-        name, 
+        name: formatNameForDisplay(name), 
         bio, 
         avatarUrl, 
         email: '', 

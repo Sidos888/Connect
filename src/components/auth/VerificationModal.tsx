@@ -30,6 +30,22 @@ export default function VerificationModal({
   verificationSuccess = false,
   accountRecognized = false
 }: VerificationModalProps) {
+  
+  // Format phone number with smart spacing for display
+  const formatPhoneNumber = (phone: string) => {
+    if (phone.length <= 3) return phone;
+    
+    // If starts with 0, use 4-3-3 spacing (0466 310 826)
+    if (phone.startsWith('0')) {
+      if (phone.length <= 4) return phone;
+      if (phone.length <= 7) return `${phone.slice(0, 4)} ${phone.slice(4)}`;
+      return `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`;
+    }
+    
+    // If doesn't start with 0, use 3-3-3 spacing (466 310 826)
+    if (phone.length <= 6) return `${phone.slice(0, 3)} ${phone.slice(3)}`;
+    return `${phone.slice(0, 3)} ${phone.slice(3, 6)} ${phone.slice(6)}`;
+  };
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -300,7 +316,7 @@ export default function VerificationModal({
               <>
                 <p className="text-sm text-gray-600 mb-1">Code sent to</p>
                 <p className="text-sm text-gray-900 font-medium">
-                  {verificationMethod === 'phone' ? `+61 ${phoneOrEmail.slice(0, 3)} ${phoneOrEmail.slice(3, 6)} ${phoneOrEmail.slice(6, 9)}` : phoneOrEmail}
+                  {verificationMethod === 'phone' ? `+61 ${formatPhoneNumber(phoneOrEmail)}` : phoneOrEmail}
                 </p>
               </>
             )}

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { getSupabaseClient, clearInvalidSession } from './supabaseClient';
+import { formatNameForDisplay } from './utils';
 
 // Account interface (our true user profile)
 interface Account {
@@ -271,7 +272,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (!emailLinkErr && emailLink?.accounts) {
             console.log('✅ NewAuthContext: Account found via email identity');
-            setAccount(emailLink.accounts as any as Account);
+            const accountData = emailLink.accounts as any as Account;
+            accountData.name = formatNameForDisplay(accountData.name);
+            setAccount(accountData);
             return;
           }
         } catch (emailError) {
@@ -294,7 +297,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
         if (!phoneLinkErr && phoneLink?.accounts) {
           console.log('✅ NewAuthContext: Account found via phone identity');
-          setAccount(phoneLink.accounts as any as Account);
+          const accountData = phoneLink.accounts as any as Account;
+          accountData.name = formatNameForDisplay(accountData.name);
+          setAccount(accountData);
           return;
         }
         console.log('⚠️ NewAuthContext: No phone identity mapping:', phoneLinkErr?.message);
@@ -312,7 +317,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
         if (!identityError && identityData?.accounts) {
           console.log('✅ NewAuthContext: Account found via auth_user_id mapping');
-          setAccount(identityData.accounts as any as Account);
+          const accountData = identityData.accounts as any as Account;
+          accountData.name = formatNameForDisplay(accountData.name);
+          setAccount(accountData);
           return;
         }
       } catch (identityError) {
@@ -758,7 +765,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (account) {
         const profileData = {
           id: account.id,
-          name: account.name,
+          name: formatNameForDisplay(account.name),
           bio: account.bio,
           avatarUrl: account.profile_pic, // Map profile_pic to avatarUrl for compatibility
           connect_id: account.connect_id,
