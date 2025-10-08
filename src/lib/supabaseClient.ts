@@ -77,6 +77,29 @@ export function getSupabaseClient(): SupabaseClient | null {
       console.log('🔐 Auth event:', event);
     }
   });
+
+  // Watchdog: detect invalid/missing refresh token and self-heal by clearing session
+  const checkAndRecoverSession = async () => {
+    try {
+      const { data, error } = await client!.auth.getSession();
+      if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
+        console.warn('🧹 Supabase: Clearing invalid refresh token state');
+        await clearInvalidSession();
+      }
+      return data?.session || null;
+    } catch (err) {
+      console.error('🔧 Supabase session watchdog error:', err);
+      return null;
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', () => {
+      checkAndRecoverSession();
+    });
+    // Initial check
+    checkAndRecoverSession();
+  }
   console.log('Supabase client created successfully with mobile-compatible persistence');
   return client;
 }
