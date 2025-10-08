@@ -274,7 +274,7 @@ export default function InlineProfileView({
         <button 
           type="button"
           aria-label="Open my connections"
-          className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm hover:shadow-md hover:bg-white transition-all min-h-[80px] flex flex-col justify-center text-left"
+          className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow min-h-[80px] flex flex-col justify-center text-left"
           onClick={handleConnectionsClick}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleConnectionsClick(); } }}
         >
@@ -333,14 +333,14 @@ export default function InlineProfileView({
         <div className="space-y-3 mb-4">
           <button 
             onClick={() => setCurrentView('about')}
-            className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-center font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center justify-center"
+            className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-center font-medium hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow shadow-sm min-h-[80px] flex items-center justify-center"
           >
             About {formatNameForDisplay(profile.name)}
           </button>
-          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center">
+          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow shadow-sm min-h-[80px] flex items-center">
             View Photos
           </button>
-          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center">
+          <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow shadow-sm min-h-[80px] flex items-center">
             View Achievements
           </button>
         </div>

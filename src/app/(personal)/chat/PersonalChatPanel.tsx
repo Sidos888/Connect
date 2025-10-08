@@ -117,7 +117,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 setShowGroupInfo(true);
               }
             }}
-            className={`bg-white rounded-2xl shadow-sm border border-gray-200 p-3 hover:shadow-md hover:bg-white transition-all cursor-pointer w-full lg:w-1/3 relative`}
+            className={`bg-white rounded-2xl shadow-sm border border-gray-200 p-3 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow cursor-pointer w-full lg:w-1/3 relative`}
           >
             {displayConversation.isGroup && /^Me:\\s*/.test(displayConversation.title) ? (
               <div className="w-full flex items-center justify-center">

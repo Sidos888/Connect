@@ -294,7 +294,7 @@ export default function ChatLayout() {
                 {/* Chat List */}
                 <div className="space-y-2">
                   {filteredConversations.map((conversation) => (
-                    <div key={conversation.id} onClick={() => handleSelectChat(conversation.id)} className={`p-4 rounded-xl cursor-pointer transition-colors ${selectedChatId === conversation.id ? 'bg-gray-100 border-[1.5px] border-gray-900' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}>
+                    <div key={conversation.id} onClick={() => handleSelectChat(conversation.id)} className={`p-4 rounded-xl cursor-pointer transition-shadow ${selectedChatId === conversation.id ? 'bg-white border border-gray-200 shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'bg-white border border-gray-200 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}>
                       <div className="flex items-center space-x-3">
                         <Avatar src={conversation.avatarUrl} name={conversation.title} size={48} />
                         <div className="flex-1 min-w-0">
@@ -364,7 +364,7 @@ export default function ChatLayout() {
                   ) : (
                     <div className="p-4 space-y-3">
                       {filteredConversations.map((conversation) => (
-                        <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className={`bg-white rounded-xl cursor-pointer w-full transition-all border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-md' : 'shadow-sm hover:shadow-md'}`}>
+                        <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className={`bg-white rounded-xl cursor-pointer w-full transition-shadow border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'shadow-sm hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}>
                           <div className="p-4">
                             <div className="flex items-center gap-3">
                               {/* Avatar */}

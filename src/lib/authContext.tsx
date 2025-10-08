@@ -544,7 +544,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         type: 'email'
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('🔐 NewAuthContext: OTP verification failed:', error.message);
+        // Handle specific token expiration error
+        if (error.message?.includes('expired') || error.message?.includes('invalid')) {
+          return { error: new Error('Verification code has expired. Please request a new code.') };
+        }
+        throw error;
+      }
+      
       if (!data.user) throw new Error('No user returned from verification');
 
       console.log('✅ NewAuthContext: Email verification successful, user ID:', data.user.id);

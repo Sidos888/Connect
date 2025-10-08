@@ -23,6 +23,11 @@ export default function ImagePicker({
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = React.useState<string | null>(initialPreviewUrl);
 
+  // Keep preview in sync if initialPreviewUrl changes after mount
+  React.useEffect(() => {
+    setPreview(initialPreviewUrl ?? null);
+  }, [initialPreviewUrl]);
+
   function handleSelect(e: React.ChangeEvent<HTMLInputElement>) {
     console.log('ImagePicker: File selection started');
     const file = e.target.files?.[0] ?? null;

@@ -58,21 +58,26 @@ class SimpleChatService {
     try {
       console.log('SimpleChatService: Getting connections for user:', userId);
       
-          // Get connections where the user is either user1 or user2
-          const { data: connections, error: connectionsError } = await this.supabase
-            .from('connections')
-            .select(`
-              id,
-              user1_id,
-              user2_id,
-              user1:user1_id(id, name, profile_pic, connect_id, bio, dob),
-              user2:user2_id(id, name, profile_pic, connect_id, bio, dob)
-            `)
-            .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-            .eq('status', 'accepted');
+      // Get connections where the user is either user1 or user2
+      const { data: connections, error: connectionsError } = await this.supabase
+        .from('connections')
+        .select(`
+          id,
+          user1_id,
+          user2_id,
+          user1:user1_id(id, name, profile_pic, connect_id, bio, dob),
+          user2:user2_id(id, name, profile_pic, connect_id, bio, dob)
+        `)
+        .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+        .eq('status', 'accepted');
 
       if (connectionsError) {
         console.error('Error fetching connections:', connectionsError);
+        // If it's an RLS policy error, return empty contacts instead of failing
+        if (connectionsError.message?.includes('policy') || connectionsError.message?.includes('permission')) {
+          console.warn('SimpleChatService: RLS policy blocked connections query, returning empty list');
+          return { contacts: [], error: null };
+        }
         return { contacts: [], error: connectionsError };
       }
 

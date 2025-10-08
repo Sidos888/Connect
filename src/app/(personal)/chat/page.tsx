@@ -403,8 +403,8 @@ export default function MessagesPage() {
                     }}
                     className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white border border-gray-200 ${
                       selectedChatId === conversation.id
-                        ? 'shadow-md'
-                        : 'shadow-sm hover:shadow-md'
+                        ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]'
+                        : 'shadow-sm hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'
                     }`}
                   >
                     <div className="flex items-center space-x-3">

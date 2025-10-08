@@ -203,7 +203,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
                     connections.map((connection) => (
                       <div
                         key={connection.id}
-                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:bg-white transition-all mx-auto max-w-md"
+                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow mx-auto max-w-md"
                       >
               <div className="flex items-center gap-4">
                           <Avatar
@@ -231,7 +231,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
                     following.map((follow) => (
                       <div
                         key={follow.id}
-                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:bg-white transition-all mx-auto max-w-md"
+                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow mx-auto max-w-md"
                       >
               <div className="flex items-center gap-4">
                           <Avatar

@@ -28,22 +28,36 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
   // Floating label states
   const [firstNameFocused, setFirstNameFocused] = useState(false);
   const [lastNameFocused, setLastNameFocused] = useState(false);
+  const [bioFocused, setBioFocused] = useState(false);
   const [dobFocused, setDobFocused] = useState(false);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
+  const bioRef = useRef<HTMLTextAreaElement>(null);
   const dobRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (personalProfile) {
+    if (personalProfile || account) {
       const fullName = personalProfile.name || '';
       const nameParts = fullName.split(' ');
       setFirstName(nameParts[0] || '');
       setLastName(nameParts.slice(1).join(' ') || '');
-      setDob(personalProfile.dob || '');
-      setBio(personalProfile.bio || '');
-      setProfilePic(personalProfile.avatarUrl || '');
+      // Support both dob (accounts table), dateOfBirth (local), or account.dob
+      setDob(
+        (personalProfile as any)?.dob ||
+        (personalProfile as any)?.dateOfBirth ||
+        (account as any)?.dob ||
+        ''
+      );
+      setBio((personalProfile as any)?.bio || (account as any)?.bio || '');
+      // Support both avatarUrl (local), profile_pic (db), or account.profile_pic
+      setProfilePic(
+        (personalProfile as any)?.avatarUrl ||
+        (personalProfile as any)?.profile_pic ||
+        (account as any)?.profile_pic ||
+        ''
+      );
     }
-  }, [personalProfile]);
+  }, [personalProfile, account]);
 
   const handleSave = async () => {
     if (!account?.id) return;
@@ -75,14 +89,17 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
         return;
       }
 
-      // Update local state
+      // Update local state (keep both legacy and new fields for compatibility)
       setPersonalProfile({
         ...personalProfile,
         name: fullName,
-        dob: dob,
+        // local store uses dateOfBirth; db uses dob
+        dateOfBirth: dob,
+        dob: dob as any,
         bio: bio,
-        avatarUrl: profilePic
-      });
+        avatarUrl: profilePic,
+        profile_pic: profilePic as any,
+      } as any);
 
       // Call onSave callback if provided
       if (onSave) {
@@ -114,6 +131,8 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
   const handleFirstNameBlur = () => setFirstNameFocused(false);
   const handleLastNameFocus = () => setLastNameFocused(true);
   const handleLastNameBlur = () => setLastNameFocused(false);
+  const handleBioFocus = () => setBioFocused(true);
+  const handleBioBlur = () => setBioFocused(false);
   const handleDobFocus = () => setDobFocused(true);
   const handleDobBlur = () => setDobFocused(false);
 
@@ -135,12 +154,11 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 overflow-y-auto">
-        <div className="space-y-6">
-          {/* Profile Picture Section */}
+      <div className="flex-1 px-6 pt-4 pb-6 overflow-y-auto">
+        <div className="space-y-4">
+          {/* 1. Profile Picture Section */}
           <div className="flex justify-center">
             <ImagePicker 
-              label="Profile Photo" 
               initialPreviewUrl={profilePic || null}
               onChange={(_, url) => {
                 setProfilePic(url || '');
@@ -151,178 +169,19 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
             />
           </div>
 
-          {/* First Name and Last Name - Side by Side */}
-          <div className="space-y-3">
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900">Name</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* First Name */}
-              <div className="relative">
-                <input
-                  ref={firstNameRef}
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  onFocus={handleFirstNameFocus}
-                  onBlur={handleFirstNameBlur}
-                  placeholder=""
-                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(firstNameFocused || firstName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
-                  style={{ 
-                    caretColor: 'black',
-                    fontSize: '16px',
-                    lineHeight: '1.2',
-                    fontFamily: 'inherit'
-                  }}
-                  required
-                />
-                
-                {/* Step 1: Initial state - only "First Name" label */}
-                {!firstNameFocused && !firstName && (
-                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                    First Name
-                  </label>
-                )}
-                
-                {/* Step 2: Focused state - label moves up, placeholder appears */}
-                {firstNameFocused && !firstName && (
-                  <>
-                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                      First Name
-                    </label>
-                    <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      Your first name
-                    </div>
-                  </>
-                )}
-                
-                {/* Step 3: Typing state - actual name replaces placeholder */}
-                {firstName && (
-                  <>
-                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                      First Name
-                    </label>
-                    <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      {firstName}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Last Name */}
-              <div className="relative">
-                <input
-                  ref={lastNameRef}
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  onFocus={handleLastNameFocus}
-                  onBlur={handleLastNameBlur}
-                  placeholder=""
-                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(lastNameFocused || lastName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
-                  style={{ 
-                    caretColor: 'black',
-                    fontSize: '16px',
-                    lineHeight: '1.2',
-                    fontFamily: 'inherit'
-                  }}
-                  required
-                />
-                
-                {/* Step 1: Initial state - only "Last Name" label */}
-                {!lastNameFocused && !lastName && (
-                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                    Last Name
-                  </label>
-                )}
-                
-                {/* Step 2: Focused state - label moves up, placeholder appears */}
-                {lastNameFocused && !lastName && (
-                  <>
-                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                      Last Name
-                    </label>
-                    <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      Your last name
-                    </div>
-                  </>
-                )}
-                
-                {/* Step 3: Typing state - actual name replaces placeholder */}
-                {lastName && (
-                  <>
-                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                      Last Name
-                    </label>
-                    <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                      {lastName}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Current Date of Birth Display */}
-          {dob && (
-            <div className="flex justify-center">
-              <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-xs">
-                <p className="text-sm text-gray-600 text-center">
-                  Current: {new Date(dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Date of Birth Section */}
-          <div className="space-y-3">
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900">Date of Birth</h3>
-            </div>
+          {/* 2. First Name and Last Name - Side by Side */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* First Name */}
             <div className="relative">
               <input
-                ref={dobRef}
+                ref={firstNameRef}
                 type="text"
-                value={dob ? new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : ''}
-                onChange={(e) => {
-                  let value = e.target.value;
-                  // Only allow numbers and forward slashes
-                  value = value.replace(/[^0-9/]/g, '');
-                  
-                  // Handle deletion - if user is deleting, don't auto-add slashes
-                  const currentValue = dob ? new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : '';
-                  const isDeleting = value.length < currentValue.length;
-                  
-                  if (!isDeleting) {
-                    // Auto-format as user types (only when adding characters)
-                    if (value.length === 2 && !value.includes('/')) {
-                      value = value + '/';
-                    } else if (value.length === 5 && value.split('/').length === 2) {
-                      value = value + '/';
-                    }
-                  }
-                  
-                  // Limit to DD/MM/YYYY format
-                  if (value.length > 10) {
-                    value = value.substring(0, 10);
-                  }
-                  
-                  // Convert DD/MM/YYYY to YYYY-MM-DD for storage
-                  if (value.length === 10) {
-                    const parts = value.split('/');
-                    if (parts.length === 3) {
-                      const [day, month, year] = parts;
-                      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                      setDob(isoDate);
-                    }
-                  } else {
-                    setDob('');
-                  }
-                }}
-                onFocus={handleDobFocus}
-                onBlur={handleDobBlur}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                onFocus={handleFirstNameFocus}
+                onBlur={handleFirstNameBlur}
                 placeholder=""
-                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(dobFocused || dob) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(firstNameFocused || firstName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
                 style={{ 
                   caretColor: 'black',
                   fontSize: '16px',
@@ -332,64 +191,236 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
                 required
               />
               
-              {/* Step 1: Initial state - only "Date of birth" label */}
-              {!dobFocused && !dob && (
+              {/* Step 1: Initial state - only "First Name" label */}
+              {!firstNameFocused && !firstName && (
                 <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                  Date of birth
+                  First Name
                 </label>
               )}
               
-              {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
-              {dobFocused && !dob && (
+              {/* Step 2: Focused state - label moves up, placeholder appears */}
+              {firstNameFocused && !firstName && (
                 <>
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                    Date of birth
+                    First Name
                   </label>
-                  {/* DD/MM/YYYY placeholder */}
                   <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                    DD/MM/YYYY
+                    Your first name
                   </div>
                 </>
               )}
               
-              {/* Step 3: Typing state - actual date replaces placeholder */}
-              {dob && (
+              {/* Step 3: Typing state - actual name replaces placeholder */}
+              {firstName && (
                 <>
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                    Date of birth
+                    First Name
                   </label>
-                  {/* Actual date content */}
                   <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                    {new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/')}
+                    {firstName}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Last Name */}
+            <div className="relative">
+              <input
+                ref={lastNameRef}
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                onFocus={handleLastNameFocus}
+                onBlur={handleLastNameBlur}
+                placeholder=""
+                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(lastNameFocused || lastName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                style={{ 
+                  caretColor: 'black',
+                  fontSize: '16px',
+                  lineHeight: '1.2',
+                  fontFamily: 'inherit'
+                }}
+                required
+              />
+              
+              {/* Step 1: Initial state - only "Last Name" label */}
+              {!lastNameFocused && !lastName && (
+                <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                  Last Name
+                </label>
+              )}
+              
+              {/* Step 2: Focused state - label moves up, placeholder appears */}
+              {lastNameFocused && !lastName && (
+                <>
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Last Name
+                  </label>
+                  <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                    Your last name
+                  </div>
+                </>
+              )}
+              
+              {/* Step 3: Typing state - actual name replaces placeholder */}
+              {lastName && (
+                <>
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Last Name
+                  </label>
+                  <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                    {lastName}
                   </div>
                 </>
               )}
             </div>
           </div>
 
-          {/* Bio Section */}
-          <div className="space-y-3">
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900">Bio</h3>
-            </div>
+          {/* 3. Bio Section with Floating Label */}
+          <div className="relative">
             <textarea
+              ref={bioRef}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell us about yourself..."
-              rows={4}
+              onFocus={handleBioFocus}
+              onBlur={handleBioBlur}
+              placeholder=""
+              rows={3}
               maxLength={150}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white resize-none"
+              className={`w-full pl-4 pr-4 pt-3 pb-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white resize-none text-transparent ${(bioFocused || bio) ? 'pt-5 pb-3' : 'py-3'}`}
               style={{ 
+                caretColor: 'black',
                 fontSize: '16px',
                 lineHeight: '1.4',
                 fontFamily: 'inherit'
               }}
             />
-            <div className="text-right">
+            
+            {/* Step 1: Initial state - only "Bio" label */}
+            {!bioFocused && !bio && (
+              <label className="absolute left-4 top-4 text-base text-gray-500 pointer-events-none">
+                Bio
+              </label>
+            )}
+            
+            {/* Step 2: Focused state - label moves up, placeholder appears */}
+            {bioFocused && !bio && (
+              <>
+                <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                  Bio
+                </label>
+                <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit' }}>
+                  Tell us about yourself...
+                </div>
+              </>
+            )}
+            
+            {/* Step 3: Typing state - actual bio replaces placeholder */}
+            {bio && (
+              <>
+                <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+                  Bio
+                </label>
+                <div className="absolute left-4 top-6 text-black pointer-events-none whitespace-pre-wrap" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit' }}>
+                  {bio}
+                </div>
+              </>
+            )}
+            
+            {/* Character counter */}
+            <div className="absolute bottom-2 right-3">
               <span className={`text-xs font-medium ${bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
                 {bio.length}/150
               </span>
             </div>
+          </div>
+
+          {/* 4. Date of Birth Section */}
+          <div className="relative">
+            <input
+              ref={dobRef}
+              type="text"
+              value={dob ? new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : ''}
+              onChange={(e) => {
+                let value = e.target.value;
+                // Only allow numbers and forward slashes
+                value = value.replace(/[^0-9/]/g, '');
+                
+                // Handle deletion - if user is deleting, don't auto-add slashes
+                const currentValue = dob ? new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : '';
+                const isDeleting = value.length < currentValue.length;
+                
+                if (!isDeleting) {
+                  // Auto-format as user types (only when adding characters)
+                  if (value.length === 2 && !value.includes('/')) {
+                    value = value + '/';
+                  } else if (value.length === 5 && value.split('/').length === 2) {
+                    value = value + '/';
+                  }
+                }
+                
+                // Limit to DD/MM/YYYY format
+                if (value.length > 10) {
+                  value = value.substring(0, 10);
+                }
+                
+                // Convert DD/MM/YYYY to YYYY-MM-DD for storage
+                if (value.length === 10) {
+                  const parts = value.split('/');
+                  if (parts.length === 3) {
+                    const [day, month, year] = parts;
+                    const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    setDob(isoDate);
+                  }
+                } else {
+                  setDob('');
+                }
+              }}
+              onFocus={handleDobFocus}
+              onBlur={handleDobBlur}
+              placeholder=""
+              className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(dobFocused || dob) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+              style={{ 
+                caretColor: 'black',
+                fontSize: '16px',
+                lineHeight: '1.2',
+                fontFamily: 'inherit'
+              }}
+              required
+            />
+            
+            {/* Step 1: Initial state - only "Date of birth" label */}
+            {!dobFocused && !dob && (
+              <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                Date of birth
+              </label>
+            )}
+            
+            {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
+            {dobFocused && !dob && (
+              <>
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  Date of birth
+                </label>
+                {/* DD/MM/YYYY placeholder */}
+                <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                  DD/MM/YYYY
+                </div>
+              </>
+            )}
+            
+            {/* Step 3: Typing state - actual date replaces placeholder */}
+            {dob && (
+              <>
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  Date of birth
+                </label>
+                {/* Actual date content */}
+                <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                  {new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/')}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Error Message */}

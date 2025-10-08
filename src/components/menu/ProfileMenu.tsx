@@ -215,7 +215,7 @@ function ConnectionsView({
                   return (
                     <div
                       key={connection.id}
-                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-6 min-h-[70px] cursor-pointer hover:shadow-md hover:bg-white transition-all mx-auto max-w-md"
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-6 min-h-[70px] cursor-pointer hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow mx-auto max-w-md"
                       onClick={() => onFriendClick(friend)}
                     >
                       <div className="flex items-center gap-4">
@@ -778,7 +778,7 @@ function MenuView({
         {/* Profile Card - Clickable */}
         <button
           onClick={onViewProfile}
-          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-md hover:bg-white rounded-lg transition-all border border-gray-200 bg-white shadow-sm"
+          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white rounded-lg transition-shadow border border-gray-200 bg-white shadow-sm"
         >
           <Avatar
             src={currentAccount?.avatarUrl ?? undefined}
@@ -1965,7 +1965,7 @@ export default function ProfileMenu() {
                     setAboutMeFromProfile(true);
                     setShowCenteredAboutMe(true);
                   }}
-                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-md hover:bg-white transition-all text-center cursor-pointer"
+                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow text-center cursor-pointer"
                   aria-label="Open about me"
                   style={{ pointerEvents: 'auto' }}
                 >
@@ -1980,7 +1980,7 @@ export default function ProfileMenu() {
                     setConnectionsFromProfile(true);
                     setShowCenteredConnections(true);
                   }}
-                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-md hover:bg-white transition-all text-center cursor-pointer"
+                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow text-center cursor-pointer"
                   aria-label="Open connections"
                   style={{ pointerEvents: 'auto' }}
                 >
@@ -1989,11 +1989,11 @@ export default function ProfileMenu() {
 
                 {/* Content Sections */}
                 <div className="space-y-4">
-                  <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center justify-between">
+                  <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow shadow-sm min-h-[80px] flex items-center justify-between">
                     <span>View Photos</span>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
                   </button>
-                  <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center justify-between">
+                  <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-xl p-4 text-left font-medium hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow shadow-sm min-h-[80px] flex items-center justify-between">
                     <span>View Achievements</span>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
                   </button>
