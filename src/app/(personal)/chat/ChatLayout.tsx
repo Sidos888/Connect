@@ -225,9 +225,9 @@ export default function ChatLayout() {
   }
 
   return (
-    <div className="chat-container flex h-full bg-white overflow-hidden relative">
+    <div className="chat-container flex h-full min-h-0 bg-white overflow-hidden relative">
       {/* Chat List Sidebar */}
-      <div className="w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+      <div className="w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full min-h-0 overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
         {showNewMessageSelector ? (
           <InlineContactSelector
             onClose={handleNewMessageClose}
@@ -315,19 +315,19 @@ export default function ChatLayout() {
             </div>
 
             {/* Desktop Layout - Keep existing */}
-            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
-              {/* Top Section - Chats Title */}
-              <div className="px-4 py-3 lg:p-6 border-b border-gray-200 flex-shrink-0 bg-white relative z-20 sticky top-0">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
-                  <button onClick={handleNewMessageClick} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                    <Plus className="w-5 h-5 text-gray-600" />
-                  </button>
+            <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full min-h-0 relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+              {/* Unified scroll container with sticky header */}
+              <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
+                {/* Sticky header */}
+                <div className="px-4 py-3 lg:p-6 border-b border-gray-200 bg-white sticky top-0 z-20">
+                  <div className="flex items-center justify-between">
+                    <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
+                    <button onClick={handleNewMessageClick} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                      <Plus className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Scrollable body: search + pills + conversations */}
-              <div className="flex-1 overflow-y-auto no-scrollbar">
                 {/* Search Section - Desktop (double gap above, quarter gap below) */}
                 <div className="px-4 pt-4 pb-1 lg:pt-6 lg:pb-1 bg-white relative z-10 mb-1">
                   <div className="relative">

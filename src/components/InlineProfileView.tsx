@@ -41,6 +41,8 @@ export default function InlineProfileView({
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
   const [mutualCount, setMutualCount] = useState(0);
+  const [selfConnections, setSelfConnections] = useState<any[]>([]);
+  const [selfConnectionsCount, setSelfConnectionsCount] = useState(0);
 
   // Reset profile when userId changes to ensure proper loading behavior
   useEffect(() => {
@@ -65,7 +67,12 @@ export default function InlineProfileView({
 
         // Get user profile from contacts or accounts table
         const { contacts } = await simpleChatService.getContacts(account?.id || '');
-        const userProfile = contacts.find(contact => contact.id === userId);
+        const userProfile = contacts.find(contact => contact.id === userId) || (account?.id === userId ? {
+          id: account?.id,
+          name: account?.name || 'You',
+          profile_pic: account?.profile_pic,
+          bio: account?.bio
+        } as any : null);
 
         if (userProfile) {
           setProfile({
@@ -75,28 +82,30 @@ export default function InlineProfileView({
             bio: userProfile.bio || 'Bio not available'
           });
 
-          // Load connection status and mutual connections
+          // Load connections data
           if (account?.id) {
             try {
-              const { status } = await simpleChatService.getConnectionStatus(account.id, userId);
-              setConnectionStatus(status);
-
-              const { count } = await simpleChatService.getMutualConnectionsCount(account.id, userId);
-              setMutualCount(count);
-
-              const { connections } = await simpleChatService.getMutualConnections(account.id, userId, 3);
-              setMutualConnections(connections);
+              if (account.id === userId) {
+                // Viewing own profile: show top connections
+                setSelfConnections(contacts.slice(0, 3));
+                setSelfConnectionsCount(contacts.length);
+                setConnectionStatus('self');
+              } else {
+                // Viewing someone else: show mutuals/relationship
+                const [statusRes, mutualCountRes, mutualsRes] = await Promise.all([
+                  simpleChatService.getConnectionStatus(account.id, userId),
+                  simpleChatService.getMutualConnectionsCount(account.id, userId),
+                  simpleChatService.getMutualConnections(account.id, userId, 3)
+                ]);
+                setConnectionStatus(statusRes.status);
+                setMutualCount(mutualCountRes.count);
+                setMutualConnections(mutualsRes.connections);
+              }
             } catch (connError) {
               console.error('InlineProfileView: Error loading connection data:', connError);
-              // Fallback: if we're viewing a contact, assume they're connected
-              if (userProfile) {
+              if (userProfile && account.id !== userId) {
                 setConnectionStatus('accepted');
               }
-            }
-          } else {
-            // Fallback: if we're viewing a contact, assume they're connected
-            if (userProfile) {
-              setConnectionStatus('accepted');
             }
           }
         } else {
@@ -179,11 +188,8 @@ export default function InlineProfileView({
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-      </div>
-    );
+    // Avoid showing a loading spinner; render nothing while data is fetched
+    return null;
   }
 
   if (error || !profile) {
@@ -262,9 +268,12 @@ export default function InlineProfileView({
         </div>
 
         {/* Connection Status */}
-        <div 
-          className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:shadow-md hover:bg-white transition-all min-h-[80px] flex flex-col justify-center"
+        <button 
+          type="button"
+          aria-label="Open my connections"
+          className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm hover:shadow-md hover:bg-white transition-all min-h-[80px] flex flex-col justify-center text-left"
           onClick={handleConnectionsClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleConnectionsClick(); } }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -272,31 +281,44 @@ export default function InlineProfileView({
                 <Users className="w-4 h-4 text-black" />
               </div>
               <span className="text-sm font-medium text-black">
-                {connectionStatus === 'accepted' ? 'Me: Friends' : 
-                 connectionStatus === 'pending' ? 'Friend Request Sent' : 
-                 'Add Friend'}
+                {account?.id === userId
+                  ? 'My connections'
+                  : connectionStatus === 'accepted' ? 'Me: Friends'
+                    : connectionStatus === 'pending' ? 'Friend Request Sent'
+                    : 'Add Friend'}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              {mutualConnections.length > 0 && (
-                <div className="flex -space-x-1">
-                  {mutualConnections.slice(0, 3).map((mutual, index) => (
-                    <div key={mutual.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                      <Avatar
-                        src={mutual.profile_pic}
-                        name={mutual.name}
-                        size={20}
-                      />
+              {account?.id === userId ? (
+                <>
+                  {selfConnections.slice(0,3).map((c:any) => (
+                    <div key={c.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                      <Avatar src={c.profile_pic} name={c.name} size={20} />
                     </div>
                   ))}
-                </div>
-              )}
-              {mutualCount > 3 && (
-                <span className="text-xs text-black">+{mutualCount - 3}</span>
+                  {selfConnectionsCount > 3 && (
+                    <span className="text-xs text-black">+{selfConnectionsCount - 3}</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  {mutualConnections.length > 0 && (
+                    <div className="flex -space-x-1">
+                      {mutualConnections.slice(0, 3).map((mutual: any) => (
+                        <div key={mutual.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                          <Avatar src={mutual.profile_pic} name={mutual.name} size={20} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {mutualCount > 3 && (
+                    <span className="text-xs text-black">+{mutualCount - 3}</span>
+                  )}
+                </>
               )}
             </div>
           </div>
-        </div>
+        </button>
 
         {/* Content Sections */}
         <div className="space-y-3 mb-4">

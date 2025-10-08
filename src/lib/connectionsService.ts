@@ -51,12 +51,17 @@ export class ConnectionsService {
       
       console.log('🔍 ConnectionsService: Test query result:', { testData, testError });
 
-      // Build query - exclude current user only if we have a valid currentUserId
+      if (testError) {
+        console.error('🔍 ConnectionsService: Basic accounts query failed:', testError);
+        return { users: [], error: testError };
+      }
+
+      // Build query - search by name and exclude current user
       let queryBuilder = this.supabase
         .from('accounts')
         .select('id, name, bio, profile_pic, connect_id, created_at')
-        .ilike('name', `%${query}%`)
-        .limit(20);
+        .ilike('name', `%${query.trim()}%`)
+        .limit(50); // Increased limit for better search results
 
       // Only exclude current user if we have a valid ID
       if (currentUserId && currentUserId !== '') {
@@ -65,17 +70,51 @@ export class ConnectionsService {
 
       const { data: nameResults, error: nameError } = await queryBuilder;
 
-      console.log('Name search results:', { nameResults, nameError });
+      console.log('🔍 ConnectionsService: Name search results:', { 
+        query: query.trim(),
+        resultsCount: nameResults?.length || 0, 
+        error: nameError,
+        sampleResults: nameResults?.slice(0, 3).map(u => ({ id: u.id, name: u.name }))
+      });
 
       if (nameError) {
-        console.error('Error searching users by name:', nameError);
+        console.error('🔍 ConnectionsService: Error searching users by name:', nameError);
         return { users: [], error: nameError };
       }
 
-      console.log('Final search results:', nameResults?.length || 0, 'users');
-      return { users: nameResults || [], error: null };
+      // Filter out users who already have pending or accepted connections
+      let filteredUsers = nameResults || [];
+      if (currentUserId && currentUserId !== '') {
+        try {
+          // Get pending requests and existing connections to filter out
+          const { requests: pendingRequests } = await this.getPendingRequests(currentUserId);
+          const { requests: sentRequests } = await this.getSentRequests(currentUserId);
+          const { connections: existingConnections } = await this.getConnections(currentUserId);
+          
+          const excludedUserIds = new Set([
+            ...pendingRequests.map(r => r.sender?.id).filter(Boolean),
+            ...sentRequests.map(r => r.receiver?.id).filter(Boolean),
+            ...existingConnections.map(c => c.user1_id === currentUserId ? c.user2_id : c.user1_id)
+          ]);
+          
+          filteredUsers = filteredUsers.filter(user => !excludedUserIds.has(user.id));
+          
+          console.log('🔍 ConnectionsService: Filtered search results:', {
+            originalCount: nameResults?.length || 0,
+            filteredCount: filteredUsers.length,
+            excludedCount: (nameResults?.length || 0) - filteredUsers.length,
+            excludedUserIds: Array.from(excludedUserIds)
+          });
+        } catch (filterError) {
+          console.error('🔍 ConnectionsService: Error filtering search results:', filterError);
+          // Continue with unfiltered results if filtering fails
+        }
+      }
+
+      console.log('🔍 ConnectionsService: Final search results:', filteredUsers.length, 'users');
+      return { users: filteredUsers, error: null };
     } catch (error) {
-      console.error('Error in searchUsers:', error);
+      console.error('🔍 ConnectionsService: Error in searchUsers:', error);
       return { users: [], error: error as Error };
     }
   }
@@ -95,31 +134,72 @@ export class ConnectionsService {
       
       console.log('🔍 ConnectionsService: Test query result for suggestions:', { testData, testError });
       
-      // Build query - exclude current user only if we have a valid currentUserId
+      if (testError) {
+        console.error('🔍 ConnectionsService: Basic accounts query failed:', testError);
+        return { users: [], error: testError };
+      }
+
+      // Build query - exclude current user and already connected users
       let queryBuilder = this.supabase
         .from('accounts')
         .select('id, name, bio, profile_pic, connect_id, created_at')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50); // Increased limit to get more suggestions
 
       // Only exclude current user if we have a valid ID
       if (currentUserId && currentUserId !== '') {
         queryBuilder = queryBuilder.neq('id', currentUserId);
+        
+        // Also exclude users who already have pending/accepted friend requests
+        // This requires a more complex query, but for now we'll filter in memory
       }
 
       const { data, error } = await queryBuilder;
 
-      console.log('Suggested friends query result:', { data, error });
+      console.log('🔍 ConnectionsService: Raw suggested friends query result:', { 
+        dataCount: data?.length || 0, 
+        error,
+        sampleUsers: data?.slice(0, 3).map(u => ({ id: u.id, name: u.name }))
+      });
 
       if (error) {
-        console.error('Error getting suggested friends:', error);
+        console.error('🔍 ConnectionsService: Error getting suggested friends:', error);
         return { users: [], error };
       }
 
-      console.log('Successfully got suggested friends:', data?.length || 0, 'users');
-      return { users: data || [], error: null };
+      // Filter out users who already have pending or accepted connections
+      let filteredUsers = data || [];
+      if (currentUserId && currentUserId !== '') {
+        try {
+          // Get pending requests
+          const { requests: pendingRequests } = await this.getPendingRequests(currentUserId);
+          const { requests: sentRequests } = await this.getSentRequests(currentUserId);
+          const { connections: existingConnections } = await this.getConnections(currentUserId);
+          
+          const excludedUserIds = new Set([
+            ...pendingRequests.map(r => r.sender?.id).filter(Boolean),
+            ...sentRequests.map(r => r.receiver?.id).filter(Boolean),
+            ...existingConnections.map(c => c.user1_id === currentUserId ? c.user2_id : c.user1_id)
+          ]);
+          
+          filteredUsers = filteredUsers.filter(user => !excludedUserIds.has(user.id));
+          
+          console.log('🔍 ConnectionsService: Filtered suggested friends:', {
+            originalCount: data?.length || 0,
+            filteredCount: filteredUsers.length,
+            excludedCount: (data?.length || 0) - filteredUsers.length,
+            excludedUserIds: Array.from(excludedUserIds)
+          });
+        } catch (filterError) {
+          console.error('🔍 ConnectionsService: Error filtering suggested friends:', filterError);
+          // Continue with unfiltered results if filtering fails
+        }
+      }
+
+      console.log('🔍 ConnectionsService: Successfully got suggested friends:', filteredUsers.length, 'users');
+      return { users: filteredUsers, error: null };
     } catch (error) {
-      console.error('Error in getSuggestedFriends:', error);
+      console.error('🔍 ConnectionsService: Error in getSuggestedFriends:', error);
       return { users: [], error: error as Error };
     }
   }
