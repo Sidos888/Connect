@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Share, Images, Settings, Users, ArrowLeft, X, MoreVertical, Trash2, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
+import { MessageCircle, Share, Images, Settings, Users, ArrowLeft, X, MoreVertical, Trash2, ChevronLeft, ChevronRight, Bell, User } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { simpleChatService } from '@/lib/simpleChatService';
 import Avatar from '@/components/Avatar';
 import ConnectionsModal from './chat/ConnectionsModal';
+import AboutMeView from './AboutMeView';
 import { formatNameForDisplay } from '@/lib/utils';
 
 interface InlineProfileViewProps {
@@ -24,6 +25,7 @@ interface UserProfile {
   bio?: string;
   phone?: string;
   email?: string;
+  dob?: string;
 }
 
 export default function InlineProfileView({ 
@@ -39,7 +41,7 @@ export default function InlineProfileView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
-  const [currentView, setCurrentView] = useState<'profile' | 'settings' | 'connections'>('profile');
+  const [currentView, setCurrentView] = useState<'profile' | 'settings' | 'connections' | 'about'>('profile');
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
   const [mutualCount, setMutualCount] = useState(0);
@@ -169,6 +171,8 @@ export default function InlineProfileView({
     if (currentView === 'connections') {
       setShowConnectionsModal(false);
       setCurrentView('profile');
+    } else if (currentView === 'about') {
+      setCurrentView('profile');
     } else {
       // If we're already at the profile view, go back to the parent
       onBack();
@@ -244,6 +248,16 @@ export default function InlineProfileView({
               <MessageCircle className="w-6 h-6 text-black" />
             </div>
             <span className="text-xs font-medium text-black">Message</span>
+          </button>
+
+          <button 
+            onClick={() => setCurrentView('about')}
+            className="flex flex-col items-center space-y-2"
+          >
+            <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+              <User className="w-6 h-6 text-black" />
+            </div>
+            <span className="text-xs font-medium text-black">About</span>
           </button>
 
           <button className="flex flex-col items-center space-y-2">
@@ -337,6 +351,18 @@ export default function InlineProfileView({
         }}
         userId={userId}
       />
+
+      {/* About Me View */}
+      {currentView === 'about' && (
+        <div className="absolute inset-0 bg-white z-20">
+          <AboutMeView
+            onBack={() => setCurrentView('profile')}
+            isPersonalProfile={account?.id === userId}
+            profileName={profile?.name}
+            profileDob={profile?.dob}
+          />
+        </div>
+      )}
 
     </div>
   );

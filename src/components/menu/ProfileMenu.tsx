@@ -8,6 +8,7 @@ import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib
 import InlineProfileView from '@/components/InlineProfileView';
 import ConnectionsModal from '@/components/chat/ConnectionsModal';
 import SettingsModal from '@/components/chat/SettingsModal';
+import AboutMeView from '@/components/AboutMeView';
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -1296,6 +1297,8 @@ export default function ProfileMenu() {
   const [showCenteredSaved, setShowCenteredSaved] = useState(false);
   const [showCenteredSettings, setShowCenteredSettings] = useState(false);
   const [settingsFromProfile, setSettingsFromProfile] = useState(false);
+  const [showCenteredAboutMe, setShowCenteredAboutMe] = useState(false);
+  const [aboutMeFromProfile, setAboutMeFromProfile] = useState(false);
   const [showCenteredFriendProfile, setShowCenteredFriendProfile] = useState(false);
   const [showCenteredConnectionsModal, setShowCenteredConnectionsModal] = useState(false);
   const [connectionsModalUserId, setConnectionsModalUserId] = useState<string | null>(null);
@@ -1952,10 +1955,20 @@ export default function ProfileMenu() {
                 </div>
 
                 {/* About Me Card */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex flex-col justify-center">
+                <button 
+                  onClick={() => {
+                    console.log('About Me button clicked in centered profile');
+                    setShowCenteredProfile(false);
+                    setAboutMeFromProfile(true);
+                    setShowCenteredAboutMe(true);
+                  }}
+                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex flex-col justify-center hover:shadow-md hover:bg-white transition-all text-left cursor-pointer"
+                  aria-label="Open about me"
+                  style={{ pointerEvents: 'auto' }}
+                >
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">About Me</h4>
-                  <p className="text-gray-500 text-sm">No information available</p>
-                </div>
+                  <p className="text-gray-500 text-sm">Birth date and more</p>
+                </button>
 
                 {/* Connections Card */}
                 <button 
@@ -2432,6 +2445,40 @@ export default function ProfileMenu() {
               // Handle friend removal if needed
             }}
           />
+        )}
+
+        {/* Centered About Me Modal */}
+        {showCenteredAboutMe && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => {
+                setShowCenteredAboutMe(false);
+                setAboutMeFromProfile(false);
+              }}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              <div className="flex flex-col h-full">
+                <AboutMeView
+                  onBack={() => {
+                    setShowCenteredAboutMe(false);
+                    if (aboutMeFromProfile) {
+                      setShowCenteredProfile(true);
+                    }
+                    setAboutMeFromProfile(false);
+                  }}
+                  isPersonalProfile={aboutMeFromProfile}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Share Profile Modal */}
