@@ -118,29 +118,50 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
             </div>
           ) : showRemoveConfirm ? (
-            <div className="flex-1 flex flex-col justify-center items-center">
-              <div className="text-center max-w-md">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Trash2 className="w-8 h-8 text-red-600" />
+            <div className="flex-1 flex flex-col justify-center items-center text-center px-6">
+              {/* Question */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-8">
+                Are you sure you want to unfriend
+              </h2>
+              
+              {/* Profile Card */}
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-8 max-w-sm w-full">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                    {profile?.profile_pic ? (
+                      <img 
+                        src={profile.profile_pic} 
+                        alt={profile.name}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-gray-600 font-medium text-lg">
+                        {(profile?.name || userName || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      {profile?.name || userName}
+                    </h3>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Remove Friend</h3>
-                <p className="text-gray-600 mb-8">
-                  Are you sure you want to remove {profile?.name || userName} from your friends? This action cannot be undone.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowRemoveConfirm(false)}
-                    className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRemoveFriend}
-                    className="flex-1 px-4 py-3 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-medium"
-                  >
-                    Remove Friend
-                  </button>
-                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="w-full max-w-sm space-y-3">
+                <button
+                  onClick={handleRemoveFriend}
+                  className="w-full px-6 py-4 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setShowRemoveConfirm(false)}
+                  className="w-full px-6 py-3 text-gray-700 font-medium hover:text-gray-900 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           ) : (
