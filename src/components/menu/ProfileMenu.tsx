@@ -9,6 +9,7 @@ import InlineProfileView from '@/components/InlineProfileView';
 import ConnectionsModal from '@/components/chat/ConnectionsModal';
 import SettingsModal from '@/components/chat/SettingsModal';
 import AboutMeView from '@/components/AboutMeView';
+import EditProfileModal from '@/components/chat/EditProfileModal';
 import Avatar from "@/components/Avatar";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -1299,6 +1300,8 @@ export default function ProfileMenu() {
   const [settingsFromProfile, setSettingsFromProfile] = useState(false);
   const [showCenteredAboutMe, setShowCenteredAboutMe] = useState(false);
   const [aboutMeFromProfile, setAboutMeFromProfile] = useState(false);
+  const [showCenteredEditProfile, setShowCenteredEditProfile] = useState(false);
+  const [editProfileFromProfile, setEditProfileFromProfile] = useState(false);
   const [showCenteredFriendProfile, setShowCenteredFriendProfile] = useState(false);
   const [showCenteredConnectionsModal, setShowCenteredConnectionsModal] = useState(false);
   const [connectionsModalUserId, setConnectionsModalUserId] = useState<string | null>(null);
@@ -2381,8 +2384,8 @@ export default function ProfileMenu() {
                         <button
                           onClick={() => {
                             setShowCenteredSettings(false);
-                            setShowCenteredAboutMe(true);
-                            setAboutMeFromProfile(false);
+                            setShowCenteredEditProfile(true);
+                            setEditProfileFromProfile(false);
                           }}
                           className="text-black underline text-sm font-medium hover:text-gray-700"
                         >
@@ -2532,6 +2535,45 @@ export default function ProfileMenu() {
             }}
             userId={selectedFriend.id}
           />
+        )}
+
+        {/* Centered Edit Profile Modal */}
+        {showCenteredEditProfile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay with smooth transition */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 1
+              }}
+              onClick={() => {
+                setShowCenteredEditProfile(false);
+                setEditProfileFromProfile(false);
+              }}
+            />
+
+            {/* Modal content */}
+            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+              <div className="flex flex-col h-full">
+                <EditProfileModal
+                  onBack={() => {
+                    setShowCenteredEditProfile(false);
+                    if (editProfileFromProfile) {
+                      setShowCenteredProfile(true);
+                    } else {
+                      setShowCenteredSettings(true);
+                    }
+                    setEditProfileFromProfile(false);
+                  }}
+                  onSave={() => {
+                    // Profile has been updated, no additional action needed
+                    console.log('Profile updated successfully');
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
       </div>
