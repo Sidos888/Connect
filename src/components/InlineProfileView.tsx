@@ -329,6 +329,12 @@ export default function InlineProfileView({
 
         {/* Content Sections */}
         <div className="space-y-3 mb-4">
+          <button 
+            onClick={() => setCurrentView('about')}
+            className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center"
+          >
+            About {formatNameForDisplay(profile.name)}
+          </button>
           <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-md hover:bg-white transition-all shadow-sm min-h-[80px] flex items-center">
             View Photos
           </button>

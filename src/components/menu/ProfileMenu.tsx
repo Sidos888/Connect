@@ -1962,12 +1962,11 @@ export default function ProfileMenu() {
                     setAboutMeFromProfile(true);
                     setShowCenteredAboutMe(true);
                   }}
-                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex flex-col justify-center hover:shadow-md hover:bg-white transition-all text-left cursor-pointer"
+                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-md hover:bg-white transition-all text-center cursor-pointer"
                   aria-label="Open about me"
                   style={{ pointerEvents: 'auto' }}
                 >
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">About Me</h4>
-                  <p className="text-gray-500 text-sm">Birth date and more</p>
+                  <span className="text-black font-medium">About Me</span>
                 </button>
 
                 {/* Connections Card */}
