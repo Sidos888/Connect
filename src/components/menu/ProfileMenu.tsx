@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X, MessageCircle, Share, MoreVertical, ChevronRight } from "lucide-react";
+import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X, MessageCircle, Share, MoreVertical, ChevronRight, ArrowLeft } from "lucide-react";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import InlineProfileView from '@/components/InlineProfileView';
 import ConnectionsModal from '@/components/chat/ConnectionsModal';
@@ -1995,7 +1995,10 @@ export default function ProfileMenu() {
             <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
               <div className="flex flex-col h-full">
                 <ConnectionsView
-                  onBack={() => setShowCenteredConnections(false)}
+                  onBack={() => {
+                    setShowCenteredConnections(false);
+                    setShowCenteredProfile(true);
+                  }}
                   onAddPerson={() => {
                     setShowCenteredConnections(false);
                     setShowCenteredAddPerson(true);
@@ -2212,10 +2215,11 @@ export default function ProfileMenu() {
                     setShowCenteredSettings(false);
                     setShowDeleteConfirm(false);
                     setShowFinalConfirm(false);
+                    setShowCenteredProfile(true);
                   }}
                   className="p-2 hover:bg-gray-100 transition-colors rounded-full"
                 >
-                  <X className="w-5 h-5 text-gray-600" />
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
                 <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
                 <div className="w-9"></div> {/* Spacer for centering */}
