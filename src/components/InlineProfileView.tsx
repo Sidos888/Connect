@@ -248,7 +248,7 @@ export default function InlineProfileView({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '20px' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '50px' }}>
         {/* Profile Header */}
         <div className="text-center mb-8">
           <div className="relative inline-block mb-6">

@@ -199,7 +199,7 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '80px' }}>
+        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '30px' }}>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
