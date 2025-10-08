@@ -240,9 +240,12 @@ export default function InlineProfileView({
             <ArrowLeft size={20} className="text-gray-700" />
           </span>
         </button>
-        <button className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand pointer-events-auto">
+        <button 
+          onClick={handleSettingsClick}
+          className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand pointer-events-auto"
+        >
           <span className="back-btn-circle">
-            <MoreVertical size={20} className="text-gray-700" />
+            <Settings size={20} className="text-gray-700" />
           </span>
         </button>
       </div>
@@ -279,16 +282,6 @@ export default function InlineProfileView({
               <Share className="w-6 h-6 text-black" />
             </div>
             <span className="text-xs font-medium text-black">Share</span>
-          </button>
-
-          <button 
-            onClick={handleSettingsClick}
-            className="flex flex-col items-center space-y-2"
-          >
-            <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-              <Settings className="w-6 h-6 text-black" />
-            </div>
-            <span className="text-xs font-medium text-black">Settings</span>
           </button>
         </div>
 
