@@ -19,6 +19,7 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dob, setDob] = useState('');
+  const [bio, setBio] = useState('');
   const [profilePic, setProfilePic] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -39,6 +40,7 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       setFirstName(nameParts[0] || '');
       setLastName(nameParts.slice(1).join(' ') || '');
       setDob(personalProfile.dob || '');
+      setBio(personalProfile.bio || '');
       setProfilePic(personalProfile.avatarUrl || '');
     }
   }, [personalProfile]);
@@ -61,6 +63,7 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
         .update({
           name: fullName,
           dob: dob || null,
+          bio: bio || null,
           profile_pic: profilePic || null,
           updated_at: new Date().toISOString()
         })
@@ -77,6 +80,7 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
         ...personalProfile,
         name: fullName,
         dob: dob,
+        bio: bio,
         avatarUrl: profilePic
       });
 
@@ -116,7 +120,7 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="flex items-center justify-between p-6">
         <button
           onClick={onBack}
           className="back-btn-circle"
@@ -259,13 +263,21 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
             </div>
           </div>
 
+          {/* Current Date of Birth Display */}
+          {dob && (
+            <div className="flex justify-center">
+              <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-xs">
+                <p className="text-sm text-gray-600 text-center">
+                  Current: {new Date(dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Date of Birth Section */}
           <div className="space-y-3">
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900">Date of Birth</h3>
-              {dob && (
-                <p className="text-sm text-gray-600">Current: {new Date(dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-              )}
             </div>
             <div className="relative">
               <input
@@ -355,6 +367,31 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
             </div>
           </div>
 
+          {/* Bio Section */}
+          <div className="space-y-3">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900">Bio</h3>
+            </div>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell us about yourself..."
+              rows={4}
+              maxLength={150}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white resize-none"
+              style={{ 
+                fontSize: '16px',
+                lineHeight: '1.4',
+                fontFamily: 'inherit'
+              }}
+            />
+            <div className="text-right">
+              <span className={`text-xs font-medium ${bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
+                {bio.length}/150
+              </span>
+            </div>
+          </div>
+
           {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -365,7 +402,7 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       </div>
 
       {/* Save Button */}
-      <div className="p-6 border-t border-gray-200">
+      <div className="p-6">
         <div className="flex justify-center">
           <button
             onClick={handleSave}
