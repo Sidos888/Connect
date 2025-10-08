@@ -63,6 +63,7 @@ export default function AccountCheckModal({
   const [isCreating, setIsCreating] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [accountCheckInProgress, setAccountCheckInProgress] = useState(false);
+  const [initialAccountCheck, setInitialAccountCheck] = useState(false);
   const [userExists, setUserExists] = useState<boolean | null>(null);
   const [existingUser, setExistingUser] = useState<{ id: string; name?: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; profile_pic?: string; bio?: string; date_of_birth?: string; dob?: string; connect_id?: string; created_at: string; updated_at: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
