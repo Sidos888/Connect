@@ -209,16 +209,22 @@ export default function InlineProfileView({
   // Always show the detailed view (universal profile section)
   return (
     <div className="flex flex-col h-full">
-      {/* Floating Action Buttons */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+      {/* Header with back button and menu */}
+      <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
         <button
           onClick={onBack}
-          className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
+          className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          aria-label="Back to previous view"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <span className="back-btn-circle">
+            <ArrowLeft size={20} className="text-gray-700" />
+          </span>
         </button>
-        <button className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto">
-          <MoreVertical className="w-6 h-6 text-gray-600" />
+        <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Profile</h2>
+        <button className="absolute right-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand">
+          <span className="back-btn-circle">
+            <MoreVertical size={20} className="text-gray-700" />
+          </span>
         </button>
       </div>
 
@@ -358,17 +364,20 @@ export default function InlineProfileView({
           />
           <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
             {/* Header */}
-            <div className="flex items-center justify-between p-6">
+            <div className="flex items-center justify-center relative w-full p-6">
               <button
                 onClick={() => {
                   setShowSettingsModal(false);
                   setShowRemoveConfirm(false);
                 }}
-                className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                className="absolute left-6 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+                aria-label="Back to profile"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <span className="back-btn-circle">
+                  <ArrowLeft size={20} className="text-gray-700" />
+                </span>
               </button>
-              <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
+              <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Settings</h2>
               <div className="w-9"></div>
             </div>
 
