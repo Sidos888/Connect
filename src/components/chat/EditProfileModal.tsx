@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Camera, Save } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabaseClient';
+import Input from '@/components/Input';
+import ImagePicker from '@/components/ImagePicker';
 
 interface EditProfileModalProps {
   onBack: () => void;
@@ -115,74 +117,48 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       {/* Content */}
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="space-y-6">
-          {/* Profile Picture Card */}
+          {/* Profile Picture Card - mirrors onboarding ImagePicker */}
           <div className="bg-white border border-gray-200 rounded-2xl p-6">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
-                {profilePic ? (
-                  <img 
-                    src={profilePic} 
-                    alt="Profile"
-                    className="w-24 h-24 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-gray-600 font-medium text-3xl">
-                    {firstName.charAt(0).toUpperCase() || 'U'}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => setShowPhotoUpload(!showPhotoUpload)}
-                className="text-black underline text-sm font-medium hover:text-gray-700"
-              >
-                Edit
-              </button>
+            <div className="max-w-sm mx-auto">
+              <ImagePicker 
+                label="Profile Photo" 
+                initialPreviewUrl={profilePic || null}
+                onChange={(_, url) => {
+                  setProfilePic(url || '');
+                  setShowPhotoUpload(false);
+                }}
+                size={96}
+                shape="circle"
+              />
             </div>
-            
-            {/* Photo Upload Section */}
-            {showPhotoUpload && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <label
-                  htmlFor="profile-pic"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <Camera className="w-4 h-4 text-gray-600" />
-                  <span className="text-gray-700 font-medium">Choose Photo</span>
-                  <input
-                    id="profile-pic"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfilePicChange}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            )}
           </div>
 
           {/* First Name Card */}
           <div className="bg-white border border-gray-200 rounded-2xl p-6">
-            <div className="space-y-3">
-              <h3 className="text-lg font-medium text-gray-900">First Name</h3>
-              <input
-                type="text"
+            <div className="max-w-sm mx-auto">
+              <div className="mb-3">
+                <h3 className="text-lg font-medium text-gray-900">First Name</h3>
+              </div>
+              <Input 
+                label="First Name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
                 placeholder="Enter your first name"
+                required
               />
             </div>
           </div>
 
           {/* Last Name Card */}
           <div className="bg-white border border-gray-200 rounded-2xl p-6">
-            <div className="space-y-3">
-              <h3 className="text-lg font-medium text-gray-900">Last Name</h3>
-              <input
-                type="text"
+            <div className="max-w-sm mx-auto">
+              <div className="mb-3">
+                <h3 className="text-lg font-medium text-gray-900">Last Name</h3>
+              </div>
+              <Input 
+                label="Last Name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
                 placeholder="Enter your last name"
               />
             </div>
@@ -190,26 +166,19 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
 
           {/* Date of Birth Card */}
           <div className="bg-white border border-gray-200 rounded-2xl p-6">
-            <div className="space-y-3">
-              <h3 className="text-lg font-medium text-gray-900">Date of Birth</h3>
-              {dob ? (
-                <div className="space-y-2">
+            <div className="max-w-sm mx-auto">
+              <div className="mb-3">
+                <h3 className="text-lg font-medium text-gray-900">Date of Birth</h3>
+                {dob && (
                   <p className="text-sm text-gray-600">Current: {new Date(dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  <input
-                    type="date"
-                    value={dob ? new Date(dob).toISOString().split('T')[0] : ''}
-                    onChange={(e) => setDob(e.target.value)}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
-                  />
-                </div>
-              ) : (
-                <input
-                  type="date"
-                  value={dob ? new Date(dob).toISOString().split('T')[0] : ''}
-                  onChange={(e) => setDob(e.target.value)}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
-                />
-              )}
+                )}
+              </div>
+              <Input 
+                label="Date of Birth"
+                type="date"
+                value={dob ? new Date(dob).toISOString().split('T')[0] : ''}
+                onChange={(e) => setDob(e.target.value)}
+              />
             </div>
           </div>
 
