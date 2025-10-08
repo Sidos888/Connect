@@ -2357,6 +2357,40 @@ export default function ProfileMenu() {
                   </div>
                 ) : (
                   <>
+                    {/* Profile Card */}
+                    <div className="bg-gray-100 rounded-2xl p-4 mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                          {personalProfile?.avatarUrl ? (
+                            <img 
+                              src={personalProfile.avatarUrl} 
+                              alt={personalProfile.name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-gray-600 font-medium text-lg">
+                              {personalProfile?.name?.charAt(0).toUpperCase() || 'U'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {personalProfile?.name || 'Your Name'}
+                          </h3>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowCenteredSettings(false);
+                            setShowCenteredAboutMe(true);
+                            setAboutMeFromProfile(false);
+                          }}
+                          className="text-blue-600 underline text-sm font-medium hover:text-blue-700"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Settings content - empty space for future settings */}
                     <div className="flex-1">
                     </div>
