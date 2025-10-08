@@ -173,17 +173,19 @@ class SimpleChatService {
         console.log('SimpleChatService: Raw participants data for chat', chat.id, ':', participantsData);
         console.log('SimpleChatService: Participants error for chat', chat.id, ':', participantsError);
 
-        if (participantsError) {
-          console.error('Error loading participants for chat:', chat.id, participantsError);
-          continue;
-        }
-
         type ParticipantRow = { accounts: { id: string; name: string; profile_pic?: string | null } };
-        const participants = (participantsData || []).map((p: ParticipantRow) => ({
-          id: p.accounts.id,
-          name: formatNameForDisplay(p.accounts.name),
-          profile_pic: p.accounts.profile_pic || undefined
-        }));
+        const participants = (!participantsError && participantsData)
+          ? (participantsData || []).map((p: ParticipantRow) => ({
+              id: p.accounts.id,
+              name: formatNameForDisplay(p.accounts.name),
+              profile_pic: p.accounts.profile_pic || undefined
+            }))
+          : [];
+
+        if (participantsError) {
+          // Do not break the entire chat load if RLS blocks the join; proceed with empty participants
+          console.warn('SimpleChatService: Proceeding with empty participants for chat due to error:', chat.id);
+        }
 
         console.log('SimpleChatService: Chat participants for', chat.id, ':', participants);
 

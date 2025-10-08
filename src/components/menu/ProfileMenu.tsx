@@ -94,9 +94,14 @@ function ConnectionsView({
           setBusinessConnections(businesses);
         } else {
           console.error('Error loading connections:', error);
+          // Gracefully degrade: show empty lists rather than surfacing runtime error
+          setPeopleConnections([]);
+          setBusinessConnections([]);
         }
       } catch (error) {
         console.error('Error loading connections:', error);
+        setPeopleConnections([]);
+        setBusinessConnections([]);
       } finally {
         setLoading(false);
       }
