@@ -2358,7 +2358,7 @@ export default function ProfileMenu() {
                 ) : (
                   <>
                     {/* Profile Card */}
-                    <div className="bg-gray-100 rounded-2xl p-4 mb-6">
+                    <div className="bg-white rounded-2xl p-4 mb-6 border border-gray-200 shadow-sm">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
                           {personalProfile?.avatarUrl ? (
@@ -2384,7 +2384,7 @@ export default function ProfileMenu() {
                             setShowCenteredAboutMe(true);
                             setAboutMeFromProfile(false);
                           }}
-                          className="text-blue-600 underline text-sm font-medium hover:text-blue-700"
+                          className="text-black underline text-sm font-medium hover:text-gray-700"
                         >
                           Edit
                         </button>
