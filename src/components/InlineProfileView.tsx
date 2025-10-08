@@ -268,7 +268,7 @@ export default function InlineProfileView({
                 <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
                   <Users className="w-4 h-4 text-black" />
                 </div>
-                <span className="text-sm font-medium text-black">My connections</span>
+                <span className="text-sm font-medium text-black">Connections</span>
               </div>
               <div className="flex items-center gap-1">
                 {selfConnections.slice(0,3).map((c:any) => (
