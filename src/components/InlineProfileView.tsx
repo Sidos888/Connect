@@ -209,19 +209,18 @@ export default function InlineProfileView({
   // Always show the detailed view (universal profile section)
   return (
     <div className="flex flex-col h-full">
-      {/* Header with back button and menu */}
-      <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+      {/* Floating Action Buttons */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
         <button
           onClick={onBack}
-          className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand pointer-events-auto"
           aria-label="Back to previous view"
         >
           <span className="back-btn-circle">
             <ArrowLeft size={20} className="text-gray-700" />
           </span>
         </button>
-        <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Profile</h2>
-        <button className="absolute right-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand">
+        <button className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand pointer-events-auto">
           <span className="back-btn-circle">
             <MoreVertical size={20} className="text-gray-700" />
           </span>
