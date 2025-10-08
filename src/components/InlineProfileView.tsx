@@ -431,7 +431,7 @@ export default function InlineProfileView({
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col justify-center">
+                <div className="flex-1 flex flex-col justify-end">
                   {connectionStatus === 'accepted' && (
                     <button
                       onClick={() => setShowRemoveConfirm(true)}
