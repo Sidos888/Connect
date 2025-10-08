@@ -1926,14 +1926,17 @@ export default function ProfileMenu() {
                   <p className="text-gray-500 text-sm">No information available</p>
                 </div>
 
-                {/* My Connections Card */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex flex-col justify-center">
+                {/* Connections Card */}
+                <button 
+                  onClick={() => setShowConnections(true)}
+                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex flex-col justify-center hover:shadow-md hover:bg-white transition-all text-left"
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
                         <Users className="w-5 h-5 text-black" />
                       </div>
-                      <span className="text-black font-medium">My connections</span>
+                      <span className="text-black font-medium">Connections</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex -space-x-2">
@@ -1945,7 +1948,7 @@ export default function ProfileMenu() {
                       <span className="text-black text-sm">+20</span>
                     </div>
                   </div>
-                </div>
+                </button>
 
                 {/* Content Sections */}
                 <div className="space-y-4">
