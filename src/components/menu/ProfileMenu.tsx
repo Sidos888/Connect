@@ -1918,7 +1918,7 @@ export default function ProfileMenu() {
                   onClick={() => {
                     console.log('Settings button clicked in centered profile');
                     setShowCenteredProfile(false);
-                    setShowSettings(true);
+                    setShowCenteredSettings(true);
                   }}
                   className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
                   aria-label="Open settings"
@@ -1953,7 +1953,7 @@ export default function ProfileMenu() {
                   onClick={() => {
                     console.log('Connections button clicked in centered profile');
                     setShowCenteredProfile(false);
-                    setShowConnections(true);
+                    setShowCenteredConnections(true);
                   }}
                   className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-md hover:bg-white transition-all text-center cursor-pointer"
                   aria-label="Open connections"
