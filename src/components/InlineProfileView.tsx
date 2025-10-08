@@ -38,6 +38,7 @@ export default function InlineProfileView({
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [currentView, setCurrentView] = useState<'profile' | 'settings' | 'connections'>('profile');
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
   const [mutualCount, setMutualCount] = useState(0);
@@ -152,7 +153,26 @@ export default function InlineProfileView({
     if (onOpenConnections) {
       onOpenConnections(userId);
     } else {
+      setCurrentView('connections');
       setShowConnectionsModal(true);
+    }
+  };
+
+  const handleSettingsClick = () => {
+    setCurrentView('settings');
+    setShowSettingsModal(true);
+  };
+
+  const handleBackFromSubView = () => {
+    if (currentView === 'connections') {
+      setShowConnectionsModal(false);
+      setCurrentView('profile');
+    } else if (currentView === 'settings') {
+      setShowSettingsModal(false);
+      setCurrentView('profile');
+    } else {
+      // If we're already at the profile view, go back to the parent
+      onBack();
     }
   };
 
@@ -212,7 +232,7 @@ export default function InlineProfileView({
       {/* Floating Action Buttons */}
       <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
         <button
-          onClick={onBack}
+          onClick={handleBackFromSubView}
           className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand pointer-events-auto"
           aria-label="Back to previous view"
         >
@@ -262,7 +282,7 @@ export default function InlineProfileView({
           </button>
 
           <button 
-            onClick={() => setShowSettingsModal(true)}
+            onClick={handleSettingsClick}
             className="flex flex-col items-center space-y-2"
           >
             <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
@@ -345,8 +365,14 @@ export default function InlineProfileView({
       {/* Connections Modal */}
       <ConnectionsModal
         isOpen={showConnectionsModal}
-        onClose={() => setShowConnectionsModal(false)}
-        onBack={() => setShowConnectionsModal(false)}
+        onClose={() => {
+          setShowConnectionsModal(false);
+          setCurrentView('profile');
+        }}
+        onBack={() => {
+          setShowConnectionsModal(false);
+          setCurrentView('profile');
+        }}
         userId={userId}
         onRemoveFriend={handleRemoveFriend}
       />
@@ -360,6 +386,7 @@ export default function InlineProfileView({
             onClick={() => {
               setShowSettingsModal(false);
               setShowRemoveConfirm(false);
+              setCurrentView('profile');
             }}
           />
           <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
@@ -369,6 +396,7 @@ export default function InlineProfileView({
                 onClick={() => {
                   setShowSettingsModal(false);
                   setShowRemoveConfirm(false);
+                  setCurrentView('profile');
                 }}
                 className="absolute left-6 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
                 aria-label="Back to profile"
