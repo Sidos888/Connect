@@ -280,10 +280,10 @@ export default function InlineProfileView({
               <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
                 <Users className="w-4 h-4 text-black" />
               </div>
-              <span className="text-sm font-medium text-black">
+              <span className="text-sm font-medium text-black text-center">
                 {account?.id === userId
                   ? 'My connections'
-                  : connectionStatus === 'accepted' ? 'Me: Friends'
+                  : connectionStatus === 'accepted' ? 'Friends'
                     : connectionStatus === 'pending' ? 'Friend Request Sent'
                     : 'Add Friend'}
               </span>

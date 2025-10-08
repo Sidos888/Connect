@@ -255,8 +255,8 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                     <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
                       <Users className="w-5 h-5 text-black" />
                     </div>
-                    <span className="text-black font-medium">
-                      {connectionStatus === 'accepted' ? 'Me: Friends' : 
+                    <span className="text-black font-medium text-center">
+                      {connectionStatus === 'accepted' ? 'Friends' : 
                        connectionStatus === 'pending' ? 'Friend Request Sent' : 
                        'Add Friend'}
                     </span>
