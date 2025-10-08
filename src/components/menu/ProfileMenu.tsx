@@ -111,7 +111,7 @@ function ConnectionsView({
           aria-label="Close connections"
         >
           <span className="back-btn-circle">
-            <X size={20} className="text-gray-700" />
+            <ArrowLeft size={20} className="text-gray-700" />
           </span>
         </button>
         <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Connections</h2>
