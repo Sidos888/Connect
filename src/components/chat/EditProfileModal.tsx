@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Camera, Save } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { useAppStore } from '@/lib/store';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 
 interface EditProfileModalProps {
   onBack: () => void;
