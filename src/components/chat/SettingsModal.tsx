@@ -121,10 +121,10 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
             </div>
           ) : currentView === 'confirm' ? (
-            <div className="flex-1 flex flex-col justify-center items-center text-center px-6">
-              {/* Profile Card */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-8 max-w-sm w-full">
-                <div className="flex items-center gap-4">
+            <div className="flex-1 flex flex-col items-center text-center px-6">
+              {/* Profile Card with Confirm Button */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 max-w-sm w-full">
+                <div className="flex items-center gap-4 mb-6">
                   <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
                     {profile?.profile_pic ? (
                       <img 
@@ -144,21 +144,13 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
                     </h3>
                   </div>
                 </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="w-full max-w-sm space-y-3">
+                
+                {/* Confirm Button at bottom of card */}
                 <button
                   onClick={handleRemoveFriend}
                   className="w-full px-6 py-4 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors"
                 >
                   Confirm
-                </button>
-                <button
-                  onClick={() => setCurrentView('settings')}
-                  className="w-full px-6 py-3 text-gray-700 font-medium hover:text-gray-900 transition-colors"
-                >
-                  Cancel
                 </button>
               </div>
             </div>
