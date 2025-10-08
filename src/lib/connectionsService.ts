@@ -384,25 +384,60 @@ export class ConnectionsService {
     }
   }
 
-  // Get connections (friends)
+  // Get connections (friends) using a two-step fetch to avoid RLS join issues
   async getConnections(userId: string): Promise<{ connections: Connection[]; error: Error | null }> {
     try {
-      const { data, error } = await this.supabase
+      // 1) Fetch raw connections rows first (no joins)
+      const { data: connectionRows, error: connError } = await this.supabase
         .from('connections')
-        .select(`
-          id, user1_id, user2_id, created_at,
-          user1:accounts!user1_id(id, name, bio, profile_pic, connect_id, created_at),
-          user2:accounts!user2_id(id, name, bio, profile_pic, connect_id, created_at)
-        `)
+        .select('id, user1_id, user2_id, created_at')
         .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error getting connections:', error);
-        return { connections: [], error };
+      if (connError) {
+        console.error('Error getting connections (base rows):', connError);
+        return { connections: [], error: connError };
       }
 
-      return { connections: data || [], error: null };
+      const rows = connectionRows || [];
+      if (rows.length === 0) return { connections: [], error: null };
+
+      // 2) Collect distinct user IDs to fetch account profiles
+      const userIds = Array.from(new Set(rows.flatMap(r => [r.user1_id, r.user2_id])));
+
+      const { data: accounts, error: accError } = await this.supabase
+        .from('accounts')
+        .select('id, name, bio, profile_pic, connect_id, created_at')
+        .in('id', userIds);
+
+      if (accError) {
+        console.error('Error loading connection account profiles:', accError);
+        // Return connections without embedded user objects
+        return { connections: rows as Connection[], error: null };
+      }
+
+      const idToUser: Record<string, User> = {};
+      (accounts || []).forEach(acc => {
+        idToUser[acc.id] = {
+          id: acc.id,
+          name: formatNameForDisplay(acc.name),
+          bio: acc.bio,
+          profile_pic: acc.profile_pic || undefined,
+          connect_id: acc.connect_id,
+          created_at: acc.created_at
+        } as User;
+      });
+
+      const enriched: Connection[] = rows.map(r => ({
+        id: r.id,
+        user1_id: r.user1_id,
+        user2_id: r.user2_id,
+        created_at: r.created_at,
+        user1: idToUser[r.user1_id],
+        user2: idToUser[r.user2_id]
+      }));
+
+      return { connections: enriched, error: null };
     } catch (error) {
       console.error('Error in getConnections:', error);
       return { connections: [], error: error as Error };
