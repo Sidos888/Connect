@@ -51,11 +51,13 @@ function LoadingOverlay({ message }: { message: string }) {
 function ConnectionsView({ 
   onBack,
   onAddPerson,
-  onFriendClick
+  onFriendClick,
+  fromProfile = false
 }: { 
   onBack: () => void;
   onAddPerson: () => void;
   onFriendClick: (friend: ConnectionUser) => void;
+  fromProfile?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
   const [peopleConnections, setPeopleConnections] = useState<any[]>([]);
@@ -111,7 +113,11 @@ function ConnectionsView({
           aria-label="Close connections"
         >
           <span className="back-btn-circle">
-            <ArrowLeft size={20} className="text-gray-700" />
+            {fromProfile ? (
+              <ArrowLeft size={20} className="text-gray-700" />
+            ) : (
+              <X size={20} className="text-gray-700" />
+            )}
           </span>
         </button>
         <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Connections</h2>
@@ -1282,12 +1288,14 @@ export default function ProfileMenu() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showCenteredProfile, setShowCenteredProfile] = useState(false);
   const [showCenteredConnections, setShowCenteredConnections] = useState(false);
+  const [connectionsFromProfile, setConnectionsFromProfile] = useState(false);
   const [showCenteredAddPerson, setShowCenteredAddPerson] = useState(false);
   const [showCenteredNotifications, setShowCenteredNotifications] = useState(false);
   const [showCenteredGallery, setShowCenteredGallery] = useState(false);
   const [showCenteredAchievements, setShowCenteredAchievements] = useState(false);
   const [showCenteredSaved, setShowCenteredSaved] = useState(false);
   const [showCenteredSettings, setShowCenteredSettings] = useState(false);
+  const [settingsFromProfile, setSettingsFromProfile] = useState(false);
   const [showCenteredFriendProfile, setShowCenteredFriendProfile] = useState(false);
   const [showCenteredConnectionsModal, setShowCenteredConnectionsModal] = useState(false);
   const [connectionsModalUserId, setConnectionsModalUserId] = useState<string | null>(null);
@@ -1918,6 +1926,7 @@ export default function ProfileMenu() {
                   onClick={() => {
                     console.log('Settings button clicked in centered profile');
                     setShowCenteredProfile(false);
+                    setSettingsFromProfile(true);
                     setShowCenteredSettings(true);
                   }}
                   className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
@@ -1953,6 +1962,7 @@ export default function ProfileMenu() {
                   onClick={() => {
                     console.log('Connections button clicked in centered profile');
                     setShowCenteredProfile(false);
+                    setConnectionsFromProfile(true);
                     setShowCenteredConnections(true);
                   }}
                   className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-md hover:bg-white transition-all text-center cursor-pointer"
@@ -1997,13 +2007,17 @@ export default function ProfileMenu() {
                 <ConnectionsView
                   onBack={() => {
                     setShowCenteredConnections(false);
-                    setShowCenteredProfile(true);
+                    if (connectionsFromProfile) {
+                      setShowCenteredProfile(true);
+                    }
+                    setConnectionsFromProfile(false);
                   }}
                   onAddPerson={() => {
                     setShowCenteredConnections(false);
                     setShowCenteredAddPerson(true);
                   }}
                   onFriendClick={handleFriendClick}
+                  fromProfile={connectionsFromProfile}
                 />
               </div>
             </div>
@@ -2215,11 +2229,18 @@ export default function ProfileMenu() {
                     setShowCenteredSettings(false);
                     setShowDeleteConfirm(false);
                     setShowFinalConfirm(false);
-                    setShowCenteredProfile(true);
+                    if (settingsFromProfile) {
+                      setShowCenteredProfile(true);
+                    }
+                    setSettingsFromProfile(false);
                   }}
                   className="p-2 hover:bg-gray-100 transition-colors rounded-full"
                 >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                  {settingsFromProfile ? (
+                    <ArrowLeft className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <X className="w-5 h-5 text-gray-600" />
+                  )}
                 </button>
                 <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
                 <div className="w-9"></div> {/* Spacer for centering */}
