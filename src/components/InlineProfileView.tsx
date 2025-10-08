@@ -275,48 +275,55 @@ export default function InlineProfileView({
           onClick={handleConnectionsClick}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleConnectionsClick(); } }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                <Users className="w-4 h-4 text-black" />
+          {account?.id === userId ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                  <Users className="w-4 h-4 text-black" />
+                </div>
+                <span className="text-sm font-medium text-black">My connections</span>
               </div>
-              <span className="text-sm font-medium text-black text-center">
-                {account?.id === userId
-                  ? 'My connections'
-                  : connectionStatus === 'accepted' ? 'Friends'
-                    : connectionStatus === 'pending' ? 'Friend Request Sent'
-                    : 'Add Friend'}
-              </span>
+              <div className="flex items-center gap-1">
+                {selfConnections.slice(0,3).map((c:any) => (
+                  <div key={c.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                    <Avatar src={c.profile_pic} name={c.name} size={20} />
+                  </div>
+                ))}
+                {selfConnectionsCount > 3 && (
+                  <span className="text-xs text-black">+{selfConnectionsCount - 3}</span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              {account?.id === userId ? (
-                <>
-                  {selfConnections.slice(0,3).map((c:any) => (
-                    <div key={c.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                      <Avatar src={c.profile_pic} name={c.name} size={20} />
-                    </div>
-                  ))}
-                  {selfConnectionsCount > 3 && (
-                    <span className="text-xs text-black">+{selfConnectionsCount - 3}</span>
-                  )}
-                </>
-              ) : (
-                <>
-                  {mutualConnections.length > 0 && (
-                    <div className="flex -space-x-1">
-                      {mutualConnections.slice(0, 3).map((mutual: any) => (
-                        <div key={mutual.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                          <Avatar src={mutual.profile_pic} name={mutual.name} size={20} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {mutualCount > 3 && (
-                    <span className="text-xs text-black">+{mutualCount - 3}</span>
-                  )}
-                </>
-              )}
+          ) : connectionStatus === 'accepted' ? (
+            <div className="flex items-center justify-center">
+              <span className="text-sm font-medium text-black">Friends</span>
             </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                  <Users className="w-4 h-4 text-black" />
+                </div>
+                <span className="text-sm font-medium text-black">
+                  {connectionStatus === 'pending' ? 'Friend Request Sent' : 'Add Friend'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {mutualConnections.length > 0 && (
+                  <div className="flex -space-x-1">
+                    {mutualConnections.slice(0, 3).map((mutual: any) => (
+                      <div key={mutual.id} className="w-5 h-5 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                        <Avatar src={mutual.profile_pic} name={mutual.name} size={20} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {mutualCount > 3 && (
+                  <span className="text-xs text-black">+{mutualCount - 3}</span>
+                )}
+              </div>
+            </div>
+          )}
           </div>
         </button>
 

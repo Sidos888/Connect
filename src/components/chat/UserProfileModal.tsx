@@ -250,36 +250,40 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
                 className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={handleConnectionsClick}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                      <Users className="w-5 h-5 text-black" />
-                    </div>
-                    <span className="text-black font-medium text-center">
-                      {connectionStatus === 'accepted' ? 'Friends' : 
-                       connectionStatus === 'pending' ? 'Friend Request Sent' : 
-                       'Add Friend'}
-                    </span>
+                {connectionStatus === 'accepted' ? (
+                  <div className="flex items-center justify-center">
+                    <span className="text-black font-medium">Friends</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {mutualConnections.length > 0 && (
-                      <div className="flex -space-x-2">
-                        {mutualConnections.slice(0, 3).map((mutual, index) => (
-                          <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                            <Avatar
-                              src={mutual.profile_pic}
-                              name={mutual.name}
-                              size={24}
-                            />
-                          </div>
-                        ))}
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
+                        <Users className="w-5 h-5 text-black" />
                       </div>
-                    )}
-                    {mutualCount > 3 && (
-                      <span className="text-black text-sm">+{mutualCount - 3}</span>
-                    )}
+                      <span className="text-black font-medium">
+                        {connectionStatus === 'pending' ? 'Friend Request Sent' : 'Add Friend'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {mutualConnections.length > 0 && (
+                        <div className="flex -space-x-2">
+                          {mutualConnections.slice(0, 3).map((mutual, index) => (
+                            <div key={mutual.id} className="w-6 h-6 bg-white border border-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                              <Avatar
+                                src={mutual.profile_pic}
+                                name={mutual.name}
+                                size={24}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {mutualCount > 3 && (
+                        <span className="text-black text-sm">+{mutualCount - 3}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Content Sections */}
