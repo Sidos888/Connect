@@ -857,11 +857,15 @@ function ProfileView({
   onBack, 
   onEditProfile,
   onShare,
+  onConnections,
+  onSettings,
   currentAccount 
 }: { 
   onBack: () => void; 
   onEditProfile: () => void;
   onShare: () => void;
+  onConnections: () => void;
+  onSettings: () => void;
   currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null;
 }) {
   return (
@@ -1838,6 +1842,16 @@ export default function ProfileMenu() {
                   setOpen(false);
                   setShowShareModal(true);
                 }}
+                onConnections={() => {
+                  console.log('ProfileView: Opening connections');
+                  setShowProfile(false);
+                  setShowConnections(true);
+                }}
+                onSettings={() => {
+                  console.log('ProfileView: Opening settings');
+                  setShowProfile(false);
+                  setShowSettings(true);
+                }}
                 currentAccount={currentAccount}
               />
             ) : (
@@ -1901,7 +1915,11 @@ export default function ProfileMenu() {
                   <X className="w-5 h-5 text-gray-600" />
                 </button>
                 <button 
-                  onClick={() => setShowSettings(true)}
+                  onClick={() => {
+                    console.log('Settings button clicked in centered profile');
+                    setShowCenteredProfile(false);
+                    setShowSettings(true);
+                  }}
                   className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
                   aria-label="Open settings"
                 >
@@ -1933,7 +1951,8 @@ export default function ProfileMenu() {
                 {/* Connections Card */}
                 <button 
                   onClick={() => {
-                    console.log('Connections button clicked');
+                    console.log('Connections button clicked in centered profile');
+                    setShowCenteredProfile(false);
                     setShowConnections(true);
                   }}
                   className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-md hover:bg-white transition-all text-center cursor-pointer"
