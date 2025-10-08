@@ -132,7 +132,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
             onClick={onBack || onClose}
             className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <div className="w-9"></div>
         </div>
