@@ -27,6 +27,7 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
   const [error, setError] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
+  const [currentView, setCurrentView] = useState<'settings' | 'confirm'>('settings');
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -99,15 +100,17 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
         {/* Header */}
         <div className="flex items-center justify-center relative w-full p-6">
           <button
-            onClick={onBack}
+            onClick={currentView === 'confirm' ? () => setCurrentView('settings') : onBack}
             className="absolute left-6 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
-            aria-label="Back to profile"
+            aria-label={currentView === 'confirm' ? "Back to settings" : "Back to profile"}
           >
             <span className="back-btn-circle">
               <ArrowLeft size={20} className="text-gray-700" />
             </span>
           </button>
-          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Settings</h2>
+          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>
+            {currentView === 'settings' ? 'Settings' : 'Are you sure you want to unfriend'}
+          </h2>
           <div className="w-9"></div>
         </div>
 
@@ -117,13 +120,8 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
             </div>
-          ) : showRemoveConfirm ? (
+          ) : currentView === 'confirm' ? (
             <div className="flex-1 flex flex-col justify-center items-center text-center px-6">
-              {/* Question */}
-              <h2 className="text-xl font-semibold text-gray-900 mb-8">
-                Are you sure you want to unfriend
-              </h2>
-              
               {/* Profile Card */}
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-8 max-w-sm w-full">
                 <div className="flex items-center gap-4">
@@ -157,7 +155,7 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
                   Confirm
                 </button>
                 <button
-                  onClick={() => setShowRemoveConfirm(false)}
+                  onClick={() => setCurrentView('settings')}
                   className="w-full px-6 py-3 text-gray-700 font-medium hover:text-gray-900 transition-colors"
                 >
                   Cancel
@@ -168,7 +166,7 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
             <div className="flex-1 flex flex-col justify-end">
               {connectionStatus === 'accepted' && (
                 <button
-                  onClick={() => setShowRemoveConfirm(true)}
+                  onClick={() => setCurrentView('confirm')}
                   className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <Trash2 className="w-5 h-5 text-red-500" />
