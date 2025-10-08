@@ -121,11 +121,11 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
             </div>
           ) : currentView === 'confirm' ? (
-            <div className="flex-1 flex flex-col items-center text-center px-6">
-              {/* Profile Card with Confirm Button */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 max-w-sm w-full">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+            <div className="flex-1 flex flex-col justify-center items-center px-6">
+              {/* Profile Card - Centered */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 max-w-sm w-full">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mb-3">
                     {profile?.profile_pic ? (
                       <img 
                         src={profile.profile_pic} 
@@ -138,21 +138,19 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
                       </span>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {profile?.name || userName}
-                    </h3>
-                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {profile?.name || userName}
+                  </h3>
                 </div>
-                
-                {/* Confirm Button at bottom of card */}
-                <button
-                  onClick={handleRemoveFriend}
-                  className="w-full px-6 py-4 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors"
-                >
-                  Confirm
-                </button>
               </div>
+              
+              {/* Confirm Button - Separate, at bottom */}
+              <button
+                onClick={handleRemoveFriend}
+                className="w-full max-w-sm px-6 py-4 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors"
+              >
+                Confirm
+              </button>
             </div>
           ) : (
             <div className="flex-1 flex flex-col justify-end">
