@@ -14,15 +14,20 @@ interface EditProfileModalProps {
 export default function EditProfileModal({ onBack, onSave }: EditProfileModalProps) {
   const { account } = useAuth();
   const { personalProfile, setPersonalProfile } = useAppStore();
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [dob, setDob] = useState('');
   const [profilePic, setProfilePic] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
 
   useEffect(() => {
     if (personalProfile) {
-      setName(personalProfile.name || '');
+      const fullName = personalProfile.name || '';
+      const nameParts = fullName.split(' ');
+      setFirstName(nameParts[0] || '');
+      setLastName(nameParts.slice(1).join(' ') || '');
       setDob(personalProfile.dob || '');
       setProfilePic(personalProfile.avatarUrl || '');
     }
@@ -35,17 +40,16 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
     setError('');
 
     try {
-      // Format name with proper capitalization
-      const formattedName = name
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+      // Combine first and last name with proper capitalization
+      const formattedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+      const formattedLastName = lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase();
+      const fullName = `${formattedFirstName} ${formattedLastName}`.trim();
 
       // Update profile in Supabase
       const { error: updateError } = await supabase
         .from('accounts')
         .update({
-          name: formattedName,
+          name: fullName,
           dob: dob || null,
           profile_pic: profilePic || null,
           updated_at: new Date().toISOString()
@@ -61,7 +65,7 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       // Update local state
       setPersonalProfile({
         ...personalProfile,
-        name: formattedName,
+        name: fullName,
         dob: dob,
         avatarUrl: profilePic
       });
@@ -111,9 +115,9 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       {/* Content */}
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="space-y-6">
-          {/* Profile Picture */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className="relative">
+          {/* Profile Picture Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6">
+            <div className="flex flex-col items-center space-y-4">
               <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
                 {profilePic ? (
                   <img 
@@ -123,53 +127,90 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
                   />
                 ) : (
                   <span className="text-gray-600 font-medium text-3xl">
-                    {name.charAt(0).toUpperCase() || 'U'}
+                    {firstName.charAt(0).toUpperCase() || 'U'}
                   </span>
                 )}
               </div>
-              <label
-                htmlFor="profile-pic"
-                className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors"
+              <button
+                onClick={() => setShowPhotoUpload(!showPhotoUpload)}
+                className="text-black underline text-sm font-medium hover:text-gray-700"
               >
-                <Camera className="w-4 h-4 text-white" />
-                <input
-                  id="profile-pic"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfilePicChange}
-                  className="hidden"
-                />
-              </label>
+                Edit
+              </button>
             </div>
-            <button
-              onClick={() => document.getElementById('profile-pic')?.click()}
-              className="text-blue-600 text-sm font-medium hover:text-blue-700"
-            >
-              Change Photo
-            </button>
+            
+            {/* Photo Upload Section */}
+            {showPhotoUpload && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <label
+                  htmlFor="profile-pic"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <Camera className="w-4 h-4 text-gray-600" />
+                  <span className="text-gray-700 font-medium">Choose Photo</span>
+                  <input
+                    id="profile-pic"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePicChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
-          {/* Name Field */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-              placeholder="Enter your name"
-            />
+          {/* First Name Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6">
+            <div className="space-y-3">
+              <h3 className="text-lg font-medium text-gray-900">First Name</h3>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
+                placeholder="Enter your first name"
+              />
+            </div>
           </div>
 
-          {/* Date of Birth Field */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-            <input
-              type="date"
-              value={dob ? new Date(dob).toISOString().split('T')[0] : ''}
-              onChange={(e) => setDob(e.target.value)}
-              className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-            />
+          {/* Last Name Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6">
+            <div className="space-y-3">
+              <h3 className="text-lg font-medium text-gray-900">Last Name</h3>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
+                placeholder="Enter your last name"
+              />
+            </div>
+          </div>
+
+          {/* Date of Birth Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6">
+            <div className="space-y-3">
+              <h3 className="text-lg font-medium text-gray-900">Date of Birth</h3>
+              {dob ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Current: {new Date(dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                  <input
+                    type="date"
+                    value={dob ? new Date(dob).toISOString().split('T')[0] : ''}
+                    onChange={(e) => setDob(e.target.value)}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
+                  />
+                </div>
+              ) : (
+                <input
+                  type="date"
+                  value={dob ? new Date(dob).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setDob(e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-base"
+                />
+              )}
+            </div>
           </div>
 
           {/* Error Message */}
@@ -185,8 +226,8 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       <div className="p-6 border-t border-gray-200">
         <button
           onClick={handleSave}
-          disabled={saving || !name.trim()}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+          disabled={saving || !firstName.trim()}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           <Save className="w-4 h-4" />
           {saving ? 'Saving...' : 'Save Changes'}
