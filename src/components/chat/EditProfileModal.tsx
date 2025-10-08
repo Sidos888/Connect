@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { useAppStore } from '@/lib/store';
