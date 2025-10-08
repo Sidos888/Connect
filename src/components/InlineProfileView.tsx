@@ -12,6 +12,7 @@ interface InlineProfileViewProps {
   onBack: () => void;
   onStartChat?: (chatId: string) => void;
   onOpenConnections?: (userId: string) => void;
+  onSettingsClick?: () => void;
   entryPoint?: 'chat' | 'connections' | 'menu'; // Context for different back behaviors
 }
 
@@ -29,6 +30,7 @@ export default function InlineProfileView({
   onBack,
   onStartChat,
   onOpenConnections,
+  onSettingsClick,
   entryPoint = 'connections'
 }: InlineProfileViewProps) {
   const { account } = useAuth();
@@ -36,8 +38,6 @@ export default function InlineProfileView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [currentView, setCurrentView] = useState<'profile' | 'settings' | 'connections'>('profile');
   const [connectionStatus, setConnectionStatus] = useState<string>('none');
   const [mutualConnections, setMutualConnections] = useState<any[]>([]);
@@ -159,16 +159,14 @@ export default function InlineProfileView({
   };
 
   const handleSettingsClick = () => {
-    setCurrentView('settings');
-    setShowSettingsModal(true);
+    if (onSettingsClick) {
+      onSettingsClick();
+    }
   };
 
   const handleBackFromSubView = () => {
     if (currentView === 'connections') {
       setShowConnectionsModal(false);
-      setCurrentView('profile');
-    } else if (currentView === 'settings') {
-      setShowSettingsModal(false);
       setCurrentView('profile');
     } else {
       // If we're already at the profile view, go back to the parent
@@ -176,36 +174,6 @@ export default function InlineProfileView({
     }
   };
 
-  const handleRemoveFriend = async () => {
-    if (!account?.id || !userId) return;
-
-    try {
-      // Remove connection
-      const { success, error } = await simpleChatService.removeConnection(account.id, userId);
-      
-      if (success) {
-        // Find and hide any existing chat
-        const { chat: existingChat } = await simpleChatService.findExistingDirectChat(account.id, userId);
-        if (existingChat) {
-          await simpleChatService.hideChat(existingChat.id, account.id);
-        }
-
-        // Update UI
-        setConnectionStatus('none');
-        setMutualConnections([]);
-        setMutualCount(0);
-        setShowSettingsModal(false);
-        setShowRemoveConfirm(false);
-        
-        // Close the profile modal
-        onBack();
-      } else {
-        console.error('Error removing friend:', error);
-      }
-    } catch (error) {
-      console.error('Error in handleRemoveFriend:', error);
-    }
-  };
 
   if (loading) {
     // Avoid showing a loading spinner; render nothing while data is fetched
@@ -367,86 +335,8 @@ export default function InlineProfileView({
           setCurrentView('profile');
         }}
         userId={userId}
-        onRemoveFriend={handleRemoveFriend}
       />
 
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-            onClick={() => {
-              setShowSettingsModal(false);
-              setShowRemoveConfirm(false);
-              setCurrentView('profile');
-            }}
-          />
-          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative z-50 mx-4">
-            {/* Header */}
-            <div className="flex items-center justify-center relative w-full p-6">
-              <button
-                onClick={() => {
-                  setShowSettingsModal(false);
-                  setShowRemoveConfirm(false);
-                  setCurrentView('profile');
-                }}
-                className="absolute left-6 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
-                aria-label="Back to profile"
-              >
-                <span className="back-btn-circle">
-                  <ArrowLeft size={20} className="text-gray-700" />
-                </span>
-              </button>
-              <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Settings</h2>
-              <div className="w-9"></div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 flex flex-col p-6">
-              {showRemoveConfirm ? (
-                <div className="flex-1 flex flex-col justify-center items-center">
-                  <div className="text-center max-w-md">
-                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Trash2 className="w-8 h-8 text-red-600" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Remove Friend</h3>
-                    <p className="text-gray-600 mb-8">
-                      Are you sure you want to remove {profile?.name} from your friends? This action cannot be undone.
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setShowRemoveConfirm(false)}
-                        className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleRemoveFriend}
-                        className="flex-1 px-4 py-3 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-medium"
-                      >
-                        Remove Friend
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col justify-end">
-                  {connectionStatus === 'accepted' && (
-                    <button
-                      onClick={() => setShowRemoveConfirm(true)}
-                      className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5 text-red-500" />
-                      <span className="font-medium">Remove Friend</span>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

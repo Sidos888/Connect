@@ -9,6 +9,7 @@ import { simpleChatService } from "@/lib/simpleChatService";
 import { useRouter } from "next/navigation";
 import InlineProfileView from "@/components/InlineProfileView";
 import GroupInfoModal from "@/components/chat/GroupInfoModal";
+import SettingsModal from "@/components/chat/SettingsModal";
 
 interface PersonalChatPanelProps {
   conversation: Conversation;
@@ -25,6 +26,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const hasMarkedAsRead = useRef(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [refreshedConversation, setRefreshedConversation] = useState<Conversation | null>(null);
@@ -269,6 +271,9 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 onStartChat={(chatId) => {
                   router.push(`/chat?chat=${chatId}`);
                 }}
+                onSettingsClick={() => {
+                  setShowSettingsModal(true);
+                }}
               />
             </div>
           </div>
@@ -280,6 +285,20 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           isOpen={showGroupInfo}
           onClose={() => setShowGroupInfo(false)}
           chatId={conversation.id}
+        />
+      )}
+
+      {/* Settings Modal */}
+      {profileUserId && (
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => {
+            setShowSettingsModal(false);
+          }}
+          onBack={() => {
+            setShowSettingsModal(false);
+          }}
+          userId={profileUserId}
         />
       )}
 
