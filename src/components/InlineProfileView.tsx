@@ -228,7 +228,7 @@ export default function InlineProfileView({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '80px' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" style={{ paddingTop: '20px' }}>
         {/* Profile Header */}
         <div className="text-center mb-8">
           <div className="relative inline-block mb-6">
@@ -346,6 +346,7 @@ export default function InlineProfileView({
       <ConnectionsModal
         isOpen={showConnectionsModal}
         onClose={() => setShowConnectionsModal(false)}
+        onBack={() => setShowConnectionsModal(false)}
         userId={userId}
         onRemoveFriend={handleRemoveFriend}
       />
