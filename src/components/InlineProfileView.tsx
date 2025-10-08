@@ -324,7 +324,6 @@ export default function InlineProfileView({
               </div>
             </div>
           )}
-          </div>
         </button>
 
         {/* Content Sections */}
