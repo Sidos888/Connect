@@ -248,7 +248,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
       {/* Profile Modals */}
       {profileUserId && showUserProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="fixed inset-0 transition-opacity duration-300 ease-in-out"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
@@ -257,7 +257,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               setProfileUserId(null);
             }}
           />
-          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative mx-4">
             <div className="flex flex-col h-full">
               <InlineProfileView
                 userId={profileUserId}

@@ -125,7 +125,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
       />
       
       {/* Modal content */}
-      <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+      <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative mx-4">
         {/* Floating Action Buttons */}
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
           <button

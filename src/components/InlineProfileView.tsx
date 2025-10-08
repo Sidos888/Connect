@@ -372,7 +372,7 @@ export default function InlineProfileView({
 
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="fixed inset-0 transition-opacity duration-300 ease-in-out"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
@@ -382,7 +382,7 @@ export default function InlineProfileView({
               setCurrentView('profile');
             }}
           />
-          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
+          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative z-50 mx-4">
             {/* Header */}
             <div className="flex items-center justify-center relative w-full p-6">
               <button
