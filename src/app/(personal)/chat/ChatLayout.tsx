@@ -317,7 +317,7 @@ export default function ChatLayout() {
             {/* Desktop Layout - Keep existing */}
             <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full min-h-0 relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
               {/* Unified scroll container with sticky header */}
-              <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
+              <div className="flex-1 overflow-y-auto no-scrollbar min-h-0" style={{ height: 'calc(100vh - 0px)' }}>
                 {/* Sticky header */}
                 <div className="px-4 py-3 lg:p-6 border-b border-gray-200 bg-white sticky top-0 z-20">
                   <div className="flex items-center justify-between">

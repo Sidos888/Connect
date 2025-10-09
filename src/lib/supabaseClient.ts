@@ -85,11 +85,22 @@ export function getSupabaseClient(): SupabaseClient | null {
       if (error && (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found'))) {
         console.warn('🧹 Supabase: Clearing invalid refresh token state');
         await clearInvalidSession();
+        // Force a fresh session check after clearing
+        const { data: newData } = await client!.auth.getSession();
+        return newData?.session || null;
       }
       return data?.session || null;
     } catch (err) {
       console.error('🔧 Supabase session watchdog error:', err);
-      return null;
+      // If we get an error, try clearing the session and retry once
+      try {
+        await clearInvalidSession();
+        const { data: retryData } = await client!.auth.getSession();
+        return retryData?.session || null;
+      } catch (retryErr) {
+        console.error('🔧 Supabase session retry error:', retryErr);
+        return null;
+      }
     }
   };
 

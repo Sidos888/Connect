@@ -29,6 +29,38 @@ export interface SimpleMessage {
 class SimpleChatService {
   private supabase = getSupabaseClient();
   private chats: Map<string, SimpleChat> = new Map();
+  private userChats: Map<string, SimpleChat[]> = new Map();
+
+  // Retry mechanism for failed requests
+  private async withRetry<T>(
+    operation: () => Promise<T>, 
+    maxRetries: number = 2,
+    delay: number = 1000
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        
+        // Don't retry on auth errors or 500 errors
+        if (lastError.message.includes('Invalid Refresh Token') || 
+            lastError.message.includes('Refresh Token Not Found') ||
+            lastError.message.includes('500')) {
+          throw lastError;
+        }
+        
+        if (attempt < maxRetries) {
+          console.warn(`SimpleChatService: Retry ${attempt + 1}/${maxRetries} after error:`, lastError.message);
+          await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
+        }
+      }
+    }
+    
+    throw lastError;
+  }
 
   // Expose Supabase client for advanced queries from UI components when needed
   getSupabaseClient() {
@@ -65,8 +97,8 @@ class SimpleChatService {
           id,
           user1_id,
           user2_id,
-          user1:user1_id(id, name, profile_pic, connect_id, bio, dob),
-          user2:user2_id(id, name, profile_pic, connect_id, bio, dob)
+          status,
+          created_at
         `)
         .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
         .eq('status', 'accepted');
@@ -83,34 +115,41 @@ class SimpleChatService {
 
       console.log('SimpleChatService: Found connections:', connections?.length || 0);
 
-      // Extract the connected users (not the current user)
-      const connectedUsers = new Map();
+      // Extract the connected user IDs (not the current user)
+      const connectedUserIds = new Set<string>();
       
       (connections || []).forEach(connection => {
-        if (connection.user1_id === userId && connection.user2) {
-          // Current user is user1, so user2 is the connection
-          connectedUsers.set(connection.user2.id, {
-            id: connection.user2.id,
-            name: connection.user2.name,
-            profile_pic: connection.user2.profile_pic,
-            connect_id: connection.user2.connect_id,
-            bio: connection.user2.bio,
-            dob: connection.user2.dob,
-            is_blocked: false
-          });
-        } else if (connection.user2_id === userId && connection.user1) {
-          // Current user is user2, so user1 is the connection
-          connectedUsers.set(connection.user1.id, {
-            id: connection.user1.id,
-            name: connection.user1.name,
-            profile_pic: connection.user1.profile_pic,
-            connect_id: connection.user1.connect_id,
-            bio: connection.user1.bio,
-            dob: connection.user1.dob,
-            is_blocked: false
-          });
+        if (connection.user1_id === userId) {
+          connectedUserIds.add(connection.user2_id);
+        } else if (connection.user2_id === userId) {
+          connectedUserIds.add(connection.user1_id);
         }
       });
+
+      // Get account details for connected users
+      const connectedUsers = new Map();
+      if (connectedUserIds.size > 0) {
+        const { data: accountsData, error: accountsError } = await this.supabase
+          .from('accounts')
+          .select('id, name, profile_pic, connect_id, bio, dob')
+          .in('id', Array.from(connectedUserIds));
+
+        if (!accountsError && accountsData) {
+          accountsData.forEach(account => {
+            connectedUsers.set(account.id, {
+              id: account.id,
+              name: account.name,
+              profile_pic: account.profile_pic,
+              connect_id: account.connect_id,
+              bio: account.bio,
+              dob: account.dob,
+              is_blocked: false
+            });
+          });
+        } else {
+          console.warn('SimpleChatService: Failed to fetch account details for connections:', accountsError);
+        }
+      }
 
       // Convert map to array and sort by name
       const contacts = Array.from(connectedUsers.values()).sort((a, b) => 
@@ -127,6 +166,17 @@ class SimpleChatService {
 
   // Get user's chats (now loads from Supabase)
   async getUserChats(userId: string): Promise<{ chats: SimpleChat[]; error: Error | null }> {
+    try {
+      return await this.withRetry(async () => {
+        return await this._getUserChatsInternal(userId);
+      });
+    } catch (error) {
+      console.error('Error in getUserChats after retries:', error);
+      return { chats: [], error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  private async _getUserChatsInternal(userId: string): Promise<{ chats: SimpleChat[]; error: Error | null }> {
     try {
       // Get user's chats from Supabase with last_read_at
       const { data: userChats, error: userChatsError } = await this.supabase
@@ -159,32 +209,40 @@ class SimpleChatService {
         return { chats: [], error: chatsError };
       }
 
-      // Get participants for each chat
+      // Get participants for each chat using a more reliable approach
       const chats: SimpleChat[] = [];
       for (const chat of chatsData || []) {
-        const { data: participantsData, error: participantsError } = await this.supabase
+        // First get the participant user IDs
+        const { data: participantIds, error: participantIdsError } = await this.supabase
           .from('chat_participants')
-          .select(`
-            user_id,
-            accounts!inner(id, name, profile_pic)
-          `)
+          .select('user_id')
           .eq('chat_id', chat.id);
 
-        console.log('SimpleChatService: Raw participants data for chat', chat.id, ':', participantsData);
-        console.log('SimpleChatService: Participants error for chat', chat.id, ':', participantsError);
+        let participants: Array<{ id: string; name: string; profile_pic?: string }> = [];
 
-        type ParticipantRow = { accounts: { id: string; name: string; profile_pic?: string | null } };
-        const participants = (!participantsError && participantsData)
-          ? (participantsData || []).map((p: ParticipantRow) => ({
-              id: p.accounts.id,
-              name: formatNameForDisplay(p.accounts.name),
-              profile_pic: p.accounts.profile_pic || undefined
-            }))
-          : [];
+        if (!participantIdsError && participantIds && participantIds.length > 0) {
+          // Then get the account details for each participant
+          const userIds = participantIds.map(p => p.user_id);
+          const { data: accountsData, error: accountsError } = await this.supabase
+            .from('accounts')
+            .select('id, name, profile_pic')
+            .in('id', userIds);
 
-        if (participantsError) {
-          // Do not break the entire chat load if RLS blocks the join; proceed with empty participants
-          console.warn('SimpleChatService: Proceeding with empty participants for chat due to error:', chat.id);
+          if (!accountsError && accountsData) {
+            participants = accountsData.map(account => ({
+              id: account.id,
+              name: formatNameForDisplay(account.name),
+              profile_pic: account.profile_pic || undefined
+            }));
+          } else {
+            console.warn('SimpleChatService: Failed to fetch account details for chat participants:', chat.id, accountsError);
+            // Fallback: create basic participant objects with just IDs
+            participants = userIds.map(id => ({
+              id,
+              name: 'Unknown User',
+              profile_pic: undefined
+            }));
+          }
         }
 
         console.log('SimpleChatService: Chat participants for', chat.id, ':', participants);
