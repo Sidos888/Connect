@@ -16,8 +16,10 @@ interface PersonalChatPanelProps {
 }
 
 export default function PersonalChatPanel({ conversation }: PersonalChatPanelProps) {
+  console.log('🎬 PersonalChatPanel: Component rendering with conversation:', conversation.id);
   const { sendMessage, markAllRead } = useAppStore();
   const { account } = useAuth();
+  console.log('🎬 PersonalChatPanel: Account:', account?.id);
   const router = useRouter();
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -43,8 +45,14 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
   // Load participants and messages from the database
   useEffect(() => {
+    console.log('PersonalChatPanel: useEffect triggered with:', { 
+      conversationId: conversation.id, 
+      accountId: account?.id,
+      conversation: conversation 
+    });
     const loadData = async () => {
       if (conversation.id && account?.id) {
+        console.log('PersonalChatPanel: Conditions met, starting loadData');
         setLoading(true);
         
         // Load chat details to get participants
@@ -88,6 +96,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         unsubscribeMessagesRef.current = unsubscribeMessages;
         
         // Subscribe to typing indicators
+        console.log('PersonalChatPanel: Setting up typing subscription for chat:', conversation.id, 'user:', account.id);
         const unsubscribeTyping = simpleChatService.subscribeToTyping(
           conversation.id,
           account.id,
@@ -96,6 +105,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             setTypingUsers(typingUserIds);
           }
         );
+        console.log('PersonalChatPanel: Typing subscription created:', !!unsubscribeTyping);
         unsubscribeTypingRef.current = unsubscribeTyping;
         
         setLoading(false);
@@ -124,9 +134,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     }
   }, [conversation.id, markAllRead, account?.id]);
 
+  // Auto-scroll to bottom when messages change or typing indicator appears/disappears
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  });
+  }, [messages.length, typingUsers.length]);
 
   // JavaScript animation for typing dots
   useEffect(() => {
@@ -262,7 +273,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           messages.map((m) => {
             const isMe = m.sender_id === account?.id;
             return (
-          <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2`}>
+          <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"} items-center gap-2`}>
             {/* Profile picture for received messages */}
             {!isMe && (
               <button 
@@ -317,70 +328,97 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           )})
         )}
         
-        <div ref={endRef} />
-      </div>
-
-              {/* Typing Indicator */}
-              {typingUsers.length > 0 && (() => {
-                console.log('🐛 Typing indicator rendering with typingUsers:', typingUsers.length);
+        {/* Typing Indicator - positioned exactly like a message */}
+        {typingUsers.length > 0 && (() => {
+          console.log('🐛 Typing indicator rendering with typingUsers:', typingUsers);
+          console.log('🐛 Current user account.id:', account?.id);
+          console.log('🐛 TypingUsers[0]:', typingUsers[0]);
+          console.log('🐛 Is current user in typingUsers?', typingUsers.includes(account?.id || ''));
+          return (
+            <div className="flex justify-start items-center gap-2 mt-12">
+              {/* Profile Card - same positioning as message avatars */}
+              {typingUsers.length === 1 && (() => {
+                let typingUser = participants.find(p => p.id === typingUsers[0]);
+                console.log('🐛 Looking for typing user:', typingUsers[0]);
+                console.log('🐛 Available participants:', participants);
+                console.log('🐛 Participant IDs:', participants.map(p => p.id));
+                console.log('🐛 Participant IDs expanded:', participants.map(p => ({ id: p.id, name: p.name })));
+                console.log('🐛 Found typing user:', typingUser);
+                
+                // If typing user not found in participants, create a placeholder
+                if (!typingUser) {
+                  console.log('🐛 Typing user not found in participants, creating placeholder');
+                  typingUser = {
+                    id: typingUsers[0],
+                    name: 'Typing User', // We'll fetch the real name later
+                    profile_pic: null
+                  };
+                }
+                
+                const avatarUrl = typingUser?.profile_pic;
+                const nameInitial = typingUser?.name?.charAt(0).toUpperCase() || 'T';
                 return (
-        <div className="flex-shrink-0 px-6 py-6 bg-white">
-          <div className="flex items-center gap-3">
-            {/* Profile Card */}
-            {typingUsers.length === 1 && (() => {
-              const typingUser = participants.find(p => p.id === typingUsers[0]);
-              const avatarUrl = typingUser?.profile_pic;
-              const nameInitial = typingUser?.name?.charAt(0).toUpperCase() || 'S';
-              return (
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt={typingUser?.name || 'Typing user'} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-gray-400 text-sm font-semibold">
-                      {nameInitial}
-                    </div>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (typingUser) {
+                        setProfileUserId(typingUser.id);
+                        setShowUserProfile(true);
+                      }
+                    }}
+                    className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 hover:bg-gray-300 transition-colors cursor-pointer"
+                  >
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={typingUser?.name || 'Typing user'} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-gray-400 text-sm font-semibold">
+                        {nameInitial}
+                      </div>
+                    )}
+                  </button>
+                );
+              })()}
+
+              {/* Bouncing Dots Card - original size with perfect positioning */}
+              <div className="bg-white text-gray-900 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm max-w-xs" style={{ backgroundColor: '#ffffff !important', color: '#111827 !important', height: 'auto', minHeight: 'fit-content' }}>
+                <div className="text-sm leading-relaxed flex items-center gap-2" style={{ height: '22.75px', lineHeight: '22.75px' }}>
+                  <div className="flex space-x-1">
+                    <div 
+                      className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                      style={{ 
+                        transform: animationPhase === 0 ? 'translateY(-10px)' : 'translateY(0)',
+                        opacity: animationPhase === 0 ? 1 : 0.7
+                      }}
+                    ></div>
+                    <div 
+                      className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                      style={{ 
+                        transform: animationPhase === 1 ? 'translateY(-10px)' : 'translateY(0)',
+                        opacity: animationPhase === 1 ? 1 : 0.7
+                      }}
+                    ></div>
+                    <div 
+                      className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                      style={{ 
+                        transform: animationPhase === 2 ? 'translateY(-10px)' : 'translateY(0)',
+                        opacity: animationPhase === 2 ? 1 : 0.7
+                      }}
+                    ></div>
+                  </div>
+                  {typingUsers.length > 1 && (
+                    <span className="text-gray-600">
+                      {`${typingUsers.length} people are typing...`}
+                    </span>
                   )}
                 </div>
-              );
-            })()}
-
-            {/* Bouncing Dots Card */}
-            <div className="bg-white text-gray-900 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm flex items-center" style={{ backgroundColor: '#ffffff !important', color: '#111827 !important', height: 'auto', minHeight: 'fit-content' }}>
-              <div className="text-sm leading-relaxed flex items-center gap-2" style={{ height: '22.75px', lineHeight: '22.75px' }}>
-                <div className="flex space-x-1">
-                  <div 
-                    className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                    style={{ 
-                      transform: animationPhase === 0 ? 'translateY(-10px)' : 'translateY(0)',
-                      opacity: animationPhase === 0 ? 1 : 0.7
-                    }}
-                  ></div>
-                  <div 
-                    className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                    style={{ 
-                      transform: animationPhase === 1 ? 'translateY(-10px)' : 'translateY(0)',
-                      opacity: animationPhase === 1 ? 1 : 0.7
-                    }}
-                  ></div>
-                  <div 
-                    className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                    style={{ 
-                      transform: animationPhase === 2 ? 'translateY(-10px)' : 'translateY(0)',
-                      opacity: animationPhase === 2 ? 1 : 0.7
-                    }}
-                  ></div>
-                </div>
-                {typingUsers.length > 1 && (
-                  <span className="text-gray-600">
-                    {`${typingUsers.length} people are typing...`}
-                  </span>
-                )}
               </div>
             </div>
-          </div>
-        </div>
-        );
-      })()}
+          );
+        })()}
+
+        <div ref={endRef} />
+      </div>
 
       {/* Message Input */}
       <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-200">

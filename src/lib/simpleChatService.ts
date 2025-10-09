@@ -35,6 +35,7 @@ class SimpleChatService {
   
   // Real-time subscriptions
   private messageSubscriptions: Map<string, any> = new Map();
+  private messageCallbacks: Map<string, (message: SimpleMessage) => void> = new Map();
   private typingSubscriptions: Map<string, any> = new Map();
   private typingUsers: Map<string, Set<string>> = new Map();
   private typingCallbacks: Map<string, (typingUsers: string[]) => void> = new Map();
@@ -97,6 +98,9 @@ class SimpleChatService {
   subscribeToMessages(chatId: string, onNewMessage: (message: SimpleMessage) => void): () => void {
     console.log('SimpleChatService: Subscribing to messages for chat:', chatId);
     
+    // Store the callback for immediate updates
+    this.messageCallbacks.set(chatId, onNewMessage);
+    
     // Unsubscribe from existing subscription if any
     if (this.messageSubscriptions.has(chatId)) {
       this.messageSubscriptions.get(chatId)?.unsubscribe();
@@ -146,6 +150,7 @@ class SimpleChatService {
       console.log('SimpleChatService: Unsubscribing from messages for chat:', chatId);
       subscription.unsubscribe();
       this.messageSubscriptions.delete(chatId);
+      this.messageCallbacks.delete(chatId);
     };
   }
 
@@ -164,12 +169,32 @@ class SimpleChatService {
       .channel(`typing:${chatId}`)
       .on('presence', { event: 'sync' }, () => {
         const state = subscription.presenceState();
-        // Count users who are in the chat input (have typing: true in their presence data)
-        const typingUserIds = Object.keys(state).filter(id => {
-          if (id === userId) return false; // Exclude current user
-          const presence = state[id];
-          return presence && presence[0] && presence[0].typing === true;
+        console.log('SimpleChatService: Presence sync state:', state);
+        console.log('SimpleChatService: Current userId:', userId);
+        
+        // Extract typing users from presence state
+        // The key is a client ID, but we need the user_id from the presence data
+        const typingUserIds: string[] = [];
+        
+        Object.entries(state).forEach(([clientKey, presences]: [string, any[]]) => {
+          console.log('SimpleChatService: Processing client:', clientKey, 'presences:', presences);
+          
+          if (presences && presences.length > 0) {
+            const presence = presences[0];
+            const presenceUserId = presence.user_id;
+            const isTyping = presence.typing === true;
+            
+            console.log('SimpleChatService: User ID:', presenceUserId, 'isTyping:', isTyping, 'current user:', userId);
+            
+            // Only include if typing and not the current user
+            if (isTyping && presenceUserId && presenceUserId !== userId) {
+              console.log('SimpleChatService: Adding typing user:', presenceUserId);
+              typingUserIds.push(presenceUserId);
+            }
+          }
         });
+        
+        console.log('SimpleChatService: Final typing users (excluding self):', typingUserIds);
         
         // Update typing users
         const typingSet = this.typingUsers.get(chatId)!;
@@ -180,16 +205,32 @@ class SimpleChatService {
         onTypingUpdate(Array.from(typingSet));
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        if (key !== userId && newPresences && newPresences[0] && newPresences[0].typing === true) {
-          const typingSet = this.typingUsers.get(chatId)!;
-          typingSet.add(key);
-          onTypingUpdate(Array.from(typingSet));
+        console.log('SimpleChatService: Presence join event:', { key, newPresences });
+        if (newPresences && newPresences[0]) {
+          const presenceUserId = newPresences[0].user_id;
+          const isTyping = newPresences[0].typing === true;
+          
+          // Only add if typing and not the current user
+          if (isTyping && presenceUserId && presenceUserId !== userId) {
+            console.log('SimpleChatService: Adding typing user on join:', presenceUserId);
+            const typingSet = this.typingUsers.get(chatId)!;
+            typingSet.add(presenceUserId);
+            onTypingUpdate(Array.from(typingSet));
+          }
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        const typingSet = this.typingUsers.get(chatId)!;
-        typingSet.delete(key);
-        onTypingUpdate(Array.from(typingSet));
+        console.log('SimpleChatService: Presence leave event:', { key, leftPresences });
+        if (leftPresences && leftPresences[0]) {
+          const presenceUserId = leftPresences[0].user_id;
+          
+          if (presenceUserId) {
+            console.log('SimpleChatService: Removing typing user on leave:', presenceUserId);
+            const typingSet = this.typingUsers.get(chatId)!;
+            typingSet.delete(presenceUserId);
+            onTypingUpdate(Array.from(typingSet));
+          }
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -213,16 +254,20 @@ class SimpleChatService {
 
   // Send typing indicator
   async sendTypingIndicator(chatId: string, userId: string, isTyping: boolean): Promise<void> {
+    console.log('SimpleChatService: sendTypingIndicator called:', { chatId, userId, isTyping });
     const subscription = this.typingSubscriptions.get(chatId);
+    console.log('SimpleChatService: Found subscription for chat:', !!subscription);
     if (!subscription) return;
 
     if (isTyping) {
+      console.log('SimpleChatService: Sending typing: true for user:', userId);
       await subscription.track({
         user_id: userId,
         typing: true,
         online_at: new Date().toISOString()
       });
     } else {
+      console.log('SimpleChatService: Sending typing: false for user:', userId);
       await subscription.track({
         user_id: userId,
         typing: false,
@@ -241,6 +286,7 @@ class SimpleChatService {
       subscription.unsubscribe();
     });
     this.messageSubscriptions.clear();
+    this.messageCallbacks.clear();
     
     // Unsubscribe from all typing subscriptions
     this.typingSubscriptions.forEach((subscription, chatId) => {
@@ -932,8 +978,25 @@ class SimpleChatService {
       
       // Add message to the in-memory chat
       chat.messages.push(message);
+      chat.last_message = message.text;
       chat.last_message_at = message.created_at;
       chat.updated_at = message.created_at;
+      
+      // Trigger immediate UI update for the sender
+      const callback = this.messageCallbacks.get(chatId);
+      if (callback) {
+        const sender = chat.participants.find(p => p.id === senderId);
+        const callbackMessage: SimpleMessage = {
+          id: messageData.id,
+          chat_id: chatId,
+          sender_id: senderId,
+          sender_name: sender?.name || 'You',
+          text: messageText,
+          created_at: messageData.created_at
+        };
+        console.log('SimpleChatService: Triggering immediate callback for sender');
+        callback(callbackMessage);
+      }
       
       console.log('SimpleChatService: Message sent and saved to Supabase:', message.id);
       return { message, error: null };

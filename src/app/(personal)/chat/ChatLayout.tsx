@@ -384,7 +384,7 @@ export default function ChatLayout() {
       </div>
 
       {/* Chat Panel - Hidden on mobile */}
-      <div className="hidden lg:flex flex-1 flex-col h-full overflow-hidden">
+      <div className="hidden sm:flex flex-1 flex-col h-full overflow-hidden">
         {selectedConversation ? (
           <PersonalChatPanel conversation={selectedConversation} />
         ) : (
