@@ -355,14 +355,14 @@ export default function ChatLayout() {
                 </div>
 
                 {/* Conversations List */}
-                <div className="bg-white mt-2">
+                <div className="bg-white mt-2 flex-1 min-h-0">
                   {filteredConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
                       <p className="text-gray-500 text-lg">{account?.id ? "No chats yet" : "Please log in to see your chats"}</p>
                       <BearEmoji size="4xl" />
                     </div>
                   ) : (
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 space-y-3 pb-32">
                       {filteredConversations.map((conversation) => (
                         <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className={`bg-white rounded-xl cursor-pointer w-full transition-shadow border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'shadow-sm hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}>
                           <div className="p-4">
