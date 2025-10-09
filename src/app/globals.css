@@ -15,6 +15,20 @@
   }
 }
 
+/* Fade-in animation for messages transitioning from typing indicator */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out !important;
+}
+
 
 
 html, body {
@@ -237,6 +251,15 @@ button[class*="Chat"] {
   -webkit-transform: none !important;
   -moz-transform: none !important;
   -o-transform: none !important;
+}
+
+/* Re-enable specific animations we want to keep */
+.chat-container .animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out !important;
+}
+
+.chat-container .transition-all {
+  transition: all 0.3s ease-in-out !important;
 }
 
 /* Ensure chat layout stays fixed and doesn't scroll with page */

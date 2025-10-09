@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -80,37 +81,8 @@ export default function ChatLayout() {
           };
         }, [account?.id, conversations]);
 
-        // Subscribe to messages for all conversations to update typing indicators
-        useEffect(() => {
-          if (!account?.id || conversations.length === 0) return;
-
-          console.log('ChatLayout: Setting up message subscriptions for typing cleanup');
-          
-          const subscriptions: (() => void)[] = [];
-          
-          conversations.forEach(conversation => {
-            const unsubscribe = simpleChatService.subscribeToMessages(
-              conversation.id,
-              (newMessage) => {
-                // When a message arrives, stop typing indicator for that sender
-                console.log('ChatLayout: Message arrived, stopping typing for sender:', newMessage.sender_id);
-                const { updateChatTyping } = useAppStore.getState();
-                const currentTyping = getChatTyping(conversation.id);
-                if (currentTyping && currentTyping.typingUsers.includes(newMessage.sender_id)) {
-                  const updatedTypingUsers = currentTyping.typingUsers.filter(id => id !== newMessage.sender_id);
-                  updateChatTyping(conversation.id, updatedTypingUsers);
-                }
-              }
-            );
-            
-            subscriptions.push(unsubscribe);
-          });
-          
-          return () => {
-            console.log('ChatLayout: Cleaning up message subscriptions');
-            subscriptions.forEach(unsubscribe => unsubscribe());
-          };
-        }, [account?.id, conversations]);
+        // Note: Typing indicator cleanup is now handled by simpleChatService
+        // No need for separate message subscriptions here
 
   // Using the new intuitive time formatting utility
 

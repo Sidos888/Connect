@@ -40,6 +40,9 @@ class SimpleChatService {
   private typingUsers: Map<string, Set<string>> = new Map();
   private typingCallbacks: Map<string, (typingUsers: string[]) => void> = new Map();
   
+  // Global message tracking to prevent duplicates across all subscriptions
+  private processedMessages: Set<string> = new Set();
+  
   // Chat message cache for instant loading
   private chatMessages: Map<string, SimpleMessage[]> = new Map();
   private chatParticipants: Map<string, any[]> = new Map();
@@ -144,6 +147,7 @@ class SimpleChatService {
             m.id === message.id || 
             (m.text === message.text && m.sender_id === message.sender_id && Math.abs(new Date(m.created_at).getTime() - new Date(message.created_at).getTime()) < 1000)
           );
+          
           if (!existingMessage) {
             // Add to local cache
             if (chat) {
@@ -158,20 +162,34 @@ class SimpleChatService {
             this.chatMessages.set(chatId, cachedMessages);
           }
 
-          // Stop typing indicator immediately when a message arrives
-          // This ensures smooth transition from typing dots to actual message
+          // Check if sender was typing BEFORE removing them
           const typingSet = this.typingUsers.get(chatId);
-          if (typingSet && typingSet.has(payload.new.sender_id)) {
-            typingSet.delete(payload.new.sender_id);
-            const typingCallback = this.typingCallbacks.get(chatId);
-            if (typingCallback) {
-              console.log('SimpleChatService: Stopping typing indicator for message sender:', payload.new.sender_id);
-              typingCallback(Array.from(typingSet));
-            }
-          }
+          const wasTyping = typingSet ? typingSet.has(payload.new.sender_id) : false;
+          
+          // Add typing state to message for smooth transition detection
+          (message as any).wasTyping = wasTyping;
 
-          // Notify callback
-          onNewMessage(message);
+          // Only notify callback if this is a NEW message (not a duplicate)
+          if (!existingMessage && !this.processedMessages.has(message.id)) {
+            console.log('SimpleChatService: Notifying callback for NEW message:', message.id);
+            this.processedMessages.add(message.id);
+            onNewMessage(message);
+          } else {
+            console.log('SimpleChatService: Skipping callback for duplicate message:', message.id);
+          }
+          
+          // THEN stop typing indicator after a delay to allow smooth transition
+          if (wasTyping && typingSet) {
+            console.log('SimpleChatService: Sender was typing, scheduling typing indicator removal');
+            setTimeout(() => {
+              typingSet.delete(payload.new.sender_id);
+              const typingCallback = this.typingCallbacks.get(chatId);
+              if (typingCallback) {
+                console.log('SimpleChatService: Stopping typing indicator for message sender:', payload.new.sender_id);
+                typingCallback(Array.from(typingSet));
+              }
+            }, 500); // Wait 500ms for smooth transition to complete
+          }
         }
       )
       .subscribe();
@@ -335,6 +353,9 @@ class SimpleChatService {
     
     this.typingUsers.clear();
     this.typingCallbacks.clear();
+    
+    // Clear processed messages to prevent memory leaks
+    this.processedMessages.clear();
   }
 
   // Get user's contacts from the database (only actual connections)

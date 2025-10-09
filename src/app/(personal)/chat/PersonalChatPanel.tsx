@@ -57,6 +57,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   // Get typing users from global store
   const typingState = getChatTyping(conversation.id);
   const typingUsers = typingState?.typingUsers || [];
+  
+  // Track pending messages (messages being transitioned from typing indicator)
+  const [pendingMessages, setPendingMessages] = useState<Map<string, any>>(new Map());
+  const pendingMessageTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
 
   // Load participants and messages from the database
@@ -124,19 +128,53 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           (newMessage) => {
             console.log('PersonalChatPanel: Received new message:', newMessage);
             
-            // Check if this message already exists (avoid duplicates)
-            setMessages(prev => {
-              const exists = prev.some(msg => 
-                msg.id === newMessage.id || 
-                (msg.text === newMessage.text && msg.sender_id === newMessage.sender_id && Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 1000)
-              );
-              if (exists) {
-                console.log('PersonalChatPanel: Message already exists, skipping duplicate');
-                return prev;
-              }
-              console.log('PersonalChatPanel: Adding new message to UI');
-              return [...prev, newMessage];
-            });
+            // Check if this sender was typing using the wasTyping flag from message
+            // This flag is set in simpleChatService BEFORE typing indicator is removed
+            const wasTyping = (newMessage as any).wasTyping === true;
+            
+            console.log('🔍 Message wasTyping flag:', wasTyping, 'sender:', newMessage.sender_id);
+            
+            if (wasTyping) {
+              console.log('🔄 Sender was typing, creating smooth transition');
+              // Add message to pending state immediately (replaces typing indicator)
+              setPendingMessages(prev => {
+                const newMap = new Map(prev);
+                newMap.set(newMessage.sender_id, newMessage);
+                return newMap;
+              });
+              
+              // After a brief moment, move to actual messages
+              const timeout = setTimeout(() => {
+                setMessages(prev => {
+                  const exists = prev.some(msg => msg.id === newMessage.id);
+                  if (exists) return prev;
+                  console.log('PersonalChatPanel: Moving pending message to actual messages');
+                  return [...prev, newMessage];
+                });
+                setPendingMessages(prev => {
+                  const newMap = new Map(prev);
+                  newMap.delete(newMessage.sender_id);
+                  return newMap;
+                });
+              }, 400); // Brief delay for smooth transition (typing indicator will be removed by simpleChatService)
+              
+              pendingMessageTimeouts.current.set(newMessage.sender_id, timeout);
+            } else {
+              console.log('PersonalChatPanel: No typing indicator, adding message normally');
+              // Normal message flow - just add it
+              setMessages(prev => {
+                const exists = prev.some(msg => 
+                  msg.id === newMessage.id || 
+                  (msg.text === newMessage.text && msg.sender_id === newMessage.sender_id && Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 1000)
+                );
+                if (exists) {
+                  console.log('PersonalChatPanel: Message already exists, skipping duplicate');
+                  return prev;
+                }
+                console.log('PersonalChatPanel: Adding new message to UI');
+                return [...prev, newMessage];
+              });
+            }
             
             // Auto-scroll to bottom when new message arrives
             setTimeout(() => {
@@ -215,6 +253,9 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       if (animationRef.current) {
         clearTimeout(animationRef.current);
       }
+      // Clean up pending message timeouts
+      pendingMessageTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      pendingMessageTimeouts.current.clear();
     };
   }, []);
 
@@ -377,37 +418,33 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         <div ref={endRef} />
       </div>
 
-      {/* Typing Indicator - positioned at bottom, outside scrollable area */}
-      {typingUsers.length > 0 && !typingUsers.includes(account?.id || '') && (() => {
+      {/* Typing Indicator & Pending Messages - positioned at bottom, outside scrollable area */}
+      {(typingUsers.length > 0 && !typingUsers.includes(account?.id || '')) && (() => {
         console.log('🐛 Typing indicator rendering with typingUsers:', typingUsers);
         console.log('🐛 Current user account.id:', account?.id);
-        console.log('🐛 TypingUsers[0]:', typingUsers[0]);
-        console.log('🐛 Is current user in typingUsers?', typingUsers.includes(account?.id || ''));
+        
         return (
-          <div className="flex-shrink-0 px-6 pb-8">
-            <div className="flex justify-start items-center gap-2">
-              {/* Profile Card - same positioning as message avatars */}
-              {typingUsers.length === 1 && (() => {
-                let typingUser = participants.find(p => p.id === typingUsers[0]);
-                console.log('🐛 Looking for typing user:', typingUsers[0]);
-                console.log('🐛 Available participants:', participants);
-                console.log('🐛 Participant IDs:', participants.map(p => p.id));
-                console.log('🐛 Participant IDs expanded:', participants.map(p => ({ id: p.id, name: p.name })));
-                console.log('🐛 Found typing user:', typingUser);
-                
-                // If typing user not found in participants, create a placeholder
-                if (!typingUser) {
-                  console.log('🐛 Typing user not found in participants, creating placeholder');
-                  typingUser = {
-                    id: typingUsers[0],
-                    name: 'Typing User', // We'll fetch the real name later
-                    profile_pic: null
-                  };
-                }
-                
-                const avatarUrl = typingUser?.profile_pic;
-                const nameInitial = typingUser?.name?.charAt(0).toUpperCase() || 'T';
-                return (
+          <div className="flex-shrink-0 px-6 pb-8 space-y-4">
+            {typingUsers.map((typingUserId: string) => {
+              // Check if this user has a pending message
+              const pendingMessage = pendingMessages.get(typingUserId);
+              let typingUser = participants.find(p => p.id === typingUserId);
+              
+              // If typing user not found in participants, create a placeholder
+              if (!typingUser) {
+                typingUser = {
+                  id: typingUserId,
+                  name: 'Typing User',
+                  profile_pic: null
+                };
+              }
+              
+              const avatarUrl = typingUser?.profile_pic;
+              const nameInitial = typingUser?.name?.charAt(0).toUpperCase() || 'T';
+              
+              return (
+                <div key={typingUserId} className="flex justify-start items-center gap-2">
+                  {/* Profile Avatar */}
                   <button
                     onClick={(e) => {
                       e.preventDefault();
@@ -427,43 +464,49 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                       </div>
                     )}
                   </button>
-                );
-              })()}
 
-              {/* Bouncing Dots Card - original size with perfect positioning */}
-              <div className="bg-white text-gray-900 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm max-w-xs" style={{ backgroundColor: '#ffffff !important', color: '#111827 !important', height: 'auto', minHeight: 'fit-content' }}>
-                <div className="text-sm leading-relaxed flex items-center gap-2" style={{ height: '22.75px', lineHeight: '22.75px' }}>
-                  <div className="flex space-x-1">
-                    <div 
-                      className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                      style={{ 
-                        transform: animationPhase === 0 ? 'translateY(-10px)' : 'translateY(0)',
-                        opacity: animationPhase === 0 ? 1 : 0.7
-                      }}
-                    ></div>
-                    <div 
-                      className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                      style={{ 
-                        transform: animationPhase === 1 ? 'translateY(-10px)' : 'translateY(0)',
-                        opacity: animationPhase === 1 ? 1 : 0.7
-                      }}
-                    ></div>
-                    <div 
-                      className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                      style={{ 
-                        transform: animationPhase === 2 ? 'translateY(-10px)' : 'translateY(0)',
-                        opacity: animationPhase === 2 ? 1 : 0.7
-                      }}
-                    ></div>
+                  {/* Message Card - Shows typing dots or actual message */}
+                  <div 
+                    className="bg-white text-gray-900 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm max-w-[70%] transition-all duration-300 ease-in-out" 
+                    style={{ backgroundColor: '#ffffff !important', color: '#111827 !important' }}
+                  >
+                    {pendingMessage ? (
+                      // Show the actual message with fade-in
+                      <div className="text-sm leading-relaxed whitespace-pre-wrap animate-fade-in">
+                        {pendingMessage.text || 'Message'}
+                      </div>
+                    ) : (
+                      // Show typing dots
+                      <div className="text-sm leading-relaxed flex items-center gap-2" style={{ height: '22.75px', lineHeight: '22.75px' }}>
+                        <div className="flex space-x-1">
+                          <div 
+                            className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                            style={{ 
+                              transform: animationPhase === 0 ? 'translateY(-10px)' : 'translateY(0)',
+                              opacity: animationPhase === 0 ? 1 : 0.7
+                            }}
+                          ></div>
+                          <div 
+                            className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                            style={{ 
+                              transform: animationPhase === 1 ? 'translateY(-10px)' : 'translateY(0)',
+                              opacity: animationPhase === 1 ? 1 : 0.7
+                            }}
+                          ></div>
+                          <div 
+                            className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                            style={{ 
+                              transform: animationPhase === 2 ? 'translateY(-10px)' : 'translateY(0)',
+                              opacity: animationPhase === 2 ? 1 : 0.7
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {typingUsers.length > 1 && (
-                    <span className="text-gray-600">
-                      {`${typingUsers.length} people are typing...`}
-                    </span>
-                  )}
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         );
       })()}
