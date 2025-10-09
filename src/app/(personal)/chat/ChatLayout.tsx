@@ -14,6 +14,7 @@ import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus } from "lucide-react";
 import { simpleChatService } from "@/lib/simpleChatService";
+import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
 export default function ChatLayout() {
   const { conversations, loadConversations, isHydrated } = useAppStore();
@@ -49,24 +50,7 @@ export default function ChatLayout() {
     console.log('ChatLayout - showNewMessageSelector:', showNewMessageSelector);
   }, [conversations, selectedChatId, searchParams, showNewMessageSelector]);
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      });
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      });
-    }
-  };
+  // Using the new intuitive time formatting utility
 
   const getLastMessage = (conversation: { messages: Array<{ text: string }> }) => {
     if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
@@ -77,7 +61,7 @@ export default function ChatLayout() {
   const getLastMessageTime = (conversation: { messages: Array<{ createdAt: string }> }) => {
     if (!conversation.messages || conversation.messages.length === 0) return "";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return lastMessage.createdAt ? formatTime(lastMessage.createdAt) : "";
+    return lastMessage.createdAt ? formatMessageTimeShort(lastMessage.createdAt) : "";
   };
 
   // Category filtering
@@ -193,16 +177,8 @@ export default function ChatLayout() {
       e.stopPropagation();
     }
     
-    // Check if we're on mobile (screen width < 768px)
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    
-    if (isMobile) {
-      // On mobile, navigate to individual chat page
-      router.push(`/chat/individual?chat=${chatId}`);
-    } else {
-      // On desktop, stay on the main chat page with selected chat
-      router.push(`/chat?chat=${chatId}`);
-    }
+    // Always navigate to the main chat page with selected chat (desktop layout)
+    router.push(`/chat?chat=${chatId}`);
   };
 
   const categories = [
@@ -294,7 +270,7 @@ export default function ChatLayout() {
                 {/* Chat List */}
                 <div className="space-y-2">
                   {filteredConversations.map((conversation) => (
-                    <div key={conversation.id} onClick={() => handleSelectChat(conversation.id)} className={`p-4 rounded-xl cursor-pointer transition-shadow ${selectedChatId === conversation.id ? 'bg-white border border-gray-200 shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'bg-white border border-gray-200 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}>
+                    <div key={conversation.id} onClick={() => handleSelectChat(conversation.id)} className={`p-4 rounded-xl cursor-pointer transition-shadow bg-white border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}>
                       <div className="flex items-center space-x-3">
                         <Avatar src={conversation.avatarUrl} name={conversation.title} size={48} />
                         <div className="flex-1 min-w-0">

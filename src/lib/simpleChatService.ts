@@ -30,6 +30,14 @@ class SimpleChatService {
   private supabase = getSupabaseClient();
   private chats: Map<string, SimpleChat> = new Map();
   private userChats: Map<string, SimpleChat[]> = new Map();
+  private userChatsTimestamp: Map<string, number> = new Map();
+  private readonly CACHE_DURATION = 30000; // 30 seconds
+  
+  // Real-time subscriptions
+  private messageSubscriptions: Map<string, any> = new Map();
+  private typingSubscriptions: Map<string, any> = new Map();
+  private typingUsers: Map<string, Set<string>> = new Map();
+  private typingCallbacks: Map<string, (typingUsers: string[]) => void> = new Map();
 
   // Retry mechanism for failed requests
   private async withRetry<T>(
@@ -83,6 +91,166 @@ class SimpleChatService {
     this.chats.clear();
     this.userChats.clear();
     console.log('SimpleChatService: Cleared all caches');
+  }
+
+  // Real-time messaging methods
+  subscribeToMessages(chatId: string, onNewMessage: (message: SimpleMessage) => void): () => void {
+    console.log('SimpleChatService: Subscribing to messages for chat:', chatId);
+    
+    // Unsubscribe from existing subscription if any
+    if (this.messageSubscriptions.has(chatId)) {
+      this.messageSubscriptions.get(chatId)?.unsubscribe();
+    }
+
+    const subscription = this.supabase
+      .channel(`chat:${chatId}`)
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'chat_messages',
+          filter: `chat_id=eq.${chatId}`
+        }, 
+        async (payload) => {
+          console.log('SimpleChatService: New message received:', payload);
+          
+          // Get sender name from participants
+          const chat = this.chats.get(chatId);
+          const sender = chat?.participants.find(p => p.id === payload.new.sender_id);
+          
+          const message: SimpleMessage = {
+            id: payload.new.id,
+            chat_id: payload.new.chat_id,
+            sender_id: payload.new.sender_id,
+            sender_name: sender?.name || 'Unknown',
+            text: payload.new.message_text,
+            created_at: payload.new.created_at
+          };
+
+          // Add to local cache
+          if (chat) {
+            chat.messages.push(message);
+            chat.last_message = message.text;
+            chat.last_message_at = message.created_at;
+          }
+
+          // Notify callback
+          onNewMessage(message);
+        }
+      )
+      .subscribe();
+
+    this.messageSubscriptions.set(chatId, subscription);
+    
+    return () => {
+      console.log('SimpleChatService: Unsubscribing from messages for chat:', chatId);
+      subscription.unsubscribe();
+      this.messageSubscriptions.delete(chatId);
+    };
+  }
+
+  subscribeToTyping(chatId: string, userId: string, onTypingUpdate: (typingUsers: string[]) => void): () => void {
+    console.log('SimpleChatService: Subscribing to typing for chat:', chatId);
+    
+    // Initialize typing users set for this chat
+    if (!this.typingUsers.has(chatId)) {
+      this.typingUsers.set(chatId, new Set());
+    }
+    
+    // Store callback
+    this.typingCallbacks.set(chatId, onTypingUpdate);
+
+    const subscription = this.supabase
+      .channel(`typing:${chatId}`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = subscription.presenceState();
+        // Count users who are in the chat input (have typing: true in their presence data)
+        const typingUserIds = Object.keys(state).filter(id => {
+          if (id === userId) return false; // Exclude current user
+          const presence = state[id];
+          return presence && presence[0] && presence[0].typing === true;
+        });
+        
+        // Update typing users
+        const typingSet = this.typingUsers.get(chatId)!;
+        typingSet.clear();
+        typingUserIds.forEach(id => typingSet.add(id));
+        
+        // Notify callback
+        onTypingUpdate(Array.from(typingSet));
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        if (key !== userId && newPresences && newPresences[0] && newPresences[0].typing === true) {
+          const typingSet = this.typingUsers.get(chatId)!;
+          typingSet.add(key);
+          onTypingUpdate(Array.from(typingSet));
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        const typingSet = this.typingUsers.get(chatId)!;
+        typingSet.delete(key);
+        onTypingUpdate(Array.from(typingSet));
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await subscription.track({
+            user_id: userId,
+            online_at: new Date().toISOString()
+          });
+        }
+      });
+
+    this.typingSubscriptions.set(chatId, subscription);
+    
+    return () => {
+      console.log('SimpleChatService: Unsubscribing from typing for chat:', chatId);
+      subscription.unsubscribe();
+      this.typingSubscriptions.delete(chatId);
+      this.typingUsers.delete(chatId);
+      this.typingCallbacks.delete(chatId);
+    };
+  }
+
+  // Send typing indicator
+  async sendTypingIndicator(chatId: string, userId: string, isTyping: boolean): Promise<void> {
+    const subscription = this.typingSubscriptions.get(chatId);
+    if (!subscription) return;
+
+    if (isTyping) {
+      await subscription.track({
+        user_id: userId,
+        typing: true,
+        online_at: new Date().toISOString()
+      });
+    } else {
+      await subscription.track({
+        user_id: userId,
+        typing: false,
+        online_at: new Date().toISOString()
+      });
+    }
+  }
+
+  // Cleanup all subscriptions
+  cleanup() {
+    console.log('SimpleChatService: Cleaning up all subscriptions');
+    
+    // Unsubscribe from all message subscriptions
+    this.messageSubscriptions.forEach((subscription, chatId) => {
+      console.log('SimpleChatService: Unsubscribing from messages for chat:', chatId);
+      subscription.unsubscribe();
+    });
+    this.messageSubscriptions.clear();
+    
+    // Unsubscribe from all typing subscriptions
+    this.typingSubscriptions.forEach((subscription, chatId) => {
+      console.log('SimpleChatService: Unsubscribing from typing for chat:', chatId);
+      subscription.unsubscribe();
+    });
+    this.typingSubscriptions.clear();
+    
+    this.typingUsers.clear();
+    this.typingCallbacks.clear();
   }
 
   // Get user's contacts from the database (only actual connections)
@@ -164,9 +332,19 @@ class SimpleChatService {
     }
   }
 
-  // Get user's chats (now loads from Supabase)
+  // Get user's chats (now loads from Supabase with caching)
   async getUserChats(userId: string): Promise<{ chats: SimpleChat[]; error: Error | null }> {
     try {
+      // Check cache first
+      const cachedChats = this.userChats.get(userId);
+      const cacheTimestamp = this.userChatsTimestamp.get(userId);
+      const now = Date.now();
+      
+      if (cachedChats && cacheTimestamp && (now - cacheTimestamp) < this.CACHE_DURATION) {
+        console.log('SimpleChatService: Returning cached chats for user:', userId);
+        return { chats: cachedChats, error: null };
+      }
+
       return await this.withRetry(async () => {
         return await this._getUserChatsInternal(userId);
       });
@@ -209,79 +387,149 @@ class SimpleChatService {
         return { chats: [], error: chatsError };
       }
 
-      // Get participants for each chat using a more reliable approach
-      const chats: SimpleChat[] = [];
-      for (const chat of chatsData || []) {
-        // First get the participant user IDs
-        const { data: participantIds, error: participantIdsError } = await this.supabase
+      // Bulk load all participants for all chats at once
+      const allChatIds = chatsData?.map(chat => chat.id) || [];
+      let allParticipants: Map<string, Array<{ id: string; name: string; profile_pic?: string }>> = new Map();
+      let allUnreadCounts: Map<string, number> = new Map();
+
+      if (allChatIds.length > 0) {
+        // Get all participants for all chats in one query
+        const { data: allParticipantData, error: allParticipantsError } = await this.supabase
           .from('chat_participants')
-          .select('user_id')
-          .eq('chat_id', chat.id);
+          .select('chat_id, user_id, last_read_at')
+          .in('chat_id', allChatIds);
 
-        let participants: Array<{ id: string; name: string; profile_pic?: string }> = [];
+        if (!allParticipantsError && allParticipantData) {
+          // Group participants by chat_id
+          const participantsByChat = new Map<string, string[]>();
+          const lastReadByChat = new Map<string, string>();
+          
+          allParticipantData.forEach(participant => {
+            if (!participantsByChat.has(participant.chat_id)) {
+              participantsByChat.set(participant.chat_id, []);
+            }
+            participantsByChat.get(participant.chat_id)!.push(participant.user_id);
+            
+            // Store last_read_at for the current user
+            if (participant.user_id === userId) {
+              lastReadByChat.set(participant.chat_id, participant.last_read_at);
+            }
+          });
 
-        if (!participantIdsError && participantIds && participantIds.length > 0) {
-          // Then get the account details for each participant
-          const userIds = participantIds.map(p => p.user_id);
-          const { data: accountsData, error: accountsError } = await this.supabase
+          // Get all unique user IDs
+          const allUserIds = [...new Set(allParticipantData.map(p => p.user_id))];
+          
+          // Fetch account details for all users in one query
+          const { data: allAccountsData, error: allAccountsError } = await this.supabase
             .from('accounts')
             .select('id, name, profile_pic')
-            .in('id', userIds);
+            .in('id', allUserIds);
 
-          if (!accountsError && accountsData) {
-            participants = accountsData.map(account => ({
-              id: account.id,
-              name: formatNameForDisplay(account.name),
-              profile_pic: account.profile_pic || undefined
-            }));
-          } else {
-            console.warn('SimpleChatService: Failed to fetch account details for chat participants:', chat.id, accountsError);
-            // Fallback: create basic participant objects with just IDs
-            participants = userIds.map(id => ({
-              id,
-              name: 'Unknown User',
-              profile_pic: undefined
-            }));
+          if (!allAccountsError && allAccountsData) {
+            const accountsMap = new Map(allAccountsData.map(account => [account.id, account]));
+            
+            // Build participants map for each chat
+            participantsByChat.forEach((userIds, chatId) => {
+              const participants = userIds.map(userId => {
+                const account = accountsMap.get(userId);
+                return account ? {
+                  id: account.id,
+                  name: formatNameForDisplay(account.name),
+                  profile_pic: account.profile_pic || undefined
+                } : {
+                  id: userId,
+                  name: 'Unknown User',
+                  profile_pic: undefined
+                };
+              });
+              allParticipants.set(chatId, participants);
+            });
           }
+
+          // Bulk calculate unread counts and get last messages for all chats
+          const unreadCountPromises = allChatIds.map(async (chatId) => {
+            const lastReadAt = lastReadByChat.get(chatId);
+            let unreadCount = 0;
+            let lastMessage = null;
+
+            // Get unread count
+            if (lastReadAt) {
+              const { count, error: unreadError } = await this.supabase
+                .from('chat_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('chat_id', chatId)
+                .gt('created_at', lastReadAt)
+                .neq('sender_id', userId);
+              
+              unreadCount = (!unreadError && count !== null) ? count : 0;
+            }
+
+            // Get last message
+            const { data: lastMessageData, error: lastMessageError } = await this.supabase
+              .from('chat_messages')
+              .select('id, message_text, sender_id, created_at')
+              .eq('chat_id', chatId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (!lastMessageError && lastMessageData) {
+              lastMessage = {
+                id: lastMessageData.id,
+                chat_id: chatId,
+                sender_id: lastMessageData.sender_id,
+                sender_name: lastMessageData.sender_id === userId ? 'You' : 'Other',
+                text: lastMessageData.message_text,
+                created_at: lastMessageData.created_at
+              };
+            }
+            
+            return { chatId, count: unreadCount, lastMessage };
+          });
+
+          const unreadResults = await Promise.all(unreadCountPromises);
+          unreadResults.forEach(({ chatId, count, lastMessage }) => {
+            allUnreadCounts.set(chatId, count);
+            // Store last message in the chat object
+            const chat = chatsData?.find(c => c.id === chatId);
+            if (chat && lastMessage) {
+              (chat as any).lastMessage = lastMessage;
+            }
+          });
         }
+      }
 
-        console.log('SimpleChatService: Chat participants for', chat.id, ':', participants);
-
-        // Find the user's last_read_at for this chat
-        const userChatData = userChats.find(uc => uc.chat_id === chat.id);
-        const lastReadAt = userChatData?.last_read_at;
-
-        // Calculate unread count by counting messages after last_read_at
-        let unreadCount = 0;
-        if (lastReadAt) {
-          const { count, error: unreadError } = await this.supabase
-            .from('chat_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('chat_id', chat.id)
-            .gt('created_at', lastReadAt)
-            .neq('sender_id', userId); // Don't count own messages
-          
-          if (!unreadError && count !== null) {
-            unreadCount = count;
-          }
-        }
+      // Build the final chats array
+      const chats: SimpleChat[] = [];
+      for (const chat of chatsData || []) {
+        const participants = allParticipants.get(chat.id) || [];
+        const unreadCount = allUnreadCounts.get(chat.id) || 0;
 
         console.log('SimpleChatService: Creating chat object for', chat.id, 'with photo:', chat.photo);
+        // Get the last message if it was loaded
+        const lastMessage = (chat as any).lastMessage;
+        
         chats.push({
           id: chat.id,
           type: chat.type,
           name: chat.name,
           photo: chat.photo,
           participants,
-          messages: [], // Will be loaded separately
+          messages: lastMessage ? [lastMessage] : [], // Include last message if available
+          last_message: lastMessage?.text,
+          last_message_at: chat.last_message_at,
           unreadCount
         });
       }
 
-      // Update in-memory chats
+      // Update in-memory chats and cache
       chats.forEach(chat => {
         this.chats.set(chat.id, chat);
       });
+      
+      // Cache the user's chats with timestamp
+      this.userChats.set(userId, chats);
+      this.userChatsTimestamp.set(userId, Date.now());
       
       console.log('SimpleChatService: getUserChats for user:', userId, 'loaded from Supabase:', chats.length, 'chats');
       return { chats, error: null };

@@ -142,15 +142,21 @@ export const useAppStore = create<FullStore>((set, get) => ({
         return;
       }
       
-      // Convert SimpleChat to Conversation format and load last message
-      const conversations: Conversation[] = await Promise.all(chats.map(async (chat) => {
+      // Convert SimpleChat to Conversation format - use last_message data that's now included
+      const conversations: Conversation[] = chats.map((chat) => {
         console.log('Converting chat:', chat.id, 'type:', chat.type, 'photo:', chat.photo);
         const otherParticipant = chat.participants.find(p => p.id !== userId);
         
-        // Load the last message for this chat
-        const { messages, error } = await simpleChatService.getChatMessages(chat.id, userId);
-        const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
-        
+        // Use the last_message data that's now loaded with the chat
+        const lastMessage = chat.last_message && chat.messages && chat.messages.length > 0 ? {
+          id: chat.messages[0].id,
+          conversationId: chat.id,
+          sender: chat.messages[0].sender_id === userId ? 'me' as const : 'them' as const,
+          text: chat.messages[0].text,
+          createdAt: chat.messages[0].created_at,
+          read: false
+        } : null;
+
         return {
           id: chat.id,
           title: chat.type === 'direct' 
@@ -161,15 +167,9 @@ export const useAppStore = create<FullStore>((set, get) => ({
             : chat.photo || null,
           isGroup: chat.type === 'group',
           unreadCount: chat.unreadCount || 0,
-          messages: lastMessage ? [{
-            id: lastMessage.id,
-            text: lastMessage.text,
-            sender_id: lastMessage.sender_id,
-            created_at: lastMessage.created_at,
-            createdAt: lastMessage.created_at
-          }] : []
+          messages: lastMessage ? [lastMessage] : []
         };
-      }));
+      });
       
       console.log('Loaded conversations:', conversations.length);
       set({ conversations });
@@ -215,6 +215,9 @@ export const useAppStore = create<FullStore>((set, get) => ({
       set({ conversations });
       const { personalProfile, businesses, context } = get();
       saveToLocalStorage({ personalProfile, businesses, context, conversations });
+      
+      // Clear cache to ensure fresh data on next load
+      simpleChatService.clearChatCache(conversationId);
     } catch (error) {
       console.error('Error in sendMessage:', error);
     }

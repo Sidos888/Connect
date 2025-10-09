@@ -27,7 +27,7 @@ export default function ProfilePage() {
   }, [isUserProfile, isGroupProfile, userId, chatId]);
 
   const handleStartChat = async (chatId: string) => {
-    router.push(`/chat/individual?chat=${chatId}`);
+    router.push(`/chat?chat=${chatId}`);
   };
 
   return (

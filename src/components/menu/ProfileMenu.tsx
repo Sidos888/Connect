@@ -2456,7 +2456,9 @@ export default function ProfileMenu() {
                     setShowCenteredConnections(true);
                   }}
                   onStartChat={(chatId) => {
-                    router.push(`/chat/individual?chat=${chatId}`);
+                    setShowCenteredFriendProfile(false);
+                    setSelectedFriend(null);
+                    router.push(`/chat?chat=${chatId}`);
                   }}
                   onSettingsClick={() => {
                     setShowSettingsModal(true);

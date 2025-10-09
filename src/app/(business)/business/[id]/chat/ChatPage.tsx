@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
 import MobileTitle from "@/components/MobileTitle";
+import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
 type Filter = "all" | "unread" | "dms";
 
@@ -26,24 +27,7 @@ export default function ChatPage() {
 
   console.log('Current business conversations:', conversations);
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      });
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      });
-    }
-  };
+  // Using the new intuitive time formatting utility
 
   const getLastMessage = (conversation: typeof conversations[0]) => {
     if (conversation.messages.length === 0) return 'No messages yet';
@@ -54,7 +38,7 @@ export default function ChatPage() {
   const getLastMessageTime = (conversation: typeof conversations[0]) => {
     if (conversation.messages.length === 0) return '';
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return formatTime(lastMessage.createdAt);
+    return formatMessageTimeShort(lastMessage.createdAt);
   };
 
   const filtered = useMemo(() => {

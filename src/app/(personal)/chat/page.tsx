@@ -155,9 +155,9 @@ export default function MessagesPage() {
       console.log('Loading conversations for account:', account.id);
       loadConversations(account.id);
     }
-    // Navigate to the individual chat page
-    console.log('Navigating to individual chat:', `/chat/individual?chat=${chatId}`);
-    router.push(`/chat/individual?chat=${chatId}`);
+    // Navigate to the main chat page (desktop layout)
+    console.log('Navigating to main chat:', `/chat?chat=${chatId}`);
+    router.push(`/chat?chat=${chatId}`);
   };
 
   const handleNewMessageClose = () => {
@@ -274,13 +274,13 @@ export default function MessagesPage() {
     <ProtectedRoute title="Chats" description="Log in / sign up to view your chats and messages" buttonText="Log in">
       <div className="h-full bg-white">
         {/* Desktop Layout */}
-        <div className="hidden lg:block h-full">
+        <div className="hidden sm:block h-full">
           <ChatLayout />
         </div>
 
         {/* Mobile Layout - Locked viewport to prevent keyboard scroll */}
         <div 
-          className="lg:hidden bg-white chat-mobile-container"
+          className="sm:hidden bg-white chat-mobile-container"
           style={{ 
             position: 'fixed !important',
             top: 0,
@@ -399,7 +399,7 @@ export default function MessagesPage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      router.push(`/chat/individual?chat=${conversation.id}`);
+                      router.push(`/chat?chat=${conversation.id}`);
                     }}
                     className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white border border-gray-200 ${
                       selectedChatId === conversation.id

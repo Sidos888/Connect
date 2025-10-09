@@ -398,7 +398,20 @@ export default function IndividualChatPage() {
             <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-2`}>
               {/* Profile picture for received messages */}
               {!isMe && (
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Find the sender of this specific message
+                    const messageSender = participants.find((p) => p.id === message.sender_id);
+                    if (messageSender) {
+                      // Navigate to the profile page for the sender
+                      router.push(`/chat/profile?user=${messageSender.id}`);
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 hover:bg-gray-300 transition-colors cursor-pointer"
+                >
                   {(() => {
                     // For group chats, show the individual sender's profile picture
                     if (conversation.isGroup) {
@@ -441,7 +454,7 @@ export default function IndividualChatPage() {
                       }
                     }
                   })()}
-                </div>
+                </button>
               )}
               
               {/* Message bubble - white background for mobile */}

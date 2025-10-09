@@ -30,6 +30,15 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [refreshedConversation, setRefreshedConversation] = useState<Conversation | null>(null);
+  
+  // Real-time state
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [testTyping, setTestTyping] = useState(false); // Real typing logic
+  const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
+  const unsubscribeTypingRef = useRef<(() => void) | null>(null);
+  const animationRef = useRef<NodeJS.Timeout | null>(null);
 
 
   // Load participants and messages from the database
@@ -67,11 +76,45 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         } else {
           console.error('Error loading messages:', messagesError);
         }
+        
+        // Subscribe to real-time messages
+        const unsubscribeMessages = simpleChatService.subscribeToMessages(
+          conversation.id,
+          (newMessage) => {
+            console.log('PersonalChatPanel: Received new message:', newMessage);
+            setMessages(prev => [...prev, newMessage]);
+          }
+        );
+        unsubscribeMessagesRef.current = unsubscribeMessages;
+        
+        // Subscribe to typing indicators
+        const unsubscribeTyping = simpleChatService.subscribeToTyping(
+          conversation.id,
+          account.id,
+          (typingUserIds) => {
+            console.log('PersonalChatPanel: Typing users updated:', typingUserIds);
+            setTypingUsers(typingUserIds);
+          }
+        );
+        unsubscribeTypingRef.current = unsubscribeTyping;
+        
         setLoading(false);
       }
     };
 
     loadData();
+    
+    // Cleanup function
+    return () => {
+      if (unsubscribeMessagesRef.current) {
+        unsubscribeMessagesRef.current();
+        unsubscribeMessagesRef.current = null;
+      }
+      if (unsubscribeTypingRef.current) {
+        unsubscribeTypingRef.current();
+        unsubscribeTypingRef.current = null;
+      }
+    };
   }, [conversation.id, account?.id, conversation]);
 
   useEffect(() => {
@@ -84,6 +127,56 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   });
+
+  // JavaScript animation for typing dots
+  useEffect(() => {
+    if (typingUsers.length > 0) {
+      const animate = () => {
+        setAnimationPhase(prev => (prev + 1) % 4); // 0, 1, 2, 3 cycles
+        animationRef.current = setTimeout(animate, 350); // ~1.4s total cycle
+      };
+      animate();
+    } else {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+        animationRef.current = null;
+      }
+    }
+
+    return () => {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+  }, [typingUsers.length]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+      }
+    };
+  }, []);
+
+  // Handle typing indicator
+  const handleTyping = () => {
+    if (!account?.id || !conversation.id) return;
+    
+    console.log('🎯 Starting typing indicator for user:', account.id);
+    // Send typing indicator
+    simpleChatService.sendTypingIndicator(conversation.id, account.id, true);
+    
+    // Clear any existing timeout - we don't want it to auto-stop while focused
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  };
 
   // Use refreshed conversation data if available, otherwise fall back to original
   const displayConversation = refreshedConversation || conversation;
@@ -172,19 +265,39 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2`}>
             {/* Profile picture for received messages */}
             {!isMe && (
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {displayConversation.avatarUrl ? (
-                  <img
-                    src={displayConversation.avatarUrl}
-                    alt={displayConversation.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-gray-400 text-sm font-semibold">
-                    {displayConversation.title.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  // Find the sender of this specific message
+                  const messageSender = participants.find((p: any) => p.id === m.sender_id);
+                  if (messageSender) {
+                    setProfileUserId(messageSender.id);
+                    setShowUserProfile(true);
+                  }
+                }}
+                className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 hover:bg-gray-300 transition-colors cursor-pointer"
+              >
+                {(() => {
+                  // Find the sender of this specific message
+                  const messageSender = participants.find((p: any) => p.id === m.sender_id);
+                  const senderAvatarUrl = messageSender?.profile_pic;
+                  const senderName = messageSender?.name || 'Unknown';
+                  
+                  return senderAvatarUrl ? (
+                    <img
+                      src={senderAvatarUrl}
+                      alt={senderName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-gray-400 text-sm font-semibold">
+                      {senderName.charAt(0).toUpperCase()}
+                    </div>
+                  );
+                })()}
+              </button>
             )}
             
             <div className={`
@@ -203,8 +316,71 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           </div>
           )})
         )}
+        
         <div ref={endRef} />
       </div>
+
+              {/* Typing Indicator */}
+              {typingUsers.length > 0 && (() => {
+                console.log('🐛 Typing indicator rendering with typingUsers:', typingUsers.length);
+                return (
+        <div className="flex-shrink-0 px-6 py-6 bg-white">
+          <div className="flex items-center gap-3">
+            {/* Profile Card */}
+            {typingUsers.length === 1 && (() => {
+              const typingUser = participants.find(p => p.id === typingUsers[0]);
+              const avatarUrl = typingUser?.profile_pic;
+              const nameInitial = typingUser?.name?.charAt(0).toUpperCase() || 'S';
+              return (
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={typingUser?.name || 'Typing user'} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-gray-400 text-sm font-semibold">
+                      {nameInitial}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Bouncing Dots Card */}
+            <div className="bg-white text-gray-900 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm flex items-center" style={{ backgroundColor: '#ffffff !important', color: '#111827 !important', height: 'auto', minHeight: 'fit-content' }}>
+              <div className="text-sm leading-relaxed flex items-center gap-2" style={{ height: '22.75px', lineHeight: '22.75px' }}>
+                <div className="flex space-x-1">
+                  <div 
+                    className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                    style={{ 
+                      transform: animationPhase === 0 ? 'translateY(-10px)' : 'translateY(0)',
+                      opacity: animationPhase === 0 ? 1 : 0.7
+                    }}
+                  ></div>
+                  <div 
+                    className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                    style={{ 
+                      transform: animationPhase === 1 ? 'translateY(-10px)' : 'translateY(0)',
+                      opacity: animationPhase === 1 ? 1 : 0.7
+                    }}
+                  ></div>
+                  <div 
+                    className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                    style={{ 
+                      transform: animationPhase === 2 ? 'translateY(-10px)' : 'translateY(0)',
+                      opacity: animationPhase === 2 ? 1 : 0.7
+                    }}
+                  ></div>
+                </div>
+                {typingUsers.length > 1 && (
+                  <span className="text-gray-600">
+                    {`${typingUsers.length} people are typing...`}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* Message Input */}
       <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-200">
@@ -217,13 +393,29 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           <div className="flex-1 relative max-w-xs sm:max-w-none">
             <textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+              }}
+              onFocus={handleTyping}
+              onBlur={() => {
+                console.log('🚪 User blurred from input field');
+                // Stop typing indicator when user leaves the input field
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                }
+                simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+              }}
               placeholder=""
-              className="w-full px-3 py-1 bg-white rounded-full border-[1.5px] border-gray-300 focus:outline-none focus:border-gray-900 focus:bg-white transition-colors resize-none text-sm shadow-sm sm:px-4 sm:py-3 sm:rounded-xl sm:border sm:border-gray-300"
+              className="w-full px-3 py-1 bg-white rounded-full border-[1.5px] border-gray-300 focus:outline-none focus:border-gray-300 focus:bg-white focus:shadow-[0_0_12px_rgba(0,0,0,0.12)] transition-colors resize-none text-sm sm:px-4 sm:py-3 sm:rounded-xl"
               rows={1}
               onKeyDown={async (e) => {
                 if (e.key === 'Enter' && !e.shiftKey && text.trim() && account?.id) {
                   e.preventDefault();
+                  // Stop typing indicator when sending
+                  if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                    simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+                  }
                   await sendMessage(conversation.id, text.trim(), account.id);
                   setText("");
                 }
@@ -234,6 +426,11 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             <button
               onClick={async () => {
                 if (text.trim() && account?.id) {
+                  // Stop typing indicator when sending
+                  if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                    simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+                  }
                   await sendMessage(conversation.id, text.trim(), account.id);
                   setText("");
                 }
@@ -269,6 +466,8 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   setProfileUserId(null);
                 }}
                 onStartChat={(chatId) => {
+                  setShowUserProfile(false);
+                  setProfileUserId(null);
                   router.push(`/chat?chat=${chatId}`);
                 }}
                 onSettingsClick={() => {

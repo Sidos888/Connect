@@ -5,6 +5,18 @@
   --foreground: #111827; /* Neutral-900 */
 }
 
+/* Typing indicator animation */
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0) !important;
+  }
+  30% {
+    transform: translateY(-10px) !important;
+  }
+}
+
+
+
 html, body {
   height: 100%;
   margin: 0;
@@ -400,12 +412,19 @@ textarea {
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="tel"]:focus,
-textarea:focus,
 select:focus {
   background-color: #ffffff !important; /* Keep white background on focus */
-  border-color: #6b7280 !important; /* Force gray border on focus */
+  border-color: #d1d5db !important; /* Force light gray border on focus */
   outline: none !important; /* Remove default browser outline */
   box-shadow: none !important; /* Remove any box shadows */
+}
+
+/* Allow shadows on textarea focus for message input */
+textarea:focus {
+  background-color: #ffffff !important; /* Keep white background on focus */
+  border-color: #d1d5db !important; /* Force light gray border on focus */
+  outline: none !important; /* Remove default browser outline */
+  /* Allow Tailwind shadow classes to work */
 }
 
 /* Web-specific fixes for keyboard behavior - only apply to individual chat page */
