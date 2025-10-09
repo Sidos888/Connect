@@ -50,7 +50,10 @@ type ChatActions = {
   clearConversations: () => void;
 };
 
-type FullStore = AppStore & ChatActions & { conversations: Conversation[] };
+type FullStore = AppStore & ChatActions & { conversations: Conversation[] } & {
+  // Typing indicator state
+  chatTypingStates: Map<string, ChatTypingState>;
+} & TypingActions;
 
 export const useAppStore = create<FullStore>((set, get) => ({
   personalProfile: null,
@@ -59,6 +62,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
   isHydrated: false,
   conversations: [],
   isAccountSwitching: false,
+  chatTypingStates: new Map(),
 
   setAccountSwitching: (loading: boolean) => {
     set({ isAccountSwitching: loading });
@@ -317,6 +321,38 @@ export const useAppStore = create<FullStore>((set, get) => ({
     set({ conversations: [] });
     const { personalProfile, businesses, context } = get();
     saveToLocalStorage({ personalProfile, businesses, context, conversations: [] });
+  },
+
+  // Typing indicator actions
+  updateChatTyping: (chatId: string, typingUsers: string[]) => {
+    console.log('Store: Updating typing state for chat:', chatId, 'users:', typingUsers);
+    const { chatTypingStates } = get();
+    const newTypingStates = new Map(chatTypingStates);
+    
+    if (typingUsers.length > 0) {
+      newTypingStates.set(chatId, {
+        chatId,
+        typingUsers,
+        lastUpdated: new Date().toISOString()
+      });
+    } else {
+      newTypingStates.delete(chatId);
+    }
+    
+    set({ chatTypingStates: newTypingStates });
+  },
+
+  clearChatTyping: (chatId: string) => {
+    console.log('Store: Clearing typing state for chat:', chatId);
+    const { chatTypingStates } = get();
+    const newTypingStates = new Map(chatTypingStates);
+    newTypingStates.delete(chatId);
+    set({ chatTypingStates: newTypingStates });
+  },
+
+  getChatTyping: (chatId: string) => {
+    const { chatTypingStates } = get();
+    return chatTypingStates.get(chatId) || null;
   },
 }));
 

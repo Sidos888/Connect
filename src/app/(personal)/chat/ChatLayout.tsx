@@ -17,7 +17,7 @@ import { simpleChatService } from "@/lib/simpleChatService";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
 export default function ChatLayout() {
-  const { conversations, loadConversations, isHydrated } = useAppStore();
+  const { conversations, loadConversations, isHydrated, getChatTyping } = useAppStore();
   const { account } = useAuth();
   useModal();
   const router = useRouter();
@@ -50,12 +50,98 @@ export default function ChatLayout() {
     console.log('ChatLayout - showNewMessageSelector:', showNewMessageSelector);
   }, [conversations, selectedChatId, searchParams, showNewMessageSelector]);
 
+        // Subscribe to typing indicators for all conversations
+        useEffect(() => {
+          if (!account?.id || conversations.length === 0) return;
+
+          console.log('ChatLayout: Setting up typing subscriptions for', conversations.length, 'conversations');
+          
+          const subscriptions: (() => void)[] = [];
+          
+          conversations.forEach(conversation => {
+            console.log('ChatLayout: Subscribing to typing for chat:', conversation.id);
+            
+            const unsubscribe = simpleChatService.subscribeToTyping(
+              conversation.id,
+              account.id,
+              (typingUserIds) => {
+                console.log('ChatLayout: Typing update for chat:', conversation.id, 'users:', typingUserIds);
+                const { updateChatTyping } = useAppStore.getState();
+                updateChatTyping(conversation.id, typingUserIds);
+              }
+            );
+            
+            subscriptions.push(unsubscribe);
+          });
+          
+          return () => {
+            console.log('ChatLayout: Cleaning up typing subscriptions');
+            subscriptions.forEach(unsubscribe => unsubscribe());
+          };
+        }, [account?.id, conversations]);
+
+        // Subscribe to messages for all conversations to update typing indicators
+        useEffect(() => {
+          if (!account?.id || conversations.length === 0) return;
+
+          console.log('ChatLayout: Setting up message subscriptions for typing cleanup');
+          
+          const subscriptions: (() => void)[] = [];
+          
+          conversations.forEach(conversation => {
+            const unsubscribe = simpleChatService.subscribeToMessages(
+              conversation.id,
+              (newMessage) => {
+                // When a message arrives, stop typing indicator for that sender
+                console.log('ChatLayout: Message arrived, stopping typing for sender:', newMessage.sender_id);
+                const { updateChatTyping } = useAppStore.getState();
+                const currentTyping = getChatTyping(conversation.id);
+                if (currentTyping && currentTyping.typingUsers.includes(newMessage.sender_id)) {
+                  const updatedTypingUsers = currentTyping.typingUsers.filter(id => id !== newMessage.sender_id);
+                  updateChatTyping(conversation.id, updatedTypingUsers);
+                }
+              }
+            );
+            
+            subscriptions.push(unsubscribe);
+          });
+          
+          return () => {
+            console.log('ChatLayout: Cleaning up message subscriptions');
+            subscriptions.forEach(unsubscribe => unsubscribe());
+          };
+        }, [account?.id, conversations]);
+
   // Using the new intuitive time formatting utility
 
   const getLastMessage = (conversation: { messages: Array<{ text: string }> }) => {
     if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
     return lastMessage.text || "No messages yet";
+  };
+
+  const getDisplayMessage = (conversation: Conversation) => {
+    // Check if anyone is typing in this chat
+    const typingState = getChatTyping(conversation.id);
+    
+    if (typingState && typingState.typingUsers.length > 0 && !typingState.typingUsers.includes(account?.id || '')) {
+      // Someone is typing - show typing indicator
+      if (conversation.isGroup) {
+        // For groups, show the first name of the person typing
+        if (typingState.typingUsers.length === 1) {
+          // For now, use a placeholder - we'll improve this with participant caching
+          return "Someone: Typing...";
+        } else {
+          return `${typingState.typingUsers.length} people: Typing...`;
+        }
+      } else {
+        // For DMs, just show "Typing..."
+        return "Typing...";
+      }
+    }
+    
+    // No one is typing - show normal last message
+    return getLastMessage(conversation);
   };
 
   const getLastMessageTime = (conversation: { messages: Array<{ createdAt: string }> }) => {
@@ -278,7 +364,7 @@ export default function ChatLayout() {
                             <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.title}</h3>
                             <span className="text-xs text-gray-500">{getLastMessageTime(conversation)}</span>
                           </div>
-                          <p className="text-sm text-gray-500 truncate mt-1">{getLastMessage(conversation) || 'No messages yet'}</p>
+                          <p className="text-sm text-gray-500 truncate mt-1">{getDisplayMessage(conversation) || 'No messages yet'}</p>
                         </div>
                         {conversation.unreadCount > 0 && (
                           <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{conversation.unreadCount}</div>
@@ -368,7 +454,7 @@ export default function ChatLayout() {
                                   </div>
                                   <span className="text-xs text-gray-500 flex-shrink-0">{getLastMessageTime(conversation)}</span>
                                 </div>
-                                <p className={`text-xs truncate leading-relaxed ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{getLastMessage(conversation)}</p>
+                                <p className={`text-xs truncate leading-relaxed ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{getDisplayMessage(conversation)}</p>
                               </div>
                             </div>
                           </div>
@@ -386,7 +472,7 @@ export default function ChatLayout() {
       {/* Chat Panel - Hidden on mobile */}
       <div className="hidden sm:flex flex-1 flex-col h-full overflow-hidden">
         {selectedConversation ? (
-          <PersonalChatPanel conversation={selectedConversation} />
+          <PersonalChatPanel key={selectedConversation.id} conversation={selectedConversation} />
         ) : (
           <div className="flex flex-col h-full bg-white">
             {/* Empty header to match PersonalChatPanel structure */}

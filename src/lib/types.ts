@@ -45,6 +45,19 @@ export type AppActions = {
 
 export type AppStore = AppState & AppActions;
 
+// Typing indicator types
+export type ChatTypingState = {
+  chatId: string;
+  typingUsers: string[]; // Array of user IDs who are typing
+  lastUpdated: string; // ISO timestamp
+};
+
+export type TypingActions = {
+  updateChatTyping: (chatId: string, typingUsers: string[]) => void;
+  clearChatTyping: (chatId: string) => void;
+  getChatTyping: (chatId: string) => ChatTypingState | null;
+};
+
 // TODO: replace with Supabase profiles and orgs tables.
 // Keep ids as string/UUID-compatible for future DB integration.
 

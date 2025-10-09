@@ -39,6 +39,10 @@ class SimpleChatService {
   private typingSubscriptions: Map<string, any> = new Map();
   private typingUsers: Map<string, Set<string>> = new Map();
   private typingCallbacks: Map<string, (typingUsers: string[]) => void> = new Map();
+  
+  // Chat message cache for instant loading
+  private chatMessages: Map<string, SimpleMessage[]> = new Map();
+  private chatParticipants: Map<string, any[]> = new Map();
 
   // Retry mechanism for failed requests
   private async withRetry<T>(
@@ -80,9 +84,13 @@ class SimpleChatService {
   clearChatCache(chatId?: string) {
     if (chatId) {
       this.chats.delete(chatId);
+      this.chatMessages.delete(chatId);
+      this.chatParticipants.delete(chatId);
       console.log('SimpleChatService: Cleared cache for chat:', chatId);
     } else {
       this.chats.clear();
+      this.chatMessages.clear();
+      this.chatParticipants.clear();
       console.log('SimpleChatService: Cleared all chat cache');
     }
   }
@@ -131,11 +139,35 @@ class SimpleChatService {
             created_at: payload.new.created_at
           };
 
-          // Add to local cache
-          if (chat) {
-            chat.messages.push(message);
-            chat.last_message = message.text;
-            chat.last_message_at = message.created_at;
+          // Check if this message already exists (avoid duplicates from optimistic updates)
+          const existingMessage = chat?.messages.find(m => 
+            m.id === message.id || 
+            (m.text === message.text && m.sender_id === message.sender_id && Math.abs(new Date(m.created_at).getTime() - new Date(message.created_at).getTime()) < 1000)
+          );
+          if (!existingMessage) {
+            // Add to local cache
+            if (chat) {
+              chat.messages.push(message);
+              chat.last_message = message.text;
+              chat.last_message_at = message.created_at;
+            }
+            
+            // Update the message cache for instant future access
+            const cachedMessages = this.chatMessages.get(chatId) || [];
+            cachedMessages.push(message);
+            this.chatMessages.set(chatId, cachedMessages);
+          }
+
+          // Stop typing indicator immediately when a message arrives
+          // This ensures smooth transition from typing dots to actual message
+          const typingSet = this.typingUsers.get(chatId);
+          if (typingSet && typingSet.has(payload.new.sender_id)) {
+            typingSet.delete(payload.new.sender_id);
+            const typingCallback = this.typingCallbacks.get(chatId);
+            if (typingCallback) {
+              console.log('SimpleChatService: Stopping typing indicator for message sender:', payload.new.sender_id);
+              typingCallback(Array.from(typingSet));
+            }
           }
 
           // Notify callback
@@ -259,20 +291,26 @@ class SimpleChatService {
     console.log('SimpleChatService: Found subscription for chat:', !!subscription);
     if (!subscription) return;
 
-    if (isTyping) {
-      console.log('SimpleChatService: Sending typing: true for user:', userId);
-      await subscription.track({
-        user_id: userId,
-        typing: true,
-        online_at: new Date().toISOString()
-      });
-    } else {
-      console.log('SimpleChatService: Sending typing: false for user:', userId);
-      await subscription.track({
-        user_id: userId,
-        typing: false,
-        online_at: new Date().toISOString()
-      });
+    try {
+      if (isTyping) {
+        console.log('SimpleChatService: Sending typing: true for user:', userId);
+        await subscription.track({
+          user_id: userId,
+          typing: true,
+          online_at: new Date().toISOString()
+        });
+        console.log('SimpleChatService: Successfully sent typing: true');
+      } else {
+        console.log('SimpleChatService: Sending typing: false for user:', userId);
+        await subscription.track({
+          user_id: userId,
+          typing: false,
+          online_at: new Date().toISOString()
+        });
+        console.log('SimpleChatService: Successfully sent typing: false');
+      }
+    } catch (error) {
+      console.error('SimpleChatService: Error sending typing indicator:', error);
     }
   }
 
@@ -802,6 +840,11 @@ class SimpleChatService {
     }
   }
 
+  // Get a chat from cache only (no database query)
+  getChatFromCache(chatId: string): SimpleChat | null {
+    return this.chats.get(chatId) || null;
+  }
+
   // Get a specific chat by ID
   async getChatById(chatId: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
@@ -878,6 +921,13 @@ class SimpleChatService {
   // Get chat messages (now loads from Supabase)
   async getChatMessages(chatId: string, userId: string): Promise<{ messages: SimpleMessage[]; error: Error | null }> {
     try {
+      // Check cache first for instant loading
+      const cachedMessages = this.chatMessages.get(chatId);
+      if (cachedMessages) {
+        console.log('SimpleChatService: getChatMessages loaded from cache:', cachedMessages.length, 'messages');
+        return { messages: cachedMessages, error: null };
+      }
+      
       const chat = this.chats.get(chatId);
       if (!chat) {
         return { messages: [], error: new Error('Chat not found') };
@@ -905,6 +955,9 @@ class SimpleChatService {
         created_at: msg.created_at
       }));
 
+      // Cache the messages for instant future access
+      this.chatMessages.set(chatId, messages);
+      
       // Update in-memory chat with messages from Supabase
       chat.messages = messages;
       
@@ -944,9 +997,45 @@ class SimpleChatService {
   // Send a message (now saves to Supabase)
   async sendMessage(chatId: string, senderId: string, messageText: string): Promise<{ message: SimpleMessage | null; error: Error | null }> {
     try {
-      const chat = this.chats.get(chatId);
+      let chat = this.chats.get(chatId);
       if (!chat) {
-        return { message: null, error: new Error('Chat not found') };
+        // Chat not in cache, try to load it
+        console.log('SimpleChatService: Chat not in cache, loading chat:', chatId);
+        const { chat: loadedChat, error: loadError } = await this.getChatById(chatId);
+        if (loadError || !loadedChat) {
+          console.error('SimpleChatService: Failed to load chat:', loadError);
+          return { message: null, error: new Error('Chat not found and could not be loaded') };
+        }
+        chat = loadedChat;
+        console.log('SimpleChatService: Successfully loaded chat:', chatId);
+      }
+
+      // Create optimistic message for instant UI feedback
+      const optimisticMessage: SimpleMessage = {
+        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique temporary ID
+        chat_id: chatId,
+        sender_id: senderId,
+        sender_name: 'You',
+        text: messageText,
+        created_at: new Date().toISOString()
+      };
+
+      // Add optimistic message immediately for instant sender feedback
+      chat.messages.push(optimisticMessage);
+      chat.last_message = messageText;
+      chat.last_message_at = optimisticMessage.created_at;
+      chat.updated_at = optimisticMessage.created_at;
+      
+      // Update the message cache immediately for instant UI updates
+      const cachedMessages = this.chatMessages.get(chatId) || [];
+      cachedMessages.push(optimisticMessage);
+      this.chatMessages.set(chatId, cachedMessages);
+      
+      // Trigger immediate UI update for the sender
+      const callback = this.messageCallbacks.get(chatId);
+      if (callback) {
+        console.log('SimpleChatService: Triggering immediate optimistic callback for sender');
+        callback(optimisticMessage);
       }
 
       // Save message to Supabase
@@ -963,11 +1052,21 @@ class SimpleChatService {
 
       if (insertError) {
         console.error('Error saving message to Supabase:', insertError);
+        // Remove optimistic message on error
+        const messageIndex = chat.messages.findIndex(m => m.id === optimisticMessage.id);
+        if (messageIndex > -1) {
+          chat.messages.splice(messageIndex, 1);
+        }
+        const cacheIndex = cachedMessages.findIndex(m => m.id === optimisticMessage.id);
+        if (cacheIndex > -1) {
+          cachedMessages.splice(cacheIndex, 1);
+          this.chatMessages.set(chatId, cachedMessages);
+        }
         return { message: null, error: insertError };
       }
 
-      // Convert Supabase message to SimpleMessage format
-      const message: SimpleMessage = {
+      // Replace optimistic message with real message
+      const realMessage: SimpleMessage = {
         id: messageData.id,
         chat_id: chatId,
         sender_id: senderId,
@@ -976,30 +1075,20 @@ class SimpleChatService {
         created_at: messageData.created_at
       };
       
-      // Add message to the in-memory chat
-      chat.messages.push(message);
-      chat.last_message = message.text;
-      chat.last_message_at = message.created_at;
-      chat.updated_at = message.created_at;
-      
-      // Trigger immediate UI update for the sender
-      const callback = this.messageCallbacks.get(chatId);
-      if (callback) {
-        const sender = chat.participants.find(p => p.id === senderId);
-        const callbackMessage: SimpleMessage = {
-          id: messageData.id,
-          chat_id: chatId,
-          sender_id: senderId,
-          sender_name: sender?.name || 'You',
-          text: messageText,
-          created_at: messageData.created_at
-        };
-        console.log('SimpleChatService: Triggering immediate callback for sender');
-        callback(callbackMessage);
+      // Replace optimistic message with real message
+      const messageIndex = chat.messages.findIndex(m => m.id === optimisticMessage.id);
+      if (messageIndex > -1) {
+        chat.messages[messageIndex] = realMessage;
       }
       
-      console.log('SimpleChatService: Message sent and saved to Supabase:', message.id);
-      return { message, error: null };
+      const cacheIndex = cachedMessages.findIndex(m => m.id === optimisticMessage.id);
+      if (cacheIndex > -1) {
+        cachedMessages[cacheIndex] = realMessage;
+        this.chatMessages.set(chatId, cachedMessages);
+      }
+      
+      console.log('SimpleChatService: Message sent and saved to Supabase:', realMessage.id);
+      return { message: realMessage, error: null };
     } catch (error) {
       console.error('Error in sendMessage:', error);
       return { message: null, error: error instanceof Error ? error : new Error('Unknown error') };

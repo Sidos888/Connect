@@ -17,9 +17,24 @@ interface PersonalChatPanelProps {
 
 export default function PersonalChatPanel({ conversation }: PersonalChatPanelProps) {
   console.log('🎬 PersonalChatPanel: Component rendering with conversation:', conversation.id);
-  const { sendMessage, markAllRead } = useAppStore();
+  
+  // Add error boundary for missing conversation
+  if (!conversation || !conversation.id) {
+    console.error('PersonalChatPanel: Invalid conversation object:', conversation);
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">Error loading chat</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const { sendMessage, markAllRead, getChatTyping } = useAppStore();
   const { account } = useAuth();
   console.log('🎬 PersonalChatPanel: Account:', account?.id);
+  console.log('🎬 PersonalChatPanel: Conversation object:', conversation);
+  console.log('🎬 PersonalChatPanel: Account object:', account);
   const router = useRouter();
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -34,13 +49,14 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const [refreshedConversation, setRefreshedConversation] = useState<Conversation | null>(null);
   
   // Real-time state
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [testTyping, setTestTyping] = useState(false); // Real typing logic
   const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
-  const unsubscribeTypingRef = useRef<(() => void) | null>(null);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Get typing users from global store
+  const typingState = getChatTyping(conversation.id);
+  const typingUsers = typingState?.typingUsers || [];
 
 
   // Load participants and messages from the database
@@ -53,36 +69,53 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     const loadData = async () => {
       if (conversation.id && account?.id) {
         console.log('PersonalChatPanel: Conditions met, starting loadData');
-        setLoading(true);
+        // Only set loading if we don't have messages yet (prevents flicker on chat switch)
+        if (messages.length === 0) {
+          setLoading(true);
+        }
         
         // Load chat details to get participants
+        console.log('PersonalChatPanel: Loading chat details for:', conversation.id, 'isGroup:', conversation.isGroup);
         const { chat, error: chatError } = await simpleChatService.getChatById(conversation.id);
-        if (!chatError && chat) {
-          setParticipants(chat.participants || []);
-          
-          // For group chats, refresh the conversation data with fresh photo
-          if (conversation.isGroup) {
-            console.log('PersonalChatPanel: Group chat detected, refreshing photo from database');
-            const updatedConversation = {
-              ...conversation,
-              avatarUrl: chat.photo || null
-            };
-            console.log('PersonalChatPanel: Updated conversation with fresh photo:', updatedConversation.avatarUrl);
-            setRefreshedConversation(updatedConversation);
-          } else {
-            setRefreshedConversation(conversation);
-          }
+        if (chatError) {
+          console.error('PersonalChatPanel: Error loading chat details:', chatError);
+          setLoading(false);
+          return;
+        }
+        if (!chat) {
+          console.error('PersonalChatPanel: Chat not found for ID:', conversation.id);
+          setLoading(false);
+          return;
+        }
+        
+        // Verify chat is properly cached
+        console.log('PersonalChatPanel: Verifying chat is cached in service');
+        // Note: Chat should now be cached from the getChatById call above
+        
+        console.log('PersonalChatPanel: Chat loaded successfully:', chat.id, 'participants:', chat.participants?.length || 0);
+        setParticipants(chat.participants || []);
+        
+        // For group chats, refresh the conversation data with fresh photo
+        if (conversation.isGroup) {
+          console.log('PersonalChatPanel: Group chat detected, refreshing photo from database');
+          const updatedConversation = {
+            ...conversation,
+            avatarUrl: chat.photo || null
+          };
+          console.log('PersonalChatPanel: Updated conversation with fresh photo:', updatedConversation.avatarUrl);
+          setRefreshedConversation(updatedConversation);
         } else {
-          console.error('Error loading chat:', chatError);
           setRefreshedConversation(conversation);
         }
         
-        // Load messages
-        const { messages, error: messagesError } = await simpleChatService.getChatMessages(conversation.id, account.id);
-        if (!messagesError) {
-          setMessages(messages);
-        } else {
-          console.error('Error loading messages:', messagesError);
+        // Only load messages if we don't have them yet (prevents refetch on chat switch)
+        if (messages.length === 0) {
+          const { messages: newMessages, error: messagesError } = await simpleChatService.getChatMessages(conversation.id, account.id);
+          if (!messagesError) {
+            setMessages(newMessages);
+          } else {
+            console.error('PersonalChatPanel: Error loading messages:', messagesError);
+          }
         }
         
         // Subscribe to real-time messages
@@ -90,23 +123,31 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           conversation.id,
           (newMessage) => {
             console.log('PersonalChatPanel: Received new message:', newMessage);
-            setMessages(prev => [...prev, newMessage]);
+            
+            // Check if this message already exists (avoid duplicates)
+            setMessages(prev => {
+              const exists = prev.some(msg => 
+                msg.id === newMessage.id || 
+                (msg.text === newMessage.text && msg.sender_id === newMessage.sender_id && Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 1000)
+              );
+              if (exists) {
+                console.log('PersonalChatPanel: Message already exists, skipping duplicate');
+                return prev;
+              }
+              console.log('PersonalChatPanel: Adding new message to UI');
+              return [...prev, newMessage];
+            });
+            
+            // Auto-scroll to bottom when new message arrives
+            setTimeout(() => {
+              endRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 100);
           }
         );
         unsubscribeMessagesRef.current = unsubscribeMessages;
         
-        // Subscribe to typing indicators
-        console.log('PersonalChatPanel: Setting up typing subscription for chat:', conversation.id, 'user:', account.id);
-        const unsubscribeTyping = simpleChatService.subscribeToTyping(
-          conversation.id,
-          account.id,
-          (typingUserIds) => {
-            console.log('PersonalChatPanel: Typing users updated:', typingUserIds);
-            setTypingUsers(typingUserIds);
-          }
-        );
-        console.log('PersonalChatPanel: Typing subscription created:', !!unsubscribeTyping);
-        unsubscribeTypingRef.current = unsubscribeTyping;
+        // Note: Typing indicators are now handled by ChatLayout's global subscription
+        // PersonalChatPanel will use the global store instead of its own subscription
         
         setLoading(false);
       }
@@ -120,12 +161,8 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         unsubscribeMessagesRef.current();
         unsubscribeMessagesRef.current = null;
       }
-      if (unsubscribeTypingRef.current) {
-        unsubscribeTypingRef.current();
-        unsubscribeTypingRef.current = null;
-      }
     };
-  }, [conversation.id, account?.id, conversation]);
+  }, [conversation.id, account?.id]);
 
   useEffect(() => {
     if (!hasMarkedAsRead.current && account?.id) {
@@ -141,13 +178,20 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
   // JavaScript animation for typing dots
   useEffect(() => {
+    console.log('PersonalChatPanel: Animation useEffect triggered, typingUsers.length:', typingUsers.length);
     if (typingUsers.length > 0) {
+      console.log('PersonalChatPanel: Starting animation');
       const animate = () => {
-        setAnimationPhase(prev => (prev + 1) % 4); // 0, 1, 2, 3 cycles
+        setAnimationPhase(prev => {
+          const newPhase = (prev + 1) % 4;
+          console.log('PersonalChatPanel: Animation phase changed to:', newPhase);
+          return newPhase;
+        });
         animationRef.current = setTimeout(animate, 350); // ~1.4s total cycle
       };
       animate();
     } else {
+      console.log('PersonalChatPanel: Stopping animation');
       if (animationRef.current) {
         clearTimeout(animationRef.current);
         animationRef.current = null;
@@ -270,10 +314,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
         ) : (
-          messages.map((m) => {
+          messages.map((m, index) => {
             const isMe = m.sender_id === account?.id;
+            // Create a unique key that combines ID with index to prevent duplicates
+            const uniqueKey = `${m.id}_${index}_${m.created_at}`;
             return (
-          <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"} items-center gap-2`}>
+          <div key={uniqueKey} className={`flex ${isMe ? "justify-end" : "justify-start"} items-center gap-2`}>
             {/* Profile picture for received messages */}
             {!isMe && (
               <button 
@@ -328,14 +374,18 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           )})
         )}
         
-        {/* Typing Indicator - positioned exactly like a message */}
-        {typingUsers.length > 0 && (() => {
-          console.log('🐛 Typing indicator rendering with typingUsers:', typingUsers);
-          console.log('🐛 Current user account.id:', account?.id);
-          console.log('🐛 TypingUsers[0]:', typingUsers[0]);
-          console.log('🐛 Is current user in typingUsers?', typingUsers.includes(account?.id || ''));
-          return (
-            <div className="flex justify-start items-center gap-2 mt-12">
+        <div ref={endRef} />
+      </div>
+
+      {/* Typing Indicator - positioned at bottom, outside scrollable area */}
+      {typingUsers.length > 0 && !typingUsers.includes(account?.id || '') && (() => {
+        console.log('🐛 Typing indicator rendering with typingUsers:', typingUsers);
+        console.log('🐛 Current user account.id:', account?.id);
+        console.log('🐛 TypingUsers[0]:', typingUsers[0]);
+        console.log('🐛 Is current user in typingUsers?', typingUsers.includes(account?.id || ''));
+        return (
+          <div className="flex-shrink-0 px-6 pb-8">
+            <div className="flex justify-start items-center gap-2">
               {/* Profile Card - same positioning as message avatars */}
               {typingUsers.length === 1 && (() => {
                 let typingUser = participants.find(p => p.id === typingUsers[0]);
@@ -414,11 +464,9 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 </div>
               </div>
             </div>
-          );
-        })()}
-
-        <div ref={endRef} />
-      </div>
+          </div>
+        );
+      })()}
 
       {/* Message Input */}
       <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-200">
@@ -441,7 +489,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 if (typingTimeoutRef.current) {
                   clearTimeout(typingTimeoutRef.current);
                 }
-                simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+                // Add a small delay to prevent rapid on/off typing indicators
+                setTimeout(() => {
+                  if (account?.id) {
+                    simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+                  }
+                }, 100);
               }}
               placeholder=""
               className="w-full px-3 py-1 bg-white rounded-full border-[1.5px] border-gray-300 focus:outline-none focus:border-gray-300 focus:bg-white focus:shadow-[0_0_12px_rgba(0,0,0,0.12)] transition-colors resize-none text-sm sm:px-4 sm:py-3 sm:rounded-xl"

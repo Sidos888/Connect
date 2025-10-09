@@ -43,6 +43,11 @@ export default function MessagesPage() {
         console.log('Loading specific chat:', selectedChatId);
         try {
           const { chat, error } = await simpleChatService.getChatById(selectedChatId);
+          if (error) {
+            console.error('Error loading specific chat:', error);
+            // Don't crash the app, just log the error
+            return;
+          }
           if (chat && !error) {
             // Add the chat to conversations if it's not already there
             const currentConversations = getConversations();
