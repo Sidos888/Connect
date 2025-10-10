@@ -35,13 +35,17 @@ class SimpleChatService {
   
   // Real-time subscriptions
   private messageSubscriptions: Map<string, any> = new Map();
-  private messageCallbacks: Map<string, (message: SimpleMessage) => void> = new Map();
+  // Allow multiple listeners per chat
+  private messageCallbacks: Map<string, Set<(message: SimpleMessage) => void>> = new Map();
   private typingSubscriptions: Map<string, any> = new Map();
   private typingUsers: Map<string, Set<string>> = new Map();
   private typingCallbacks: Map<string, (typingUsers: string[]) => void> = new Map();
   
   // Global message tracking to prevent duplicates across all subscriptions
   private processedMessages: Set<string> = new Set();
+  // Recent message signature timestamps to guard against content-duplicate bursts
+  // key = `${chatId}:${sender_id}:${text}` value = epoch ms last seen
+  private recentMessageSignatures: Map<string, number> = new Map();
   
   // Chat message cache for instant loading
   private chatMessages: Map<string, SimpleMessage[]> = new Map();
@@ -109,13 +113,15 @@ class SimpleChatService {
   subscribeToMessages(chatId: string, onNewMessage: (message: SimpleMessage) => void): () => void {
     console.log('SimpleChatService: Subscribing to messages for chat:', chatId);
     
-    // Store the callback for immediate updates
-    this.messageCallbacks.set(chatId, onNewMessage);
-    
-    // Unsubscribe from existing subscription if any
-    if (this.messageSubscriptions.has(chatId)) {
-      this.messageSubscriptions.get(chatId)?.unsubscribe();
+    // Store the callback for fan-out
+    if (!this.messageCallbacks.has(chatId)) {
+      this.messageCallbacks.set(chatId, new Set());
     }
+    const cbSet = this.messageCallbacks.get(chatId)!;
+    cbSet.add(onNewMessage);
+    
+    // Create subscription once per chat
+    if (!this.messageSubscriptions.has(chatId)) {
 
     const subscription = this.supabase
       .channel(`chat:${chatId}`)
@@ -170,12 +176,22 @@ class SimpleChatService {
           (message as any).wasTyping = wasTyping;
 
           // Only notify callback if this is a NEW message (not a duplicate)
-          if (!existingMessage && !this.processedMessages.has(message.id)) {
+          // Extra guard: dedupe by (chatId, sender_id, text) within short window (2s)
+          const signatureKey = `${chatId}:${message.sender_id}:${(message.text || '').trim()}`;
+          const nowMs = Date.now();
+          const lastSeen = this.recentMessageSignatures.get(signatureKey) || 0;
+
+          const isDuplicateById = this.processedMessages.has(message.id);
+          const isDuplicateBySignature = nowMs - lastSeen < 2000; // 2s window
+
+          if (!existingMessage && !isDuplicateById && !isDuplicateBySignature) {
             console.log('SimpleChatService: Notifying callback for NEW message:', message.id);
             this.processedMessages.add(message.id);
-            onNewMessage(message);
+            this.recentMessageSignatures.set(signatureKey, nowMs);
+            const listeners = this.messageCallbacks.get(chatId);
+            if (listeners) listeners.forEach(cb => cb(message));
           } else {
-            console.log('SimpleChatService: Skipping callback for duplicate message:', message.id);
+            console.log('SimpleChatService: Skipping callback for duplicate message (id/signature):', message.id, isDuplicateBySignature);
           }
           
           // THEN stop typing indicator after a delay to allow smooth transition
@@ -194,13 +210,24 @@ class SimpleChatService {
       )
       .subscribe();
 
-    this.messageSubscriptions.set(chatId, subscription);
+      this.messageSubscriptions.set(chatId, subscription);
+    }
     
     return () => {
-      console.log('SimpleChatService: Unsubscribing from messages for chat:', chatId);
-      subscription.unsubscribe();
-      this.messageSubscriptions.delete(chatId);
-      this.messageCallbacks.delete(chatId);
+      // Remove this listener; keep channel if others are listening
+      const set = this.messageCallbacks.get(chatId);
+      if (set) {
+        set.delete(onNewMessage);
+        if (set.size === 0) {
+          this.messageCallbacks.delete(chatId);
+          const sub = this.messageSubscriptions.get(chatId);
+          if (sub) {
+            console.log('SimpleChatService: Unsubscribing channel for chat:', chatId);
+            sub.unsubscribe();
+          }
+          this.messageSubscriptions.delete(chatId);
+        }
+      }
     };
   }
 
@@ -356,6 +383,7 @@ class SimpleChatService {
     
     // Clear processed messages to prevent memory leaks
     this.processedMessages.clear();
+    this.recentMessageSignatures.clear();
   }
 
   // Get user's contacts from the database (only actual connections)
@@ -1053,10 +1081,10 @@ class SimpleChatService {
       this.chatMessages.set(chatId, cachedMessages);
       
       // Trigger immediate UI update for the sender
-      const callback = this.messageCallbacks.get(chatId);
-      if (callback) {
+      const callbacks = this.messageCallbacks.get(chatId);
+      if (callbacks && callbacks.size > 0) {
         console.log('SimpleChatService: Triggering immediate optimistic callback for sender');
-        callback(optimisticMessage);
+        callbacks.forEach(callback => callback(optimisticMessage));
       }
 
       // Save message to Supabase

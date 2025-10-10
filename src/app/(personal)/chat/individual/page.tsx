@@ -354,15 +354,15 @@ export default function IndividualChatPage() {
           </button>
           
           {/* Input field */}
-          <div className="flex-1 relative max-w-xs">
-            <input
-              type="text"
+          <div className="flex-1 relative max-w-xs sm:max-w-none">
+            <textarea
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              className="w-full px-3 py-1 bg-white border-[1.5px] border-gray-300 rounded-full focus:outline-none focus:border-gray-900 transition-colors duration-200 text-sm shadow-sm"
               placeholder=""
+              className="w-full px-3 py-1 bg-white rounded-full border-[1.5px] border-gray-300 focus:outline-none focus:border-gray-300 focus:bg-white focus:shadow-[0_0_12px_rgba(0,0,0,0.12)] transition-colors resize-none text-sm sm:px-4 sm:py-3 sm:rounded-xl"
+              rows={1}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && messageText.trim()) {
+                if (e.key === 'Enter' && !e.shiftKey && messageText.trim()) {
                   e.preventDefault();
                   handleSendMessage();
                 }
@@ -370,16 +370,18 @@ export default function IndividualChatPage() {
             />
           </div>
           
-          {messageText.trim() && (
-            <button
-              onClick={handleSendMessage}
-              className="p-2 rounded-full bg-orange-500 text-white hover:opacity-90"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
+          <button
+            onClick={handleSendMessage}
+            className={`p-2 rounded-full transition-colors ${
+              messageText.trim() 
+                ? "bg-gray-900 text-white hover:bg-gray-800" 
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -388,7 +390,7 @@ export default function IndividualChatPage() {
         className="px-4 overflow-y-auto space-y-3"
         style={{
           height: 'calc(100dvh - 210px)',
-          paddingBottom: '80px',
+          paddingBottom: '0px', // No bottom padding needed since bottom nav is hidden
           position: 'relative'
         }}
       >

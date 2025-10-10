@@ -17,6 +17,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isAnyModalOpen } = useModal();
   const isChatPage = pathname.startsWith('/chat');
+  const isIndividualChatPage = pathname.startsWith('/chat/individual');
   const isSettingsPage = pathname === '/settings';
   const isMenuPage = pathname === '/menu';
   const isOnboardingPage = pathname === '/onboarding';
@@ -84,10 +85,12 @@ export default function AppShell({ children }: AppShellProps) {
           </ProtectedRoute>
         </main>
 
-        {/* Mobile: Bottom Navigation Bar */}
-        <div className="sm:hidden">
-          <MobileBottomNavigation />
-        </div>
+        {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages */}
+        {!isIndividualChatPage && (
+          <div className="sm:hidden">
+            <MobileBottomNavigation />
+          </div>
+        )}
       </div>
     );
   }

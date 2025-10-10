@@ -18,7 +18,7 @@ import { simpleChatService } from "@/lib/simpleChatService";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
 export default function ChatLayout() {
-  const { conversations, loadConversations, isHydrated, getChatTyping } = useAppStore();
+  const { conversations, loadConversations, isHydrated, getChatTyping, setConversations, getConversations } = useAppStore();
   const { account } = useAuth();
   useModal();
   const router = useRouter();
@@ -38,10 +38,16 @@ export default function ChatLayout() {
       console.log('Store hydrated, loading real conversations for user:', account.id);
       // Use real chat service
       loadConversations(account.id);
+      
+      // On mobile, if there's a selected chat in URL, redirect to individual page
+      if (selectedChatId && typeof window !== 'undefined' && window.innerWidth < 640) {
+        console.log('🔥 Mobile detected with selected chat, redirecting to individual page');
+        router.push(`/chat/individual?chat=${selectedChatId}`);
+      }
     } else if (isHydrated && !account?.id) {
       console.log('Store hydrated but no user authenticated, skipping conversation loading');
     }
-  }, [isHydrated, account?.id, loadConversations]);
+  }, [isHydrated, account?.id, loadConversations, selectedChatId, router]);
 
   // Debug logging
   useEffect(() => {
@@ -81,8 +87,42 @@ export default function ChatLayout() {
           };
         }, [account?.id, conversations]);
 
-        // Note: Typing indicator cleanup is now handled by simpleChatService
-        // No need for separate message subscriptions here
+        // Live-update conversation list ordering and previews on new messages
+        useEffect(() => {
+          if (!isHydrated || !account?.id || conversations.length === 0) return;
+
+          const unsubscribes: Array<() => void> = [];
+          conversations.forEach(conv => {
+            const off = simpleChatService.subscribeToMessages(conv.id, (newMessage) => {
+              // Update last message preview and move conversation to top
+              const current = getConversations();
+              const updated = current.map(c => {
+                if (c.id !== conv.id) return c;
+                const last = {
+                  id: newMessage.id,
+                  conversationId: conv.id,
+                  sender: newMessage.sender_id === account.id ? 'me' as const : 'them' as const,
+                  text: newMessage.text || '',
+                  createdAt: newMessage.created_at,
+                  read: newMessage.sender_id === account.id
+                };
+                return { ...c, messages: [...(c.messages || []), last] };
+              });
+              // Move the updated conversation to the top
+              const sorted = updated.sort((a, b) => {
+                const at = a.messages.length ? new Date(a.messages[a.messages.length - 1].createdAt).getTime() : 0;
+                const bt = b.messages.length ? new Date(b.messages[b.messages.length - 1].createdAt).getTime() : 0;
+                return bt - at;
+              });
+              setConversations(sorted);
+            });
+            unsubscribes.push(off);
+          });
+
+          return () => {
+            unsubscribes.forEach(u => u());
+          };
+        }, [isHydrated, account?.id, conversations]);
 
   // Using the new intuitive time formatting utility
 
@@ -229,14 +269,29 @@ export default function ChatLayout() {
     setSelectedContactsForGroup([]);
   };
 
-  const handleSelectChat = (chatId: string, e?: React.MouseEvent) => {
+  const handleSelectChat = (chatId: string, e?: React.MouseEvent | React.TouchEvent) => {
+    console.log('🔥 handleSelectChat called with chatId:', chatId);
+    console.log('🔥 Window width:', typeof window !== 'undefined' ? window.innerWidth : 'N/A');
+    
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     
-    // Always navigate to the main chat page with selected chat (desktop layout)
-    router.push(`/chat?chat=${chatId}`);
+    // Check if we're on mobile (screen width < 640px which is sm breakpoint)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    
+    console.log('🔥 isMobile:', isMobile);
+    
+    if (isMobile) {
+      // On mobile, navigate to the individual chat page
+      console.log('🔥 Navigating to mobile chat page:', `/chat/individual?chat=${chatId}`);
+      router.push(`/chat/individual?chat=${chatId}`);
+    } else {
+      // On desktop, stay on the main chat page with selected chat
+      console.log('🔥 Navigating to desktop chat page:', `/chat?chat=${chatId}`);
+      router.push(`/chat?chat=${chatId}`);
+    }
   };
 
   const categories = [
@@ -328,8 +383,21 @@ export default function ChatLayout() {
                 {/* Chat List */}
                 <div className="space-y-2">
                   {filteredConversations.map((conversation) => (
-                    <div key={conversation.id} onClick={() => handleSelectChat(conversation.id)} className={`p-4 rounded-xl cursor-pointer transition-shadow bg-white border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}>
-                      <div className="flex items-center space-x-3">
+                    <div 
+                      key={conversation.id} 
+                      onClick={(e) => {
+                        console.log('🎯 Mobile card clicked:', conversation.id);
+                        handleSelectChat(conversation.id, e);
+                      }}
+                      onTouchEnd={(e) => {
+                        console.log('🎯 Mobile card touched:', conversation.id);
+                        e.preventDefault();
+                        handleSelectChat(conversation.id);
+                      }}
+                      className={`p-4 rounded-xl cursor-pointer transition-shadow bg-white border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}
+                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <div className="flex items-center space-x-3 pointer-events-none">
                         <Avatar src={conversation.avatarUrl} name={conversation.title} size={48} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">

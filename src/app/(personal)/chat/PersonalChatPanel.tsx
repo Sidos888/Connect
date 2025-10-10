@@ -146,6 +146,18 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               // After a brief moment, move to actual messages
               const timeout = setTimeout(() => {
                 setMessages(prev => {
+                  // If we already have a temp optimistic message for this sender/text, replace it
+                  const tempIndex = prev.findIndex(msg => 
+                    typeof msg.id === 'string' && (msg.id as string).startsWith('temp_') &&
+                    msg.sender_id === newMessage.sender_id &&
+                    (msg.text || '') === (newMessage.text || '')
+                  );
+                  if (tempIndex !== -1) {
+                    const updated = [...prev];
+                    updated[tempIndex] = newMessage;
+                    console.log('PersonalChatPanel: Replaced temp optimistic message with real message');
+                    return updated;
+                  }
                   const exists = prev.some(msg => msg.id === newMessage.id);
                   if (exists) return prev;
                   console.log('PersonalChatPanel: Moving pending message to actual messages');
@@ -163,9 +175,21 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               console.log('PersonalChatPanel: No typing indicator, adding message normally');
               // Normal message flow - just add it
               setMessages(prev => {
+                // Replace optimistic temp message if present
+                const tempIndex = prev.findIndex(msg => 
+                  typeof msg.id === 'string' && (msg.id as string).startsWith('temp_') &&
+                  msg.sender_id === newMessage.sender_id &&
+                  (msg.text || '') === (newMessage.text || '')
+                );
+                if (tempIndex !== -1) {
+                  const updated = [...prev];
+                  updated[tempIndex] = newMessage;
+                  console.log('PersonalChatPanel: Replaced temp optimistic message with real message');
+                  return updated;
+                }
                 const exists = prev.some(msg => 
                   msg.id === newMessage.id || 
-                  (msg.text === newMessage.text && msg.sender_id === newMessage.sender_id && Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 1000)
+                  (msg.text === newMessage.text && msg.sender_id === newMessage.sender_id && Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 10000)
                 );
                 if (exists) {
                   console.log('PersonalChatPanel: Message already exists, skipping duplicate');
@@ -556,26 +580,28 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               }}
             />
           </div>
-          {text.trim() && (
-            <button
-              onClick={async () => {
-                if (text.trim() && account?.id) {
-                  // Stop typing indicator when sending
-                  if (typingTimeoutRef.current) {
-                    clearTimeout(typingTimeoutRef.current);
-                    simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
-                  }
-                  await sendMessage(conversation.id, text.trim(), account.id);
-                  setText("");
+          <button
+            onClick={async () => {
+              if (text.trim() && account?.id) {
+                // Stop typing indicator when sending
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                  simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
                 }
-              }}
-              className="p-2 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
+                await sendMessage(conversation.id, text.trim(), account.id);
+                setText("");
+              }
+            }}
+            className={`p-2 rounded-full transition-colors ${
+              text.trim() 
+                ? "bg-gray-900 text-white hover:bg-gray-800" 
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       </div>
 
