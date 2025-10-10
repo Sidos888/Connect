@@ -10,6 +10,10 @@ import { useRouter } from "next/navigation";
 import InlineProfileView from "@/components/InlineProfileView";
 import GroupInfoModal from "@/components/chat/GroupInfoModal";
 import SettingsModal from "@/components/chat/SettingsModal";
+import MessageBubble from "@/components/chat/MessageBubble";
+import MessageActionModal from "@/components/chat/MessageActionModal";
+import MediaUploadButton from "@/components/chat/MediaUploadButton";
+import type { SimpleMessage } from "@/lib/simpleChatService";
 
 interface PersonalChatPanelProps {
   conversation: Conversation;
@@ -47,11 +51,58 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [refreshedConversation, setRefreshedConversation] = useState<Conversation | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<SimpleMessage | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
+  const [pendingMedia, setPendingMedia] = useState<string[]>([]);
   
   // Real-time state
   const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
+  const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
+
+  // Message action handlers
+  const handleMessageLongPress = (message: SimpleMessage) => {
+    setSelectedMessage(message);
+  };
+
+  const handleReply = (message: SimpleMessage) => {
+    setReplyToMessage(message);
+    setSelectedMessage(null);
+  };
+
+  const handleCopy = (message: SimpleMessage) => {
+    navigator.clipboard.writeText(message.text || '');
+  };
+
+  const handleDelete = async (message: SimpleMessage) => {
+    if (account?.id) {
+      await simpleChatService.deleteMessage(message.id, account.id);
+    }
+  };
+
+  const handleReact = async (message: SimpleMessage, emoji: string) => {
+    if (account?.id) {
+      await simpleChatService.addReaction(message.id, account.id, emoji);
+    }
+  };
+
+  const handleProfileClick = (userId: string) => {
+    setProfileUserId(userId);
+    setShowUserProfile(true);
+  };
+
+  const handleMediaSelected = (urls: string[]) => {
+    setPendingMedia(urls);
+  };
+
+  const cancelReply = () => {
+    setReplyToMessage(null);
+  };
+
+  const cancelMedia = () => {
+    setPendingMedia([]);
+  };
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   
   // Get typing users from global store
@@ -208,6 +259,25 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         );
         unsubscribeMessagesRef.current = unsubscribeMessages;
         
+        // Subscribe to reaction changes for real-time updates
+        const unsubscribeReactions = simpleChatService.subscribeToReactions(
+          conversation.id,
+          (messageId) => {
+            console.log('PersonalChatPanel: Reaction update received for message:', messageId);
+            // Refresh the specific message to get updated reactions
+            setMessages(prev => {
+              return prev.map(msg => {
+                if (msg.id === messageId) {
+                  // Trigger a re-render by updating the message
+                  return { ...msg, reactions: msg.reactions || [] };
+                }
+                return msg;
+              });
+            });
+          }
+        );
+        unsubscribeReactionsRef.current = unsubscribeReactions;
+        
         // Note: Typing indicators are now handled by ChatLayout's global subscription
         // PersonalChatPanel will use the global store instead of its own subscription
         
@@ -222,6 +292,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       if (unsubscribeMessagesRef.current) {
         unsubscribeMessagesRef.current();
         unsubscribeMessagesRef.current = null;
+      }
+      if (unsubscribeReactionsRef.current) {
+        unsubscribeReactionsRef.current();
+        unsubscribeReactionsRef.current = null;
       }
     };
   }, [conversation.id, account?.id]);
@@ -384,59 +458,17 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             // Create a unique key that combines ID with index to prevent duplicates
             const uniqueKey = `${m.id}_${index}_${m.created_at}`;
             return (
-          <div key={uniqueKey} className={`flex ${isMe ? "justify-end" : "justify-start"} items-center gap-2`}>
-            {/* Profile picture for received messages */}
-            {!isMe && (
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  // Find the sender of this specific message
-                  const messageSender = participants.find((p: any) => p.id === m.sender_id);
-                  if (messageSender) {
-                    setProfileUserId(messageSender.id);
-                    setShowUserProfile(true);
-                  }
-                }}
-                className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 hover:bg-gray-300 transition-colors cursor-pointer"
-              >
-                {(() => {
-                  // Find the sender of this specific message
-                  const messageSender = participants.find((p: any) => p.id === m.sender_id);
-                  const senderAvatarUrl = messageSender?.profile_pic;
-                  const senderName = messageSender?.name || 'Unknown';
-                  
-                  return senderAvatarUrl ? (
-                    <img
-                      src={senderAvatarUrl}
-                      alt={senderName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-gray-400 text-sm font-semibold">
-                      {senderName.charAt(0).toUpperCase()}
-                    </div>
-                  );
-                })()}
-              </button>
-            )}
-            
-            <div className={`
-              max-w-[70%]
-              ${isMe 
-                ? "bg-white text-gray-900 border border-gray-200" 
-                : "bg-white text-gray-900 border border-gray-200"
-              }
-              rounded-2xl px-4 py-3 shadow-sm
-            `} style={{ backgroundColor: '#ffffff !important', color: '#111827 !important' }}>
-              {/* Message Content */}
-              <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                {m.text || 'Message'}
-              </div>
-            </div>
-          </div>
-          )})
+              <MessageBubble
+                key={uniqueKey}
+                message={m}
+                isMe={isMe}
+                participants={participants}
+                onLongPress={handleMessageLongPress}
+                onReactionClick={handleReact}
+                onProfileClick={handleProfileClick}
+              />
+            );
+          })
         )}
         
         <div ref={endRef} />
@@ -535,14 +567,65 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         );
       })()}
 
+      {/* Reply Preview */}
+      {replyToMessage && (
+        <div className="flex-shrink-0 px-6 py-2 bg-gray-50 border-t border-gray-200">
+          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+            <div className="flex-1">
+              <div className="text-xs text-gray-600 mb-1">
+                Replying to {replyToMessage.sender_name}
+              </div>
+              <div className="text-sm text-gray-800 truncate">
+                {replyToMessage.text || 'Media message'}
+              </div>
+            </div>
+            <button
+              onClick={cancelReply}
+              className="ml-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Media Preview */}
+      {pendingMedia.length > 0 && (
+        <div className="flex-shrink-0 px-6 py-2 bg-gray-50 border-t border-gray-200">
+          <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-600">Media:</div>
+            <div className="flex gap-2">
+              {pendingMedia.map((url, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    className="w-12 h-12 rounded-lg object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={cancelMedia}
+              className="ml-auto p-1 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Message Input */}
       <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-200">
         <div className="flex items-center gap-3">
-          <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
+          <MediaUploadButton 
+            onMediaSelected={handleMediaSelected}
+            disabled={false}
+          />
           <div className="flex-1 relative max-w-xs sm:max-w-none">
             <textarea
               value={text}
@@ -574,8 +657,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                     clearTimeout(typingTimeoutRef.current);
                     simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
                   }
-                  await sendMessage(conversation.id, text.trim(), account.id);
+                  await sendMessage(conversation.id, text.trim(), account.id, replyToMessage?.id, pendingMedia.length > 0 ? pendingMedia : undefined);
                   setText("");
+                  setReplyToMessage(null);
+                  setPendingMedia([]);
                 }
               }}
             />
@@ -588,8 +673,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   clearTimeout(typingTimeoutRef.current);
                   simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
                 }
-                await sendMessage(conversation.id, text.trim(), account.id);
+                await sendMessage(conversation.id, text.trim(), account.id, replyToMessage?.id, pendingMedia.length > 0 ? pendingMedia : undefined);
                 setText("");
+                setReplyToMessage(null);
+                setPendingMedia([]);
               }
             }}
             className={`p-2 rounded-full transition-colors ${
@@ -660,6 +747,17 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           userId={profileUserId}
         />
       )}
+
+      {/* Message Action Modal */}
+      <MessageActionModal
+        selectedMessage={selectedMessage}
+        onClose={() => setSelectedMessage(null)}
+        onReply={handleReply}
+        onCopy={handleCopy}
+        onDelete={handleDelete}
+        onReact={handleReact}
+        isMe={selectedMessage?.sender_id === account?.id}
+      />
 
     </div>
   );

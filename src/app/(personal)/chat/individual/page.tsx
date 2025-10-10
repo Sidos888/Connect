@@ -7,6 +7,10 @@ import { useAuth } from "@/lib/authContext";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { useAppStore } from "@/lib/store";
 import { ArrowLeft } from "lucide-react";
+import MessageBubble from "@/components/chat/MessageBubble";
+import MessageActionModal from "@/components/chat/MessageActionModal";
+import MediaUploadButton from "@/components/chat/MediaUploadButton";
+import type { SimpleMessage } from "@/lib/simpleChatService";
 
 export default function IndividualChatPage() {
   const router = useRouter();
@@ -31,6 +35,10 @@ export default function IndividualChatPage() {
   const [startX, setStartX] = useState<number | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const hasMarkedAsRead = useRef(false);
+  const [selectedMessage, setSelectedMessage] = useState<SimpleMessage | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
+  const [pendingMedia, setPendingMedia] = useState<string[]>([]);
+  const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
 
   // Load conversation and messages
   useEffect(() => {
@@ -119,6 +127,27 @@ export default function IndividualChatPage() {
         }
 
         setLoading(false);
+
+        // Subscribe to reaction changes for real-time updates
+        if (chatId) {
+          const unsubscribeReactions = simpleChatService.subscribeToReactions(
+            chatId,
+            (messageId) => {
+              console.log('Individual chat page: Reaction update received for message:', messageId);
+              // Refresh the specific message to get updated reactions
+              setMessages(prev => {
+                return prev.map(msg => {
+                  if (msg.id === messageId) {
+                    // Trigger a re-render by updating the message
+                    return { ...msg, reactions: msg.reactions || [] };
+                  }
+                  return msg;
+                });
+              });
+            }
+          );
+          unsubscribeReactionsRef.current = unsubscribeReactions;
+        }
       } catch (error) {
         console.error('Error loading data:', error);
         setError('Failed to load conversation');
@@ -127,6 +156,14 @@ export default function IndividualChatPage() {
     };
 
     loadData();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribeReactionsRef.current) {
+        unsubscribeReactionsRef.current();
+        unsubscribeReactionsRef.current = null;
+      }
+    };
   }, [account?.id, chatId]);
 
   // Scroll to bottom when messages change
@@ -146,9 +183,49 @@ export default function IndividualChatPage() {
   // Handle sending messages
   const handleSendMessage = async () => {
     if (messageText.trim() && account?.id && conversation?.id) {
-      await sendMessage(conversation.id, messageText.trim(), account.id);
+      await sendMessage(conversation.id, messageText.trim(), account.id, replyToMessage?.id, pendingMedia.length > 0 ? pendingMedia : undefined);
       setMessageText("");
+      setReplyToMessage(null);
+      setPendingMedia([]);
     }
+  };
+
+  // Message action handlers
+  const handleMessageLongPress = (message: SimpleMessage) => {
+    setSelectedMessage(message);
+  };
+
+  const handleReply = (message: SimpleMessage) => {
+    setReplyToMessage(message);
+    setSelectedMessage(null);
+  };
+
+  const handleCopy = (message: SimpleMessage) => {
+    navigator.clipboard.writeText(message.text || '');
+  };
+
+  const handleDelete = async (message: SimpleMessage) => {
+    if (account?.id) {
+      await simpleChatService.deleteMessage(message.id, account.id);
+    }
+  };
+
+  const handleReact = async (message: SimpleMessage, emoji: string) => {
+    if (account?.id) {
+      await simpleChatService.addReaction(message.id, account.id, emoji);
+    }
+  };
+
+  const handleMediaSelected = (urls: string[]) => {
+    setPendingMedia(urls);
+  };
+
+  const cancelReply = () => {
+    setReplyToMessage(null);
+  };
+
+  const cancelMedia = () => {
+    setPendingMedia([]);
   };
 
   // Handle swipe gestures - RIGHT swipe (drag from left to right)
@@ -336,6 +413,74 @@ export default function IndividualChatPage() {
         ></div>
       </div>
 
+      {/* Reply Preview */}
+      {replyToMessage && (
+        <div 
+          className="bg-gray-50 border-t border-gray-200 px-4 fixed left-0 right-0 z-30"
+          style={{ 
+            height: '60px', 
+            paddingTop: '8px', 
+            paddingBottom: '8px',
+            bottom: '80px'
+          }}
+        >
+          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+            <div className="flex-1">
+              <div className="text-xs text-gray-600 mb-1">
+                Replying to {replyToMessage.sender_name}
+              </div>
+              <div className="text-sm text-gray-800 truncate">
+                {replyToMessage.text || 'Media message'}
+              </div>
+            </div>
+            <button
+              onClick={cancelReply}
+              className="ml-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Media Preview */}
+      {pendingMedia.length > 0 && (
+        <div 
+          className="bg-gray-50 border-t border-gray-200 px-4 fixed left-0 right-0 z-30"
+          style={{ 
+            height: '60px', 
+            paddingTop: '8px', 
+            paddingBottom: '8px',
+            bottom: replyToMessage ? '140px' : '80px'
+          }}
+        >
+          <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-600">Media:</div>
+            <div className="flex gap-2">
+              {pendingMedia.map((url, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    className="w-12 h-12 rounded-lg object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={cancelMedia}
+              className="ml-auto p-1 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Fixed Input */}
       <div 
         className="bg-white border-t border-gray-200 px-4 fixed left-0 right-0 z-20"
@@ -347,11 +492,10 @@ export default function IndividualChatPage() {
         }}
       >
         <div className="flex items-center gap-3">
-          <button className="p-2 rounded-full hover:bg-gray-100">
-            <svg className="w-7 h-7 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
+          <MediaUploadButton 
+            onMediaSelected={handleMediaSelected}
+            disabled={false}
+          />
           
           {/* Input field */}
           <div className="flex-1 relative max-w-xs sm:max-w-none">
@@ -397,83 +541,30 @@ export default function IndividualChatPage() {
         {messages.map((message) => {
           const isMe = message.sender_id === account?.id;
           return (
-            <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-2`}>
-              {/* Profile picture for received messages */}
-              {!isMe && (
-                <button 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Find the sender of this specific message
-                    const messageSender = participants.find((p) => p.id === message.sender_id);
-                    if (messageSender) {
-                      // Navigate to the profile page for the sender
-                      router.push(`/chat/profile?user=${messageSender.id}`);
-                    }
-                  }}
-                  className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 hover:bg-gray-300 transition-colors cursor-pointer"
-                >
-                  {(() => {
-                    // For group chats, show the individual sender's profile picture
-                    if (conversation.isGroup) {
-                      const sender = participants.find((p) => p.id === message.sender_id);
-                      if (sender?.profile_pic) {
-                        return (
-                          <Image
-                            src={sender.profile_pic}
-                            alt={sender.name}
-                            width={32}
-                            height={32}
-                            className="w-full h-full object-cover"
-                          />
-                        );
-                      } else {
-                        return (
-                          <div className="text-gray-400 text-sm font-semibold">
-                            {sender?.name?.charAt(0)?.toUpperCase() || '?'}
-                          </div>
-                        );
-                      }
-                    } else {
-                      // For direct messages, show the other participant's profile picture
-                      if (conversation.avatarUrl) {
-                        return (
-                          <Image
-                            src={conversation.avatarUrl}
-                            alt={conversation.title}
-                            width={32}
-                            height={32}
-                            className="w-full h-full object-cover"
-                          />
-                        );
-                      } else {
-                        return (
-                          <div className="text-gray-400 text-sm font-semibold">
-                            {conversation.title.charAt(0).toUpperCase()}
-                          </div>
-                        );
-                      }
-                    }
-                  })()}
-                </button>
-              )}
-              
-              {/* Message bubble - white background for mobile */}
-              <div className={`
-                max-w-[70%] px-4 py-3 rounded-2xl shadow-sm
-                ${isMe 
-                  ? 'bg-white text-gray-900 border border-gray-200' 
-                  : 'bg-white text-gray-900 border border-gray-200'
-                }
-              `}>
-                <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</div>
-              </div>
-            </div>
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isMe={isMe}
+              participants={participants}
+              onLongPress={handleMessageLongPress}
+              onReactionClick={handleReact}
+              onProfileClick={(userId) => router.push(`/chat/profile?user=${userId}`)}
+            />
           );
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Message Action Modal */}
+      <MessageActionModal
+        selectedMessage={selectedMessage}
+        onClose={() => setSelectedMessage(null)}
+        onReply={handleReply}
+        onCopy={handleCopy}
+        onDelete={handleDelete}
+        onReact={handleReact}
+        isMe={selectedMessage?.sender_id === account?.id}
+      />
 
     </div>
   );

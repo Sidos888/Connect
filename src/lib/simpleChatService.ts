@@ -24,6 +24,19 @@ export interface SimpleMessage {
   sender_name: string;
   text: string;
   created_at: string;
+  reply_to_message_id?: string | null;
+  reply_to_message?: SimpleMessage | null;
+  media_urls?: string[];
+  reactions?: MessageReaction[];
+  deleted_at?: string | null;
+}
+
+export interface MessageReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
 }
 
 class SimpleChatService {
@@ -145,7 +158,11 @@ class SimpleChatService {
             sender_id: payload.new.sender_id,
             sender_name: sender?.name || 'Unknown',
             text: payload.new.message_text,
-            created_at: payload.new.created_at
+            created_at: payload.new.created_at,
+            reply_to_message_id: payload.new.reply_to_message_id || null,
+            media_urls: payload.new.media_urls || undefined,
+            reactions: [],
+            deleted_at: payload.new.deleted_at || null
           };
 
           // Check if this message already exists (avoid duplicates from optimistic updates)
@@ -357,6 +374,32 @@ class SimpleChatService {
     } catch (error) {
       console.error('SimpleChatService: Error sending typing indicator:', error);
     }
+  }
+
+  // Subscribe to reaction changes for real-time updates
+  subscribeToReactions(chatId: string, onReactionUpdate: (messageId: string) => void): () => void {
+    console.log('SimpleChatService: Subscribing to reactions for chat:', chatId);
+    
+    const subscription = this.supabase
+      .channel(`reactions:${chatId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'message_reactions',
+        filter: `message_id=in.(SELECT id FROM chat_messages WHERE chat_id=${chatId})`
+      }, (payload) => {
+        console.log('SimpleChatService: Reaction change received:', payload);
+        const messageId = payload.new?.message_id || payload.old?.message_id;
+        if (messageId) {
+          onReactionUpdate(messageId);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      console.log('SimpleChatService: Unsubscribing from reactions for chat:', chatId);
+      subscription.unsubscribe();
+    };
   }
 
   // Cleanup all subscriptions
@@ -982,11 +1025,16 @@ class SimpleChatService {
         return { messages: [], error: new Error('Chat not found') };
       }
 
-      // Load messages from Supabase
+      // Load messages from Supabase with reactions and reply data
       const { data: messagesData, error: fetchError } = await this.supabase
         .from('chat_messages')
-        .select('*')
+        .select(`
+          *,
+          reply_to:chat_messages!reply_to_message_id(id, message_text, sender_id),
+          reactions:message_reactions(id, user_id, emoji, created_at)
+        `)
         .eq('chat_id', chatId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
       if (fetchError) {
@@ -1001,7 +1049,19 @@ class SimpleChatService {
         sender_id: msg.sender_id,
         sender_name: msg.sender_id === userId ? 'You' : 'Other',
         text: msg.message_text || '',
-        created_at: msg.created_at
+        created_at: msg.created_at,
+        reply_to_message_id: msg.reply_to_message_id || null,
+        reply_to_message: msg.reply_to ? {
+          id: msg.reply_to.id,
+          chat_id: msg.chat_id,
+          sender_id: msg.reply_to.sender_id,
+          sender_name: msg.reply_to.sender_id === userId ? 'You' : 'Other',
+          text: msg.reply_to.message_text || '',
+          created_at: msg.created_at
+        } : null,
+        media_urls: msg.media_urls || undefined,
+        reactions: msg.reactions || [],
+        deleted_at: msg.deleted_at || null
       }));
 
       // Cache the messages for instant future access
@@ -1043,8 +1103,55 @@ class SimpleChatService {
     }
   }
 
-  // Send a message (now saves to Supabase)
-  async sendMessage(chatId: string, senderId: string, messageText: string): Promise<{ message: SimpleMessage | null; error: Error | null }> {
+  // Add reaction to a message
+  async addReaction(messageId: string, userId: string, emoji: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('message_reactions')
+        .insert({ message_id: messageId, user_id: userId, emoji });
+      return { error };
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+      return { error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Remove reaction from a message
+  async removeReaction(messageId: string, userId: string, emoji: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('message_reactions')
+        .delete()
+        .match({ message_id: messageId, user_id: userId, emoji });
+      return { error };
+    } catch (error) {
+      console.error('Error removing reaction:', error);
+      return { error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Soft delete a message
+  async deleteMessage(messageId: string, userId: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('chat_messages')
+        .update({ deleted_at: new Date().toISOString() })
+        .match({ id: messageId, sender_id: userId });
+      return { error };
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      return { error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Send a message (now saves to Supabase with optional reply and media)
+  async sendMessage(
+    chatId: string, 
+    senderId: string, 
+    messageText: string,
+    replyToMessageId?: string,
+    mediaUrls?: string[]
+  ): Promise<{ message: SimpleMessage | null; error: Error | null }> {
     try {
       let chat = this.chats.get(chatId);
       if (!chat) {
@@ -1066,7 +1173,10 @@ class SimpleChatService {
         sender_id: senderId,
         sender_name: 'You',
         text: messageText,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        reply_to_message_id: replyToMessageId || null,
+        media_urls: mediaUrls || undefined,
+        reactions: []
       };
 
       // Add optimistic message immediately for instant sender feedback
@@ -1094,6 +1204,8 @@ class SimpleChatService {
           chat_id: chatId,
           sender_id: senderId,
           message_text: messageText,
+          reply_to_message_id: replyToMessageId || null,
+          media_urls: mediaUrls || null,
           created_at: new Date().toISOString()
         })
         .select()
@@ -1121,7 +1233,10 @@ class SimpleChatService {
         sender_id: senderId,
         sender_name: 'You',
         text: messageText,
-        created_at: messageData.created_at
+        created_at: messageData.created_at,
+        reply_to_message_id: messageData.reply_to_message_id || null,
+        media_urls: messageData.media_urls || undefined,
+        reactions: []
       };
       
       // Replace optimistic message with real message
