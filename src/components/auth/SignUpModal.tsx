@@ -293,7 +293,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
           verificationValue={verificationValue}
         />
       ) : (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center overflow-hidden">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -301,7 +301,15 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
           />
           
           {/* Modal */}
-          <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-300 ease-out h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden">
+          <div 
+            className="relative bg-white rounded-t-3xl md:rounded-2xl w-full max-w-[680px] md:w-[680px] h-[85vh] md:h-[620px] overflow-hidden flex flex-col transform transition-all duration-300 ease-out"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+            }}
+          >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="w-10" /> {/* Spacer */}
@@ -317,9 +325,9 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="flex-1 p-6 flex flex-col justify-center">
           {step === 'phone' && (
-            <form onSubmit={handlePhoneSubmit} className="space-y-3">
+            <form onSubmit={handlePhoneSubmit} className="space-y-4 max-w-md mx-auto w-full">
               {/* Country/Region Dropdown */}
               <div className="relative">
                 <div className="relative">
@@ -416,7 +424,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
           )}
 
           {step === 'email' && (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <form onSubmit={handleEmailSubmit} className="space-y-4 max-w-md mx-auto w-full">
               {/* Email Input */}
               <div className="relative">
                 <input

@@ -73,7 +73,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
         console.log('ProtectedRoute: Loading timeout reached, forcing stop');
         setLoadingTimeout(true);
       }
-    }, 5000); // 5 second timeout - more reasonable
+    }, 8000); // 8 second timeout - give more time for account loading
 
     return () => clearTimeout(timeout);
   }, [isHydrated, loading]);
@@ -84,7 +84,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
       const immediateTimeout = setTimeout(() => {
         console.log('ProtectedRoute: Hydration timeout - forcing hydration');
         setLoadingTimeout(true);
-      }, 3000); // 3 second timeout - more reasonable
+      }, 5000); // 5 second timeout - give more time for hydration
 
       return () => clearTimeout(immediateTimeout);
     }
@@ -247,20 +247,30 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   // Profile loading is now handled naturally without timeouts
 
-  // Debug logging to see what's happening (reduced to prevent spam)
-  if (user && !personalProfile) {
-    console.log('ProtectedRoute Debug:', {
-      user: 'SIGNED IN',
-      userId: user?.id,
-      userEmail: user?.email,
-      personalProfile: 'NULL',
-      isLoadingProfile,
-      pathname
-    });
+  // Enhanced debug logging to see what's happening
+  console.log('🔍 ProtectedRoute Debug:', {
+    hasUser: !!user,
+    userId: user?.id,
+    userEmail: user?.email,
+    userPhone: user?.phone,
+    hasPersonalProfile: !!personalProfile,
+    personalProfileId: personalProfile?.id,
+    personalProfileName: personalProfile?.name,
+    isLoadingProfile,
+    isHydrated,
+    loadingTimeout,
+    pathname,
+    loading
+  });
+
+  // 🚀 BULLETPROOF: If we have profile data, show content immediately (no loading screens)
+  if (personalProfile && !loadingTimeout) {
+    console.log('🚀 BULLETPROOF: Profile exists, showing content immediately - no loading screens');
+    return <>{children}</>;
   }
 
-  // Wait for store to hydrate - but with a very aggressive timeout to prevent infinite loading
-  if (!isHydrated && !loadingTimeout) {
+  // Wait for store to hydrate - but only if user exists AND no profile yet
+  if (!isHydrated && !loadingTimeout && user && !personalProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
@@ -271,7 +281,8 @@ export default function ProtectedRoute({ children, fallback, title, description,
     );
   }
 
-  if (loading && !loadingTimeout) {
+  // Only show loading for signed-in users who are loading their profile AND no profile exists yet
+  if (loading && !loadingTimeout && user && !personalProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
@@ -282,8 +293,8 @@ export default function ProtectedRoute({ children, fallback, title, description,
     );
   }
 
-  // Force timeout after 5 seconds - show login screen
-  if (loadingTimeout) {
+  // Force timeout after 5 seconds - but only show login screen if no user
+  if (loadingTimeout && !user) {
     console.log('ProtectedRoute: Timeout reached, showing login screen');
     return (
       <div className="login-screen flex flex-col items-center justify-center h-screen bg-white p-4 overflow-hidden">
@@ -321,7 +332,9 @@ export default function ProtectedRoute({ children, fallback, title, description,
   // Don't show loading animation for profile loading - let content render immediately
   // Profile will load in the background
 
-  if (!user) {
+  // 🚀 BULLETPROOF: Only show login screen if BOTH user AND personalProfile are missing
+  // This prevents the flash during client-side navigation when profile is set but user hasn't loaded yet
+  if (!user && !personalProfile) {
     if (fallback) {
       return <>{fallback}</>;
     }
@@ -398,6 +411,12 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
       </>
     );
+  }
+
+  // If we have a user but timeout occurred, still show content (auth is working)
+  if (loadingTimeout && user && personalProfile) {
+    console.log('ProtectedRoute: Timeout occurred but user is authenticated, showing content');
+    return <>{children}</>;
   }
 
   // User is authenticated, render children

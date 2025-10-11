@@ -54,10 +54,16 @@ export default function TopNavigation() {
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+        <div className="flex items-center h-16 lg:h-20 relative">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center">
+            <button 
+              onClick={() => {
+                console.log('Connect logo clicked - navigating to explore');
+                window.location.href = '/explore';
+              }}
+              className="flex items-center cursor-pointer"
+            >
               <Image
                 src="/connect-logo.svg"
                 alt="Connect"
@@ -66,32 +72,34 @@ export default function TopNavigation() {
                 className="h-6 lg:h-8 w-auto"
                 priority
               />
-            </Link>
+            </button>
           </div>
 
-          {/* Desktop Navigation - Center */}
-          <nav className="hidden lg:flex items-center space-x-8">
-            {navigationItems.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`
-                    text-base font-semibold transition-colors relative
-                    ${active 
-                      ? "text-gray-900" 
-                      : "text-gray-500 hover:text-gray-700"
-                    }
-                  `}
-                >
-                  <span>{item.label}</span>
-                  {active && (
-                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gray-900 rounded-full"></div>
-                  )}
-                </Link>
-              );
-            })}
+          {/* Desktop Navigation - Absolutely Centered */}
+          <nav className="hidden lg:flex items-center absolute left-1/2 transform -translate-x-1/2">
+            <div className="flex items-center space-x-8">
+              {navigationItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`
+                      text-base font-semibold transition-colors relative
+                      ${active 
+                        ? "text-gray-900" 
+                        : "text-gray-500 hover:text-gray-700"
+                      }
+                    `}
+                  >
+                    <span>{item.label}</span>
+                    {active && (
+                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gray-900 rounded-full"></div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           </nav>
 
           {/* Mobile Navigation - Center */}
@@ -122,7 +130,7 @@ export default function TopNavigation() {
           </nav>
 
           {/* Right Side - Auth or Profile Menu */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 absolute right-0">
             {user ? (
               <>
                 {/* Profile Menu */}

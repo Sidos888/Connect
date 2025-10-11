@@ -53,58 +53,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Debug account state changes
+  // Debug user state changes
   useEffect(() => {
+    console.log('🔍 AuthContext: ========== USER STATE CHANGED ==========');
+    console.log('🔍 AuthContext: User state:', user ? { id: user.id, email: user.email, phone: user.phone } : null);
+    console.log('🔍 AuthContext: Loading state:', loading);
+  }, [user, loading]);
+
+  // Debug account state changes and sync with store
+  useEffect(() => {
+    console.log('🔍 AuthContext: ========== ACCOUNT STATE CHANGED ==========');
     console.log('🔍 AuthContext: Account state changed:', account ? { id: account.id, name: account.name } : null);
-  }, [account]);
+    console.log('🔍 AuthContext: User state:', user ? { id: user.id, email: user.email, phone: user.phone } : null);
+    
+    // Sync account with personalProfile in store
+    if (account && typeof window !== 'undefined') {
+      import('./store').then(({ useAppStore }) => {
+        const store = useAppStore.getState();
+        console.log('🔍 AuthContext: Store state before sync:', { 
+          hasPersonalProfile: !!store.personalProfile,
+          personalProfileId: store.personalProfile?.id 
+        });
+        
+        if (store.setPersonalProfile) {
+          store.setPersonalProfile({
+            id: account.id,
+            name: account.name,
+            bio: account.bio || '',
+            avatarUrl: account.profile_pic,
+            email: user?.email || '',
+            phone: user?.phone || '',
+            dateOfBirth: account.dob || '',
+            connectId: account.connect_id || '',
+            createdAt: account.created_at,
+            updatedAt: account.updated_at
+          });
+          console.log('✅ AuthContext: Synced account to personalProfile in store');
+          
+          // Verify the sync worked
+          const updatedStore = useAppStore.getState();
+          console.log('🔍 AuthContext: Store state after sync:', { 
+            hasPersonalProfile: !!updatedStore.personalProfile,
+            personalProfileId: updatedStore.personalProfile?.id,
+            personalProfileName: updatedStore.personalProfile?.name
+          });
+        }
+      });
+    }
+  }, [account, user]);
   const supabase = getSupabaseClient();
   const realtimeCleanupRef = useRef<(() => void) | null>(null);
 
   // Initialize auth state
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    // Detect mobile environment
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
-    const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!supabase) return;
     
-    // Add error handling for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Auth state change:', event, session ? 'Session exists' : 'No session');
-      
-      // Handle authentication errors gracefully
-      if (event === 'SIGNED_OUT') {
-        console.log('🔐 User signed out');
-        setUser(null);
-        setAccount(null);
-      } else if (event === 'TOKEN_REFRESHED') {
-        console.log('🔐 Token refreshed successfully');
-        setUser(session?.user || null);
-      } else if (event === 'SIGNED_IN') {
-        console.log('🔐 User signed in');
-        setUser(session?.user || null);
-      }
-      
-      setLoading(false);
-    });
-    
-    // Initializing auth system
+    console.log('🔄 NewAuthContext: ========== AUTH INITIALIZATION STARTING ==========');
 
-    // Cleanup function
-    return () => {
-      subscription.unsubscribe();
-      if (realtimeCleanupRef.current) {
-        realtimeCleanupRef.current();
-      }
-    };
-  }, [supabase]);
-
-  // Set up real-time sync for profile changes
-  useEffect(() => {
-    if (!supabase || !user?.id) return;
+    // Set up real-time sync for profile changes
     const setupRealtimeSync = () => {
       if (!user?.id) return;
 
@@ -159,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('🔄 NewAuthContext: ========== GET INITIAL SESSION CALLED ==========');
         console.log('🔄 NewAuthContext: Loading initial session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -184,8 +191,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         if (session?.user) {
-          console.log('👤 NewAuthContext: User found in session, loading account...');
+          console.log('👤 NewAuthContext: ========== SETTING USER FROM INITIAL SESSION ==========');
+          console.log('👤 NewAuthContext: User found in session:', { id: session.user.id, email: session.user.email, phone: session.user.phone });
+          console.log('👤 NewAuthContext: Current user state before setUser:', user ? { id: user.id, email: user.email } : null);
+          
           setUser(session.user);
+          
+          console.log('👤 NewAuthContext: setUser called, loading account...');
           try {
             await loadAccountForUser(session.user.id);
             console.log('👤 NewAuthContext: Initial account loading completed');
@@ -208,14 +220,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 NewAuthContext: Auth state change:', event, !!session?.user);
+      console.log('🔄 NewAuthContext: ========== AUTH STATE CHANGE ==========');
+      console.log('🔄 NewAuthContext: Event:', event);
+      console.log('🔄 NewAuthContext: Has session:', !!session);
+      console.log('🔄 NewAuthContext: Session user:', session?.user ? { id: session.user.id, email: session.user.email, phone: session.user.phone } : null);
+      console.log('🔄 NewAuthContext: Current user state:', user ? { id: user.id, email: user.email } : null);
+      console.log('🔄 NewAuthContext: Current account state:', account ? { id: account.id, name: account.name } : null);
       
         if (session?.user) {
-          console.log('🔐 AuthContext: User session available, loading account for:', session.user.id);
+          console.log('🔐 AuthContext: ========== AUTH STATE CHANGE - USER SESSION AVAILABLE ==========');
+          console.log('🔐 AuthContext: User session available:', { id: session.user.id, email: session.user.email, phone: session.user.phone });
+          console.log('🔐 AuthContext: Current user state before setUser:', user ? { id: user.id, email: user.email } : null);
+          
           setUser(session.user);
           
           // Call loadAccountForUser and wait for it to complete
           try {
+            console.log('🔐 AuthContext: Starting account loading...');
             await loadAccountForUser(session.user.id);
             console.log('🔐 AuthContext: Account loading completed successfully');
           } catch (error) {
@@ -225,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Set up real-time sync after user is loaded
           setupRealtimeSync();
         } else {
+          console.log('🔐 AuthContext: ========== AUTH STATE CHANGE - NO USER SESSION ==========');
           console.log('🔐 AuthContext: No user session, clearing account');
           setUser(null);
           setAccount(null);
@@ -242,12 +264,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [supabase]);
 
+  // Set up real-time sync for profile changes (separate useEffect for when user changes)
+  useEffect(() => {
+    if (!supabase || !user?.id) return;
+    
+    const setupRealtimeSync = () => {
+      // Clean up existing sync if any
+      if (realtimeCleanupRef.current) {
+        realtimeCleanupRef.current();
+      }
+
+      const channel = supabase
+        .channel('profile-sync')
+        .on('postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'accounts',
+            filter: `id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('🔄 Real-time profile update received:', payload.new);
+            // Update local state with the new profile data
+            setAccount(payload.new);
+            
+            // Also update the app store for consistency
+            if (typeof window !== 'undefined') {
+              import('./store').then(({ useAppStore }) => {
+                const store = useAppStore.getState();
+              if (store.setPersonalProfile) {
+                store.setPersonalProfile({
+                  id: payload.new.id,
+                  name: payload.new.name,
+                  bio: payload.new.bio,
+                  avatarUrl: payload.new.profile_pic,
+                  email: payload.new.email || '',
+                  phone: payload.new.phone || '',
+                  dateOfBirth: payload.new.dob || '',
+                  connectId: payload.new.connect_id || '',
+                  createdAt: payload.new.created_at,
+                  updatedAt: payload.new.updated_at
+                });
+              }
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      realtimeCleanupRef.current = () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    setupRealtimeSync();
+
+    return () => {
+      if (realtimeCleanupRef.current) {
+        realtimeCleanupRef.current();
+      }
+    };
+  }, [supabase, user?.id]);
+
   // Load account for authenticated user - MOBILE ENHANCED
   const loadAccountForUser = async (authUserId: string) => {
     try {
+      console.log('🔍 NewAuthContext: ========== STARTING ACCOUNT LOAD ==========');
       console.log('🔍 NewAuthContext: Loading account for user:', authUserId);
       console.log('🔍 NewAuthContext: Current user object:', user);
       console.log('🔍 NewAuthContext: Supabase client available:', !!supabase);
+      console.log('🔍 NewAuthContext: Current account state:', account ? { id: account.id, name: account.name } : null);
       
       // Strategy 1: identifier-first (email)
       const email = user?.email?.toLowerCase();
@@ -256,10 +342,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { data: emailLink, error: emailLinkErr } = await supabase!
             .from('account_identities')
-            .select(`account_id, account_identities.created_at, accounts!inner(*)`)
+            .select(`account_id, created_at, accounts!account_id(*)`)
             .eq('method', 'email')
             .eq('identifier', email)
-            .order('account_identities.created_at', { ascending: false })
+            .order('created_at', { ascending: false })
             .limit(1)
             .single();
           
@@ -289,10 +375,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('📱 NewAuthContext: Trying phone identity linking…', phone);
         const { data: phoneLink, error: phoneLinkErr } = await supabase!
           .from('account_identities')
-          .select(`account_id, account_identities.created_at, accounts!inner(*)`)
+          .select(`account_id, created_at, accounts!account_id(*)`)
           .eq('method', 'phone')
           .eq('identifier', phone)
-          .order('account_identities.created_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1)
           .single();
         if (!phoneLinkErr && phoneLink?.accounts) {
@@ -310,9 +396,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: identityData, error: identityError } = await supabase!
           .from('account_identities')
-          .select(`account_id, account_identities.created_at, accounts!inner(*)`)
+          .select(`account_id, created_at, accounts!account_id(*)`)
           .eq('auth_user_id', authUserId)
-          .order('account_identities.created_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1)
           .single();
         if (!identityError && identityData?.accounts) {
@@ -422,6 +508,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('❌ NewAuthContext: All lookup strategies failed');
       
+      // FALLBACK: Create a minimal account object to prevent null state
+      console.log('🔄 NewAuthContext: Creating fallback account to prevent null state');
+      const fallbackAccount = {
+        id: authUserId,
+        name: user?.email?.split('@')[0] || 'User',
+        bio: '',
+        profile_pic: null,
+        connect_id: generateConnectId(user?.email?.split('@')[0] || 'User'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setAccount(fallbackAccount as Account);
+      console.log('✅ NewAuthContext: Fallback account set to prevent null state');
+      
       // DEBUG: Let's see what accounts actually exist
       try {
         console.log('🔍 NewAuthContext: DEBUG - Checking what accounts exist in database...');
@@ -452,14 +552,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🔍 NewAuthContext: DEBUG query failed:', debugError);
       }
       
-      console.log('🔍 NewAuthContext: No account found, setting to null');
-      setAccount(null);
+      // Account is already set to fallback above, no need to set to null
+      console.log('🔍 NewAuthContext: Account loading completed with fallback');
     } catch (error) {
       console.error('❌ NewAuthContext: Error loading account:', error);
-      setAccount(null);
+      // Even on error, set a fallback account to prevent null state
+      const fallbackAccount = {
+        id: authUserId,
+        name: user?.email?.split('@')[0] || 'User',
+        bio: '',
+        profile_pic: null,
+        connect_id: generateConnectId(user?.email?.split('@')[0] || 'User'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setAccount(fallbackAccount as Account);
+      console.log('✅ NewAuthContext: Error fallback account set');
     }
     
-    console.log('🔍 NewAuthContext: loadAccountForUser function completed');
+    console.log('🔍 NewAuthContext: ========== ACCOUNT LOAD COMPLETED ==========');
+    console.log('🔍 NewAuthContext: Final account state:', account ? { id: account.id, name: account.name } : null);
+    
+    // Check store state after loading
+    if (typeof window !== 'undefined') {
+      import('./store').then(({ useAppStore }) => {
+        const store = useAppStore.getState();
+        console.log('🔍 NewAuthContext: Final store state:', { 
+          hasPersonalProfile: !!store.personalProfile,
+          personalProfileId: store.personalProfile?.id,
+          personalProfileName: store.personalProfile?.name
+        });
+      });
+    }
   };
 
   // Send email verification
@@ -478,9 +602,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      console.log('📧 NewAuthContext: Sending email verification to:', email);
+      console.log('📧 NewAuthContext: ========== SENDING EMAIL OTP ==========');
+      console.log('📧 NewAuthContext: Email:', email);
+      console.log('📧 NewAuthContext: Supabase client available:', !!supabase);
+      console.log('📧 NewAuthContext: Supabase URL:', supabase.supabaseUrl);
+      console.log('📧 NewAuthContext: Supabase Key (anonymized):', supabase.supabaseKey?.substring(0, 10) + '...');
       
-      const { error } = await supabase.auth.signInWithOtp({
+      // Test Supabase connection
+      try {
+        const { data: healthCheck, error: healthError } = await supabase.from('accounts').select('count').limit(1);
+        console.log('📧 NewAuthContext: Supabase connection test:', { 
+          hasHealthData: !!healthCheck, 
+          hasHealthError: !!healthError,
+          healthErrorMessage: healthError?.message 
+        });
+      } catch (healthErr) {
+        console.warn('📧 NewAuthContext: Supabase connection test failed:', healthErr);
+      }
+      
+      const { data, error } = await supabase.auth.signInWithOtp({
         email: email,
         options: { 
           emailRedirectTo: undefined,
@@ -488,7 +628,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
+      console.log('📧 NewAuthContext: OTP response:', { 
+        hasData: !!data, 
+        hasError: !!error, 
+        errorMessage: error?.message,
+        errorCode: error?.status,
+        dataKeys: data ? Object.keys(data) : null
+      });
+
       if (error) {
+        console.error('❌ NewAuthContext: Email OTP error details:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          name: error.name
+        });
+        
         // Handle rate limiting error specifically
         if (error.message.includes('For security purposes')) {
           localStorage.setItem('lastEmailVerification', now.toString());
@@ -500,9 +655,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Store timestamp of successful email send
       localStorage.setItem('lastEmailVerification', now.toString());
       console.log('✅ NewAuthContext: Email verification sent successfully');
+      console.log('✅ NewAuthContext: Response data:', data);
       return { error: null };
     } catch (error) {
+      console.error('❌ NewAuthContext: ========== EMAIL OTP ERROR ==========');
       console.error('❌ NewAuthContext: Error sending email verification:', error);
+      console.error('❌ NewAuthContext: Error details:', {
+        message: (error as any)?.message,
+        status: (error as any)?.status,
+        statusText: (error as any)?.statusText,
+        name: (error as any)?.name
+      });
       return { error: error as Error };
     }
   };
@@ -558,10 +721,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('✅ NewAuthContext: Email verification successful, user ID:', data.user.id);
 
       // Check if this email is already linked to an account
-      const { exists } = await checkExistingAccount(email);
+      const { exists, account } = await checkExistingAccount(email);
       
-      if (exists) {
-        console.log('👤 NewAuthContext: Found existing account for email');
+      if (exists && account) {
+        console.log('👤 NewAuthContext: Found existing account for email, setting account state');
+        // Set the account immediately so the user is properly authenticated
+        setAccount(account);
+        
+        // Ensure identity mapping exists for future logins
+        try {
+          const { error: identityError } = await supabase
+            .from('account_identities')
+            .upsert({
+              account_id: account.id,
+              auth_user_id: data.user.id,
+              method: 'email',
+              identifier: email.toLowerCase()
+            }, { 
+              onConflict: 'account_id,auth_user_id,method,identifier',
+              ignoreDuplicates: false 
+            });
+          
+          if (identityError) {
+            console.warn('⚠️ NewAuthContext: Failed to create/update identity mapping:', identityError);
+          } else {
+            console.log('✅ NewAuthContext: Identity mapping created/updated successfully');
+          }
+        } catch (identityErr) {
+          console.warn('⚠️ NewAuthContext: Identity mapping error:', identityErr);
+        }
+        
+        // Load the account after a brief delay to ensure database operations complete
+        try {
+          console.log('🔄 NewAuthContext: Loading account after email verification...');
+          // Small delay to ensure identity mapping is committed
+          await new Promise(resolve => setTimeout(resolve, 100));
+          await loadAccountForUser(data.user.id);
+          console.log('✅ NewAuthContext: Account loaded successfully after email verification');
+        } catch (loadError) {
+          console.error('❌ NewAuthContext: Failed to load account after email verification:', loadError);
+        }
         return { error: null, isExistingAccount: true };
       } else {
         console.log('🆕 NewAuthContext: New user, will need to create account');
@@ -590,7 +789,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         type: 'sms'
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific token expiration error
+        if (error.message?.includes('expired') || error.message?.includes('invalid')) {
+          console.error('🔐 NewAuthContext: OTP token expired or invalid');
+          return { error: new Error('Verification code has expired. Please request a new code.') };
+        }
+        throw error;
+      }
       if (!data.user) throw new Error('No user returned from verification');
 
       console.log('✅ NewAuthContext: Phone verification successful, user ID:', data.user.id);
@@ -601,8 +807,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('🔍 NewAuthContext: Phone account check result:', { exists, account });
       
-      if (exists) {
-        console.log('👤 NewAuthContext: Found existing account for phone');
+      if (exists && account) {
+        console.log('👤 NewAuthContext: Found existing account for phone, setting account state');
+        // Set the account immediately so the user is properly authenticated
+        setAccount(account);
+        
+        // Ensure identity mapping exists for future logins
+        try {
+          const { error: identityError } = await supabase
+            .from('account_identities')
+            .upsert({
+              account_id: account.id,
+              auth_user_id: data.user.id,
+              method: 'phone',
+              identifier: phone
+            }, { 
+              onConflict: 'account_id,auth_user_id,method,identifier',
+              ignoreDuplicates: false 
+            });
+          
+          if (identityError) {
+            console.warn('⚠️ NewAuthContext: Failed to create/update identity mapping:', identityError);
+          } else {
+            console.log('✅ NewAuthContext: Identity mapping created/updated successfully');
+          }
+        } catch (identityErr) {
+          console.warn('⚠️ NewAuthContext: Identity mapping error:', identityErr);
+        }
+        
+        // Load the account after a brief delay to ensure database operations complete
+        try {
+          console.log('🔄 NewAuthContext: Loading account after phone verification...');
+          // Small delay to ensure identity mapping is committed
+          await new Promise(resolve => setTimeout(resolve, 100));
+          await loadAccountForUser(data.user.id);
+          console.log('✅ NewAuthContext: Account loaded successfully after phone verification');
+        } catch (loadError) {
+          console.error('❌ NewAuthContext: Failed to load account after phone verification:', loadError);
+        }
         return { error: null, isExistingAccount: true };
       } else {
         console.log('🆕 NewAuthContext: New user, will need to create account');
@@ -630,7 +872,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('account_identities')
         .select(`
           account_id,
-          accounts!inner (
+          accounts (
             id,
             name,
             bio,
@@ -677,7 +919,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .from('account_identities')
             .select(`
               account_id,
-              accounts!inner (
+              accounts (
                 id,
                 name,
                 bio,
@@ -1121,6 +1363,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setAccount(null);
       setLoading(false);
+      
+      // Clean up real-time subscriptions
+      if (realtimeCleanupRef.current) {
+        console.log('🧹 Cleaning up real-time subscriptions...');
+        realtimeCleanupRef.current();
+        realtimeCleanupRef.current = null;
+      }
+      
+      // Clear chat service caches and subscriptions
+      if (typeof window !== 'undefined') {
+        const { simpleChatService } = await import('./simpleChatService');
+        console.log('🧹 Cleaning up chat service...');
+        simpleChatService.cleanup();
+        simpleChatService.clearAllCaches();
+      }
       
       // Clear all storage immediately
       if (typeof window !== 'undefined') {

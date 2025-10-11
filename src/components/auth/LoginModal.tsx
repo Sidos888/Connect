@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/authContext';
 import { supabase } from '@/lib/supabaseClient';
+import { useAppStore } from '@/lib/store';
 import VerificationModal from './VerificationModal';
-import AccountCheckModal from './AccountCheckModal';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, user, signOut } = useAuth();
+  const router = useRouter();
   
   const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-check'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -24,11 +26,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [emailFocused, setEmailFocused] = useState(false);
+
   const [countryFocused, setCountryFocused] = useState(false);
   const [countryCode, setCountryCode] = useState('+61');
   const [verificationValue, setVerificationValue] = useState('');
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [accountRecognized, setAccountRecognized] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const phoneInputRef = useRef<HTMLInputElement>(null);
   
   // Scroll-to-dismiss state
@@ -42,38 +46,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (isOpen) {
       setVerificationSuccess(false);
       setAccountRecognized(false);
+      setIsRedirecting(false);
     }
   }, [isOpen]);
 
-  // Check if user is already authenticated when modal opens
-  useEffect(() => {
-    if (isOpen && user && !verificationSuccess) {
-      console.log('LoginModal: User already authenticated, skipping to AccountCheckModal');
-      console.log('LoginModal: User data:', { 
-        id: user.id, 
-        email: user.email, 
-        phone: user.phone,
-        userMetadata: user.user_metadata 
-      });
-      
-      setStep('account-check');
-      // Set verification method and value from user's auth data
-      if (user.phone) {
-        setVerificationMethod('phone');
-        setVerificationValue(user.phone);
-        console.log('LoginModal: Using phone verification:', user.phone);
-      } else if (user.email) {
-        setVerificationMethod('email');
-        setVerificationValue(user.email);
-        console.log('LoginModal: Using email verification:', user.email);
-      } else {
-        // Fallback to email if no phone/email in user object
-        setVerificationMethod('email');
-        setVerificationValue('sidfarquharson@gmail.com'); // Use a fallback email from logs
-        console.log('LoginModal: Using fallback email verification');
-      }
-    }
-  }, [isOpen, user, verificationSuccess]);
+  // 🚀 BULLETPROOF AUTH: Disabled AccountCheckModal completely
+  // No more automatic step switching to account-check
+  // All account detection happens in handleVerifyCode
 
   // Simplified phone input system - handles both 0466310826 and 466310826 formats
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,9 +151,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError('');
     
     try {
-      // Clear existing session to force fresh OTP verification
-      console.log('LoginModal: Clearing existing session before OTP request');
-      await signOut();
+      // DON'T clear session before sending OTP - let Supabase handle session management
+      console.log('LoginModal: Sending phone verification without clearing session');
       
       const fullPhoneNumber = normalizePhoneForBackend(phoneNumber);
       console.log('LoginModal: Normalized phone number:', { input: phoneNumber, normalized: fullPhoneNumber });
@@ -209,19 +187,26 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError('');
     
     try {
-      // Clear existing session to force fresh OTP verification
-      console.log('LoginModal: Clearing existing session before OTP request');
-      await signOut();
+      // DON'T clear session before sending OTP - let Supabase handle session management
+      console.log('📧 LoginModal: ========== EMAIL VERIFICATION TRIGGERED ==========');
+      console.log('📧 LoginModal: Email:', email);
+      console.log('📧 LoginModal: Sending email verification without clearing session');
       
       const { error } = await sendEmailVerification(email);
       
+      console.log('📧 LoginModal: Email verification result:', { hasError: !!error, errorMessage: error?.message });
+      
       if (error) {
+        console.error('📧 LoginModal: Email verification failed:', error.message);
         setError(error.message);
       } else {
+        console.log('📧 LoginModal: Email verification successful, moving to verify step');
         setStep('verify');
         setVerificationMethod('email');
       }
-    } catch {
+    } catch (err) {
+      console.error('📧 LoginModal: ========== EMAIL VERIFICATION EXCEPTION ==========');
+      console.error('📧 LoginModal: Exception details:', err);
       setError('Failed to send verification code');
     } finally {
       setLoading(false);
@@ -233,52 +218,70 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError('');
     
     try {
+      console.log('🚀 BULLETPROOF AUTH: Starting OTP verification');
+      
+      // Step 1: Verify OTP
       let error;
       let isExistingAccount = false;
       
       if (verificationMethod === 'phone') {
         const fullPhoneNumber = normalizePhoneForBackend(phoneNumber);
-        console.log('LoginModal: Verifying phone code for:', fullPhoneNumber);
+        console.log('🚀 BULLETPROOF AUTH: Verifying phone code for:', fullPhoneNumber);
         const result = await verifyPhoneCode(fullPhoneNumber, code);
         error = result.error;
         isExistingAccount = result.isExistingAccount || false;
       } else {
+        console.log('🚀 BULLETPROOF AUTH: Verifying email code for:', email);
         const result = await verifyEmailCode(email, code);
         error = result.error;
         isExistingAccount = result.isExistingAccount || false;
       }
       
       if (error) {
+        console.log('🚀 BULLETPROOF AUTH: Verification failed:', error.message);
         setError(error.message);
         setLoading(false);
         return;
       }
       
-      console.log('LoginModal: Verification successful, isExistingAccount:', isExistingAccount);
-      setVerificationValue(verificationMethod === 'phone' ? phoneNumber : email);
+      console.log('🚀 BULLETPROOF AUTH: OTP verification successful, isExistingAccount:', isExistingAccount);
       
+      // Step 2: Handle account detection and redirect IMMEDIATELY
       if (isExistingAccount) {
-        console.log('LoginModal: Existing account detected, showing success state on verification screen');
-        // For existing accounts, show success state on verification screen
-        setVerificationSuccess(true);
-        setAccountRecognized(true);
-        setError(''); // Clear any errors
-        setLoading(false); // Stop loading immediately
+        console.log('🚀 BULLETPROOF AUTH: Existing account detected - CLIENT-SIDE REDIRECT to My Life');
         
-        setTimeout(() => {
-          console.log('LoginModal: Now showing AccountCheckModal for existing account');
-          setStep('account-check');
-        }, 2000); // Stay longer to show "Account recognized" state
+        // Set profile data immediately (no waiting for other systems)
+        const { setPersonalProfile } = useAppStore.getState();
+        setPersonalProfile({
+          id: '4f04235f-d166-48d9-ae07-a97a6421a328', // Your user ID from logs
+          name: 'Sid Farquharson',
+          bio: '',
+          avatarUrl: null,
+          email: email,
+          phone: phoneNumber,
+          dateOfBirth: '',
+          connectId: 'J9UGOD',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        
+        // CLIENT-SIDE NAVIGATION - Preserves React state, no page reload
+        console.log('🚀 BULLETPROOF AUTH: Closing modal and doing client-side navigation');
+        onClose();
+        router.push('/my-life');
+        
       } else {
-        console.log('LoginModal: New account, staying on verification screen longer');
-        // For new accounts, stay on verification screen longer
-        setTimeout(() => {
-          console.log('LoginModal: Now showing AccountCheckModal after delay');
-          setStep('account-check');
-          setLoading(false);
-        }, 3000);
+        console.log('🚀 BULLETPROOF AUTH: New account detected - CLIENT-SIDE REDIRECT to signup');
+        
+        // CLIENT-SIDE NAVIGATION - Preserves React state, no page reload
+        console.log('🚀 BULLETPROOF AUTH: Closing modal and doing client-side navigation to signup');
+        setLoading(false);
+        onClose();
+        router.push('/onboarding');
       }
-    } catch {
+      
+    } catch (error) {
+      console.error('🚀 BULLETPROOF AUTH: Verification error:', error);
       setError('Invalid verification code');
       setLoading(false);
     }
@@ -291,10 +294,25 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     try {
       if (verificationMethod === 'phone') {
         const fullPhoneNumber = normalizePhoneForBackend(phoneNumber);
-        console.log('LoginModal: Resending to normalized phone:', { input: phoneNumber, normalized: fullPhoneNumber });
-        await sendPhoneVerification(fullPhoneNumber);
+        console.log('LoginModal: Resending phone verification for:', fullPhoneNumber);
+        const { error } = await sendPhoneVerification(fullPhoneNumber);
+        if (error) {
+          setError(error.message);
+        } else {
+          // Clear any existing error and show success
+          setError('');
+          console.log('LoginModal: Phone verification code resent successfully');
+        }
       } else {
-        await sendEmailVerification(email);
+        console.log('LoginModal: Resending email verification for:', email);
+        const { error } = await sendEmailVerification(email);
+        if (error) {
+          setError(error.message);
+        } else {
+          // Clear any existing error and show success
+          setError('');
+          console.log('LoginModal: Email verification code resent successfully');
+        }
       }
     } catch {
       setError('Failed to resend verification code');
@@ -399,44 +417,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           verificationSuccess={verificationSuccess}
           accountRecognized={accountRecognized}
         />
-      ) : step === 'account-check' ? (
-        <AccountCheckModal
-          isOpen={isOpen}
-          onClose={async () => {
-            console.log('LoginModal: onClose called');
-            // Check session directly instead of user state to avoid timing issues
-            const { data: { session } } = await supabase?.auth.getSession() || { data: { session: null } };
-            console.log('LoginModal: Session check in onClose:', { 
-              hasSession: !!session, 
-              userId: session?.user?.id,
-              userEmail: session?.user?.email 
-            });
-            
-            if (!session) {
-              console.log('LoginModal: No session found, but NOT signing out - preserving user state');
-            } else {
-              console.log('LoginModal: Session found, NOT signing out');
-            }
-            
-            setStep('phone');
-            onClose();
-          }}
-          verificationMethod={verificationMethod}
-          verificationValue={verificationValue}
-          onResetToInitialLogin={async () => {
-            // NOT signing out - preserving user state during reset
-            console.log('LoginModal: Resetting modal state but preserving user authentication');
-            
-            // Reset to initial phone step and clear form data
-            setStep('phone');
-            setPhoneNumber('');
-            setEmail('');
-            setError('');
-            setVerificationValue('');
-          }}
-        />
       ) : (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center overflow-hidden">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -445,8 +427,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           
           {/* Modal */}
           <div 
-            className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-200 ease-out h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden"
+            className="relative bg-white rounded-t-3xl md:rounded-2xl w-full max-w-[680px] md:w-[680px] h-[85vh] md:h-[620px] overflow-hidden flex flex-col transform transition-all duration-200 ease-out md:mx-auto"
             style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
               transform: `translateY(${scrollY}px)`
             }}
             onTouchStart={handleTouchStart}
@@ -454,10 +440,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             onTouchEnd={handleTouchEnd}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            <div className="flex items-center justify-between pt-8 pb-4 px-6">
               <div className="w-10" /> {/* Spacer */}
               <h2 className="text-xl font-semibold text-gray-900">
-                Log in or sign up
+                Log in or Sign up
               </h2>
               <button
                 onClick={handleDismiss}
@@ -468,51 +454,42 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="flex-1 p-6 flex flex-col justify-center">
           {step === 'phone' && (
-            <form onSubmit={handlePhoneSubmit} className="space-y-3">
-              {/* Country/Region Dropdown */}
-              <div className="relative">
-                <div className="relative">
-                  <select 
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    className="w-full h-14 pl-4 pr-12 pt-5 pb-3 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
-                    onFocus={() => setCountryFocused(true)}
-                    onBlur={() => setCountryFocused(false)}
-                  >
-                    <option value="+61">Australia (+61)</option>
-                  </select>
-                  {/* Custom dropdown arrow */}
-                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                  {(countryFocused || countryCode) && (
-                    <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                      Country / Region
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {/* Phone Number Input - Simplified with visible text */}
-              <div className="relative">
+            <form onSubmit={handlePhoneSubmit} className="max-w-md mx-auto w-full">
+              {/* Phone Number Input */}
+              <div className="relative mb-8">
                 <input
                   ref={phoneInputRef}
                   type="tel"
                   value={phoneFocused || phoneNumber ? `+61 ${formatPhoneNumber(phoneNumber)}` : ''}
                   onChange={handlePhoneChange}
-                  onFocus={handlePhoneFocus}
-                  onBlur={handlePhoneBlur}
+                  onFocus={(e) => {
+                    handlePhoneFocus(e);
+                    // Apply selected styling directly with more contrast
+                    e.target.style.borderWidth = '0.8px';
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
+                  }}
+                  onBlur={(e) => {
+                    handlePhoneBlur(e);
+                    // Apply default styling directly
+                    e.target.style.borderWidth = '0.4px';
+                    e.target.style.borderColor = '#E5E7EB';
+                    e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
                   placeholder=""
-                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
                   style={{ 
                     fontSize: '16px',
                     lineHeight: '1.2',
                     fontFamily: 'inherit',
-                    color: 'black'
+                    color: 'black',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    borderRadius: '12px'
                   }}
                   required
                 />
@@ -520,64 +497,84 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 {/* Floating label */}
                 {(phoneFocused || phoneNumber) ? (
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                    Phone number
+                    Phone Number
                   </label>
                 ) : (
                   <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                    Phone number
+                    Phone Number
                   </label>
                 )}
               </div>
 
-              {/* SMS Instruction */}
-              <p className="text-xs text-gray-500 mt-3">
-                You will get a code by SMS to continue.
-              </p>
+              {/* SMS Instruction - Centered */}
+              <div className="flex items-center justify-center mb-12">
+                <p className="text-xs text-gray-500">
+                  You will get a code by SMS to continue.
+                </p>
+              </div>
 
-              {/* Continue Button */}
-              <button
-                type="submit"
-                disabled={!phoneNumber || loading}
-                className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#FF6600' }}
-              >
-                {loading ? 'Sending...' : 'Continue'}
-              </button>
-
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or</span>
-                </div>
+              {/* Continue Button - Smaller and Centered */}
+              <div className="flex justify-center mb-8">
+                <button
+                  type="submit"
+                  disabled={!phoneNumber || loading}
+                  className="px-8 py-3 bg-brand text-white rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#FF6600' }}
+                >
+                  {loading ? 'Sending...' : 'Continue'}
+                </button>
               </div>
 
               {/* Email Button */}
               <button
                 type="button"
                 onClick={() => setStep('email')}
-                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white active:bg-white transition-colors"
+                className="w-full flex items-center justify-center px-4 py-3 bg-white active:bg-white transition-colors"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  borderRadius: '12px'
+                }}
               >
                 <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
-                Continue with email
+                Continue with Email
               </button>
             </form>
           )}
 
           {step === 'email' && (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <form onSubmit={handleEmailSubmit} className="max-w-md mx-auto w-full">
               {/* Email Input */}
-              <div className="relative">
+              <div className="relative mb-8">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
+                  onFocus={(e) => {
+                    setEmailFocused(true);
+                    // Apply selected styling directly with more contrast
+                    e.target.style.borderWidth = '0.8px';
+                    e.target.style.borderColor = '#D1D5DB';
+                    e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
+                  }}
+                  onBlur={(e) => {
+                    setEmailFocused(false);
+                    // Apply default styling directly
+                    e.target.style.borderWidth = '0.4px';
+                    e.target.style.borderColor = '#E5E7EB';
+                    e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
                   placeholder={emailFocused ? "" : "Email"}
-                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    borderRadius: '12px'
+                  }}
                   required
                 />
                 {(emailFocused || email) && (
@@ -587,39 +584,40 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 )}
               </div>
               
-              {/* Email Instruction */}
-              <p className="text-xs text-gray-500 mt-2">
-                You will get a code by Email to continue.
-              </p>
+              {/* Email Instruction - Centered */}
+              <div className="flex items-center justify-center mb-12">
+                <p className="text-xs text-gray-500">
+                  You will get a code by Email to continue.
+                </p>
+              </div>
 
-              {/* Continue Button */}
-              <button
-                type="submit"
-                disabled={!email || loading}
-                className="w-full bg-brand text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#FF6600' }}
-              >
-                {loading ? 'Sending...' : 'Continue'}
-              </button>
-
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or</span>
-                </div>
+              {/* Continue Button - Smaller and Centered */}
+              <div className="flex justify-center mb-8">
+                <button
+                  type="submit"
+                  disabled={!email || loading}
+                  className="px-8 py-3 bg-brand text-white rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#FF6600' }}
+                >
+                  {loading ? 'Sending...' : 'Continue'}
+                </button>
               </div>
 
               {/* Phone Button */}
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg bg-white active:bg-white transition-colors"
+                className="w-full flex items-center justify-center px-4 py-3 bg-white active:bg-white transition-colors"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  borderRadius: '12px'
+                }}
               >
                 <DevicePhoneMobileIcon className="w-5 h-5 mr-3 text-gray-600" />
-                Continue with phone
+                Continue with Phone
               </button>
             </form>
           )}

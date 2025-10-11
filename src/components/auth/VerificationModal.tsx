@@ -260,7 +260,7 @@ export default function VerificationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center overflow-hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -269,8 +269,12 @@ export default function VerificationModal({
       
       {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
       <div 
-        className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-2xl transform transition-all duration-200 ease-out h-[85vh] md:h-auto md:max-h-[95vh] overflow-hidden"
+        className="relative bg-white rounded-t-3xl md:rounded-2xl w-full max-w-[680px] md:w-[680px] h-[85vh] md:h-[620px] overflow-hidden flex flex-col transform transition-all duration-200 ease-out"
         style={{
+          borderWidth: '0.4px',
+          borderColor: '#E5E7EB',
+          borderStyle: 'solid',
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
           transform: `translateY(${scrollY}px)`
         }}
         onTouchStart={handleTouchStart}
@@ -278,7 +282,7 @@ export default function VerificationModal({
         onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between p-6">
           <button
             onClick={onBack}
             className="p-1 text-gray-600 hover:text-gray-800 transition-colors"
@@ -290,8 +294,8 @@ export default function VerificationModal({
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          <div className="text-center mb-8">
+        <div className="flex-1 p-6 flex flex-col justify-center">
+          <div className="text-center mb-8 max-w-md mx-auto w-full">
             {verificationSuccess && accountRecognized ? (
               <>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -380,20 +384,27 @@ export default function VerificationModal({
                 onChange={(e) => handleInputChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                onFocus={() => setActiveIndex(index)}
-                className={`
-                  w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-[3px] rounded-xl
-                  focus:outline-none focus:ring-0 transition-all duration-75 bg-white
-                  ${activeIndex === index
-                    ? '!border-black'
-                    : 'border-gray-300'
-                  }
-                `}
+                onFocus={(e) => {
+                  setActiveIndex(index);
+                  // Apply selected styling directly using setProperty with !important
+                  e.target.style.setProperty('border-width', '0.8px', 'important');
+                  e.target.style.setProperty('border-color', '#D1D5DB', 'important');
+                  e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
+                }}
+                onBlur={(e) => {
+                  // Apply default styling directly
+                  e.target.style.setProperty('border-width', '0.4px', 'important');
+                  e.target.style.setProperty('border-color', '#E5E7EB', 'important');
+                  e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', 'important');
+                }}
+                className="w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold focus:outline-none focus:ring-0 transition-all duration-75 bg-white"
                 style={{ 
                   caretColor: 'transparent',
-                  borderColor: activeIndex === index 
-                    ? '#000000' 
-                    : '#d1d5db'
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  borderRadius: '12px',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                 }}
               />
             ))}
@@ -404,19 +415,30 @@ export default function VerificationModal({
           {!verificationSuccess && (
           <div className="space-y-3">
             {/* Verify Button */}
-            <button
-              onClick={handleVerify}
-              disabled={code.join('').length !== 6}
-              className={`
-                w-full h-14 rounded-lg font-semibold text-white transition-all duration-75
-                ${code.join('').length === 6
-                  ? 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'
-                  : 'bg-gray-300 cursor-not-allowed'
-                }
-              `}
-            >
-              Continue
-            </button>
+            <div className="flex justify-center mb-8">
+              <button
+                onClick={handleVerify}
+                disabled={code.join('').length !== 6 || loading}
+                className={`
+                  px-8 py-3 rounded-lg font-semibold text-white transition-all duration-75
+                  ${code.join('').length === 6 && !loading
+                    ? 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'
+                    : 'bg-gray-300 cursor-not-allowed'
+                  }
+                `}
+                style={{ backgroundColor: code.join('').length === 6 && !loading ? '#FF6600' : undefined }}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center space-x-1 w-full h-full min-h-[1.5rem]">
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                ) : (
+                  'Continue'
+                )}
+              </button>
+            </div>
 
             {/* Resend Button */}
             <div className="text-center">

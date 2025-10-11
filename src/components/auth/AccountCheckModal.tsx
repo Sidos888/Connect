@@ -65,6 +65,7 @@ export default function AccountCheckModal({
   const [accountCheckInProgress, setAccountCheckInProgress] = useState(false);
   const [initialAccountCheck, setInitialAccountCheck] = useState(false);
   const [userExists, setUserExists] = useState<boolean | null>(null);
+  const [autoRedirectInProgress, setAutoRedirectInProgress] = useState(false);
   const [existingUser, setExistingUser] = useState<{ id: string; name?: string; full_name?: string; email?: string; phone?: string; avatar_url?: string; profile_pic?: string; bio?: string; date_of_birth?: string; dob?: string; connect_id?: string; created_at: string; updated_at: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -213,7 +214,7 @@ export default function AccountCheckModal({
       // THIRD: Check account_identities table for this auth user
       const { data: identityRecord, error: identityError } = await supabase
         .from('account_identities')
-        .select('account_id, accounts!inner(*)')
+        .select('account_id, accounts!account_id(*)')
         .eq('auth_user_id', user.id)
         .maybeSingle();
       
@@ -228,6 +229,10 @@ export default function AccountCheckModal({
         setUserExists(true);
         setExistingUser(identityRecord.accounts as any);
         setAccountCheckInProgress(false);
+        
+        // 🚀 SKIP WELCOME BACK PAGE - Auto-redirect existing users
+        console.log('AccountCheckModal: 🚀 SKIPPING WELCOME BACK PAGE - Auto-redirecting to My Life');
+        setTimeout(() => bulletproofAutoRedirect(), 100); // Bulletproof auto-redirect
         return;
       }
     }
@@ -328,6 +333,10 @@ export default function AccountCheckModal({
             setUserExists(true);
             setExistingUser(accountData);
             setAccountCheckInProgress(false);
+            
+            // 🚀 SKIP WELCOME BACK PAGE - Auto-redirect existing users
+            console.log('AccountCheckModal: 🚀 SKIPPING WELCOME BACK PAGE - Auto-redirecting to My Life');
+            setTimeout(() => bulletproofAutoRedirect(), 100); // Bulletproof auto-redirect
             return;
           }
         }
@@ -393,6 +402,10 @@ export default function AccountCheckModal({
           console.log('AccountCheckModal: Setting existingUser data:', userData);
           setUserExists(true);
           setExistingUser(userData);
+          
+          // 🚀 SKIP WELCOME BACK PAGE - Auto-redirect existing users
+          console.log('AccountCheckModal: 🚀 SKIPPING WELCOME BACK PAGE - Auto-redirecting to My Life');
+          setTimeout(() => bulletproofAutoRedirect(), 100); // Bulletproof auto-redirect
         }
       } else {
         setUserExists(exists);
@@ -443,6 +456,10 @@ export default function AccountCheckModal({
           dob: account.dob || undefined
         });
         setAccountCheckInProgress(false);
+        
+        // 🚀 SKIP WELCOME BACK PAGE - Auto-redirect existing users
+        console.log('AccountCheckModal: 🚀 SKIPPING WELCOME BACK PAGE - Auto-redirecting to My Life');
+        bulletproofAutoRedirect(); // Bulletproof auto-redirect
       }
     }
   }, [isOpen, account?.id, user?.id]);
@@ -507,6 +524,59 @@ export default function AccountCheckModal({
       }, mobileTimeout);
     }
   }, [isOpen, user?.id, verificationMethod, verificationValue]);
+
+  // 🚀 BULLETPROOF AUTO-REDIRECT FUNCTION
+  const bulletproofAutoRedirect = async () => {
+    // Prevent multiple simultaneous redirects
+    if (autoRedirectInProgress || isSigningIn) {
+      console.log('AccountCheckModal: 🚫 Auto-redirect already in progress, skipping');
+      return;
+    }
+
+    setAutoRedirectInProgress(true);
+    setIsSigningIn(true);
+    
+    console.log('AccountCheckModal: 🚀 BULLETPROOF AUTO-REDIRECT STARTING');
+    console.log('AccountCheckModal: Existing user data:', existingUser);
+    
+    try {
+      // Step 1: Set profile data in app store immediately
+      if (existingUser) {
+        const profileData = {
+          id: existingUser.id,
+          name: existingUser.name || 'User',
+          bio: existingUser.bio || '',
+          avatarUrl: existingUser.profile_pic || null,
+          email: (verificationMethod as string) === 'email' ? verificationValue : (existingUser.email || ''),
+          phone: (verificationMethod as string) === 'phone' ? verificationValue : (existingUser.phone || ''),
+          dateOfBirth: existingUser.dob || '',
+          connectId: (existingUser as any).connect_id || 'USER',
+          createdAt: existingUser.created_at,
+          updatedAt: existingUser.updated_at
+        };
+        
+        console.log('AccountCheckModal: 🚀 Setting profile data:', profileData);
+        setPersonalProfile(profileData);
+      }
+      
+      // Step 2: Close modal immediately to prevent any UI glitches
+      console.log('AccountCheckModal: 🚀 Closing modal immediately');
+      onClose();
+      
+      // Step 3: Direct redirect to My Life (skip all auth refresh complexity)
+      console.log('AccountCheckModal: 🚀 Direct redirect to /my-life');
+      router.push('/my-life');
+      
+    } catch (error) {
+      console.error('AccountCheckModal: 🚀 Auto-redirect error:', error);
+      // Even if there's an error, try to redirect anyway
+      onClose();
+      router.push('/my-life');
+    } finally {
+      setAutoRedirectInProgress(false);
+      setIsSigningIn(false);
+    }
+  };
 
   const handleSignIn = async () => {
     setIsSigningIn(true);
@@ -1258,11 +1328,15 @@ export default function AccountCheckModal({
   if (!isOpen || !modalVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-end md:items-center justify-center md:pb-0 overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-end md:items-center justify-center overflow-hidden">
       {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
       <div 
-        className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl shadow-xl h-[85vh] md:h-auto md:max-h-[95vh] md:mx-auto overflow-hidden flex flex-col transition-transform duration-200 ease-out"
+        className="relative bg-white rounded-t-3xl md:rounded-2xl w-full max-w-[680px] md:w-[680px] h-[85vh] md:h-[620px] overflow-hidden flex flex-col transition-transform duration-200 ease-out"
         style={{
+          borderWidth: '0.4px',
+          borderColor: '#E5E7EB',
+          borderStyle: 'solid',
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
           transform: userExists === true ? `translateY(${scrollY}px)` : 'translateY(0)'
         }}
         onTouchStart={handleTouchStart}
@@ -1270,7 +1344,7 @@ export default function AccountCheckModal({
         onTouchEnd={handleTouchEnd}
       >
         {/* Header - Show title for Welcome back, hide for other states */}
-        {userExists === true ? (
+        {userExists === true && !autoRedirectInProgress ? (
           <div className="px-6 pt-6 pb-4 relative">
             <button
               onClick={handleDismiss}
@@ -1343,6 +1417,12 @@ export default function AccountCheckModal({
             <div className="flex flex-col items-center justify-center h-full py-16">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-900 border-t-transparent"></div>
               <p className="mt-4 text-gray-600 text-center">Setting up your account...</p>
+            </div>
+          ) : autoRedirectInProgress ? (
+            // Auto-redirect loading screen
+            <div className="flex flex-col items-center justify-center h-full py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-900 border-t-transparent"></div>
+              <p className="mt-4 text-gray-600 text-center">Signing you in...</p>
             </div>
           ) : userExists === true ? (
             // Existing Account Card - Perfectly centered layout

@@ -75,6 +75,18 @@ class SimpleChatService {
   // Chat message cache for instant loading
   private chatMessages: Map<string, SimpleMessage[]> = new Map();
   private chatParticipants: Map<string, any[]> = new Map();
+  
+  // Cleanup interval
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
+  constructor() {
+    // Run cleanup every 5 minutes
+    if (typeof window !== 'undefined') {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanupOldTracking();
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+  }
 
   // Retry mechanism for failed requests
   private async withRetry<T>(
@@ -162,10 +174,11 @@ class SimpleChatService {
           filter: `chat_id=eq.${chatId}`
         }, 
         async (payload) => {
-          
-          // Get sender name from participants
-          const chat = this.chats.get(chatId);
-          const sender = chat?.participants.find(p => p.id === payload.new.sender_id);
+          try {
+            
+            // Get sender name from participants
+            const chat = this.chats.get(chatId);
+            const sender = chat?.participants.find(p => p.id === payload.new.sender_id);
           
           const message: SimpleMessage = {
             id: payload.new.id,
@@ -237,9 +250,43 @@ class SimpleChatService {
               }
             }, 500); // Wait 500ms for smooth transition to complete
           }
+          } catch (error) {
+            console.error('SimpleChatService: Error processing message in subscription:', error);
+            // Don't throw - keep subscription alive even if one message fails
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`SimpleChatService: Message subscription active for chat ${chatId}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`SimpleChatService: Subscription error for chat ${chatId}, will retry...`);
+          // Retry subscription after 3 seconds
+          setTimeout(() => {
+            console.log(`SimpleChatService: Retrying message subscription for chat ${chatId}`);
+            const cbSet = this.messageCallbacks.get(chatId);
+            if (cbSet && cbSet.size > 0) {
+              // Resubscribe if there are still listeners
+              this.messageSubscriptions.delete(chatId);
+              // Trigger resubscription by calling subscribeToMessages again
+              const firstCallback = Array.from(cbSet)[0];
+              this.subscribeToMessages(chatId, firstCallback);
+            }
+          }, 3000);
+        } else if (status === 'TIMED_OUT') {
+          console.error(`SimpleChatService: Subscription timeout for chat ${chatId}, will retry...`);
+          // Retry after timeout
+          setTimeout(() => {
+            console.log(`SimpleChatService: Retrying message subscription after timeout for chat ${chatId}`);
+            const cbSet = this.messageCallbacks.get(chatId);
+            if (cbSet && cbSet.size > 0) {
+              this.messageSubscriptions.delete(chatId);
+              const firstCallback = Array.from(cbSet)[0];
+              this.subscribeToMessages(chatId, firstCallback);
+            }
+          }, 5000);
+        }
+      });
 
       this.messageSubscriptions.set(chatId, subscription);
     }
@@ -274,7 +321,8 @@ class SimpleChatService {
     const subscription = this.supabase
       .channel(`typing:${chatId}`)
       .on('presence', { event: 'sync' }, () => {
-        const state = subscription.presenceState();
+        try {
+          const state = subscription.presenceState();
         
         // Extract typing users from presence state
         // The key is a client ID, but we need the user_id from the presence data
@@ -303,29 +351,40 @@ class SimpleChatService {
         
         // Notify callback
         onTypingUpdate(Array.from(typingSet));
+        } catch (error) {
+          console.error('SimpleChatService: Error in typing sync handler:', error);
+        }
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        if (newPresences && newPresences[0]) {
-          const presenceUserId = newPresences[0].user_id;
-          const isTyping = newPresences[0].typing === true;
-          
-          // Only add if typing and not the current user
-          if (isTyping && presenceUserId && presenceUserId !== userId) {
-            const typingSet = this.typingUsers.get(chatId)!;
-            typingSet.add(presenceUserId);
-            onTypingUpdate(Array.from(typingSet));
+        try {
+          if (newPresences && newPresences[0]) {
+            const presenceUserId = newPresences[0].user_id;
+            const isTyping = newPresences[0].typing === true;
+            
+            // Only add if typing and not the current user
+            if (isTyping && presenceUserId && presenceUserId !== userId) {
+              const typingSet = this.typingUsers.get(chatId)!;
+              typingSet.add(presenceUserId);
+              onTypingUpdate(Array.from(typingSet));
+            }
           }
+        } catch (error) {
+          console.error('SimpleChatService: Error in typing join handler:', error);
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        if (leftPresences && leftPresences[0]) {
-          const presenceUserId = leftPresences[0].user_id;
-          
-          if (presenceUserId) {
-            const typingSet = this.typingUsers.get(chatId)!;
-            typingSet.delete(presenceUserId);
-            onTypingUpdate(Array.from(typingSet));
+        try {
+          if (leftPresences && leftPresences[0]) {
+            const presenceUserId = leftPresences[0].user_id;
+            
+            if (presenceUserId) {
+              const typingSet = this.typingUsers.get(chatId)!;
+              typingSet.delete(presenceUserId);
+              onTypingUpdate(Array.from(typingSet));
+            }
           }
+        } catch (error) {
+          console.error('SimpleChatService: Error in typing leave handler:', error);
         }
       })
       .subscribe(async (status) => {
@@ -382,12 +441,22 @@ class SimpleChatService {
         table: 'message_reactions',
         filter: `message_id=in.(SELECT id FROM chat_messages WHERE chat_id=${chatId})`
       }, (payload) => {
-        const messageId = payload.new?.message_id || payload.old?.message_id;
-        if (messageId) {
-          onReactionUpdate(messageId);
+        try {
+          const messageId = payload.new?.message_id || payload.old?.message_id;
+          if (messageId) {
+            onReactionUpdate(messageId);
+          }
+        } catch (error) {
+          console.error('SimpleChatService: Error processing reaction update:', error);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`SimpleChatService: Reaction subscription active for chat ${chatId}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`SimpleChatService: Reaction subscription error for chat ${chatId}`);
+        }
+      });
 
     return () => {
       subscription.unsubscribe();
@@ -397,16 +466,30 @@ class SimpleChatService {
   // Cleanup all subscriptions
   cleanup() {
     
+    // Clear cleanup interval
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    
     // Unsubscribe from all message subscriptions
     this.messageSubscriptions.forEach((subscription, chatId) => {
-      subscription.unsubscribe();
+      try {
+        subscription.unsubscribe();
+      } catch (error) {
+        console.error('SimpleChatService: Error unsubscribing from messages:', error);
+      }
     });
     this.messageSubscriptions.clear();
     this.messageCallbacks.clear();
     
     // Unsubscribe from all typing subscriptions
     this.typingSubscriptions.forEach((subscription, chatId) => {
-      subscription.unsubscribe();
+      try {
+        subscription.unsubscribe();
+      } catch (error) {
+        console.error('SimpleChatService: Error unsubscribing from typing:', error);
+      }
     });
     this.typingSubscriptions.clear();
     
@@ -416,6 +499,28 @@ class SimpleChatService {
     // Clear processed messages to prevent memory leaks
     this.processedMessages.clear();
     this.recentMessageSignatures.clear();
+    
+    console.log('SimpleChatService: Cleanup completed successfully');
+  }
+
+  // Periodically clean up old processed messages and signatures to prevent unbounded growth
+  private cleanupOldTracking() {
+    const now = Date.now();
+    const MAX_AGE = 5 * 60 * 1000; // 5 minutes
+    
+    // Clean up old message signatures
+    for (const [key, timestamp] of this.recentMessageSignatures.entries()) {
+      if (now - timestamp > MAX_AGE) {
+        this.recentMessageSignatures.delete(key);
+      }
+    }
+    
+    // Limit processedMessages size (keep only last 1000 messages)
+    if (this.processedMessages.size > 1000) {
+      const toKeep = Array.from(this.processedMessages).slice(-1000);
+      this.processedMessages.clear();
+      toKeep.forEach(id => this.processedMessages.add(id));
+    }
   }
 
   // Get user's contacts from the database (only actual connections)

@@ -579,17 +579,27 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
+      // Clear typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
+      
+      // Clear animation timeout
       if (animationRef.current) {
         clearTimeout(animationRef.current);
+        animationRef.current = null;
       }
+      
       // Clean up pending message timeouts
-      pendingMessageTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      pendingMessageTimeouts.current.forEach(timeout => {
+        if (timeout) clearTimeout(timeout);
+      });
       pendingMessageTimeouts.current.clear();
+      
+      console.log('PersonalChatPanel: Cleanup completed for conversation', conversation.id);
     };
-  }, []);
+  }, [conversation.id]);
 
   // Handle typing indicator
   const handleTyping = () => {
@@ -932,29 +942,37 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                       return;
                     }
 
-                    // Save attachments if any
-                    if (pendingMedia.length > 0) {
-                      try {
-                        await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
-                      } catch (attachmentError) {
-                        console.error('Failed to save attachments:', attachmentError);
-                        // Continue anyway - the message was sent successfully
-                      }
-                    }
-
-                    // Clear the form
-                    setText("");
-                    setReplyToMessage(null);
-                    setPendingMedia([]);
-
-                    // Refresh messages to show the new message with attachments
-                    const { messages: updatedMessages } = await simpleChatService.getChatMessages(conversation.id, account.id);
-                    if (updatedMessages) {
-                      setMessages(updatedMessages);
-                    }
-                  } catch (error) {
-                    console.error('Error sending message:', error);
+                // Save attachments if any
+                if (pendingMedia.length > 0) {
+                  try {
+                    await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
+                    // Manually update the message with attachments for instant display
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === newMessage.id 
+                        ? { ...msg, attachments: pendingMedia.map((media, idx) => ({
+                            id: `${newMessage.id}_${idx}`,
+                            file_url: media.file_url,
+                            file_type: media.file_type,
+                            file_size: media.file_size,
+                            thumbnail_url: media.thumbnail_url,
+                            width: media.width,
+                            height: media.height
+                          })) }
+                        : msg
+                    ));
+                  } catch (attachmentError) {
+                    console.error('Failed to save attachments:', attachmentError);
+                    // Continue anyway - the message was sent successfully
                   }
+                }
+
+                // Clear the form
+                setText("");
+                setReplyToMessage(null);
+                setPendingMedia([]);
+              } catch (error) {
+                console.error('Error sending message:', error);
+              }
                 }
               }}
             />
@@ -988,6 +1006,20 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   if (pendingMedia.length > 0) {
                     try {
                       await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
+                      // Manually update the message with attachments for instant display
+                      setMessages(prev => prev.map(msg => 
+                        msg.id === newMessage.id 
+                          ? { ...msg, attachments: pendingMedia.map((media, idx) => ({
+                              id: `${newMessage.id}_${idx}`,
+                              file_url: media.file_url,
+                              file_type: media.file_type,
+                              file_size: media.file_size,
+                              thumbnail_url: media.thumbnail_url,
+                              width: media.width,
+                              height: media.height
+                            })) }
+                          : msg
+                      ));
                     } catch (attachmentError) {
                       console.error('Failed to save attachments:', attachmentError);
                       // Continue anyway - the message was sent successfully
@@ -998,12 +1030,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   setText("");
                   setReplyToMessage(null);
                   setPendingMedia([]);
-
-                  // Refresh messages to show the new message with attachments
-                  const { messages: updatedMessages } = await simpleChatService.getChatMessages(conversation.id, account.id);
-                  if (updatedMessages) {
-                    setMessages(updatedMessages);
-                  }
                 } catch (error) {
                   console.error('Error sending message:', error);
                 }
