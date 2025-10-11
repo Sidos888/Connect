@@ -89,7 +89,6 @@ interface PersonalChatPanelProps {
 }
 
 export default function PersonalChatPanel({ conversation }: PersonalChatPanelProps) {
-  console.log('🎬 PersonalChatPanel: Component rendering with conversation:', conversation.id);
   
   // Add error boundary for missing conversation
   if (!conversation || !conversation.id) {
@@ -105,9 +104,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   
   const { sendMessage, markAllRead, getChatTyping } = useAppStore();
   const { account } = useAuth();
-  console.log('🎬 PersonalChatPanel: Account:', account?.id);
-  console.log('🎬 PersonalChatPanel: Conversation object:', conversation);
-  console.log('🎬 PersonalChatPanel: Account object:', account);
   const router = useRouter();
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -232,7 +228,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     input.onchange = async (event) => {
       const files = (event.target as HTMLInputElement).files;
       if (files && files.length > 0) {
-        console.log('Files selected:', files);
         await handleFileUpload(Array.from(files));
       }
     };
@@ -242,7 +237,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   };
 
   const handleFileUpload = async (files: File[]) => {
-    console.log('Uploading files:', files);
     
     try {
       const { getSupabaseClient } = await import('@/lib/supabaseClient');
@@ -286,15 +280,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           .getPublicUrl(uploadData.path);
 
         const uploadSuccess = true; // Successfully uploaded to Supabase Storage
-        
-        console.log('Successfully uploaded to Supabase Storage:', publicUrl);
-        console.log('File details:', {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          fileName: fileName,
-          publicUrl: publicUrl
-        });
+        // Upload logging removed for performance
 
         // Determine file type and get metadata
         const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
@@ -334,11 +320,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           file_size: file.size
         };
         
-        console.log('Created media item:', {
-          ...mediaItem,
-          uploadSuccess,
-          isLocalUrl: !uploadSuccess
-        });
+        // Media item logging removed for performance
         uploadedMedia.push(mediaItem);
       }
       
@@ -367,21 +349,15 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
   // Load participants and messages from the database
   useEffect(() => {
-    console.log('PersonalChatPanel: useEffect triggered with:', { 
-      conversationId: conversation.id, 
-      accountId: account?.id,
-      conversation: conversation 
-    });
+    // useEffect logging removed for performance
     const loadData = async () => {
       if (conversation.id && account?.id) {
-        console.log('PersonalChatPanel: Conditions met, starting loadData');
         // Only set loading if we don't have messages yet (prevents flicker on chat switch)
         if (messages.length === 0) {
           setLoading(true);
         }
         
         // Load chat details to get participants
-        console.log('PersonalChatPanel: Loading chat details for:', conversation.id, 'isGroup:', conversation.isGroup);
         const { chat, error: chatError } = await simpleChatService.getChatById(conversation.id);
         if (chatError) {
           console.error('PersonalChatPanel: Error loading chat details:', chatError);
@@ -395,20 +371,16 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         }
         
         // Verify chat is properly cached
-        console.log('PersonalChatPanel: Verifying chat is cached in service');
         // Note: Chat should now be cached from the getChatById call above
         
-        console.log('PersonalChatPanel: Chat loaded successfully:', chat.id, 'participants:', chat.participants?.length || 0);
         setParticipants(chat.participants || []);
         
         // For group chats, refresh the conversation data with fresh photo
         if (conversation.isGroup) {
-          console.log('PersonalChatPanel: Group chat detected, refreshing photo from database');
           const updatedConversation = {
             ...conversation,
             avatarUrl: chat.photo || null
           };
-          console.log('PersonalChatPanel: Updated conversation with fresh photo:', updatedConversation.avatarUrl);
           setRefreshedConversation(updatedConversation);
         } else {
           setRefreshedConversation(conversation);
@@ -428,7 +400,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         try {
           const chatMedia = await simpleChatService.getChatMedia(conversation.id);
           setAllChatMedia(chatMedia);
-          console.log('✅ Chat media loaded successfully:', chatMedia.length, 'items');
         } catch (error) {
           console.error('Failed to load chat media:', error);
           console.error('Error details:', {
@@ -444,16 +415,13 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         const unsubscribeMessages = simpleChatService.subscribeToMessages(
           conversation.id,
           (newMessage) => {
-            console.log('PersonalChatPanel: Received new message:', newMessage);
             
             // Check if this sender was typing using the wasTyping flag from message
             // This flag is set in simpleChatService BEFORE typing indicator is removed
             const wasTyping = (newMessage as any).wasTyping === true;
             
-            console.log('🔍 Message wasTyping flag:', wasTyping, 'sender:', newMessage.sender_id);
             
             if (wasTyping) {
-              console.log('🔄 Sender was typing, creating smooth transition');
               // Add message to pending state immediately (replaces typing indicator)
               setPendingMessages(prev => {
                 const newMap = new Map(prev);
@@ -473,12 +441,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   if (tempIndex !== -1) {
                     const updated = [...prev];
                     updated[tempIndex] = newMessage;
-                    console.log('PersonalChatPanel: Replaced temp optimistic message with real message');
                     return updated;
                   }
                   const exists = prev.some(msg => msg.id === newMessage.id);
                   if (exists) return prev;
-                  console.log('PersonalChatPanel: Moving pending message to actual messages');
                   return [...prev, newMessage];
                 });
                 setPendingMessages(prev => {
@@ -490,7 +456,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               
               pendingMessageTimeouts.current.set(newMessage.sender_id, timeout);
             } else {
-              console.log('PersonalChatPanel: No typing indicator, adding message normally');
               // Normal message flow - just add it
               setMessages(prev => {
                 // Replace optimistic temp message if present
@@ -502,7 +467,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 if (tempIndex !== -1) {
                   const updated = [...prev];
                   updated[tempIndex] = newMessage;
-                  console.log('PersonalChatPanel: Replaced temp optimistic message with real message');
                   return updated;
                 }
                 const exists = prev.some(msg => 
@@ -510,10 +474,8 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   (msg.text === newMessage.text && msg.sender_id === newMessage.sender_id && Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 10000)
                 );
                 if (exists) {
-                  console.log('PersonalChatPanel: Message already exists, skipping duplicate');
                   return prev;
                 }
-                console.log('PersonalChatPanel: Adding new message to UI');
                 return [...prev, newMessage];
               });
             }
@@ -530,7 +492,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         const unsubscribeReactions = simpleChatService.subscribeToReactions(
           conversation.id,
           (messageId) => {
-            console.log('PersonalChatPanel: Reaction update received for message:', messageId);
             // Refresh the specific message to get updated reactions
             setMessages(prev => {
               return prev.map(msg => {
@@ -588,20 +549,16 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
   // JavaScript animation for typing dots
   useEffect(() => {
-    console.log('PersonalChatPanel: Animation useEffect triggered, typingUsers.length:', typingUsers.length);
     if (typingUsers.length > 0) {
-      console.log('PersonalChatPanel: Starting animation');
       const animate = () => {
         setAnimationPhase(prev => {
           const newPhase = (prev + 1) % 4;
-          console.log('PersonalChatPanel: Animation phase changed to:', newPhase);
           return newPhase;
         });
         animationRef.current = setTimeout(animate, 350); // ~1.4s total cycle
       };
       animate();
     } else {
-      console.log('PersonalChatPanel: Stopping animation');
       if (animationRef.current) {
         clearTimeout(animationRef.current);
         animationRef.current = null;
@@ -635,7 +592,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const handleTyping = () => {
     if (!account?.id || !conversation.id) return;
     
-    console.log('🎯 Starting typing indicator for user:', account.id);
     // Send typing indicator
     simpleChatService.sendTypingIndicator(conversation.id, account.id, true);
     
@@ -650,9 +606,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const displayConversation = refreshedConversation || conversation;
   
   // Debug logging
-  console.log('PersonalChatPanel - Original conversation avatarUrl:', conversation.avatarUrl);
-  console.log('PersonalChatPanel - Refreshed conversation avatarUrl:', refreshedConversation?.avatarUrl);
-  console.log('PersonalChatPanel - Display conversation avatarUrl:', displayConversation.avatarUrl);
 
   return (
         <div className="flex flex-col h-full bg-white">
@@ -674,7 +627,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 }
               } else {
                 // Group chat - show group info modal
-                console.log('PersonalChatPanel: Opening group info modal for chat:', displayConversation.id);
                 setShowGroupInfo(true);
               }
             }}
@@ -757,8 +709,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
       {/* Typing Indicator & Pending Messages - positioned at bottom, outside scrollable area */}
       {(typingUsers.length > 0 && !typingUsers.includes(account?.id || '')) && (() => {
-        console.log('🐛 Typing indicator rendering with typingUsers:', typingUsers);
-        console.log('🐛 Current user account.id:', account?.id);
         
         return (
           <div className="flex-shrink-0 px-6 pb-8 space-y-4">
@@ -931,7 +881,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)`;
               }}
               onBlur={(e) => {
-                console.log('🚪 User blurred from input field');
                 e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)`;
                 // Stop typing indicator when user leaves the input field
                 if (typingTimeoutRef.current) {
@@ -986,7 +935,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                     if (pendingMedia.length > 0) {
                       try {
                         await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
-                        console.log('Successfully saved attachments for message:', newMessage.id);
                       } catch (attachmentError) {
                         console.error('Failed to save attachments:', attachmentError);
                         // Continue anyway - the message was sent successfully
@@ -1039,7 +987,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   if (pendingMedia.length > 0) {
                     try {
                       await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
-                      console.log('Successfully saved attachments for message:', newMessage.id);
                     } catch (attachmentError) {
                       console.error('Failed to save attachments:', attachmentError);
                       // Continue anyway - the message was sent successfully

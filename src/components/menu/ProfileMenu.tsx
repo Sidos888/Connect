@@ -93,11 +93,7 @@ function ConnectionsView({
           const people = userConnections || [];
           const businesses: any[] = [];
           
-          console.log('🔍 ConnectionsView: Separated connections:', {
-            people: people.length,
-            businesses: businesses.length,
-            total: userConnections?.length || 0
-          });
+          // Connection logging removed for performance
           
           setPeopleConnections(people);
           setBusinessConnections(businesses);

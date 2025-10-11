@@ -66,7 +66,7 @@ export function getSupabaseClient(): SupabaseClient | null {
       autoRefreshToken: true,
       detectSessionInUrl: false, // Disable for mobile to avoid URL-based session detection issues
       flowType: 'pkce', // Use PKCE flow for better mobile security
-      debug: process.env.NODE_ENV === 'development'
+      debug: false // Disable verbose auth logs for better performance
     }
   });
 

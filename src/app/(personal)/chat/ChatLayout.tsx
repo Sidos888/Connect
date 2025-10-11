@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
@@ -38,44 +38,40 @@ export default function ChatLayout() {
 
   useEffect(() => {
     if (isHydrated && account?.id) {
-      console.log('Store hydrated, loading real conversations for user:', account.id);
       // Use real chat service
       loadConversations(account.id);
       
       // On mobile, if there's a selected chat in URL, redirect to individual page
       if (selectedChatId && typeof window !== 'undefined' && window.innerWidth < 640) {
-        console.log('🔥 Mobile detected with selected chat, redirecting to individual page');
         router.push(`/chat/individual?chat=${selectedChatId}`);
       }
     } else if (isHydrated && !account?.id) {
-      console.log('Store hydrated but no user authenticated, skipping conversation loading');
     }
   }, [isHydrated, account?.id, loadConversations, selectedChatId, router]);
 
   // Debug logging
   useEffect(() => {
-    console.log('ChatLayout - conversations:', conversations);
-    console.log('ChatLayout - selectedChatId:', selectedChatId);
-    console.log('ChatLayout - searchParams:', searchParams.toString());
-    console.log('ChatLayout - showNewMessageSelector:', showNewMessageSelector);
   }, [conversations, selectedChatId, searchParams, showNewMessageSelector]);
 
         // Subscribe to typing indicators for all conversations
+        // Use ref to track conversation IDs to prevent recreation on every render
+        const conversationIdsRef = useRef<string[]>([]);
         useEffect(() => {
           if (!account?.id || conversations.length === 0) return;
 
-          console.log('ChatLayout: Setting up typing subscriptions for', conversations.length, 'conversations');
+          // Only recreate subscriptions if conversation IDs actually changed
+          const currentIds = conversations.map((c: any) => c.id).sort().join(',');
+          const prevIds = conversationIdsRef.current.sort().join(',');
+          if (currentIds === prevIds) return;
           
+          conversationIdsRef.current = conversations.map((c: any) => c.id);
           const subscriptions: (() => void)[] = [];
           
           conversations.forEach((conversation: any) => {
-            console.log('ChatLayout: Subscribing to typing for chat:', conversation.id);
-            
             const unsubscribe = simpleChatService.subscribeToTyping(
               conversation.id,
               account.id,
               (typingUserIds) => {
-                console.log('ChatLayout: Typing update for chat:', conversation.id, 'users:', typingUserIds);
                 const { updateChatTyping } = useAppStore.getState();
                 updateChatTyping(conversation.id, typingUserIds);
               }
@@ -85,51 +81,68 @@ export default function ChatLayout() {
           });
           
           return () => {
-            console.log('ChatLayout: Cleaning up typing subscriptions');
             subscriptions.forEach(unsubscribe => unsubscribe());
           };
-        }, [account?.id, conversations]);
+        }, [account?.id, conversations.length]);
 
         // Live-update conversation list ordering and previews on new messages
+        // Use ref to prevent recreation on every conversation update
+        const messageSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
         useEffect(() => {
           if (!isHydrated || !account?.id || conversations.length === 0) return;
 
-          const unsubscribes: Array<() => void> = [];
+          const currentConvIds = new Set(conversations.map((c: any) => c.id));
+          const existingConvIds = new Set(messageSubscriptionsRef.current.keys());
+          
+          // Remove subscriptions for conversations that no longer exist
+          for (const convId of existingConvIds) {
+            if (!currentConvIds.has(convId)) {
+              const unsubscribe = messageSubscriptionsRef.current.get(convId);
+              if (unsubscribe) unsubscribe();
+              messageSubscriptionsRef.current.delete(convId);
+            }
+          }
+          
+          // Add subscriptions for new conversations
           conversations.forEach((conv: any) => {
-            const off = simpleChatService.subscribeToMessages(conv.id, (newMessage) => {
-              // Update last message preview and move conversation to top
-              const current = getConversations();
-              const updated = current.map((c: any) => {
-                if (c.id !== conv.id) return c;
-                const last = {
-                  id: newMessage.id,
-                  conversationId: conv.id,
-                  sender: newMessage.sender_id === account.id ? 'me' as const : 'them' as const,
-                  text: newMessage.text || '',
-                  createdAt: newMessage.created_at,
-                  read: newMessage.sender_id === account.id
-                };
-                return { ...c, messages: [...(c.messages || []), last] };
+            if (!messageSubscriptionsRef.current.has(conv.id)) {
+              const off = simpleChatService.subscribeToMessages(conv.id, (newMessage) => {
+                // Update last message preview and move conversation to top
+                const current = getConversations();
+                const updated = current.map((c: any) => {
+                  if (c.id !== conv.id) return c;
+                  const last = {
+                    id: newMessage.id,
+                    conversationId: conv.id,
+                    sender: newMessage.sender_id === account.id ? 'me' as const : 'them' as const,
+                    text: newMessage.text || '',
+                    createdAt: newMessage.created_at,
+                    read: newMessage.sender_id === account.id
+                  };
+                  return { ...c, messages: [...(c.messages || []), last] };
+                });
+                // Move the updated conversation to the top
+                const sorted = updated.sort((a: any, b: any) => {
+                  const at = a.messages.length ? new Date(a.messages[a.messages.length - 1].createdAt).getTime() : 0;
+                  const bt = b.messages.length ? new Date(b.messages[b.messages.length - 1].createdAt).getTime() : 0;
+                  return bt - at;
+                });
+                setConversations(sorted);
               });
-              // Move the updated conversation to the top
-              const sorted = updated.sort((a: any, b: any) => {
-                const at = a.messages.length ? new Date(a.messages[a.messages.length - 1].createdAt).getTime() : 0;
-                const bt = b.messages.length ? new Date(b.messages[b.messages.length - 1].createdAt).getTime() : 0;
-                return bt - at;
-              });
-              setConversations(sorted);
-            });
-            unsubscribes.push(off);
+              messageSubscriptionsRef.current.set(conv.id, off);
+            }
           });
 
           return () => {
-            unsubscribes.forEach(u => u());
+            // Cleanup all subscriptions on unmount
+            messageSubscriptionsRef.current.forEach(unsubscribe => unsubscribe());
+            messageSubscriptionsRef.current.clear();
           };
-        }, [isHydrated, account?.id, conversations]);
+        }, [isHydrated, account?.id, conversations.length]);
 
   // Using the new intuitive time formatting utility
-
-  const getLastMessage = (conversation: Conversation) => {
+  // Memoize helper functions to prevent recreation on every render
+  const getLastMessage = useCallback((conversation: Conversation) => {
     if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
     
@@ -159,9 +172,9 @@ export default function ChatLayout() {
     
     // If no text and no attachments, show "No messages yet"
     return "No messages yet";
-  };
+  }, []);
 
-  const getDisplayMessage = (conversation: Conversation) => {
+  const getDisplayMessage = useCallback((conversation: Conversation) => {
     // Check if anyone is typing in this chat
     const typingState = getChatTyping(conversation.id);
     
@@ -183,16 +196,16 @@ export default function ChatLayout() {
     
     // No one is typing - show normal last message
     return getLastMessage(conversation);
-  };
+  }, [getChatTyping, account?.id, getLastMessage]);
 
-  const getLastMessageTime = (conversation: { messages: Array<{ createdAt: string }> }) => {
+  const getLastMessageTime = useCallback((conversation: { messages: Array<{ createdAt: string }> }) => {
     if (!conversation.messages || conversation.messages.length === 0) return "";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
     return lastMessage.createdAt ? formatMessageTimeShort(lastMessage.createdAt) : "";
-  };
+  }, []);
 
-  // Category filtering
-  const getFilteredConversations = () => {
+  // Memoize filtered conversations to prevent recalculation on every render
+  const filteredConversations = useMemo(() => {
     const filtered = conversations.filter((conv: any) => 
       conv.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -207,26 +220,21 @@ export default function ChatLayout() {
       default:
         return filtered;
     }
-  };
+  }, [conversations, searchQuery, activeCategory]);
 
-  const filteredConversations = getFilteredConversations();
-
-  // Category counts
-  const getCategoryCounts = () => {
+  // Memoize category counts
+  const { unreadCount, dmCount, groupCount } = useMemo(() => {
     const unreadCount = conversations.filter((conv: any) => conv.unreadCount > 0).length;
     const dmCount = conversations.filter((conv: any) => !conv.isGroup).length;
     const groupCount = conversations.filter((conv: any) => conv.isGroup).length;
     
     return { unreadCount, dmCount, groupCount };
-  };
-
-  const { unreadCount, dmCount, groupCount } = getCategoryCounts();
+  }, [conversations]);
 
   // Fetch selected conversation from simple chat service
   useEffect(() => {
     const fetchSelectedConversation = async () => {
       if (selectedChatId) {
-        console.log('ChatLayout: Fetching conversation for chatId:', selectedChatId);
         const { chat } = await simpleChatService.getChatById(selectedChatId);
         if (chat && account?.id) {
           // Convert SimpleChat to Conversation format
@@ -243,10 +251,8 @@ export default function ChatLayout() {
             messages: []
           };
           setSelectedConversation(conversation);
-          console.log('ChatLayout: Set selected conversation:', conversation);
         } else {
           setSelectedConversation(null);
-          console.log('ChatLayout: No conversation found for chatId:', selectedChatId);
         }
       } else {
         setSelectedConversation(null);
@@ -266,7 +272,6 @@ export default function ChatLayout() {
 
   // Modal handlers
   const handleNewMessageComplete = (chatId: string) => {
-    console.log('ChatLayout: handleNewMessageComplete called with chatId:', chatId);
     setShowNewMessageSelector(false);
     setShowGroupSetup(false);
     // Refresh conversations to include the new chat
@@ -274,7 +279,6 @@ export default function ChatLayout() {
       loadConversations(account.id);
     }
     // Navigate to the chat within the same layout
-    console.log('Navigating to chat:', chatId);
     router.push(`/chat?chat=${chatId}`);
   };
 
@@ -299,8 +303,6 @@ export default function ChatLayout() {
   };
 
   const handleSelectChat = (chatId: string, e?: React.MouseEvent | React.TouchEvent) => {
-    console.log('🔥 handleSelectChat called with chatId:', chatId);
-    console.log('🔥 Window width:', typeof window !== 'undefined' ? window.innerWidth : 'N/A');
     
     if (e) {
       e.preventDefault();
@@ -310,15 +312,12 @@ export default function ChatLayout() {
     // Check if we're on mobile (screen width < 640px which is sm breakpoint)
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
     
-    console.log('🔥 isMobile:', isMobile);
     
     if (isMobile) {
       // On mobile, navigate to the individual chat page
-      console.log('🔥 Navigating to mobile chat page:', `/chat/individual?chat=${chatId}`);
       router.push(`/chat/individual?chat=${chatId}`);
     } else {
       // On desktop, stay on the main chat page with selected chat
-      console.log('🔥 Navigating to desktop chat page:', `/chat?chat=${chatId}`);
       router.push(`/chat?chat=${chatId}`);
     }
   };

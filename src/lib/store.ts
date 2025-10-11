@@ -121,11 +121,9 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 
   loadConversations: async (userId: string) => {
-    console.log('loadConversations called for user:', userId);
     
     // Don't try to load conversations if user is not authenticated
     if (!userId) {
-      console.log('No userId provided, skipping conversation loading');
       return;
     }
     
@@ -148,7 +146,6 @@ export const useAppStore = create<FullStore>((set, get) => ({
       
       // Convert SimpleChat to Conversation format - use last_message data that's now included
       const conversations: Conversation[] = chats.map((chat) => {
-        console.log('Converting chat:', chat.id, 'type:', chat.type, 'photo:', chat.photo);
         const otherParticipant = chat.participants.find(p => p.id !== userId);
         
         // Use the last_message data that's now loaded with the chat
@@ -178,7 +175,6 @@ export const useAppStore = create<FullStore>((set, get) => ({
         };
       });
       
-      console.log('Loaded conversations:', conversations.length);
       set({ conversations });
       const { personalProfile, businesses, context } = get();
       saveToLocalStorage({ personalProfile, businesses, context, conversations });
@@ -320,7 +316,6 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 
   clearConversations: () => {
-    console.log('Store: Clearing all conversations');
     set({ conversations: [] });
     const { personalProfile, businesses, context } = get();
     saveToLocalStorage({ personalProfile, businesses, context, conversations: [] });
@@ -328,7 +323,6 @@ export const useAppStore = create<FullStore>((set, get) => ({
 
   // Typing indicator actions
   updateChatTyping: (chatId: string, typingUsers: string[]) => {
-    console.log('Store: Updating typing state for chat:', chatId, 'users:', typingUsers);
     const { chatTypingStates } = get();
     const newTypingStates = new Map(chatTypingStates);
     
@@ -346,7 +340,6 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 
   clearChatTyping: (chatId: string) => {
-    console.log('Store: Clearing typing state for chat:', chatId);
     const { chatTypingStates } = get();
     const newTypingStates = new Map(chatTypingStates);
     newTypingStates.delete(chatId);
@@ -373,12 +366,10 @@ if (typeof window !== "undefined") {
           conversations: [], // Always start with empty conversations to load real data
           isHydrated: true, // Mark as hydrated after loading from localStorage
         });
-        console.log('✅ Store hydrated from localStorage');
       } else {
         useAppStore.setState({
           isHydrated: true, // Mark as hydrated even with empty state
         });
-        console.log('✅ Store hydrated with empty state');
       }
     } catch (error) {
       console.error('Error hydrating store:', error);
@@ -386,7 +377,6 @@ if (typeof window !== "undefined") {
       useAppStore.setState({
         isHydrated: true,
       });
-      console.log('✅ Store hydrated with error fallback');
     }
   }, 0);
 }

@@ -118,12 +118,10 @@ class SimpleChatService {
       this.chats.delete(chatId);
       this.chatMessages.delete(chatId);
       this.chatParticipants.delete(chatId);
-      console.log('SimpleChatService: Cleared cache for chat:', chatId);
     } else {
       this.chats.clear();
       this.chatMessages.clear();
       this.chatParticipants.clear();
-      console.log('SimpleChatService: Cleared all chat cache');
     }
   }
 
@@ -133,19 +131,16 @@ class SimpleChatService {
     this.userChats.clear();
     this.chatMessages.clear();
     this.userChatsTimestamp.clear();
-    console.log('SimpleChatService: Cleared all caches');
   }
 
   // Force refresh conversations (clear cache and reload)
   async forceRefreshConversations(userId: string) {
-    console.log('SimpleChatService: Force refreshing conversations for user:', userId);
     this.clearAllCaches();
     return await this.getUserChats(userId);
   }
 
   // Real-time messaging methods
   subscribeToMessages(chatId: string, onNewMessage: (message: SimpleMessage) => void): () => void {
-    console.log('SimpleChatService: Subscribing to messages for chat:', chatId);
     
     // Store the callback for fan-out
     if (!this.messageCallbacks.has(chatId)) {
@@ -167,7 +162,6 @@ class SimpleChatService {
           filter: `chat_id=eq.${chatId}`
         }, 
         async (payload) => {
-          console.log('SimpleChatService: New message received:', payload);
           
           // Get sender name from participants
           const chat = this.chats.get(chatId);
@@ -224,23 +218,19 @@ class SimpleChatService {
           const isDuplicateBySignature = nowMs - lastSeen < 2000; // 2s window
 
           if (!existingMessage && !isDuplicateById && !isDuplicateBySignature) {
-            console.log('SimpleChatService: Notifying callback for NEW message:', message.id);
             this.processedMessages.add(message.id);
             this.recentMessageSignatures.set(signatureKey, nowMs);
             const listeners = this.messageCallbacks.get(chatId);
             if (listeners) listeners.forEach(cb => cb(message));
           } else {
-            console.log('SimpleChatService: Skipping callback for duplicate message (id/signature):', message.id, isDuplicateBySignature);
           }
           
           // THEN stop typing indicator after a delay to allow smooth transition
           if (wasTyping && typingSet) {
-            console.log('SimpleChatService: Sender was typing, scheduling typing indicator removal');
             setTimeout(() => {
               typingSet.delete(payload.new.sender_id);
               const typingCallback = this.typingCallbacks.get(chatId);
               if (typingCallback) {
-                console.log('SimpleChatService: Stopping typing indicator for message sender:', payload.new.sender_id);
                 typingCallback(Array.from(typingSet));
               }
             }, 500); // Wait 500ms for smooth transition to complete
@@ -261,7 +251,6 @@ class SimpleChatService {
           this.messageCallbacks.delete(chatId);
           const sub = this.messageSubscriptions.get(chatId);
           if (sub) {
-            console.log('SimpleChatService: Unsubscribing channel for chat:', chatId);
             sub.unsubscribe();
           }
           this.messageSubscriptions.delete(chatId);
@@ -271,7 +260,6 @@ class SimpleChatService {
   }
 
   subscribeToTyping(chatId: string, userId: string, onTypingUpdate: (typingUsers: string[]) => void): () => void {
-    console.log('SimpleChatService: Subscribing to typing for chat:', chatId);
     
     // Initialize typing users set for this chat
     if (!this.typingUsers.has(chatId)) {
@@ -285,32 +273,26 @@ class SimpleChatService {
       .channel(`typing:${chatId}`)
       .on('presence', { event: 'sync' }, () => {
         const state = subscription.presenceState();
-        console.log('SimpleChatService: Presence sync state:', state);
-        console.log('SimpleChatService: Current userId:', userId);
         
         // Extract typing users from presence state
         // The key is a client ID, but we need the user_id from the presence data
         const typingUserIds: string[] = [];
         
         Object.entries(state).forEach(([clientKey, presences]: [string, any[]]) => {
-          console.log('SimpleChatService: Processing client:', clientKey, 'presences:', presences);
           
           if (presences && presences.length > 0) {
             const presence = presences[0];
             const presenceUserId = presence.user_id;
             const isTyping = presence.typing === true;
             
-            console.log('SimpleChatService: User ID:', presenceUserId, 'isTyping:', isTyping, 'current user:', userId);
             
             // Only include if typing and not the current user
             if (isTyping && presenceUserId && presenceUserId !== userId) {
-              console.log('SimpleChatService: Adding typing user:', presenceUserId);
               typingUserIds.push(presenceUserId);
             }
           }
         });
         
-        console.log('SimpleChatService: Final typing users (excluding self):', typingUserIds);
         
         // Update typing users
         const typingSet = this.typingUsers.get(chatId)!;
@@ -321,14 +303,12 @@ class SimpleChatService {
         onTypingUpdate(Array.from(typingSet));
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('SimpleChatService: Presence join event:', { key, newPresences });
         if (newPresences && newPresences[0]) {
           const presenceUserId = newPresences[0].user_id;
           const isTyping = newPresences[0].typing === true;
           
           // Only add if typing and not the current user
           if (isTyping && presenceUserId && presenceUserId !== userId) {
-            console.log('SimpleChatService: Adding typing user on join:', presenceUserId);
             const typingSet = this.typingUsers.get(chatId)!;
             typingSet.add(presenceUserId);
             onTypingUpdate(Array.from(typingSet));
@@ -336,12 +316,10 @@ class SimpleChatService {
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('SimpleChatService: Presence leave event:', { key, leftPresences });
         if (leftPresences && leftPresences[0]) {
           const presenceUserId = leftPresences[0].user_id;
           
           if (presenceUserId) {
-            console.log('SimpleChatService: Removing typing user on leave:', presenceUserId);
             const typingSet = this.typingUsers.get(chatId)!;
             typingSet.delete(presenceUserId);
             onTypingUpdate(Array.from(typingSet));
@@ -360,7 +338,6 @@ class SimpleChatService {
     this.typingSubscriptions.set(chatId, subscription);
     
     return () => {
-      console.log('SimpleChatService: Unsubscribing from typing for chat:', chatId);
       subscription.unsubscribe();
       this.typingSubscriptions.delete(chatId);
       this.typingUsers.delete(chatId);
@@ -370,28 +347,22 @@ class SimpleChatService {
 
   // Send typing indicator
   async sendTypingIndicator(chatId: string, userId: string, isTyping: boolean): Promise<void> {
-    console.log('SimpleChatService: sendTypingIndicator called:', { chatId, userId, isTyping });
     const subscription = this.typingSubscriptions.get(chatId);
-    console.log('SimpleChatService: Found subscription for chat:', !!subscription);
     if (!subscription) return;
 
     try {
       if (isTyping) {
-        console.log('SimpleChatService: Sending typing: true for user:', userId);
         await subscription.track({
           user_id: userId,
           typing: true,
           online_at: new Date().toISOString()
         });
-        console.log('SimpleChatService: Successfully sent typing: true');
       } else {
-        console.log('SimpleChatService: Sending typing: false for user:', userId);
         await subscription.track({
           user_id: userId,
           typing: false,
           online_at: new Date().toISOString()
         });
-        console.log('SimpleChatService: Successfully sent typing: false');
       }
     } catch (error) {
       console.error('SimpleChatService: Error sending typing indicator:', error);
@@ -400,7 +371,6 @@ class SimpleChatService {
 
   // Subscribe to reaction changes for real-time updates
   subscribeToReactions(chatId: string, onReactionUpdate: (messageId: string) => void): () => void {
-    console.log('SimpleChatService: Subscribing to reactions for chat:', chatId);
     
     const subscription = this.supabase
       .channel(`reactions:${chatId}`)
@@ -410,7 +380,6 @@ class SimpleChatService {
         table: 'message_reactions',
         filter: `message_id=in.(SELECT id FROM chat_messages WHERE chat_id=${chatId})`
       }, (payload) => {
-        console.log('SimpleChatService: Reaction change received:', payload);
         const messageId = payload.new?.message_id || payload.old?.message_id;
         if (messageId) {
           onReactionUpdate(messageId);
@@ -419,18 +388,15 @@ class SimpleChatService {
       .subscribe();
 
     return () => {
-      console.log('SimpleChatService: Unsubscribing from reactions for chat:', chatId);
       subscription.unsubscribe();
     };
   }
 
   // Cleanup all subscriptions
   cleanup() {
-    console.log('SimpleChatService: Cleaning up all subscriptions');
     
     // Unsubscribe from all message subscriptions
     this.messageSubscriptions.forEach((subscription, chatId) => {
-      console.log('SimpleChatService: Unsubscribing from messages for chat:', chatId);
       subscription.unsubscribe();
     });
     this.messageSubscriptions.clear();
@@ -438,7 +404,6 @@ class SimpleChatService {
     
     // Unsubscribe from all typing subscriptions
     this.typingSubscriptions.forEach((subscription, chatId) => {
-      console.log('SimpleChatService: Unsubscribing from typing for chat:', chatId);
       subscription.unsubscribe();
     });
     this.typingSubscriptions.clear();
@@ -454,7 +419,6 @@ class SimpleChatService {
   // Get user's contacts from the database (only actual connections)
   async getContacts(userId: string): Promise<{ contacts: any[]; error: Error | null }> {
     try {
-      console.log('SimpleChatService: Getting connections for user:', userId);
       
       // Get connections where the user is either user1 or user2
       const { data: connections, error: connectionsError } = await this.supabase
@@ -479,7 +443,6 @@ class SimpleChatService {
         return { contacts: [], error: connectionsError };
       }
 
-      console.log('SimpleChatService: Found connections:', connections?.length || 0);
 
       // Extract the connected user IDs (not the current user)
       const connectedUserIds = new Set<string>();
@@ -522,7 +485,6 @@ class SimpleChatService {
         a.name.localeCompare(b.name)
       );
 
-      console.log('SimpleChatService: Returning connected users:', contacts.length);
       return { contacts, error: null };
     } catch (error) {
       console.error('Error in getContacts:', error);
@@ -539,7 +501,6 @@ class SimpleChatService {
       const now = Date.now();
       
       if (cachedChats && cacheTimestamp && (now - cacheTimestamp) < this.CACHE_DURATION) {
-        console.log('SimpleChatService: Returning cached chats for user:', userId);
         return { chats: cachedChats, error: null };
       }
 
@@ -566,7 +527,6 @@ class SimpleChatService {
       }
 
       if (!userChats || userChats.length === 0) {
-        console.log('SimpleChatService: No chats found for user:', userId);
         return { chats: [], error: null };
       }
 
@@ -712,7 +672,6 @@ class SimpleChatService {
         const participants = allParticipants.get(chat.id) || [];
         const unreadCount = allUnreadCounts.get(chat.id) || 0;
 
-        console.log('SimpleChatService: Creating chat object for', chat.id, 'with photo:', chat.photo);
         // Get the last message if it was loaded
         const lastMessage = (chat as any).lastMessage;
         
@@ -738,7 +697,6 @@ class SimpleChatService {
       this.userChats.set(userId, chats);
       this.userChatsTimestamp.set(userId, Date.now());
       
-      console.log('SimpleChatService: getUserChats for user:', userId, 'loaded from Supabase:', chats.length, 'chats');
       return { chats, error: null };
     } catch (error) {
       console.error('Error in getUserChats:', error);
@@ -770,7 +728,6 @@ class SimpleChatService {
   // Find existing direct chat between two users
   async findExistingDirectChat(userId1: string, userId2: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
-      console.log('SimpleChatService: Looking for existing direct chat between:', userId1, 'and', userId2);
 
       // Query for direct chats where both users are participants
       const { data: chats, error } = await this.supabase
@@ -804,13 +761,11 @@ class SimpleChatService {
           // Found existing chat, convert to SimpleChat format
           const { chat: fullChat, error: chatError } = await this.getChatById(chat.id);
           if (!chatError && fullChat) {
-            console.log('SimpleChatService: Found existing chat:', chat.id);
             return { chat: fullChat, error: null };
           }
         }
       }
 
-      console.log('SimpleChatService: No existing chat found');
       return { chat: null, error: null };
     } catch (error) {
       console.error('Error in findExistingDirectChat:', error);
@@ -821,7 +776,6 @@ class SimpleChatService {
   // Create a direct chat (now saves to Supabase)
   async createDirectChat(otherUserId: string, currentUserId: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
-      console.log('SimpleChatService: Creating direct chat between:', currentUserId, 'and', otherUserId);
 
       // Create chat in Supabase
       const { data: chatData, error: chatError } = await this.supabase
@@ -876,8 +830,6 @@ class SimpleChatService {
       // Store the chat in memory
       this.chats.set(chatData.id, chat);
       
-      console.log('SimpleChatService: Created and saved chat to Supabase:', chat);
-      console.log('SimpleChatService: Total chats in memory:', this.chats.size);
       return { chat, error: null };
     } catch (error) {
       console.error('SimpleChatService: Error creating chat:', error);
@@ -888,7 +840,6 @@ class SimpleChatService {
   // Create a group chat
   async createGroupChat(name: string, participantIds: string[], photo?: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
-      console.log('SimpleChatService: Creating group chat:', name, 'with participants:', participantIds);
       
       // Create chat in Supabase
       const { data: chatData, error: chatError } = await this.supabase
@@ -953,8 +904,6 @@ class SimpleChatService {
 
       // Store in memory
       this.chats.set(chat.id, chat);
-      console.log('SimpleChatService: Created and saved group chat to Supabase:', chat);
-      console.log('SimpleChatService: Total chats in memory:', this.chats.size);
 
       return { chat, error: null };
     } catch (error) {
@@ -974,12 +923,10 @@ class SimpleChatService {
       // First check local cache
       const cachedChat = this.chats.get(chatId);
       if (cachedChat) {
-        console.log('SimpleChatService: getChatById from cache for:', chatId);
         return { chat: cachedChat, error: null };
       }
 
       // If not in cache, query the database
-      console.log('SimpleChatService: getChatById from database for:', chatId);
       
       // Get chat details
       const { data: chatData, error: chatError } = await this.supabase
@@ -1027,13 +974,10 @@ class SimpleChatService {
         last_message_at: chatData.last_message_at || undefined
       };
 
-      console.log('SimpleChatService: getChatById - chatData.photo:', chatData.photo);
-      console.log('SimpleChatService: getChatById - simpleChat.photo:', simpleChat.photo);
 
       // Cache the result
       this.chats.set(chatId, simpleChat);
 
-      console.log('SimpleChatService: getChatById found chat:', simpleChat.id);
       return { chat: simpleChat, error: null };
     } catch (error) {
       console.error('Error in getChatById:', error);
@@ -1047,7 +991,6 @@ class SimpleChatService {
       // Check cache first for instant loading
       const cachedMessages = this.chatMessages.get(chatId);
       if (cachedMessages) {
-        console.log('SimpleChatService: getChatMessages loaded from cache:', cachedMessages.length, 'messages');
         return { messages: cachedMessages, error: null };
       }
       
@@ -1080,14 +1023,7 @@ class SimpleChatService {
         const sender = chat.participants.find(p => p.id === msg.sender_id);
         
         // Debug: Log message data to see what's being loaded
-        if (msg.deleted_at) {
-          console.log('DEBUG: Found message with deleted_at:', {
-            id: msg.id,
-            text: msg.message_text,
-            deleted_at: msg.deleted_at,
-            sender_id: msg.sender_id
-          });
-        }
+        // (console.log removed for performance)
         
         return {
           id: msg.id,
@@ -1120,7 +1056,6 @@ class SimpleChatService {
       // Update in-memory chat with messages from Supabase
       chat.messages = messages;
       
-      console.log('SimpleChatService: getChatMessages for chat:', chatId, 'loaded from Supabase:', messages.length, 'messages');
       return { messages, error: null };
     } catch (error) {
       console.error('Error in getChatMessages:', error);
@@ -1145,7 +1080,6 @@ class SimpleChatService {
       // Remove from in-memory cache
       this.chats.delete(chatId);
       
-      console.log('SimpleChatService: Chat deleted:', chatId);
       return { success: true, error: null };
     } catch (error) {
       console.error('Error in deleteChat:', error);
@@ -1206,14 +1140,12 @@ class SimpleChatService {
       let chat = this.chats.get(chatId);
       if (!chat) {
         // Chat not in cache, try to load it
-        console.log('SimpleChatService: Chat not in cache, loading chat:', chatId);
         const { chat: loadedChat, error: loadError } = await this.getChatById(chatId);
         if (loadError || !loadedChat) {
           console.error('SimpleChatService: Failed to load chat:', loadError);
           return { message: null, error: new Error('Chat not found and could not be loaded') };
         }
         chat = loadedChat;
-        console.log('SimpleChatService: Successfully loaded chat:', chatId);
       }
 
       // Create optimistic message for instant UI feedback
@@ -1244,7 +1176,6 @@ class SimpleChatService {
       // Trigger immediate UI update for the sender
       const callbacks = this.messageCallbacks.get(chatId);
       if (callbacks && callbacks.size > 0) {
-        console.log('SimpleChatService: Triggering immediate optimistic callback for sender');
         callbacks.forEach(callback => callback(optimisticMessage));
       }
 
@@ -1303,7 +1234,6 @@ class SimpleChatService {
         this.chatMessages.set(chatId, cachedMessages);
       }
       
-      console.log('SimpleChatService: Message sent and saved to Supabase:', realMessage.id);
       return { message: realMessage, error: null };
     } catch (error) {
       console.error('Error in sendMessage:', error);
@@ -1430,7 +1360,6 @@ class SimpleChatService {
   // Get user's connections (friends) - bidirectional
   async getUserConnections(userId: string): Promise<{ connections: any[]; error: Error | null }> {
     try {
-      console.log('SimpleChatService: Getting user connections for:', userId);
       
       const { data, error } = await this.supabase
         .rpc('get_user_bidirectional_connections', {
@@ -1438,7 +1367,6 @@ class SimpleChatService {
           status_filter: 'accepted'
         });
 
-      console.log('SimpleChatService: getUserConnections result:', { data, error });
 
       if (error) {
         console.error('Error getting user connections:', error);
@@ -1600,7 +1528,6 @@ class SimpleChatService {
         throw new Error(`Database error: ${error.message}`);
       }
       
-      console.log('saveAttachments: Successfully saved', attachmentRecords.length, 'attachments for message', messageId);
     } catch (error) {
       console.error('Error in saveAttachments:', error);
       throw error;
@@ -1646,7 +1573,6 @@ class SimpleChatService {
         throw new Error(`Database error: ${error.message}`);
       }
       
-      console.log('getChatMedia: Retrieved', data?.length || 0, 'media items for chat', chatId);
       return data || [];
     } catch (error) {
       console.error('Error in getChatMedia:', error);

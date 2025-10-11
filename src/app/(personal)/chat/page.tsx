@@ -41,7 +41,6 @@ export default function MessagesPage() {
   useEffect(() => {
     const loadSpecificChat = async () => {
       if (selectedChatId && !selectedConversation && account?.id && isHydrated) {
-        console.log('Loading specific chat:', selectedChatId);
         try {
           const { chat, error } = await simpleChatService.getChatById(selectedChatId);
           if (error) {
@@ -83,11 +82,9 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (isHydrated && account?.id) {
-      console.log('Store hydrated, loading real conversations for user:', account.id);
       // Use real chat service
       loadConversations(account.id);
     } else if (isHydrated && !account?.id) {
-      console.log('Store hydrated but no user authenticated, skipping conversation loading');
     }
   }, [isHydrated, account?.id, loadConversations]);
 
@@ -118,12 +115,10 @@ export default function MessagesPage() {
 
       // Listen for focus events on input elements
       const handleInputFocus = () => {
-        console.log('Input focused - preventing page slide');
         preventPageSlide();
       };
 
       const handleInputBlur = () => {
-        console.log('Input blurred - restoring page slide');
         // Delay to ensure keyboard is fully hidden
         setTimeout(restorePageSlide, 300);
       };
@@ -147,22 +142,18 @@ export default function MessagesPage() {
 
   // Add another effect to log when conversations change
   useEffect(() => {
-    console.log('Conversations state changed:', conversations);
   }, [conversations]);
 
 
   // Modal handlers
   const handleNewMessageComplete = (chatId: string) => {
-    console.log('handleNewMessageComplete called with chatId:', chatId);
     setShowNewMessageModal(false);
     setShowGroupSetupModal(false);
     // Refresh conversations to include the new chat
     if (account?.id) {
-      console.log('Loading conversations for account:', account.id);
       loadConversations(account.id);
     }
     // Navigate to the main chat page (desktop layout)
-    console.log('Navigating to main chat:', `/chat?chat=${chatId}`);
     router.push(`/chat?chat=${chatId}`);
   };
 
@@ -175,7 +166,6 @@ export default function MessagesPage() {
     setShowNewMessageModal(true);
   };
 
-  console.log('Current conversations:', conversations);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -282,7 +272,6 @@ export default function MessagesPage() {
     }
   }, [isHydrated]);
 
-  console.log('Chat page render - isHydrated:', isHydrated);
 
 
   // Show chat content if authenticated
