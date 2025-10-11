@@ -9,8 +9,11 @@ import { useAppStore } from "@/lib/store";
 import { ArrowLeft } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import MessageActionModal from "@/components/chat/MessageActionModal";
-import MediaUploadButton from "@/components/chat/MediaUploadButton";
-import type { SimpleMessage } from "@/lib/simpleChatService";
+import MediaUploadButton, { UploadedMedia } from "@/components/chat/MediaUploadButton";
+import MediaPreview from "@/components/chat/MediaPreview";
+import GalleryModal from "@/components/chat/GalleryModal";
+import MediaViewer from "@/components/chat/MediaViewer";
+import type { SimpleMessage, MediaAttachment } from "@/lib/simpleChatService";
 
 export default function IndividualChatPage() {
   const router = useRouter();
@@ -38,8 +41,15 @@ export default function IndividualChatPage() {
   const [selectedMessage, setSelectedMessage] = useState<SimpleMessage | null>(null);
   const [selectedMessageElement, setSelectedMessageElement] = useState<HTMLElement | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
-  const [pendingMedia, setPendingMedia] = useState<string[]>([]);
+  const [pendingMedia, setPendingMedia] = useState<UploadedMedia[]>([]);
   const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
+  
+  // Media viewer states
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryMessage, setGalleryMessage] = useState<SimpleMessage | null>(null);
+  const [showMediaViewer, setShowMediaViewer] = useState(false);
+  const [viewerStartIndex, setViewerStartIndex] = useState(0);
+  const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]);
 
   // Simple mobile optimization - prevent body scroll
   useEffect(() => {
@@ -141,6 +151,15 @@ export default function IndividualChatPage() {
           setMessages(messages);
         }
 
+        // Load all chat media for the viewer
+        try {
+          const chatMedia = await simpleChatService.getChatMedia(chatId);
+          setAllChatMedia(chatMedia);
+        } catch (error) {
+          console.error('Failed to load chat media:', error);
+          // Don't fail the entire chat load if media loading fails
+        }
+
         setLoading(false);
 
         // Subscribe to reaction changes for real-time updates
@@ -197,11 +216,44 @@ export default function IndividualChatPage() {
 
   // Handle sending messages
   const handleSendMessage = async () => {
-    if (messageText.trim() && account?.id && conversation?.id) {
-      await sendMessage(conversation.id, messageText.trim(), account.id, replyToMessage?.id, pendingMedia.length > 0 ? pendingMedia : undefined);
-      setMessageText("");
-      setReplyToMessage(null);
-      setPendingMedia([]);
+    if ((messageText.trim() || pendingMedia.length > 0) && account?.id && conversation?.id) {
+      try {
+        // Create the message first
+        const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
+          conversation.id,
+          account.id,
+          messageText.trim(),
+          replyToMessage?.id
+        );
+
+        if (messageError || !newMessage) {
+          console.error('Failed to send message:', messageError);
+          return;
+        }
+
+        // Save attachments if any
+        if (pendingMedia.length > 0) {
+          try {
+            await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
+          } catch (attachmentError) {
+            console.error('Failed to save attachments:', attachmentError);
+            // Continue anyway - the message was sent successfully
+          }
+        }
+
+        // Clear the form
+        setMessageText("");
+        setReplyToMessage(null);
+        setPendingMedia([]);
+
+        // Refresh messages to show the new message with attachments
+        const { messages: updatedMessages } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        if (updatedMessages) {
+          setMessages(updatedMessages);
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
     }
   };
 
@@ -231,8 +283,32 @@ export default function IndividualChatPage() {
     }
   };
 
-  const handleMediaSelected = (urls: string[]) => {
-    setPendingMedia(urls);
+  const handleMediaSelected = (media: UploadedMedia[]) => {
+    setPendingMedia(media);
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    setPendingMedia(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAttachmentClick = (message: SimpleMessage) => {
+    setGalleryMessage(message);
+    setShowGallery(true);
+  };
+
+  const handleGalleryImageClick = (index: number) => {
+    // Find the starting index in allChatMedia for this message's attachments
+    let startIndex = 0;
+    for (let i = 0; i < allChatMedia.length; i++) {
+      if (allChatMedia[i].id === galleryMessage?.attachments?.[0]?.id) {
+        startIndex = i;
+        break;
+      }
+    }
+    
+    setViewerStartIndex(startIndex + index);
+    setShowMediaViewer(true);
+    setShowGallery(false);
   };
 
   const cancelReply = () => {
@@ -467,6 +543,15 @@ export default function IndividualChatPage() {
         </div>
       )}
 
+      {/* Media Preview */}
+      {pendingMedia.length > 0 && (
+        <div className="fixed left-0 right-0 z-30 px-4" style={{ bottom: '80px' }}>
+          <MediaPreview 
+            pendingMedia={pendingMedia}
+            onRemove={handleRemoveMedia}
+          />
+        </div>
+      )}
 
       {/* Fixed Input */}
       <div 
@@ -490,48 +575,10 @@ export default function IndividualChatPage() {
         }}
       >
         <div className="flex items-center gap-3">
-          {/* Add/Media Button - White card with icon */}
-          <button
-            onClick={() => {
-              const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-              fileInput?.click();
-            }}
-            className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-gray-900 hover:bg-gray-50 transition-colors border-[0.4px] border-[#E5E7EB]"
-            title="Add photos or videos"
-            style={{
-              boxShadow: `
-                0 0 1px rgba(100, 100, 100, 0.25),
-                inset 0 0 2px rgba(27, 27, 27, 0.25)
-              `
-            }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
-          
-          {/* Hidden file input for media upload */}
-          <input
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            onChange={async (event) => {
-              const files = event.target.files;
-              if (!files || files.length === 0) return;
-
-              try {
-                const urls: string[] = [];
-                for (const file of Array.from(files)) {
-                  // Simple file handling - you can enhance this with actual upload logic
-                  const url = URL.createObjectURL(file);
-                  urls.push(url);
-                }
-                handleMediaSelected(urls);
-              } catch (error) {
-                console.error('Media selection error:', error);
-              }
-            }}
-            className="hidden"
+          {/* Add Media Button */}
+          <MediaUploadButton 
+            onMediaSelected={handleMediaSelected}
+            disabled={false}
           />
           
           {/* Input field - 44px height with centered text */}
@@ -633,6 +680,7 @@ export default function IndividualChatPage() {
                 onLongPress={handleMessageLongPress}
                 onReactionClick={handleReact}
                 onProfileClick={(userId) => router.push(`/chat/profile?user=${userId}`)}
+                onAttachmentClick={handleAttachmentClick}
               />
             </div>
           );
@@ -653,6 +701,22 @@ export default function IndividualChatPage() {
         onDelete={handleDelete}
         onReact={handleReact}
         isMe={selectedMessage?.sender_id === account?.id}
+      />
+
+      {/* Gallery Modal */}
+      <GalleryModal 
+        isOpen={showGallery}
+        message={galleryMessage}
+        onClose={() => setShowGallery(false)}
+        onImageClick={handleGalleryImageClick}
+      />
+
+      {/* Media Viewer */}
+      <MediaViewer
+        isOpen={showMediaViewer}
+        allMedia={allChatMedia}
+        initialIndex={viewerStartIndex}
+        onClose={() => setShowMediaViewer(false)}
       />
 
     </div>

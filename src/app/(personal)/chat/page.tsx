@@ -5,6 +5,7 @@ import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
 import MobileTitle from "@/components/MobileTitle";
 import { useAppStore } from "@/lib/store";
+import type { Conversation } from "@/lib/types";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChatLayout from "./ChatLayout";
 import PersonalChatPanel from "./PersonalChatPanel";
@@ -195,9 +196,29 @@ export default function MessagesPage() {
     }
   };
 
-  const getLastMessage = (conversation: { messages: Array<{ text: string }> }) => {
+  const getLastMessage = (conversation: Conversation) => {
     if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
+    
+    // Check if message has attachments
+    if (lastMessage.attachments && lastMessage.attachments.length > 0) {
+      const attachment = lastMessage.attachments[0];
+      const mediaType = attachment.file_type === 'video' ? 'video' : 'photo';
+      const mediaIcon = attachment.file_type === 'video' ? '🎥' : '📷';
+      
+      // For group chats, include sender name
+      if (conversation.isGroup && lastMessage.senderName) {
+        return `${lastMessage.senderName}: ${mediaIcon} ${mediaType}`;
+      }
+      
+      return `${mediaIcon} ${mediaType}`;
+    }
+    
+    // For text messages in group chats, include sender name
+    if (conversation.isGroup && lastMessage.senderName && lastMessage.text) {
+      return `${lastMessage.senderName}: ${lastMessage.text}`;
+    }
+    
     return lastMessage.text || "No messages yet";
   };
 
@@ -248,51 +269,14 @@ export default function MessagesPage() {
     { id: "group", label: "Groups", count: mobileGroupCount },
   ];
 
-  // Show loading state while store is hydrating - with aggressive timeout
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  
+  // Force hydration immediately to prevent loading state issues
   useEffect(() => {
-    // Immediate timeout check
     if (!isHydrated) {
-      const timeout = setTimeout(() => {
-        console.log('Chat page: Loading timeout reached, forcing hydration');
-        setLoadingTimeout(true);
-        useAppStore.setState({ isHydrated: true });
-      }, 1000); // 1 second timeout
-
-      return () => clearTimeout(timeout);
+      useAppStore.setState({ isHydrated: true });
     }
   }, [isHydrated]);
 
-  // Force hydration immediately on mount if not hydrated
-  useEffect(() => {
-    if (!isHydrated) {
-      const immediateTimeout = setTimeout(() => {
-        console.log('Chat page: Immediate hydration check');
-        if (!isHydrated) {
-          console.log('Chat page: Force setting isHydrated to true immediately');
-          useAppStore.setState({ isHydrated: true });
-          setLoadingTimeout(true);
-        }
-      }, 500); // 500ms immediate check
-
-      return () => clearTimeout(immediateTimeout);
-    }
-  }, []);
-
-  console.log('Chat page render - isHydrated:', isHydrated, 'loadingTimeout:', loadingTimeout);
-
-  // Show loading only for a very brief moment
-  if (!isHydrated && !loadingTimeout) {
-    return (
-      <div className="flex h-screen bg-white items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="text-gray-500">Loading chats...</p>
-        </div>
-      </div>
-    );
-  }
+  console.log('Chat page render - isHydrated:', isHydrated);
 
 
   // Show chat content if authenticated
@@ -365,12 +349,18 @@ export default function MessagesPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search"
-                  className="w-full pl-10 pr-4 py-3 bg-white rounded-xl focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors shadow-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-white rounded-xl focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-all duration-200"
                   style={{
                     fontSize: '16px', // Prevents zoom on iOS
                     WebkitAppearance: 'none',
-                    WebkitTapHighlightColor: 'transparent'
+                    WebkitTapHighlightColor: 'transparent',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                   }}
+                  onFocus={(e) => e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'}
+                  onBlur={(e) => e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'}
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,11 +378,16 @@ export default function MessagesPage() {
                   <button
                     key={category.id}
                     onClick={() => setMobileActiveCategory(category.id)}
-                    className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-colors focus:outline-none shadow-sm ${
-                      mobileActiveCategory === category.id
-                        ? 'bg-white text-neutral-900'
-                        : 'bg-white text-neutral-700'
-                    }`}
+                    className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: mobileActiveCategory === category.id ? '#D1D5DB' : '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: mobileActiveCategory === category.id 
+                        ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      color: mobileActiveCategory === category.id ? '#111827' : '#374151'
+                    }}
                   >
                     <span className="text-sm font-medium leading-none">{category.label}</span>
                     {category.count !== null && (
@@ -427,11 +422,17 @@ export default function MessagesPage() {
                       e.stopPropagation();
                       router.push(`/chat?chat=${conversation.id}`);
                     }}
-                    className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white border border-gray-200 ${
-                      selectedChatId === conversation.id
-                        ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]'
-                        : 'shadow-sm hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'
-                    }`}
+                    className="p-4 rounded-xl cursor-pointer transition-all duration-200 bg-white"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: selectedChatId === conversation.id ? '#D1D5DB' : '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: selectedChatId === conversation.id 
+                        ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent'
+                    }}
                   >
                     <div className="flex items-center space-x-3">
                       <Avatar

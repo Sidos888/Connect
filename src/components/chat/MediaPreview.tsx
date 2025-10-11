@@ -1,0 +1,118 @@
+"use client";
+
+import { UploadedMedia } from "./MediaUploadButton";
+import { X } from "lucide-react";
+
+interface MediaPreviewProps {
+  pendingMedia: UploadedMedia[];
+  onRemove: (index: number) => void;
+}
+
+export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewProps) {
+  if (pendingMedia.length === 0) return null;
+
+  console.log('MediaPreview rendering with:', JSON.stringify(pendingMedia, null, 2));
+  console.log('MediaPreview URLs:', pendingMedia.map(m => ({ 
+    file_url: m.file_url, 
+    file_type: m.file_type,
+    thumbnail_url: m.thumbnail_url 
+  })));
+
+  return (
+    <div className="mb-4">
+      <div className="flex gap-2 flex-wrap">
+        {pendingMedia.map((media, index) => (
+          <div
+            key={index}
+            className="relative w-12 h-12 rounded-lg overflow-hidden bg-white flex-shrink-0 border border-gray-200"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              minWidth: '48px',
+              minHeight: '48px',
+              maxWidth: '48px',
+              maxHeight: '48px'
+            }}
+          >
+            {/* Media preview - fills entire square */}
+            <div className="w-full h-full relative">
+              {media.file_type === 'video' ? (
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center relative">
+                  {media.thumbnail_url ? (
+                    <>
+                      <img
+                        src={media.thumbnail_url}
+                        alt="Video thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Play icon overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-4 h-4 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                          <svg className="w-2 h-2 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-gray-400">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full h-full relative">
+                  <img
+                    src={media.file_url}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-xl"
+                    style={{
+                      imageRendering: 'auto',
+                      backfaceVisibility: 'hidden'
+                    }}
+                    title={`Image: ${media.file_url}`}
+                    onLoad={() => {
+                      console.log('✅ Image loaded successfully:', media.file_url);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ Failed to load image:', media.file_url);
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      
+                      // Show error placeholder
+                      const placeholder = target.parentElement?.querySelector('.error-placeholder');
+                      if (placeholder) {
+                        (placeholder as HTMLElement).style.display = 'flex';
+                      }
+                    }}
+                  />
+                  {/* Error placeholder */}
+                  <div className="error-placeholder absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center text-gray-500 rounded-xl" style={{ display: 'none' }}>
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                    </svg>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Remove button */}
+            <button
+              onClick={() => onRemove(index)}
+              className="absolute top-0.5 right-0.5 w-4 h-4 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all"
+              style={{
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+              }}
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

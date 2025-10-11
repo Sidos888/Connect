@@ -66,25 +66,25 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   const { title: displayTitle, description: displayDescription, buttonText: displayButtonText } = getCustomMessages();
 
-  // Add aggressive timeout to prevent infinite loading
+  // Add timeout to prevent infinite loading - more reasonable timing
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!isHydrated || loading) {
         console.log('ProtectedRoute: Loading timeout reached, forcing stop');
         setLoadingTimeout(true);
       }
-    }, 1000); // 1 second timeout - very aggressive
+    }, 5000); // 5 second timeout - more reasonable
 
     return () => clearTimeout(timeout);
   }, [isHydrated, loading]);
 
-  // Force immediate timeout if hydration takes too long
+  // Force timeout if hydration takes too long - more reasonable timing
   useEffect(() => {
     if (!isHydrated) {
       const immediateTimeout = setTimeout(() => {
-        console.log('ProtectedRoute: Immediate timeout - forcing hydration');
+        console.log('ProtectedRoute: Hydration timeout - forcing hydration');
         setLoadingTimeout(true);
-      }, 500); // 500ms immediate timeout
+      }, 3000); // 3 second timeout - more reasonable
 
       return () => clearTimeout(immediateTimeout);
     }

@@ -17,16 +17,28 @@ export interface SimpleChat {
   unreadCount: number;
 }
 
+export interface MediaAttachment {
+  id: string;
+  file_url: string;
+  file_type: 'image' | 'video';
+  file_size?: number;
+  thumbnail_url?: string;
+  width?: number;
+  height?: number;
+}
+
 export interface SimpleMessage {
   id: string;
   chat_id: string;
   sender_id: string;
   sender_name: string;
+  sender_profile_pic?: string;
   text: string;
   created_at: string;
   reply_to_message_id?: string | null;
   reply_to_message?: SimpleMessage | null;
-  media_urls?: string[];
+  media_urls?: string[]; // Keep for backward compatibility
+  attachments?: MediaAttachment[]; // New structured attachments
   reactions?: MessageReaction[];
   deleted_at?: string | null;
 }
@@ -157,6 +169,7 @@ class SimpleChatService {
             chat_id: payload.new.chat_id,
             sender_id: payload.new.sender_id,
             sender_name: sender?.name || 'Unknown',
+            sender_profile_pic: sender?.profile_pic || undefined,
             text: payload.new.message_text,
             created_at: payload.new.created_at,
             reply_to_message_id: payload.new.reply_to_message_id || null,
@@ -640,23 +653,32 @@ class SimpleChatService {
               unreadCount = (!unreadError && count !== null) ? count : 0;
             }
 
-            // Get last message
+            // Get last message with attachments (only non-deleted messages)
             const { data: lastMessageData, error: lastMessageError } = await this.supabase
               .from('chat_messages')
-              .select('id, message_text, sender_id, created_at')
+              .select(`
+                id, message_text, sender_id, created_at,
+                attachments:attachments(id, file_url, file_type, file_size, thumbnail_url, width, height, created_at)
+              `)
               .eq('chat_id', chatId)
+              .is('deleted_at', null)
               .order('created_at', { ascending: false })
               .limit(1)
               .single();
 
             if (!lastMessageError && lastMessageData) {
+              // Get sender name from participants
+              const sender = allParticipants.get(chatId)?.find(p => p.id === lastMessageData.sender_id);
+              const senderName = lastMessageData.sender_id === userId ? 'You' : (sender?.name || 'Unknown');
+              
               lastMessage = {
                 id: lastMessageData.id,
                 chat_id: chatId,
                 sender_id: lastMessageData.sender_id,
-                sender_name: lastMessageData.sender_id === userId ? 'You' : 'Other',
+                sender_name: senderName,
                 text: lastMessageData.message_text,
-                created_at: lastMessageData.created_at
+                created_at: lastMessageData.created_at,
+                attachments: lastMessageData.attachments || []
               };
             }
             
@@ -1025,13 +1047,14 @@ class SimpleChatService {
         return { messages: [], error: new Error('Chat not found') };
       }
 
-      // Load messages from Supabase with reactions and reply data
+      // Load messages from Supabase with reactions, reply data, and attachments
       const { data: messagesData, error: fetchError } = await this.supabase
         .from('chat_messages')
         .select(`
           *,
           reply_to:chat_messages!reply_to_message_id(id, message_text, sender_id),
-          reactions:message_reactions(id, user_id, emoji, created_at)
+          reactions:message_reactions(id, user_id, emoji, created_at),
+          attachments:attachments(id, file_url, file_type, file_size, thumbnail_url, width, height, created_at)
         `)
         .eq('chat_id', chatId)
         .is('deleted_at', null)
@@ -1043,26 +1066,34 @@ class SimpleChatService {
       }
 
       // Convert Supabase messages to SimpleMessage format
-      const messages: SimpleMessage[] = (messagesData || []).map(msg => ({
-        id: msg.id,
-        chat_id: msg.chat_id,
-        sender_id: msg.sender_id,
-        sender_name: msg.sender_id === userId ? 'You' : 'Other',
-        text: msg.message_text || '',
-        created_at: msg.created_at,
-        reply_to_message_id: msg.reply_to_message_id || null,
-        reply_to_message: (msg.reply_to && msg.reply_to.id) ? {
-          id: msg.reply_to.id,
+      const messages: SimpleMessage[] = (messagesData || []).map(msg => {
+        // Get sender info from chat participants
+        const sender = chat.participants.find(p => p.id === msg.sender_id);
+        
+        return {
+          id: msg.id,
           chat_id: msg.chat_id,
-          sender_id: msg.reply_to.sender_id,
-          sender_name: msg.reply_to.sender_id === userId ? 'You' : 'Other',
-          text: msg.reply_to.message_text || '',
-          created_at: msg.created_at
-        } : null,
-        media_urls: msg.media_urls || undefined,
-        reactions: msg.reactions || [],
-        deleted_at: msg.deleted_at || null
-      }));
+          sender_id: msg.sender_id,
+          sender_name: sender?.name || (msg.sender_id === userId ? 'You' : 'Other'),
+          sender_profile_pic: sender?.profile_pic || undefined,
+          text: msg.message_text || '',
+          created_at: msg.created_at,
+          reply_to_message_id: msg.reply_to_message_id || null,
+          reply_to_message: (msg.reply_to && msg.reply_to.id) ? {
+            id: msg.reply_to.id,
+            chat_id: msg.chat_id,
+            sender_id: msg.reply_to.sender_id,
+            sender_name: msg.reply_to.sender_id === userId ? 'You' : 'Other',
+            sender_profile_pic: undefined, // We'd need to fetch this separately if needed
+            text: msg.reply_to.message_text || '',
+            created_at: msg.created_at
+          } : null,
+          media_urls: msg.media_urls || undefined,
+          attachments: msg.attachments || [],
+          reactions: msg.reactions || [],
+          deleted_at: msg.deleted_at || null
+        };
+      });
 
       // Cache the messages for instant future access
       this.chatMessages.set(chatId, messages);
@@ -1172,6 +1203,7 @@ class SimpleChatService {
         chat_id: chatId,
         sender_id: senderId,
         sender_name: 'You',
+        sender_profile_pic: undefined, // Current user's profile pic will be handled by Avatar component
         text: messageText,
         created_at: new Date().toISOString(),
         reply_to_message_id: replyToMessageId || null,
@@ -1232,6 +1264,7 @@ class SimpleChatService {
         chat_id: chatId,
         sender_id: senderId,
         sender_name: 'You',
+        sender_profile_pic: undefined, // Current user's profile pic will be handled by Avatar component
         text: messageText,
         created_at: messageData.created_at,
         reply_to_message_id: messageData.reply_to_message_id || null,
@@ -1516,6 +1549,89 @@ class SimpleChatService {
     } catch (error) {
       console.error('Error in updateGroupProfile:', error);
       return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // Attachment methods
+  async saveAttachments(messageId: string, attachments: Array<{
+    file_url: string;
+    file_type: 'image' | 'video';
+    file_size: number;
+    thumbnail_url?: string;
+    width?: number;
+    height?: number;
+  }>): Promise<void> {
+    try {
+      const attachmentRecords = attachments.map(att => ({
+        message_id: messageId,
+        file_url: att.file_url,
+        file_type: att.file_type,
+        file_size: att.file_size,
+        thumbnail_url: att.thumbnail_url,
+        width: att.width,
+        height: att.height
+      }));
+      
+      const { error } = await this.supabase
+        .from('attachments')
+        .insert(attachmentRecords);
+        
+      if (error) {
+        console.error('Supabase error in saveAttachments:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+      
+      console.log('saveAttachments: Successfully saved', attachmentRecords.length, 'attachments for message', messageId);
+    } catch (error) {
+      console.error('Error in saveAttachments:', error);
+      throw error;
+    }
+  }
+
+  async getMessageAttachments(messageIds: string[]): Promise<Map<string, MediaAttachment[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from('attachments')
+        .select('*')
+        .in('message_id', messageIds);
+        
+      if (error) {
+        console.error('Supabase error in getMessageAttachments:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+      
+      // Group by message_id
+      const grouped = new Map<string, MediaAttachment[]>();
+      data?.forEach(att => {
+        if (!grouped.has(att.message_id)) grouped.set(att.message_id, []);
+        grouped.get(att.message_id)!.push(att);
+      });
+      
+      return grouped;
+    } catch (error) {
+      console.error('Error in getMessageAttachments:', error);
+      throw error;
+    }
+  }
+
+  async getChatMedia(chatId: string): Promise<MediaAttachment[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('attachments')
+        .select('*, chat_messages!inner(chat_id, created_at)')
+        .eq('chat_messages.chat_id', chatId)
+        .order('created_at', { ascending: true });
+        
+      if (error) {
+        console.error('Supabase error in getChatMedia:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+      
+      console.log('getChatMedia: Retrieved', data?.length || 0, 'media items for chat', chatId);
+      return data || [];
+    } catch (error) {
+      console.error('Error in getChatMedia:', error);
+      throw error;
     }
   }
 }

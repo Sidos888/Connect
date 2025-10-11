@@ -66,7 +66,18 @@ export type Message = {
   id: UUID;
   conversationId: UUID;
   sender: "me" | "them";
+  senderId?: string;
+  senderName?: string;
   text: string;
+  attachments?: Array<{
+    id: string;
+    file_url: string;
+    file_type: 'image' | 'video';
+    file_size?: number;
+    thumbnail_url?: string;
+    width?: number;
+    height?: number;
+  }>;
   createdAt: string; // ISO
   read?: boolean;
 };

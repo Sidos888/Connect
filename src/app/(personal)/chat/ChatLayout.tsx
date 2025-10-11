@@ -129,9 +129,29 @@ export default function ChatLayout() {
 
   // Using the new intuitive time formatting utility
 
-  const getLastMessage = (conversation: { messages: Array<{ text: string }> }) => {
+  const getLastMessage = (conversation: Conversation) => {
     if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
     const lastMessage = conversation.messages[conversation.messages.length - 1];
+    
+    // Check if message has attachments
+    if (lastMessage.attachments && lastMessage.attachments.length > 0) {
+      const attachment = lastMessage.attachments[0];
+      const mediaType = attachment.file_type === 'video' ? 'video' : 'photo';
+      const mediaIcon = attachment.file_type === 'video' ? '🎥' : '📷';
+      
+      // For group chats, include sender name
+      if (conversation.isGroup && lastMessage.senderName) {
+        return `${lastMessage.senderName}: ${mediaIcon} ${mediaType}`;
+      }
+      
+      return `${mediaIcon} ${mediaType}`;
+    }
+    
+    // For text messages in group chats, include sender name
+    if (conversation.isGroup && lastMessage.senderName && lastMessage.text) {
+      return `${lastMessage.senderName}: ${lastMessage.text}`;
+    }
+    
     return lastMessage.text || "No messages yet";
   };
 
@@ -336,137 +356,8 @@ export default function ChatLayout() {
           />
         ) : (
           <>
-            {/* Mobile Layout - Similar to My Life */}
-            <div className="lg:hidden min-h-screen bg-white">
-              {console.log('🔥 MOBILE LAYOUT RENDERING - This should show new card styling')}
-              {/* Mobile Title - Same as My Life */}
-              <div 
-                className="fixed top-0 left-0 right-0 z-50"
-                style={{ zIndex: 60, backgroundColor: 'white' }}
-              >
-                <div className="pt-safe-top px-4 pb-2 pt-8 bg-white h-[96px] flex items-end">
-                  <div className="flex items-center justify-between w-full h-full">
-                    <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
-                    <div className="flex items-center justify-center h-full min-w-[40px] relative z-10">
-                      <button onClick={handleNewMessageClick} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                        <Plus className="w-5 h-5 text-gray-600" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content Area - Same structure as My Life */}
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-[120px] lg:pt-6">
-                {/* Search Bar - Same position as My Life profile card */}
-                <div className="mb-4 lg:mb-8">
-                  <div className="max-w-lg mx-auto lg:max-w-xl">
-                    <div className="relative">
-                      <input 
-                        type="text" 
-                        value={searchQuery} 
-                        onChange={(e) => setSearchQuery(e.target.value)} 
-                        placeholder="Search" 
-                        className="w-full pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-all duration-200"
-                        style={{
-                          backgroundColor: 'white',
-                          borderWidth: '0.4px',
-                          borderColor: '#E5E7EB',
-                          borderStyle: 'solid',
-                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                        }}
-                        onFocus={(e) => { 
-                          setIsSearchFocused(true);
-                          // Apply selected design styling
-                          e.target.style.setProperty('background-color', 'white', 'important');
-                          e.target.style.setProperty('border-width', '0.8px', 'important');
-                          e.target.style.setProperty('border-color', '#D1D5DB', 'important');
-                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
-                        }} 
-                        onBlur={(e) => { 
-                          setIsSearchFocused(false);
-                          // Apply unselected design styling
-                          e.target.style.setProperty('background-color', 'white', 'important');
-                          e.target.style.setProperty('border-width', '0.4px', 'important');
-                          e.target.style.setProperty('border-color', '#E5E7EB', 'important');
-                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', 'important');
-                        }} 
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Category Pills */}
-                <div className="mb-4">
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
-                    {categories.map((category) => (
-                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none ${activeCategory === category.id ? 'border-[0.8px] border-[#D1D5DB] bg-white text-neutral-900' : 'border-[0.4px] border-[#E5E7EB] bg-white text-neutral-700'}`} style={{ boxShadow: activeCategory === category.id ? `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)` : `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)` }}>
-                        <span className="text-sm font-medium leading-none">{category.label}</span>
-                        {category.count !== null && (
-                          <span className={`ml-2 text-xs leading-none ${activeCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Chat List */}
-                <div className="px-4 space-y-2">
-                  {filteredConversations.map((conversation: any) => {
-                    console.log('🔥 Mobile card rendering:', conversation.id, 'with new styling');
-                    return (
-                    <div 
-                      key={conversation.id} 
-                      onClick={(e) => {
-                        console.log('🎯 Mobile card clicked:', conversation.id);
-                        handleSelectChat(conversation.id, e);
-                      }}
-                      onTouchEnd={(e) => {
-                        console.log('🎯 Mobile card touched:', conversation.id);
-                        e.preventDefault();
-                        handleSelectChat(conversation.id);
-                      }}
-                      className={`p-4 rounded-xl cursor-pointer transition-all duration-200 bg-white ${selectedChatId === conversation.id ? 'border-[0.8px] border-[#D1D5DB] shadow-[0_0_12px_rgba(0,0,0,0.15)]' : 'border-[0.4px] border-[#E5E7EB] hover:shadow-[0_0_16px_rgba(0,0,0,0.18)]'}`}
-                      style={{
-                        boxShadow: selectedChatId === conversation.id ? `
-                          0 2px 8px rgba(0, 0, 0, 0.12),
-                          0 1px 3px rgba(0, 0, 0, 0.08)
-                        ` : `
-                          0 2px 4px rgba(0, 0, 0, 0.06),
-                          0 1px 2px rgba(0, 0, 0, 0.04)
-                        `,
-                        touchAction: 'manipulation',
-                        WebkitTapHighlightColor: 'transparent'
-                      }}
-                    >
-                      <div className="flex items-center space-x-3 pointer-events-none">
-                        <Avatar src={conversation.avatarUrl} name={conversation.title} size={48} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.title}</h3>
-                            <span className="text-xs text-gray-500">{getLastMessageTime(conversation)}</span>
-                          </div>
-                          <p className="text-sm text-gray-500 truncate mt-1">{getDisplayMessage(conversation) || 'No messages yet'}</p>
-                        </div>
-                        {conversation.unreadCount > 0 && (
-                          <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{conversation.unreadCount}</div>
-                        )}
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Layout - Keep existing */}
+            {/* Desktop Layout */}
             <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full min-h-0 relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
-              {console.log('🔥 DESKTOP LAYOUT RENDERING - This should show new card styling')}
               {/* Unified scroll container with sticky header */}
               <div className="flex-1 overflow-y-auto no-scrollbar min-h-0" style={{ height: 'calc(100vh - 0px)' }}>
                 {/* Sticky header */}
@@ -487,30 +378,17 @@ export default function ChatLayout() {
                         value={searchQuery} 
                         onChange={(e) => setSearchQuery(e.target.value)} 
                         placeholder="Search" 
-                        className="w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-all duration-200"
+                        className="w-full pl-10 pr-4 py-2 rounded-xl focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-all duration-200 bg-white"
                         style={{
-                          backgroundColor: 'white',
                           borderWidth: '0.4px',
                           borderColor: '#E5E7EB',
                           borderStyle: 'solid',
-                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                        }} 
-                        onFocus={(e) => { 
-                          setIsSearchFocused(true);
-                          // Apply selected design styling
-                          e.target.style.setProperty('background-color', 'white', 'important');
-                          e.target.style.setProperty('border-width', '0.8px', 'important');
-                          e.target.style.setProperty('border-color', '#D1D5DB', 'important');
-                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
-                        }} 
-                        onBlur={(e) => { 
-                          setIsSearchFocused(false);
-                          // Apply unselected design styling
-                          e.target.style.setProperty('background-color', 'white', 'important');
-                          e.target.style.setProperty('border-width', '0.4px', 'important');
-                          e.target.style.setProperty('border-color', '#E5E7EB', 'important');
-                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', 'important');
-                        }} 
+                          boxShadow: isSearchFocused 
+                            ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        }}
+                        onFocus={() => setIsSearchFocused(true)} 
+                        onBlur={() => setIsSearchFocused(false)} 
                       />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -524,7 +402,20 @@ export default function ChatLayout() {
                 <div className="px-4 py-3 bg-white mb-1">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                     {categories.map((category) => (
-                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none ${activeCategory === category.id ? 'border-[0.8px] border-[#D1D5DB] bg-white text-neutral-900' : 'border-[0.4px] border-[#E5E7EB] bg-white text-neutral-700'}`} style={{ boxShadow: activeCategory === category.id ? `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)` : `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)` }}>
+                      <button 
+                        key={category.id} 
+                        onClick={() => setActiveCategory(category.id)} 
+                        className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: activeCategory === category.id ? '#D1D5DB' : '#E5E7EB',
+                          borderStyle: 'solid',
+                          boxShadow: activeCategory === category.id 
+                            ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          color: activeCategory === category.id ? '#111827' : '#374151'
+                        }}
+                      >
                         <span className="text-sm font-medium leading-none">{category.label}</span>
                         {category.count !== null && (
                           <span className={`ml-2 text-xs leading-none ${activeCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
@@ -544,15 +435,14 @@ export default function ChatLayout() {
                   ) : (
                     <div className="p-4 space-y-3 pb-32">
                       {filteredConversations.map((conversation: any) => (
-                        <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className={`bg-white rounded-xl cursor-pointer w-full transition-all duration-200 ${selectedChatId === conversation.id ? 'border-[0.8px] border-[#D1D5DB] shadow-[0_0_12px_rgba(0,0,0,0.15)]' : 'border-[0.4px] border-[#E5E7EB] hover:shadow-[0_0_16px_rgba(0,0,0,0.18)]'}`}
+                        <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className="bg-white rounded-xl cursor-pointer w-full transition-all duration-200"
                           style={{
-                            boxShadow: selectedChatId === conversation.id ? `
-                              0 2px 8px rgba(0, 0, 0, 0.12),
-                              0 1px 3px rgba(0, 0, 0, 0.08)
-                            ` : `
-                              0 2px 4px rgba(0, 0, 0, 0.06),
-                              0 1px 2px rgba(0, 0, 0, 0.04)
-                            `
+                            borderWidth: '0.4px',
+                            borderColor: selectedChatId === conversation.id ? '#D1D5DB' : '#E5E7EB',
+                            borderStyle: 'solid',
+                            boxShadow: selectedChatId === conversation.id 
+                              ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                              : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                           }}>
                           <div className="p-4">
                             <div className="flex items-center gap-3">

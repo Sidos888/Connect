@@ -3,10 +3,70 @@
 import { useState, useRef } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
+export interface UploadedMedia {
+  file_url: string;
+  file_type: 'image' | 'video';
+  thumbnail_url?: string;
+  width?: number;
+  height?: number;
+  file_size: number;
+}
+
 interface MediaUploadButtonProps {
-  onMediaSelected: (urls: string[]) => void;
+  onMediaSelected: (media: UploadedMedia[]) => void;
   disabled?: boolean;
 }
+
+// Generate video thumbnail using HTML5 video + canvas API
+const generateVideoThumbnail = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = URL.createObjectURL(file);
+    
+    video.onloadeddata = () => {
+      video.currentTime = 1; // Get frame at 1 second
+    };
+    
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(URL.createObjectURL(blob));
+          } else {
+            reject(new Error('Failed to generate thumbnail'));
+          }
+        }, 'image/jpeg', 0.7);
+      } else {
+        reject(new Error('Failed to get canvas context'));
+      }
+    };
+    
+    video.onerror = () => {
+      reject(new Error('Failed to load video'));
+    };
+  });
+};
+
+// Get image dimensions
+const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      reject(new Error('Failed to load image'));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+};
 
 export default function MediaUploadButton({ 
   onMediaSelected, 
@@ -61,14 +121,50 @@ export default function MediaUploadButton({
           .from('chat-media')
           .getPublicUrl(fileName);
 
-        return publicUrl;
+        // Determine file type and get metadata
+        const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
+        let thumbnail_url: string | undefined;
+        let width: number | undefined;
+        let height: number | undefined;
+
+        try {
+          if (file_type === 'video') {
+            // Generate video thumbnail
+            thumbnail_url = await generateVideoThumbnail(file);
+            // For videos, we'll get dimensions from the video element
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            await new Promise((resolve) => {
+              video.onloadedmetadata = resolve;
+            });
+            width = video.videoWidth;
+            height = video.videoHeight;
+          } else {
+            // Get image dimensions
+            const dimensions = await getImageDimensions(file);
+            width = dimensions.width;
+            height = dimensions.height;
+          }
+        } catch (metadataError) {
+          console.warn('Failed to extract metadata for', file.name, metadataError);
+          // Continue without metadata rather than failing the upload
+        }
+
+        return {
+          file_url: publicUrl,
+          file_type,
+          thumbnail_url,
+          width,
+          height,
+          file_size: file.size
+        } as UploadedMedia;
       });
 
       // Wait for all uploads to complete
-      const urls = await Promise.all(uploadPromises);
+      const uploadedMedia = await Promise.all(uploadPromises);
       
       setUploadProgress(100);
-      onMediaSelected(urls);
+      onMediaSelected(uploadedMedia);
       
     } catch (error) {
       console.error('Media upload error:', error);

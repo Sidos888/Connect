@@ -312,21 +312,36 @@ button[class*="Chat"] {
   border-radius: 9999px;
 }
 
-/* Disable all page transitions globally */
+/* Disable all page transitions globally - but allow card styling */
 * {
+  -webkit-tap-highlight-color: transparent; /* prevent grey tap highlight */
+}
+
+/* Disable transitions only for specific elements that cause issues */
+body, html, main, div[class*="page"] {
   transition: none !important;
   animation: none !important;
   -webkit-transition: none !important;
   -moz-transition: none !important;
   -o-transition: none !important;
-  -webkit-tap-highlight-color: transparent; /* prevent grey tap highlight */
 }
 
 /* Re-enable only specific transitions we want to keep */
 .hover\:bg-gray-100:hover,
 .hover\:bg-gray-200:hover,
-.hover\:shadow-md:hover {
-  transition: background-color 0.2s ease !important;
+.hover\:shadow-md:hover,
+.hover\:shadow-\[0_0_16px_rgba\(0\,0\,0\,0\.18\)\]:hover,
+.hover\:shadow-\[0_0_12px_rgba\(0\,0\,0\,0\.12\)\]:hover {
+  transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+/* Allow card styling and transitions */
+.rounded-xl,
+.border-\[0\.4px\],
+.border-\[0\.8px\],
+.shadow-\[0_0_16px_rgba\(0\,0\,0\,0\.18\)\],
+.shadow-\[0_0_12px_rgba\(0\,0\,0\,0\.15\)\] {
+  transition: all 0.2s ease !important;
 }
 
 /* Force white background on active/pressed states */

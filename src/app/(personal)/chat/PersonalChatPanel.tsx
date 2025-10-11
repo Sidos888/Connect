@@ -12,9 +12,77 @@ import GroupInfoModal from "@/components/chat/GroupInfoModal";
 import SettingsModal from "@/components/chat/SettingsModal";
 import MessageBubble from "@/components/chat/MessageBubble";
 import MessageActionModal from "@/components/chat/MessageActionModal";
-import MediaUploadButton from "@/components/chat/MediaUploadButton";
+import MediaUploadButton, { UploadedMedia } from "@/components/chat/MediaUploadButton";
+import MediaPreview from "@/components/chat/MediaPreview";
+import GalleryModal from "@/components/chat/GalleryModal";
+import MediaViewer from "@/components/chat/MediaViewer";
 import AttachmentMenu from "@/components/chat/AttachmentMenu";
-import type { SimpleMessage } from "@/lib/simpleChatService";
+import type { SimpleMessage, MediaAttachment } from "@/lib/simpleChatService";
+
+// Generate video thumbnail using HTML5 video + canvas API
+const generateVideoThumbnail = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = URL.createObjectURL(file);
+    
+    video.onloadeddata = () => {
+      video.currentTime = 1; // Get frame at 1 second
+    };
+    
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(URL.createObjectURL(blob));
+          } else {
+            reject(new Error('Failed to generate thumbnail'));
+          }
+        }, 'image/jpeg', 0.7);
+      } else {
+        reject(new Error('Failed to get canvas context'));
+      }
+    };
+    
+    video.onerror = () => {
+      reject(new Error('Failed to load video'));
+    };
+  });
+};
+
+// Get image dimensions
+const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      reject(new Error('Failed to load image'));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+};
+
+// Get image dimensions from URL
+const getImageDimensionsFromUrl = (url: string): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      reject(new Error('Failed to load image from URL'));
+    };
+    img.src = url;
+  });
+};
 
 interface PersonalChatPanelProps {
   conversation: Conversation;
@@ -55,8 +123,15 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const [selectedMessage, setSelectedMessage] = useState<SimpleMessage | null>(null);
   const [selectedMessageElement, setSelectedMessageElement] = useState<HTMLElement | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
-  const [pendingMedia, setPendingMedia] = useState<string[]>([]);
+  const [pendingMedia, setPendingMedia] = useState<UploadedMedia[]>([]);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  
+  // Media viewer states
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryMessage, setGalleryMessage] = useState<SimpleMessage | null>(null);
+  const [showMediaViewer, setShowMediaViewer] = useState(false);
+  const [viewerStartIndex, setViewerStartIndex] = useState(0);
+  const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]);
   
   // Real-time state
   const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
@@ -95,8 +170,32 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     setShowUserProfile(true);
   };
 
-  const handleMediaSelected = (urls: string[]) => {
-    setPendingMedia(urls);
+  const handleMediaSelected = (media: UploadedMedia[]) => {
+    setPendingMedia(media);
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    setPendingMedia(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAttachmentClick = (message: SimpleMessage) => {
+    setGalleryMessage(message);
+    setShowGallery(true);
+  };
+
+  const handleGalleryImageClick = (index: number) => {
+    // Find the starting index in allChatMedia for this message's attachments
+    let startIndex = 0;
+    for (let i = 0; i < allChatMedia.length; i++) {
+      if (allChatMedia[i].id === galleryMessage?.attachments?.[0]?.id) {
+        startIndex = i;
+        break;
+      }
+    }
+    
+    setViewerStartIndex(startIndex + index);
+    setShowMediaViewer(true);
+    setShowGallery(false);
   };
 
   const cancelReply = () => {
@@ -130,12 +229,11 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       input.accept = '*/*'; // All file types
     }
     
-    input.onchange = (event) => {
+    input.onchange = async (event) => {
       const files = (event.target as HTMLInputElement).files;
       if (files && files.length > 0) {
         console.log('Files selected:', files);
-        // TODO: Handle file upload logic here
-        handleFileUpload(Array.from(files));
+        await handleFileUpload(Array.from(files));
       }
     };
     
@@ -143,13 +241,114 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     input.click();
   };
 
-  const handleFileUpload = (files: File[]) => {
-    // Handle the uploaded files here
+  const handleFileUpload = async (files: File[]) => {
     console.log('Uploading files:', files);
     
-    // Create preview URLs for images/videos
-    const previewUrls = files.map(file => URL.createObjectURL(file));
-    setPendingMedia(previewUrls);
+    try {
+      const { getSupabaseClient } = await import('@/lib/supabaseClient');
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        throw new Error('Failed to initialize Supabase client');
+      }
+      const uploadedMedia: UploadedMedia[] = [];
+      
+      for (const file of files) {
+        // Validate file type for images/videos only for now
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+          console.warn(`Skipping file ${file.name} - not an image or video`);
+          continue;
+        }
+
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`File ${file.name} is too large. Maximum size is 10MB`);
+          continue;
+        }
+
+        // Generate unique filename
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        
+        // Upload file to Supabase Storage
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('chat-media')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error('Failed to upload to Supabase Storage:', uploadError);
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('chat-media')
+          .getPublicUrl(uploadData.path);
+
+        const uploadSuccess = true; // Successfully uploaded to Supabase Storage
+        
+        console.log('Successfully uploaded to Supabase Storage:', publicUrl);
+        console.log('File details:', {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          fileName: fileName,
+          publicUrl: publicUrl
+        });
+
+        // Determine file type and get metadata
+        const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
+        let thumbnail_url: string | undefined;
+        let width: number | undefined;
+        let height: number | undefined;
+
+        try {
+          if (file_type === 'video') {
+            // Generate video thumbnail
+            thumbnail_url = await generateVideoThumbnail(file);
+            // For videos, get dimensions from video element
+            const video = document.createElement('video');
+            video.src = publicUrl; // Use the Supabase Storage URL
+            await new Promise((resolve) => {
+              video.onloadedmetadata = resolve;
+            });
+            width = video.videoWidth;
+            height = video.videoHeight;
+          } else {
+            // Get image dimensions from the uploaded URL
+            const dimensions = await getImageDimensionsFromUrl(publicUrl);
+            width = dimensions.width;
+            height = dimensions.height;
+          }
+        } catch (metadataError) {
+          console.warn('Failed to extract metadata for', file.name, metadataError);
+          // Continue without metadata rather than failing the upload
+        }
+
+        const mediaItem = {
+          file_url: publicUrl,
+          file_type,
+          thumbnail_url,
+          width,
+          height,
+          file_size: file.size
+        };
+        
+        console.log('Created media item:', {
+          ...mediaItem,
+          uploadSuccess,
+          isLocalUrl: !uploadSuccess
+        });
+        uploadedMedia.push(mediaItem);
+      }
+      
+      if (uploadedMedia.length > 0) {
+        setPendingMedia(uploadedMedia);
+      }
+    } catch (error) {
+      console.error('Error handling file upload:', error);
+      alert('Failed to upload files');
+    }
   };
 
   const removeMediaItem = (index: number) => {
@@ -223,6 +422,22 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           } else {
             console.error('PersonalChatPanel: Error loading messages:', messagesError);
           }
+        }
+
+        // Load all chat media for the viewer
+        try {
+          const chatMedia = await simpleChatService.getChatMedia(conversation.id);
+          setAllChatMedia(chatMedia);
+          console.log('✅ Chat media loaded successfully:', chatMedia.length, 'items');
+        } catch (error) {
+          console.error('Failed to load chat media:', error);
+          console.error('Error details:', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            chatId: conversation.id
+          });
+          // Don't fail the entire chat load if media loading fails
+          setAllChatMedia([]); // Set empty array as fallback
         }
         
         // Subscribe to real-time messages
@@ -518,18 +733,13 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             return (
               <MessageBubble
                 key={uniqueKey}
-                ref={(el) => {
-                  if (selectedMessage?.id === m.id && el) {
-                    setSelectedMessageElement(el);
-                  }
-                }}
                 message={m}
-                isMe={isMe}
-                isSelected={selectedMessage?.id === m.id}
-                participants={participants}
-                onLongPress={handleMessageLongPress}
-                onReactionClick={handleReact}
-                onProfileClick={handleProfileClick}
+                currentUserId={account?.id || ''}
+                onReactionToggle={(emoji: string, messageId: string) => handleReact(messages.find(msg => msg.id === messageId)!, emoji)}
+                onAttachmentClick={handleAttachmentClick}
+                onReply={handleReply}
+                onDelete={(messageId: string) => handleDelete(messages.find(msg => msg.id === messageId)!)}
+                showOptions={true}
               />
             );
           })
@@ -660,84 +870,35 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       <div className={`flex-shrink-0 px-6 bg-white border-t border-gray-200 relative transition-all duration-200 ${
         pendingMedia.length > 0 ? 'py-4' : 'py-4'
       }`}>
-        {/* Media Preview Section - Only show when media is selected */}
+        {/* Media Preview Section */}
         {pendingMedia.length > 0 && (
           <div className="mb-4">
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {pendingMedia.map((url, index) => (
-                <div key={index} className="relative flex-shrink-0">
-                  <div 
-                    className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 border-[0.4px] border-[#E5E7EB]"
-                    style={{
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                    }}
-                  >
-                    <img
-                      src={url}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <button
-                    onClick={() => removeMediaItem(index)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center border-[0.4px] border-[#E5E7EB] shadow-sm hover:bg-gray-50 transition-colors"
-                    style={{
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                    }}
-                  >
-                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
+            <MediaPreview 
+              pendingMedia={pendingMedia}
+              onRemove={handleRemoveMedia}
+            />
           </div>
         )}
         
         <div className={`flex items-center gap-3 ${pendingMedia.length > 0 ? '' : ''}`}>
-          {/* Add/Media Button - Only show when no media is selected */}
+          {/* Media Upload Button - Only show when no media is pending */}
           {pendingMedia.length === 0 && (
             <button
               onClick={handleAttachmentMenuOpen}
-              className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-gray-900 hover:bg-gray-50 transition-colors border-[0.4px] border-[#E5E7EB]"
-              title="Add attachment"
+              className="w-11 h-11 rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB] bg-white text-gray-600 hover:bg-gray-50 cursor-pointer"
               style={{
                 boxShadow: `
                   0 0 1px rgba(100, 100, 100, 0.25),
                   inset 0 0 2px rgba(27, 27, 27, 0.25)
                 `
               }}
+              title="Add photos or videos"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </button>
           )}
-          
-          {/* Hidden file input for media upload */}
-          <input
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            onChange={async (event) => {
-              const files = event.target.files;
-              if (!files || files.length === 0) return;
-
-              try {
-                const urls: string[] = [];
-                for (const file of Array.from(files)) {
-                  // Simple file handling - you can enhance this with actual upload logic
-                  const url = URL.createObjectURL(file);
-                  urls.push(url);
-                }
-                handleMediaSelected(urls);
-              } catch (error) {
-                console.error('Media selection error:', error);
-              }
-            }}
-            className="hidden"
-          />
 
           {/* Attachment Menu - positioned above + button */}
           {showAttachmentMenu && (
@@ -792,17 +953,52 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               }}
               rows={1}
               onKeyDown={async (e) => {
-                if (e.key === 'Enter' && !e.shiftKey && text.trim() && account?.id) {
+                if (e.key === 'Enter' && !e.shiftKey && (text.trim() || pendingMedia.length > 0) && account?.id) {
                   e.preventDefault();
                   // Stop typing indicator when sending
                   if (typingTimeoutRef.current) {
                     clearTimeout(typingTimeoutRef.current);
                     simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
                   }
-                  await sendMessage(conversation.id, text.trim(), account.id, replyToMessage?.id, pendingMedia.length > 0 ? pendingMedia : undefined);
-                  setText("");
-                  setReplyToMessage(null);
-                  setPendingMedia([]);
+                  
+                  try {
+                    // Create the message first
+                    const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
+                      conversation.id,
+                      account.id,
+                      text.trim(),
+                      replyToMessage?.id
+                    );
+
+                    if (messageError || !newMessage) {
+                      console.error('Failed to send message:', messageError);
+                      return;
+                    }
+
+                    // Save attachments if any
+                    if (pendingMedia.length > 0) {
+                      try {
+                        await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
+                        console.log('Successfully saved attachments for message:', newMessage.id);
+                      } catch (attachmentError) {
+                        console.error('Failed to save attachments:', attachmentError);
+                        // Continue anyway - the message was sent successfully
+                      }
+                    }
+
+                    // Clear the form
+                    setText("");
+                    setReplyToMessage(null);
+                    setPendingMedia([]);
+
+                    // Refresh messages to show the new message with attachments
+                    const { messages: updatedMessages } = await simpleChatService.getChatMessages(conversation.id, account.id);
+                    if (updatedMessages) {
+                      setMessages(updatedMessages);
+                    }
+                  } catch (error) {
+                    console.error('Error sending message:', error);
+                  }
                 }
               }}
             />
@@ -817,10 +1013,45 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   clearTimeout(typingTimeoutRef.current);
                   simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
                 }
-                await sendMessage(conversation.id, text.trim(), account.id, replyToMessage?.id, pendingMedia.length > 0 ? pendingMedia : undefined);
-                setText("");
-                setReplyToMessage(null);
-                setPendingMedia([]);
+                
+                try {
+                  // Create the message first
+                  const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
+                    conversation.id,
+                    account.id,
+                    text.trim(),
+                    replyToMessage?.id
+                  );
+
+                  if (messageError || !newMessage) {
+                    console.error('Failed to send message:', messageError);
+                    return;
+                  }
+
+                  // Save attachments if any
+                  if (pendingMedia.length > 0) {
+                    try {
+                      await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
+                      console.log('Successfully saved attachments for message:', newMessage.id);
+                    } catch (attachmentError) {
+                      console.error('Failed to save attachments:', attachmentError);
+                      // Continue anyway - the message was sent successfully
+                    }
+                  }
+
+                  // Clear the form
+                  setText("");
+                  setReplyToMessage(null);
+                  setPendingMedia([]);
+
+                  // Refresh messages to show the new message with attachments
+                  const { messages: updatedMessages } = await simpleChatService.getChatMessages(conversation.id, account.id);
+                  if (updatedMessages) {
+                    setMessages(updatedMessages);
+                  }
+                } catch (error) {
+                  console.error('Error sending message:', error);
+                }
               }
             }}
             className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB] ${
@@ -913,7 +1144,21 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         isMe={selectedMessage?.sender_id === account?.id}
       />
 
+      {/* Gallery Modal */}
+      <GalleryModal 
+        isOpen={showGallery}
+        message={galleryMessage}
+        onClose={() => setShowGallery(false)}
+        onImageClick={handleGalleryImageClick}
+      />
 
+      {/* Media Viewer */}
+      <MediaViewer
+        isOpen={showMediaViewer}
+        allMedia={allChatMedia}
+        initialIndex={viewerStartIndex}
+        onClose={() => setShowMediaViewer(false)}
+      />
 
     </div>
   );

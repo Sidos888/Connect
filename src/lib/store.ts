@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { AppStore, Business, PersonalProfile, UUID, Conversation } from "./types";
+import { AppStore, Business, PersonalProfile, UUID, Conversation, ChatTypingState, TypingActions } from "./types";
 import { simpleChatService, SimpleChat, SimpleMessage } from "./simpleChatService";
 import { getSupabaseClient } from "./supabaseClient";
 
@@ -59,7 +59,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
   personalProfile: null,
   businesses: [],
   context: { type: "personal" },
-  isHydrated: false,
+  isHydrated: false, // Always start as false to prevent hydration mismatch
   conversations: [],
   isAccountSwitching: false,
   chatTypingStates: new Map(),
@@ -156,7 +156,10 @@ export const useAppStore = create<FullStore>((set, get) => ({
           id: chat.messages[0].id,
           conversationId: chat.id,
           sender: chat.messages[0].sender_id === userId ? 'me' as const : 'them' as const,
+          senderId: chat.messages[0].sender_id,
+          senderName: chat.messages[0].sender_name || 'Unknown',
           text: chat.messages[0].text,
+          attachments: chat.messages[0].attachments || [],
           createdAt: chat.messages[0].created_at,
           read: false
         } : null;
@@ -356,28 +359,36 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 }));
 
-// Hydrate from localStorage on first import in client
+// Hydrate from localStorage after store is initialized
 if (typeof window !== "undefined") {
-  // Use setTimeout to ensure DOM is ready
+  // Use setTimeout to ensure store is fully initialized
   setTimeout(() => {
-    const persisted = loadFromLocalStorage();
-    if (persisted) {
+    try {
+      const persisted = loadFromLocalStorage();
+      if (persisted) {
+        useAppStore.setState({
+          personalProfile: persisted.personalProfile,
+          businesses: persisted.businesses,
+          context: persisted.context,
+          conversations: [], // Always start with empty conversations to load real data
+          isHydrated: true, // Mark as hydrated after loading from localStorage
+        });
+        console.log('✅ Store hydrated from localStorage');
+      } else {
+        useAppStore.setState({
+          isHydrated: true, // Mark as hydrated even with empty state
+        });
+        console.log('✅ Store hydrated with empty state');
+      }
+    } catch (error) {
+      console.error('Error hydrating store:', error);
+      // Still mark as hydrated even if there's an error
       useAppStore.setState({
-        personalProfile: persisted.personalProfile,
-        businesses: persisted.businesses,
-        context: persisted.context,
         isHydrated: true,
-        conversations: [], // Always start with empty conversations to load real data
       });
-      console.log('Store hydrated from localStorage');
-    } else {
-      useAppStore.setState({ isHydrated: true, conversations: [] });
-      console.log('Store hydrated with empty state');
+      console.log('✅ Store hydrated with error fallback');
     }
   }, 0);
-} else {
-  // Server-side: set hydrated to false initially
-  useAppStore.setState({ isHydrated: false });
 }
 
 export function useCurrentBusiness() {
