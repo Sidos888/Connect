@@ -84,8 +84,13 @@ export default function MediaUploadButton({
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const startTime = performance.now();
+    console.log('🚀 File selection started');
+    
     const files = event.target.files;
     if (!files || files.length === 0) return;
+
+    console.log(`📁 ${files.length} file(s) selected`);
 
     setUploading(true);
     setUploadProgress(0);
@@ -93,6 +98,9 @@ export default function MediaUploadButton({
     try {
       // Create immediate previews with local URLs for INSTANT display (<50ms)
       const immediatePreviews: UploadedMedia[] = [];
+      
+      console.log('⚡ Creating blob URLs...');
+      const blobStartTime = performance.now();
       
       // Process files synchronously but very quickly - only essential operations
       for (let i = 0; i < files.length; i++) {
@@ -123,8 +131,16 @@ export default function MediaUploadButton({
         immediatePreviews.push(immediatePreview);
       }
       
+      const blobEndTime = performance.now();
+      console.log(`⚡ Blob URLs created in ${(blobEndTime - blobStartTime).toFixed(2)}ms`);
+      
       // Show previews IMMEDIATELY (this should be <50ms)
+      console.log('📤 Sending previews to parent component...');
       onMediaSelected(immediatePreviews);
+      
+      const previewEndTime = performance.now();
+      console.log(`✅ PREVIEW DISPLAYED in ${(previewEndTime - startTime).toFixed(2)}ms`);
+      
       setUploadProgress(25);
 
       // Now generate thumbnails and dimensions asynchronously (don't block UI)

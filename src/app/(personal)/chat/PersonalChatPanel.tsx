@@ -167,7 +167,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   };
 
   const handleMediaSelected = (media: UploadedMedia[]) => {
+    console.log('📥 PersonalChatPanel received media:', media.length, 'items');
+    const startRender = performance.now();
     setPendingMedia(media);
+    console.log(`🎨 setPendingMedia called in ${(performance.now() - startRender).toFixed(2)}ms`);
   };
 
   const handleRemoveMedia = (index: number) => {
@@ -694,10 +697,8 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 key={uniqueKey}
                 message={m}
                 currentUserId={account?.id || ''}
-                onReactionToggle={(emoji: string, messageId: string) => handleReact(messages.find(msg => msg.id === messageId)!, emoji)}
                 onAttachmentClick={handleAttachmentClick}
                 onReply={handleReply}
-                onDelete={(messageId: string) => handleDelete(messages.find(msg => msg.id === messageId)!)}
                 showOptions={true}
               />
             );

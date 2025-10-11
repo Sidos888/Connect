@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { UploadedMedia } from "./MediaUploadButton";
 import { X } from "lucide-react";
 
@@ -10,6 +11,14 @@ interface MediaPreviewProps {
 
 export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewProps) {
   if (pendingMedia.length === 0) return null;
+
+  console.log('🖼️ MediaPreview rendering with', pendingMedia.length, 'items');
+  const renderStart = performance.now();
+  
+  // Log after render
+  React.useEffect(() => {
+    console.log(`✨ MediaPreview rendered in ${(performance.now() - renderStart).toFixed(2)}ms`);
+  });
 
   return (
     <div className="mb-4">
