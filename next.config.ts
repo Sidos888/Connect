@@ -2,11 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Only use static export for production builds
-  ...(process.env.NODE_ENV === 'production' && {
-    output: 'export',
-    distDir: 'out',
-    trailingSlash: true,
-  }),
+  // Disabled for now due to dynamic route limitations
+  // ...(process.env.NODE_ENV === 'production' && {
+  //   output: 'export',
+  //   distDir: 'out',
+  //   trailingSlash: true,
+  // }),
   images: {
     unoptimized: true
   },
