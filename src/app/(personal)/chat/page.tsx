@@ -219,7 +219,13 @@ export default function MessagesPage() {
       return `${lastMessage.senderName}: ${lastMessage.text}`;
     }
     
-    return lastMessage.text || "No messages yet";
+    // If message has text, show it
+    if (lastMessage.text && lastMessage.text.trim()) {
+      return lastMessage.text;
+    }
+    
+    // If no text and no attachments, show "No messages yet"
+    return "No messages yet";
   };
 
   const getLastMessageTime = (conversation: { messages: Array<{ createdAt: string }> }) => {

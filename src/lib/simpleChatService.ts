@@ -131,7 +131,16 @@ class SimpleChatService {
   clearAllCaches() {
     this.chats.clear();
     this.userChats.clear();
+    this.chatMessages.clear();
+    this.userChatsTimestamp.clear();
     console.log('SimpleChatService: Cleared all caches');
+  }
+
+  // Force refresh conversations (clear cache and reload)
+  async forceRefreshConversations(userId: string) {
+    console.log('SimpleChatService: Force refreshing conversations for user:', userId);
+    this.clearAllCaches();
+    return await this.getUserChats(userId);
   }
 
   // Real-time messaging methods
@@ -1069,6 +1078,16 @@ class SimpleChatService {
       const messages: SimpleMessage[] = (messagesData || []).map(msg => {
         // Get sender info from chat participants
         const sender = chat.participants.find(p => p.id === msg.sender_id);
+        
+        // Debug: Log message data to see what's being loaded
+        if (msg.deleted_at) {
+          console.log('DEBUG: Found message with deleted_at:', {
+            id: msg.id,
+            text: msg.message_text,
+            deleted_at: msg.deleted_at,
+            sender_id: msg.sender_id
+          });
+        }
         
         return {
           id: msg.id,
