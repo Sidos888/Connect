@@ -6,11 +6,6 @@ import InlineProfileView from "@/components/InlineProfileView";
 import MobileTitle from "@/components/MobileTitle";
 import { ArrowLeft } from "lucide-react";
 
-// Required for static export
-export async function generateStaticParams() {
-  return [];
-}
-
 export default function UserProfilePage() {
   const router = useRouter();
   const params = useParams();
