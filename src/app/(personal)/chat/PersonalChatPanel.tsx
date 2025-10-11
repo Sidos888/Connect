@@ -549,6 +549,11 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         // PersonalChatPanel will use the global store instead of its own subscription
         
         setLoading(false);
+        
+        // Scroll to bottom after messages are loaded
+        setTimeout(() => {
+          endRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 100);
       }
     };
 
@@ -576,7 +581,9 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
   // Auto-scroll to bottom when messages change or typing indicator appears/disappears
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages.length, typingUsers.length]);
 
   // JavaScript animation for typing dots

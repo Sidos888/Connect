@@ -162,6 +162,11 @@ export default function IndividualChatPage() {
 
         setLoading(false);
 
+        // Scroll to bottom after messages are loaded
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 100);
+
         // Subscribe to reaction changes for real-time updates
         if (chatId) {
           const unsubscribeReactions = simpleChatService.subscribeToReactions(
@@ -202,7 +207,9 @@ export default function IndividualChatPage() {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   // Mark messages as read when chat is loaded
