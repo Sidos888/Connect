@@ -91,7 +91,12 @@ export default function MediaUploadButton({
     setUploadProgress(0);
 
     try {
-      const uploadPromises = Array.from(files).map(async (file, index) => {
+      // First, create immediate previews with local URLs for instant display
+      const immediatePreviews: UploadedMedia[] = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
         // Validate file type
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
           throw new Error(`File ${file.name} is not a valid image or video`);
@@ -102,6 +107,37 @@ export default function MediaUploadButton({
           throw new Error(`File ${file.name} is too large. Maximum size is 10MB`);
         }
 
+        const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
+        const localUrl = URL.createObjectURL(file);
+        
+        // Create immediate preview with local URL
+        const immediatePreview: UploadedMedia = {
+          file_url: localUrl, // Use local URL for instant display
+          file_type,
+          file_size: file.size,
+          width: undefined, // Will be filled later
+          height: undefined, // Will be filled later
+          thumbnail_url: undefined // Will be filled later for videos
+        };
+
+        // Generate thumbnail for videos immediately
+        if (file_type === 'video') {
+          try {
+            immediatePreview.thumbnail_url = await generateVideoThumbnail(file);
+          } catch (error) {
+            console.warn('Failed to generate video thumbnail:', error);
+          }
+        }
+
+        immediatePreviews.push(immediatePreview);
+      }
+
+      // Show immediate previews
+      onMediaSelected(immediatePreviews);
+      setUploadProgress(25);
+
+      // Now upload to server in background
+      const uploadPromises = Array.from(files).map(async (file, index) => {
         // Generate unique filename
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
@@ -151,7 +187,7 @@ export default function MediaUploadButton({
         }
 
         return {
-          file_url: publicUrl,
+          file_url: publicUrl, // Server URL
           file_type,
           thumbnail_url,
           width,
@@ -164,6 +200,8 @@ export default function MediaUploadButton({
       const uploadedMedia = await Promise.all(uploadPromises);
       
       setUploadProgress(100);
+      
+      // Update with server URLs (this will trigger a re-render with the final URLs)
       onMediaSelected(uploadedMedia);
       
     } catch (error) {

@@ -20,20 +20,20 @@ export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewPro
 
   return (
     <div className="mb-4">
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-3 flex-wrap">
         {pendingMedia.map((media, index) => (
           <div
             key={index}
-            className="relative w-12 h-12 rounded-lg overflow-hidden bg-white flex-shrink-0 border border-gray-200"
+            className="relative w-16 h-16 rounded-2xl overflow-hidden bg-white flex-shrink-0 border border-gray-200"
             style={{
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              minWidth: '48px',
-              minHeight: '48px',
-              maxWidth: '48px',
-              maxHeight: '48px'
+              minWidth: '64px',
+              minHeight: '64px',
+              maxWidth: '64px',
+              maxHeight: '64px'
             }}
           >
             {/* Media preview - fills entire square */}
@@ -69,12 +69,16 @@ export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewPro
                   <img
                     src={media.file_url}
                     alt="Preview"
-                    className="w-full h-full object-cover rounded-xl"
+                    className="w-full h-full object-cover"
                     style={{
                       imageRendering: 'auto',
-                      backfaceVisibility: 'hidden'
+                      backfaceVisibility: 'hidden',
+                      transform: 'translateZ(0)', // Hardware acceleration
+                      willChange: 'transform' // Optimize for animations
                     }}
                     title={`Image: ${media.file_url}`}
+                    loading="eager" // Load immediately for instant display
+                    decoding="async" // Async decoding for better performance
                     onLoad={() => {
                       console.log('✅ Image loaded successfully:', media.file_url);
                     }}
@@ -91,7 +95,7 @@ export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewPro
                     }}
                   />
                   {/* Error placeholder */}
-                  <div className="error-placeholder absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center text-gray-500 rounded-xl" style={{ display: 'none' }}>
+                  <div className="error-placeholder absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center text-gray-500" style={{ display: 'none' }}>
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
                     </svg>
@@ -103,12 +107,12 @@ export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewPro
             {/* Remove button */}
             <button
               onClick={() => onRemove(index)}
-              className="absolute top-0.5 right-0.5 w-4 h-4 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all"
+              className="absolute top-1 right-1 w-5 h-5 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all"
               style={{
                 boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
               }}
             >
-              <X className="w-2.5 h-2.5" />
+              <X className="w-3 h-3" />
             </button>
           </div>
         ))}
