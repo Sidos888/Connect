@@ -16,7 +16,15 @@ export default function QuickActions({ onCreate, onCalendar }: Props) {
         onClick={onCalendar}
         className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
       >
-        <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+        <div 
+          className="w-14 h-14 bg-white rounded-full flex items-center justify-center hover:bg-white transition-all duration-200"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+          }}
+        >
           <CalendarIcon width={24} height={24} className="text-gray-600" />
         </div>
         <span className="text-xs font-medium text-gray-700">Calendar</span>
@@ -27,7 +35,15 @@ export default function QuickActions({ onCreate, onCalendar }: Props) {
         onClick={onCreate}
         className="flex flex-col items-center space-y-2 p-4 rounded-xl transition-all duration-200 hover:scale-105"
       >
-        <div className="w-14 h-14 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center hover:shadow-md hover:border-gray-300 transition-all duration-200">
+        <div 
+          className="w-14 h-14 bg-white rounded-full flex items-center justify-center hover:bg-white transition-all duration-200"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+          }}
+        >
           <PlusIcon width={24} height={24} className="text-gray-600" />
         </div>
         <span className="text-xs font-medium text-gray-700">Create</span>

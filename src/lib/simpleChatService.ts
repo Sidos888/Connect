@@ -1051,7 +1051,7 @@ class SimpleChatService {
         text: msg.message_text || '',
         created_at: msg.created_at,
         reply_to_message_id: msg.reply_to_message_id || null,
-        reply_to_message: msg.reply_to ? {
+        reply_to_message: (msg.reply_to && msg.reply_to.id) ? {
           id: msg.reply_to.id,
           chat_id: msg.chat_id,
           sender_id: msg.reply_to.sender_id,

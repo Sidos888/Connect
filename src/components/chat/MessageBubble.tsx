@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef } from "react";
 import Image from "next/image";
 import type { SimpleMessage, MessageReaction } from "@/lib/simpleChatService";
 
 interface MessageBubbleProps {
   message: SimpleMessage;
   isMe: boolean;
+  isSelected?: boolean;
   participants: Array<{
     id: string;
     name: string;
@@ -17,14 +18,15 @@ interface MessageBubbleProps {
   onProfileClick?: (userId: string) => void;
 }
 
-export default function MessageBubble({
+const MessageBubble = forwardRef<HTMLDivElement, MessageBubbleProps>(({
   message,
   isMe,
+  isSelected = false,
   participants,
   onLongPress,
   onReactionClick,
   onProfileClick
-}: MessageBubbleProps) {
+}, ref) => {
   const [showReactions, setShowReactions] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isLongPressing = useRef(false);
@@ -90,7 +92,10 @@ export default function MessageBubble({
   const isDeleted = message.deleted_at;
 
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"} items-center gap-2`}>
+    <div 
+      ref={ref}
+      className={`flex ${isMe ? "justify-end" : "justify-start"} items-center gap-2 ${isSelected ? 'bg-blue-50 rounded-lg p-2' : ''}`}
+    >
       {/* Profile picture for received messages */}
       {!isMe && (
         <button 
@@ -121,7 +126,15 @@ export default function MessageBubble({
       <div className="relative max-w-[70%]">
         {/* Reply preview */}
         {message.reply_to_message && (
-          <div className="mb-2 p-2 bg-gray-100 rounded-lg border-l-4 border-gray-400">
+          <div 
+            className="mb-2 p-2 bg-white rounded-lg border-l-4 border-gray-400"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+            }}
+          >
             <div className="text-xs text-gray-600 mb-1">
               Replying to {message.reply_to_message.sender_name}
             </div>
@@ -133,18 +146,17 @@ export default function MessageBubble({
 
         {/* Main message bubble */}
         <div 
-          className={`
-            ${isMe 
-              ? "bg-white text-gray-900 border border-gray-200" 
-              : "bg-white text-gray-900 border border-gray-200"
-            }
-            rounded-2xl px-4 py-3 shadow-sm cursor-pointer
-          `}
+          className="bg-white text-gray-900 rounded-2xl px-4 py-3 cursor-pointer"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+          }}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
           onContextMenu={handleContextMenu}
-          style={{ backgroundColor: '#ffffff !important', color: '#111827 !important' }}
         >
           {/* Message Content */}
           {isDeleted ? (
@@ -198,4 +210,8 @@ export default function MessageBubble({
       </div>
     </div>
   );
-}
+});
+
+MessageBubble.displayName = 'MessageBubble';
+
+export default MessageBubble;

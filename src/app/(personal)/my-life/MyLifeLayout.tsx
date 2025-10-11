@@ -50,7 +50,15 @@ export default function MyLifeLayout(): JSX.Element {
 
           {/* Profile card at top (mirrors Menu profile card) */}
           <div className="px-4 pt-4">
-            <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-4 grid grid-cols-[40px_1fr] items-center">
+            <div 
+              className="rounded-2xl bg-white px-5 py-4 grid grid-cols-[40px_1fr] items-center"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+              }}
+            >
               <div className="flex items-center">
                 <Avatar
                   src={personalProfile?.avatarUrl ?? undefined}

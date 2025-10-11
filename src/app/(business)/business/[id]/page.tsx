@@ -24,7 +24,15 @@ export default function Page() {
       <div className="space-y-5 px-4 lg:px-0 pt-[120px] lg:pt-0">
         <h1 className="hidden lg:block text-3xl font-bold">Explore</h1>
 
-      <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-4">
+      <div 
+        className="rounded-2xl bg-white px-5 py-4"
+        style={{
+          borderWidth: '0.4px',
+          borderColor: '#E5E7EB',
+          borderStyle: 'solid',
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+        }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 text-neutral-900">
             <span className="text-lg">📍</span>
@@ -36,7 +44,16 @@ export default function Page() {
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {categories.slice(0, 6).map((c) => (
-          <button key={c.title} className="rounded-2xl border border-neutral-200 shadow-sm bg-white h-28 lg:h-32 xl:h-36 px-4 text-center hover:bg-neutral-50 flex flex-col items-center justify-center gap-2">
+          <button 
+            key={c.title} 
+            className="rounded-2xl bg-white h-28 lg:h-32 xl:h-36 px-4 text-center hover:bg-white flex flex-col items-center justify-center gap-2 transition-all duration-200"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+            }}
+          >
             <div className="text-3xl lg:text-4xl" aria-hidden>{c.icon}</div>
             <div className="text-sm lg:text-base font-medium text-neutral-900">{c.title}</div>
           </button>

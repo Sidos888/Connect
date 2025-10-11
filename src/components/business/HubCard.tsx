@@ -13,7 +13,13 @@ export default function HubCard({ href, title, subline, status, thumbnailUrl, su
   return (
     <Link
       href={href}
-      className="min-w-[260px] md:min-w-[280px] snap-start rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
+      className="min-w-[260px] md:min-w-[280px] snap-start rounded-2xl bg-white p-4 hover:bg-white active:bg-white transition-all duration-200"
+      style={{
+        borderWidth: '0.4px',
+        borderColor: '#E5E7EB',
+        borderStyle: 'solid',
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+      }}
     >
       <div className="flex flex-col items-center text-center gap-2">
         <div className="w-14 h-14 rounded-xl overflow-hidden bg-neutral-200">

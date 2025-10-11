@@ -13,6 +13,7 @@ import SettingsModal from "@/components/chat/SettingsModal";
 import MessageBubble from "@/components/chat/MessageBubble";
 import MessageActionModal from "@/components/chat/MessageActionModal";
 import MediaUploadButton from "@/components/chat/MediaUploadButton";
+import AttachmentMenu from "@/components/chat/AttachmentMenu";
 import type { SimpleMessage } from "@/lib/simpleChatService";
 
 interface PersonalChatPanelProps {
@@ -52,8 +53,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const [participants, setParticipants] = useState<any[]>([]);
   const [refreshedConversation, setRefreshedConversation] = useState<Conversation | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<SimpleMessage | null>(null);
+  const [selectedMessageElement, setSelectedMessageElement] = useState<HTMLElement | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
   const [pendingMedia, setPendingMedia] = useState<string[]>([]);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   
   // Real-time state
   const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
@@ -102,6 +105,55 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
   const cancelMedia = () => {
     setPendingMedia([]);
+  };
+
+  const handleAttachmentMenuOpen = () => {
+    setShowAttachmentMenu(true);
+  };
+
+  const handleAttachmentMenuClose = () => {
+    setShowAttachmentMenu(false);
+  };
+
+  const handleFileSelect = (type: 'file' | 'photos' | 'contact' | 'event' | 'ai') => {
+    setShowAttachmentMenu(false);
+    
+    // Create a hidden file input to trigger native file picker
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    
+    // Set accept attribute based on type
+    if (type === 'photos') {
+      input.accept = 'image/*,video/*';
+    } else if (type === 'file') {
+      input.accept = '*/*'; // All file types
+    }
+    
+    input.onchange = (event) => {
+      const files = (event.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        console.log('Files selected:', files);
+        // TODO: Handle file upload logic here
+        handleFileUpload(Array.from(files));
+      }
+    };
+    
+    // Trigger the native file picker
+    input.click();
+  };
+
+  const handleFileUpload = (files: File[]) => {
+    // Handle the uploaded files here
+    console.log('Uploading files:', files);
+    
+    // Create preview URLs for images/videos
+    const previewUrls = files.map(file => URL.createObjectURL(file));
+    setPendingMedia(previewUrls);
+  };
+
+  const removeMediaItem = (index: number) => {
+    setPendingMedia(prev => prev.filter((_, i) => i !== index));
   };
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -404,7 +456,13 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 setShowGroupInfo(true);
               }
             }}
-            className={`bg-white rounded-2xl shadow-sm border border-gray-200 p-3 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow cursor-pointer w-full lg:w-1/3 relative`}
+            className="bg-white rounded-2xl p-3 hover:bg-white transition-all duration-200 cursor-pointer w-full lg:w-1/3 relative"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+            }}
           >
             {displayConversation.isGroup && /^Me:\\s*/.test(displayConversation.title) ? (
               <div className="w-full flex items-center justify-center">
@@ -460,8 +518,14 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
             return (
               <MessageBubble
                 key={uniqueKey}
+                ref={(el) => {
+                  if (selectedMessage?.id === m.id && el) {
+                    setSelectedMessageElement(el);
+                  }
+                }}
                 message={m}
                 isMe={isMe}
+                isSelected={selectedMessage?.id === m.id}
                 participants={participants}
                 onLongPress={handleMessageLongPress}
                 onReactionClick={handleReact}
@@ -591,50 +655,116 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         </div>
       )}
 
-      {/* Pending Media Preview */}
-      {pendingMedia.length > 0 && (
-        <div className="flex-shrink-0 px-6 py-2 bg-gray-50 border-t border-gray-200">
-          <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
-            <div className="text-sm text-gray-600">Media:</div>
-            <div className="flex gap-2">
+
+      {/* Message Input */}
+      <div className={`flex-shrink-0 px-6 bg-white border-t border-gray-200 relative transition-all duration-200 ${
+        pendingMedia.length > 0 ? 'py-4' : 'py-4'
+      }`}>
+        {/* Media Preview Section - Only show when media is selected */}
+        {pendingMedia.length > 0 && (
+          <div className="mb-4">
+            <div className="flex gap-3 overflow-x-auto pb-2">
               {pendingMedia.map((url, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={url}
-                    alt={`Preview ${index + 1}`}
-                    className="w-12 h-12 rounded-lg object-cover"
-                  />
+                <div key={index} className="relative flex-shrink-0">
+                  <div 
+                    className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 border-[0.4px] border-[#E5E7EB]"
+                    style={{
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    }}
+                  >
+                    <img
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeMediaItem(index)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center border-[0.4px] border-[#E5E7EB] shadow-sm hover:bg-gray-50 transition-colors"
+                    style={{
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    }}
+                  >
+                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+        
+        <div className={`flex items-center gap-3 ${pendingMedia.length > 0 ? '' : ''}`}>
+          {/* Add/Media Button - Only show when no media is selected */}
+          {pendingMedia.length === 0 && (
             <button
-              onClick={cancelMedia}
-              className="ml-auto p-1 rounded-full hover:bg-gray-100 transition-colors"
+              onClick={handleAttachmentMenuOpen}
+              className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-gray-900 hover:bg-gray-50 transition-colors border-[0.4px] border-[#E5E7EB]"
+              title="Add attachment"
+              style={{
+                boxShadow: `
+                  0 0 1px rgba(100, 100, 100, 0.25),
+                  inset 0 0 2px rgba(27, 27, 27, 0.25)
+                `
+              }}
             >
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
             </button>
-          </div>
-        </div>
-      )}
+          )}
+          
+          {/* Hidden file input for media upload */}
+          <input
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            onChange={async (event) => {
+              const files = event.target.files;
+              if (!files || files.length === 0) return;
 
-      {/* Message Input */}
-      <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-200">
-        <div className="flex items-center gap-3">
-          <MediaUploadButton 
-            onMediaSelected={handleMediaSelected}
-            disabled={false}
+              try {
+                const urls: string[] = [];
+                for (const file of Array.from(files)) {
+                  // Simple file handling - you can enhance this with actual upload logic
+                  const url = URL.createObjectURL(file);
+                  urls.push(url);
+                }
+                handleMediaSelected(urls);
+              } catch (error) {
+                console.error('Media selection error:', error);
+              }
+            }}
+            className="hidden"
           />
-          <div className="flex-1 relative max-w-xs sm:max-w-none">
+
+          {/* Attachment Menu - positioned above + button */}
+          {showAttachmentMenu && (
+            <AttachmentMenu
+              onClose={handleAttachmentMenuClose}
+              onSelectFile={() => handleFileSelect('file')}
+              onSelectPhotos={() => handleFileSelect('photos')}
+              onSelectContact={() => handleFileSelect('contact')}
+              onSelectEvent={() => handleFileSelect('event')}
+              onSelectAI={() => handleFileSelect('ai')}
+            />
+          )}
+          
+          {/* Input field - 44px height with centered text */}
+          <div className="flex-1 relative flex items-center">
             <textarea
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
               }}
-              onFocus={handleTyping}
-              onBlur={() => {
+              onFocus={(e) => {
+                handleTyping();
+                e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)`;
+              }}
+              onBlur={(e) => {
                 console.log('🚪 User blurred from input field');
+                e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)`;
                 // Stop typing indicator when user leaves the input field
                 if (typingTimeoutRef.current) {
                   clearTimeout(typingTimeoutRef.current);
@@ -647,7 +777,19 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 }, 100);
               }}
               placeholder=""
-              className="w-full px-3 py-1 bg-white rounded-full border-[1.5px] border-gray-300 focus:outline-none focus:border-gray-300 focus:bg-white focus:shadow-[0_0_12px_rgba(0,0,0,0.12)] transition-colors resize-none text-sm sm:px-4 sm:py-3 sm:rounded-xl"
+              className="w-full h-11 px-4 bg-white rounded-full border-[0.4px] border-[#E5E7EB] focus:outline-none focus:border-[0.8px] focus:border-[#D1D5DB] focus:bg-white transition-all duration-200 resize-none text-sm text-black caret-black"
+              style={{
+                margin: 0,
+                paddingTop: '10px',
+                paddingBottom: '10px',
+                lineHeight: '1.2',
+                boxSizing: 'border-box',
+                verticalAlign: 'middle',
+                boxShadow: `
+                  0 0 1px rgba(100, 100, 100, 0.25),
+                  inset 0 0 2px rgba(27, 27, 27, 0.25)
+                `
+              }}
               rows={1}
               onKeyDown={async (e) => {
                 if (e.key === 'Enter' && !e.shiftKey && text.trim() && account?.id) {
@@ -665,9 +807,11 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               }}
             />
           </div>
+          
+          {/* Send Button - White card that turns black when active */}
           <button
             onClick={async () => {
-              if (text.trim() && account?.id) {
+              if ((text.trim() || pendingMedia.length > 0) && account?.id) {
                 // Stop typing indicator when sending
                 if (typingTimeoutRef.current) {
                   clearTimeout(typingTimeoutRef.current);
@@ -679,11 +823,17 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 setPendingMedia([]);
               }
             }}
-            className={`p-2 rounded-full transition-colors ${
-              text.trim() 
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB] ${
+              text.trim() || pendingMedia.length > 0
                 ? "bg-gray-900 text-white hover:bg-gray-800" 
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-400 cursor-not-allowed"
             }`}
+            style={{
+              boxShadow: `
+                0 0 1px rgba(100, 100, 100, 0.25),
+                inset 0 0 2px rgba(27, 27, 27, 0.25)
+              `
+            }}
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
@@ -751,13 +901,19 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
       {/* Message Action Modal */}
       <MessageActionModal
         selectedMessage={selectedMessage}
-        onClose={() => setSelectedMessage(null)}
+        messageElement={selectedMessageElement}
+        onClose={() => {
+          setSelectedMessage(null);
+          setSelectedMessageElement(null);
+        }}
         onReply={handleReply}
         onCopy={handleCopy}
         onDelete={handleDelete}
         onReact={handleReact}
         isMe={selectedMessage?.sender_id === account?.id}
       />
+
+
 
     </div>
   );

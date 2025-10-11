@@ -457,7 +457,15 @@ export default function Page() {
         {/* Content */}
         <div className="flex-1 px-4 py-6">
           {/* Profile Card */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div 
+            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-6"
+            style={{
+              boxShadow: `
+                0 0 1px rgba(100, 100, 100, 0.25),
+                inset 0 0 2px rgba(27, 27, 27, 0.25)
+              `
+            }}
+          >
             {/* Card Header: Edit Profile action (right aligned) */}
             <div className="flex justify-end items-start mb-4">
               <button
@@ -894,7 +902,13 @@ export default function Page() {
                 return (
                   <div
                     key={connection.id}
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 py-8 relative min-h-[80px] cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px] cursor-pointer hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:border-[#D1D5DB] transition-all duration-200"
+                    style={{
+                      boxShadow: `
+                        0 0 1px rgba(100, 100, 100, 0.25),
+                        inset 0 0 2px rgba(27, 27, 27, 0.25)
+                      `
+                    }}
                     onClick={() => handleFriendClick(friend)}
                   >
                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
@@ -929,7 +943,13 @@ export default function Page() {
                 return (
                   <div
                     key={connection.id}
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 py-8 relative min-h-[80px]"
+                    className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px]"
+                    style={{
+                      boxShadow: `
+                        0 0 1px rgba(100, 100, 100, 0.25),
+                        inset 0 0 2px rgba(27, 27, 27, 0.25)
+                      `
+                    }}
                   >
                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                       {business.profile_pic ? (
@@ -1022,7 +1042,15 @@ export default function Page() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {/* Profile Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div 
+            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-6 mb-6"
+            style={{
+              boxShadow: `
+                0 0 1px rgba(100, 100, 100, 0.25),
+                inset 0 0 2px rgba(27, 27, 27, 0.25)
+              `
+            }}
+          >
             <div className="text-center">
               {/* Profile Picture */}
               <div className="flex justify-center mb-6">
@@ -1378,7 +1406,16 @@ export default function Page() {
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-gray-900">Friend Requests</h3>
                     {pendingRequests.map((request) => (
-                      <div key={request.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                      <div 
+                        key={request.id} 
+                        className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4"
+                        style={{
+                          boxShadow: `
+                            0 0 1px rgba(100, 100, 100, 0.25),
+                            inset 0 0 2px rgba(27, 27, 27, 0.25)
+                          `
+                        }}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
@@ -1457,7 +1494,16 @@ export default function Page() {
                             {searchResults
                               .filter(user => userConnectionStatuses[user.id] !== 'connected')
                               .map((user) => (
-                            <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                            <div 
+                              key={user.id} 
+                              className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 flex items-center justify-between"
+                              style={{
+                                boxShadow: `
+                                  0 0 1px rgba(100, 100, 100, 0.25),
+                                  inset 0 0 2px rgba(27, 27, 27, 0.25)
+                                `
+                              }}
+                            >
                               <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                                   {user.profile_pic ? (
@@ -1526,7 +1572,16 @@ export default function Page() {
                           .filter(user => userConnectionStatuses[user.id] !== 'connected')
                           .slice(0, 5)
                           .map((user) => (
-                          <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                          <div 
+                            key={user.id} 
+                            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 flex items-center justify-between"
+                            style={{
+                              boxShadow: `
+                                0 0 1px rgba(100, 100, 100, 0.25),
+                                inset 0 0 2px rgba(27, 27, 27, 0.25)
+                              `
+                            }}
+                          >
                             <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                                 {user.profile_pic ? (
@@ -1626,7 +1681,16 @@ export default function Page() {
                 <div className="max-w-lg mx-auto lg:max-w-xl relative">
                   {/* Bio Card - Back layer with only bottom corners */}
                   {currentAccount?.bio && (
-                    <div className="absolute top-0 left-0 right-0 bg-white border-l border-r border-b border-gray-200 p-6 shadow-sm rounded-b-2xl z-0 block" style={{ top: '56px' }}>
+                    <div 
+                      className="absolute top-0 left-0 right-0 bg-white border-l border-r border-b border-[0.4px] border-[#E5E7EB] p-6 rounded-b-xl z-0 block" 
+                      style={{ 
+                        top: '56px',
+                        boxShadow: `
+                          0 0 1px rgba(100, 100, 100, 0.25),
+                          inset 0 0 2px rgba(27, 27, 27, 0.25)
+                        `
+                      }}
+                    >
                       <h3 className="font-semibold text-gray-900 mb-3 text-sm text-center">Bio</h3>
                       <p className="text-sm text-gray-700 leading-relaxed text-center">{currentAccount.bio}</p>
                     </div>
@@ -1699,11 +1763,17 @@ export default function Page() {
                 <button
                   key={item.title}
                   className="
-                    rounded-2xl border border-neutral-200 bg-white p-4 lg:p-6 shadow-sm
-                    hover:shadow-md hover:bg-neutral-50 transition-shadow duration-200
+                    rounded-xl border-[0.4px] border-[#E5E7EB] bg-white p-4 lg:p-6
+                    hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:border-[#D1D5DB] transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1
                     h-28 lg:h-36 xl:h-40
                   "
+                  style={{
+                    boxShadow: `
+                      0 0 1px rgba(100, 100, 100, 0.25),
+                      inset 0 0 2px rgba(27, 27, 27, 0.25)
+                    `
+                  }}
                   onClick={() => {
                     if (item.onClick) {
                       item.onClick();

@@ -248,20 +248,41 @@ export default function MessagesPage() {
     { id: "group", label: "Groups", count: mobileGroupCount },
   ];
 
-  // Show loading state while store is hydrating - with timeout
+  // Show loading state while store is hydrating - with aggressive timeout
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!isHydrated) {
-        console.log('Chat page: Loading timeout reached');
+    // Immediate timeout check
+    if (!isHydrated) {
+      const timeout = setTimeout(() => {
+        console.log('Chat page: Loading timeout reached, forcing hydration');
         setLoadingTimeout(true);
-      }
-    }, 8000); // 8 second timeout
+        useAppStore.setState({ isHydrated: true });
+      }, 1000); // 1 second timeout
 
-    return () => clearTimeout(timeout);
+      return () => clearTimeout(timeout);
+    }
   }, [isHydrated]);
 
+  // Force hydration immediately on mount if not hydrated
+  useEffect(() => {
+    if (!isHydrated) {
+      const immediateTimeout = setTimeout(() => {
+        console.log('Chat page: Immediate hydration check');
+        if (!isHydrated) {
+          console.log('Chat page: Force setting isHydrated to true immediately');
+          useAppStore.setState({ isHydrated: true });
+          setLoadingTimeout(true);
+        }
+      }, 500); // 500ms immediate check
+
+      return () => clearTimeout(immediateTimeout);
+    }
+  }, []);
+
+  console.log('Chat page render - isHydrated:', isHydrated, 'loadingTimeout:', loadingTimeout);
+
+  // Show loading only for a very brief moment
   if (!isHydrated && !loadingTimeout) {
     return (
       <div className="flex h-screen bg-white items-center justify-center">

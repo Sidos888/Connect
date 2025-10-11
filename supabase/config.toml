@@ -111,10 +111,10 @@ content_path = "./supabase/templates/email_change.html"
 subject = "Confirm your new phone number"
 content_path = "./supabase/templates/phone_change.html"
 
-[edge_functions]
-enabled = true
-# Port to use for the Edge Functions API.
-port = 54325
+# [edge_functions]
+# enabled = true
+# # Port to use for the Edge Functions API.
+# port = 54325
 
 [analytics]
 enabled = false

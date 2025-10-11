@@ -36,9 +36,24 @@ export default function IndividualChatPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const hasMarkedAsRead = useRef(false);
   const [selectedMessage, setSelectedMessage] = useState<SimpleMessage | null>(null);
+  const [selectedMessageElement, setSelectedMessageElement] = useState<HTMLElement | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
   const [pendingMedia, setPendingMedia] = useState<string[]>([]);
   const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
+
+  // Simple mobile optimization - prevent body scroll
+  useEffect(() => {
+    // Prevent body scroll on mobile chat but allow chat container to scroll
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.position = 'unset';
+      document.body.style.width = 'unset';
+    };
+  }, []);
 
   // Load conversation and messages
   useEffect(() => {
@@ -168,7 +183,7 @@ export default function IndividualChatPage() {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
   }, [messages]);
 
   // Mark messages as read when chat is loaded
@@ -316,13 +331,17 @@ export default function IndividualChatPage() {
 
   return (
     <div 
-      className="h-screen bg-white relative" 
+      className="bg-white relative h-screen" 
       style={{ 
-        height: '100dvh', // Use dynamic viewport height for mobile
         transform: `translateX(${dragOffset}px)`,
         transition: isDragging ? 'none' : 'transform 0.2s ease-out',
-        position: 'relative',
-        overflow: 'hidden'
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+        backgroundColor: 'white'
       }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -340,27 +359,37 @@ export default function IndividualChatPage() {
         />
       )}
       
-      {/* Spacer for fixed header */}
-      <div style={{ height: '130px' }}></div>
       {/* Fixed Header */}
       <div 
         className="bg-white fixed left-0 right-0 z-20"
         style={{ 
           paddingTop: '50px',
-          top: '0px'
+          top: '0px',
+          backgroundColor: 'white',
+          height: '132px'
+        }}
+        ref={(el) => {
+          if (el) {
+            console.log('🔍 Header height calculation:', {
+              offsetHeight: el.offsetHeight,
+              paddingTop: el.style.paddingTop,
+              computedHeight: window.getComputedStyle(el).height,
+              styleHeight: el.style.height
+            });
+          }
         }}
       >
         {/* Header Row - All elements on same horizontal line */}
-        <div className="px-4 lg:px-6 py-3 flex items-center gap-3">
+        <div className="px-4 lg:px-6 py-3 flex items-center justify-center">
           {/* Back Button */}
           <button
             onClick={() => router.push('/chat')}
-            className="p-2 rounded-full hover:bg-gray-100"
+            className="p-2 rounded-full hover:bg-gray-100 absolute left-4"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           
-          {/* Profile Card */}
+          {/* Profile Card - Centered and narrower */}
           <button 
             onClick={() => {
                      if (!conversation.isGroup) {
@@ -374,7 +403,7 @@ export default function IndividualChatPage() {
                        router.push(`/chat/profile?chatId=${conversation.id}`);
                      }
             }}
-            className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm hover:bg-gray-50 transition-colors"
+            className="bg-white border border-gray-200 rounded-lg px-6 py-2 flex items-center gap-3 shadow-sm hover:bg-gray-50 transition-colors max-w-xs"
           >
             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {conversation.avatarUrl ? (
@@ -391,16 +420,9 @@ export default function IndividualChatPage() {
                 </div>
               )}
             </div>
-            <div className="flex-1 text-left">
+            <div className="text-center">
               <div className="font-semibold text-gray-900">{conversation.title}</div>
             </div>
-          </button>
-          
-          {/* Menu Button */}
-          <button className="p-2 rounded-full hover:bg-gray-100">
-            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-            </svg>
           </button>
         </div>
         
@@ -413,7 +435,7 @@ export default function IndividualChatPage() {
         ></div>
       </div>
 
-      {/* Reply Preview */}
+      {/* Reply Preview - Only show when actually replying */}
       {replyToMessage && (
         <div 
           className="bg-gray-50 border-t border-gray-200 px-4 fixed left-0 right-0 z-30"
@@ -445,41 +467,6 @@ export default function IndividualChatPage() {
         </div>
       )}
 
-      {/* Pending Media Preview */}
-      {pendingMedia.length > 0 && (
-        <div 
-          className="bg-gray-50 border-t border-gray-200 px-4 fixed left-0 right-0 z-30"
-          style={{ 
-            height: '60px', 
-            paddingTop: '8px', 
-            paddingBottom: '8px',
-            bottom: replyToMessage ? '140px' : '80px'
-          }}
-        >
-          <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
-            <div className="text-sm text-gray-600">Media:</div>
-            <div className="flex gap-2">
-              {pendingMedia.map((url, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={url}
-                    alt={`Preview ${index + 1}`}
-                    className="w-12 h-12 rounded-lg object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={cancelMedia}
-              className="ml-auto p-1 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Fixed Input */}
       <div 
@@ -488,22 +475,86 @@ export default function IndividualChatPage() {
           height: '80px', 
           paddingTop: '8px', 
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          bottom: '0px'
+          bottom: '0px',
+          backgroundColor: 'white'
+        }}
+        ref={(el) => {
+          if (el) {
+            console.log('🔍 Input area height calculation:', {
+              offsetHeight: el.offsetHeight,
+              styleHeight: el.style.height,
+              computedHeight: window.getComputedStyle(el).height,
+              paddingBottom: el.style.paddingBottom
+            });
+          }
         }}
       >
         <div className="flex items-center gap-3">
-          <MediaUploadButton 
-            onMediaSelected={handleMediaSelected}
-            disabled={false}
+          {/* Add/Media Button - White card with icon */}
+          <button
+            onClick={() => {
+              const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+              fileInput?.click();
+            }}
+            className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-gray-900 hover:bg-gray-50 transition-colors border-[0.4px] border-[#E5E7EB]"
+            title="Add photos or videos"
+            style={{
+              boxShadow: `
+                0 0 1px rgba(100, 100, 100, 0.25),
+                inset 0 0 2px rgba(27, 27, 27, 0.25)
+              `
+            }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+          
+          {/* Hidden file input for media upload */}
+          <input
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            onChange={async (event) => {
+              const files = event.target.files;
+              if (!files || files.length === 0) return;
+
+              try {
+                const urls: string[] = [];
+                for (const file of Array.from(files)) {
+                  // Simple file handling - you can enhance this with actual upload logic
+                  const url = URL.createObjectURL(file);
+                  urls.push(url);
+                }
+                handleMediaSelected(urls);
+              } catch (error) {
+                console.error('Media selection error:', error);
+              }
+            }}
+            className="hidden"
           />
           
-          {/* Input field */}
-          <div className="flex-1 relative max-w-xs sm:max-w-none">
+          {/* Input field - 44px height with centered text */}
+          <div className="flex-1 relative flex items-center">
             <textarea
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               placeholder=""
-              className="w-full px-3 py-1 bg-white rounded-full border-[1.5px] border-gray-300 focus:outline-none focus:border-gray-300 focus:bg-white focus:shadow-[0_0_12px_rgba(0,0,0,0.12)] transition-colors resize-none text-sm sm:px-4 sm:py-3 sm:rounded-xl"
+              className="w-full h-11 px-4 bg-white rounded-full border-[0.4px] border-[#E5E7EB] focus:outline-none focus:border-[0.8px] focus:border-[#D1D5DB] focus:bg-white transition-all duration-200 resize-none text-sm text-black caret-black"
+              style={{
+                margin: 0,
+                paddingTop: '10px',
+                paddingBottom: '10px',
+                lineHeight: '1.2',
+                boxSizing: 'border-box',
+                verticalAlign: 'middle',
+                boxShadow: `
+                  0 0 1px rgba(100, 100, 100, 0.25),
+                  inset 0 0 2px rgba(27, 27, 27, 0.25)
+                `
+              }}
+              onFocus={(e) => e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)`}
+              onBlur={(e) => e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)`}
               rows={1}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey && messageText.trim()) {
@@ -514,13 +565,20 @@ export default function IndividualChatPage() {
             />
           </div>
           
+          {/* Send Button - White card that turns black when active */}
           <button
             onClick={handleSendMessage}
-            className={`p-2 rounded-full transition-colors ${
-              messageText.trim() 
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB] ${
+              messageText.trim() || pendingMedia.length > 0
                 ? "bg-gray-900 text-white hover:bg-gray-800" 
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-400 cursor-not-allowed"
             }`}
+            style={{
+              boxShadow: `
+                0 0 1px rgba(100, 100, 100, 0.25),
+                inset 0 0 2px rgba(27, 27, 27, 0.25)
+              `
+            }}
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
@@ -531,34 +589,65 @@ export default function IndividualChatPage() {
 
       {/* Chat Section - Scrollable messages area */}
       <div 
-        className="px-4 overflow-y-auto space-y-3"
+        className="px-4 overflow-y-auto bg-white"
         style={{
-          height: 'calc(100dvh - 210px)',
-          paddingBottom: '0px', // No bottom padding needed since bottom nav is hidden
-          position: 'relative'
+          height: 'calc(100vh - 200px)', // Header (132px) + Input (80px) = 212px, but using 200px to eliminate gap
+          paddingTop: '16px', // Add space at top for first message
+          paddingBottom: '16px', // Add space at bottom for last message
+          position: 'relative',
+          overflowY: 'scroll',
+          WebkitOverflowScrolling: 'touch',
+          backgroundColor: 'white',
+          top: '132px' // Position below the header
+        }}
+        ref={(el) => {
+          if (el) {
+            console.log('🔍 Chat container height calculation:', {
+              viewportHeight: window.innerHeight,
+              dvh: window.innerHeight,
+              calculatedHeight: window.innerHeight - 200,
+              actualHeight: el.offsetHeight,
+              style: el.style.height,
+              computedStyle: window.getComputedStyle(el).height,
+              top: el.style.top,
+              paddingTop: el.style.paddingTop,
+              paddingBottom: el.style.paddingBottom
+            });
+          }
         }}
       >
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const isMe = message.sender_id === account?.id;
           return (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isMe={isMe}
-              participants={participants}
-              onLongPress={handleMessageLongPress}
-              onReactionClick={handleReact}
-              onProfileClick={(userId) => router.push(`/chat/profile?user=${userId}`)}
-            />
+            <div key={message.id} style={{ marginBottom: index < messages.length - 1 ? '12px' : '12px' }}>
+              <MessageBubble
+                ref={(el) => {
+                  if (selectedMessage?.id === message.id && el) {
+                    setSelectedMessageElement(el);
+                  }
+                }}
+                message={message}
+                isMe={isMe}
+                isSelected={selectedMessage?.id === message.id}
+                participants={participants}
+                onLongPress={handleMessageLongPress}
+                onReactionClick={handleReact}
+                onProfileClick={(userId) => router.push(`/chat/profile?user=${userId}`)}
+              />
+            </div>
           );
         })}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} style={{ height: '0px', margin: '0px', padding: '0px' }} />
       </div>
 
       {/* Message Action Modal */}
       <MessageActionModal
         selectedMessage={selectedMessage}
-        onClose={() => setSelectedMessage(null)}
+        messageElement={selectedMessageElement}
+        onClose={() => {
+          setSelectedMessage(null);
+          setSelectedMessageElement(null);
+        }}
         onReply={handleReply}
         onCopy={handleCopy}
         onDelete={handleDelete}

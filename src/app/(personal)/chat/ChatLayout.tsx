@@ -26,6 +26,9 @@ export default function ChatLayout() {
   const selectedChatId = searchParams.get("chat");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  
+  
   const [showNewMessageSelector, setShowNewMessageSelector] = useState(false);
   const [showGroupSetup, setShowGroupSetup] = useState(false);
   type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean; unreadCount: number; messages: Array<{ text: string; createdAt?: string }> } | null;
@@ -65,7 +68,7 @@ export default function ChatLayout() {
           
           const subscriptions: (() => void)[] = [];
           
-          conversations.forEach(conversation => {
+          conversations.forEach((conversation: any) => {
             console.log('ChatLayout: Subscribing to typing for chat:', conversation.id);
             
             const unsubscribe = simpleChatService.subscribeToTyping(
@@ -92,11 +95,11 @@ export default function ChatLayout() {
           if (!isHydrated || !account?.id || conversations.length === 0) return;
 
           const unsubscribes: Array<() => void> = [];
-          conversations.forEach(conv => {
+          conversations.forEach((conv: any) => {
             const off = simpleChatService.subscribeToMessages(conv.id, (newMessage) => {
               // Update last message preview and move conversation to top
               const current = getConversations();
-              const updated = current.map(c => {
+              const updated = current.map((c: any) => {
                 if (c.id !== conv.id) return c;
                 const last = {
                   id: newMessage.id,
@@ -109,7 +112,7 @@ export default function ChatLayout() {
                 return { ...c, messages: [...(c.messages || []), last] };
               });
               // Move the updated conversation to the top
-              const sorted = updated.sort((a, b) => {
+              const sorted = updated.sort((a: any, b: any) => {
                 const at = a.messages.length ? new Date(a.messages[a.messages.length - 1].createdAt).getTime() : 0;
                 const bt = b.messages.length ? new Date(b.messages[b.messages.length - 1].createdAt).getTime() : 0;
                 return bt - at;
@@ -164,17 +167,17 @@ export default function ChatLayout() {
 
   // Category filtering
   const getFilteredConversations = () => {
-    const filtered = conversations.filter(conv => 
+    const filtered = conversations.filter((conv: any) => 
       conv.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     switch (activeCategory) {
       case "unread":
-        return filtered.filter(conv => conv.unreadCount > 0);
+        return filtered.filter((conv: any) => conv.unreadCount > 0);
       case "dm":
-        return filtered.filter(conv => !conv.isGroup);
+        return filtered.filter((conv: any) => !conv.isGroup);
       case "group":
-        return filtered.filter(conv => conv.isGroup);
+        return filtered.filter((conv: any) => conv.isGroup);
       default:
         return filtered;
     }
@@ -184,9 +187,9 @@ export default function ChatLayout() {
 
   // Category counts
   const getCategoryCounts = () => {
-    const unreadCount = conversations.filter(conv => conv.unreadCount > 0).length;
-    const dmCount = conversations.filter(conv => !conv.isGroup).length;
-    const groupCount = conversations.filter(conv => conv.isGroup).length;
+    const unreadCount = conversations.filter((conv: any) => conv.unreadCount > 0).length;
+    const dmCount = conversations.filter((conv: any) => !conv.isGroup).length;
+    const groupCount = conversations.filter((conv: any) => conv.isGroup).length;
     
     return { unreadCount, dmCount, groupCount };
   };
@@ -301,6 +304,7 @@ export default function ChatLayout() {
     { id: "group", label: "Groups", count: groupCount },
   ];
 
+  
   // Show loading state while store is hydrating
   if (!isHydrated) {
     return (
@@ -308,6 +312,7 @@ export default function ChatLayout() {
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
           <p className="text-gray-500">Loading chats...</p>
+          <p className="text-xs text-gray-400">Debug: isHydrated = {isHydrated ? 'true' : 'false'}</p>
         </div>
       </div>
     );
@@ -333,6 +338,7 @@ export default function ChatLayout() {
           <>
             {/* Mobile Layout - Similar to My Life */}
             <div className="lg:hidden min-h-screen bg-white">
+              {console.log('🔥 MOBILE LAYOUT RENDERING - This should show new card styling')}
               {/* Mobile Title - Same as My Life */}
               <div 
                 className="fixed top-0 left-0 right-0 z-50"
@@ -356,7 +362,36 @@ export default function ChatLayout() {
                 <div className="mb-4 lg:mb-8">
                   <div className="max-w-lg mx-auto lg:max-w-xl">
                     <div className="relative">
-                      <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search" className="w-full pl-10 pr-4 py-3 bg-white border-[1.5px] border-gray-300 rounded-xl focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors" />
+                      <input 
+                        type="text" 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        placeholder="Search" 
+                        className="w-full pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-all duration-200"
+                        style={{
+                          backgroundColor: 'white',
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          borderStyle: 'solid',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        }}
+                        onFocus={(e) => { 
+                          setIsSearchFocused(true);
+                          // Apply selected design styling
+                          e.target.style.setProperty('background-color', 'white', 'important');
+                          e.target.style.setProperty('border-width', '0.8px', 'important');
+                          e.target.style.setProperty('border-color', '#D1D5DB', 'important');
+                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
+                        }} 
+                        onBlur={(e) => { 
+                          setIsSearchFocused(false);
+                          // Apply unselected design styling
+                          e.target.style.setProperty('background-color', 'white', 'important');
+                          e.target.style.setProperty('border-width', '0.4px', 'important');
+                          e.target.style.setProperty('border-color', '#E5E7EB', 'important');
+                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', 'important');
+                        }} 
+                      />
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -370,7 +405,7 @@ export default function ChatLayout() {
                 <div className="mb-4">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                     {categories.map((category) => (
-                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-colors focus:outline-none shadow-sm ${activeCategory === category.id ? 'bg-white text-neutral-900' : 'bg-white text-neutral-700'}`}>
+                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none ${activeCategory === category.id ? 'border-[0.8px] border-[#D1D5DB] bg-white text-neutral-900' : 'border-[0.4px] border-[#E5E7EB] bg-white text-neutral-700'}`} style={{ boxShadow: activeCategory === category.id ? `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)` : `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)` }}>
                         <span className="text-sm font-medium leading-none">{category.label}</span>
                         {category.count !== null && (
                           <span className={`ml-2 text-xs leading-none ${activeCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
@@ -381,8 +416,10 @@ export default function ChatLayout() {
                 </div>
 
                 {/* Chat List */}
-                <div className="space-y-2">
-                  {filteredConversations.map((conversation) => (
+                <div className="px-4 space-y-2">
+                  {filteredConversations.map((conversation: any) => {
+                    console.log('🔥 Mobile card rendering:', conversation.id, 'with new styling');
+                    return (
                     <div 
                       key={conversation.id} 
                       onClick={(e) => {
@@ -394,8 +431,18 @@ export default function ChatLayout() {
                         e.preventDefault();
                         handleSelectChat(conversation.id);
                       }}
-                      className={`p-4 rounded-xl cursor-pointer transition-shadow bg-white border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}
-                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                      className={`p-4 rounded-xl cursor-pointer transition-all duration-200 bg-white ${selectedChatId === conversation.id ? 'border-[0.8px] border-[#D1D5DB] shadow-[0_0_12px_rgba(0,0,0,0.15)]' : 'border-[0.4px] border-[#E5E7EB] hover:shadow-[0_0_16px_rgba(0,0,0,0.18)]'}`}
+                      style={{
+                        boxShadow: selectedChatId === conversation.id ? `
+                          0 2px 8px rgba(0, 0, 0, 0.12),
+                          0 1px 3px rgba(0, 0, 0, 0.08)
+                        ` : `
+                          0 2px 4px rgba(0, 0, 0, 0.06),
+                          0 1px 2px rgba(0, 0, 0, 0.04)
+                        `,
+                        touchAction: 'manipulation',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
                     >
                       <div className="flex items-center space-x-3 pointer-events-none">
                         <Avatar src={conversation.avatarUrl} name={conversation.title} size={48} />
@@ -411,13 +458,15 @@ export default function ChatLayout() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             {/* Desktop Layout - Keep existing */}
             <div className="hidden lg:block w-full lg:w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col h-full min-h-0 relative" style={{ borderRightWidth: '1px', borderRightColor: 'rgb(229 231 235)' }}>
+              {console.log('🔥 DESKTOP LAYOUT RENDERING - This should show new card styling')}
               {/* Unified scroll container with sticky header */}
               <div className="flex-1 overflow-y-auto no-scrollbar min-h-0" style={{ height: 'calc(100vh - 0px)' }}>
                 {/* Sticky header */}
@@ -433,7 +482,36 @@ export default function ChatLayout() {
                 {/* Search Section - Desktop (double gap above, quarter gap below) */}
                 <div className="px-4 pt-4 pb-1 lg:pt-6 lg:pb-1 bg-white relative z-10 mb-1">
                   <div className="relative">
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search" className="w-full pl-10 pr-4 py-2 bg-white border-[1.5px] border-gray-300 rounded-lg focus:border-gray-900 focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-colors" />
+                    <input 
+                        type="text" 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        placeholder="Search" 
+                        className="w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-all duration-200"
+                        style={{
+                          backgroundColor: 'white',
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          borderStyle: 'solid',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        }} 
+                        onFocus={(e) => { 
+                          setIsSearchFocused(true);
+                          // Apply selected design styling
+                          e.target.style.setProperty('background-color', 'white', 'important');
+                          e.target.style.setProperty('border-width', '0.8px', 'important');
+                          e.target.style.setProperty('border-color', '#D1D5DB', 'important');
+                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
+                        }} 
+                        onBlur={(e) => { 
+                          setIsSearchFocused(false);
+                          // Apply unselected design styling
+                          e.target.style.setProperty('background-color', 'white', 'important');
+                          e.target.style.setProperty('border-width', '0.4px', 'important');
+                          e.target.style.setProperty('border-color', '#E5E7EB', 'important');
+                          e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', 'important');
+                        }} 
+                      />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -446,7 +524,7 @@ export default function ChatLayout() {
                 <div className="px-4 py-3 bg-white mb-1">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
                     {categories.map((category) => (
-                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap border-[1.5px] transition-colors focus:outline-none ${activeCategory === category.id ? 'bg-white border-gray-900 text-neutral-900' : 'bg-white border-gray-300 text-neutral-700 hover:border-gray-400'} shadow-sm`}>
+                      <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none ${activeCategory === category.id ? 'border-[0.8px] border-[#D1D5DB] bg-white text-neutral-900' : 'border-[0.4px] border-[#E5E7EB] bg-white text-neutral-700'}`} style={{ boxShadow: activeCategory === category.id ? `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)` : `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)` }}>
                         <span className="text-sm font-medium leading-none">{category.label}</span>
                         {category.count !== null && (
                           <span className={`ml-2 text-xs leading-none ${activeCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
@@ -465,8 +543,17 @@ export default function ChatLayout() {
                     </div>
                   ) : (
                     <div className="p-4 space-y-3 pb-32">
-                      {filteredConversations.map((conversation) => (
-                        <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className={`bg-white rounded-xl cursor-pointer w-full transition-shadow border border-gray-200 ${selectedChatId === conversation.id ? 'shadow-[0_0_12px_rgba(0,0,0,0.12)]' : 'shadow-sm hover:shadow-[0_0_12px_rgba(0,0,0,0.12)]'}`}>
+                      {filteredConversations.map((conversation: any) => (
+                        <div key={conversation.id} onClick={(e) => handleSelectChat(conversation.id, e)} className={`bg-white rounded-xl cursor-pointer w-full transition-all duration-200 ${selectedChatId === conversation.id ? 'border-[0.8px] border-[#D1D5DB] shadow-[0_0_12px_rgba(0,0,0,0.15)]' : 'border-[0.4px] border-[#E5E7EB] hover:shadow-[0_0_16px_rgba(0,0,0,0.18)]'}`}
+                          style={{
+                            boxShadow: selectedChatId === conversation.id ? `
+                              0 2px 8px rgba(0, 0, 0, 0.12),
+                              0 1px 3px rgba(0, 0, 0, 0.08)
+                            ` : `
+                              0 2px 4px rgba(0, 0, 0, 0.06),
+                              0 1px 2px rgba(0, 0, 0, 0.04)
+                            `
+                          }}>
                           <div className="p-4">
                             <div className="flex items-center gap-3">
                               {/* Avatar */}

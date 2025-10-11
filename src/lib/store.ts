@@ -358,18 +358,23 @@ export const useAppStore = create<FullStore>((set, get) => ({
 
 // Hydrate from localStorage on first import in client
 if (typeof window !== "undefined") {
-  const persisted = loadFromLocalStorage();
-  if (persisted) {
-    useAppStore.setState({
-      personalProfile: persisted.personalProfile,
-      businesses: persisted.businesses,
-      context: persisted.context,
-      isHydrated: true,
-      conversations: [], // Always start with empty conversations to load real data
-    });
-  } else {
-    useAppStore.setState({ isHydrated: true, conversations: [] });
-  }
+  // Use setTimeout to ensure DOM is ready
+  setTimeout(() => {
+    const persisted = loadFromLocalStorage();
+    if (persisted) {
+      useAppStore.setState({
+        personalProfile: persisted.personalProfile,
+        businesses: persisted.businesses,
+        context: persisted.context,
+        isHydrated: true,
+        conversations: [], // Always start with empty conversations to load real data
+      });
+      console.log('Store hydrated from localStorage');
+    } else {
+      useAppStore.setState({ isHydrated: true, conversations: [] });
+      console.log('Store hydrated with empty state');
+    }
+  }, 0);
 } else {
   // Server-side: set hydrated to false initially
   useAppStore.setState({ isHydrated: false });

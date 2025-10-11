@@ -66,17 +66,29 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   const { title: displayTitle, description: displayDescription, buttonText: displayButtonText } = getCustomMessages();
 
-  // Add timeout to prevent infinite loading
+  // Add aggressive timeout to prevent infinite loading
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!isHydrated || loading) {
         console.log('ProtectedRoute: Loading timeout reached, forcing stop');
         setLoadingTimeout(true);
       }
-    }, 10000); // 10 second timeout
+    }, 1000); // 1 second timeout - very aggressive
 
     return () => clearTimeout(timeout);
   }, [isHydrated, loading]);
+
+  // Force immediate timeout if hydration takes too long
+  useEffect(() => {
+    if (!isHydrated) {
+      const immediateTimeout = setTimeout(() => {
+        console.log('ProtectedRoute: Immediate timeout - forcing hydration');
+        setLoadingTimeout(true);
+      }, 500); // 500ms immediate timeout
+
+      return () => clearTimeout(immediateTimeout);
+    }
+  }, []);
 
   // Load profile only when user changes or when no profile exists
   useEffect(() => {
@@ -247,7 +259,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
     });
   }
 
-  // Wait for store to hydrate - but with a timeout to prevent infinite loading
+  // Wait for store to hydrate - but with a very aggressive timeout to prevent infinite loading
   if (!isHydrated && !loadingTimeout) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -265,6 +277,42 @@ export default function ProtectedRoute({ children, fallback, title, description,
         <div className="text-center space-y-4">
           <LoadingSpinner />
           <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Force timeout after 5 seconds - show login screen
+  if (loadingTimeout) {
+    console.log('ProtectedRoute: Timeout reached, showing login screen');
+    return (
+      <div className="login-screen flex flex-col items-center justify-center h-screen bg-white p-4 overflow-hidden">
+        <div className="text-center w-full max-w-sm">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {displayTitle}
+          </h1>
+          <div className="text-gray-600 mb-8 flex items-center justify-center">
+            <p className="text-center">
+              {displayDescription}
+            </p>
+          </div>
+          <div className="mt-6 w-full flex justify-center">
+            <AuthButton onClick={() => {
+              console.log('ProtectedRoute: Continue button clicked after timeout');
+              try {
+                if (showLogin && typeof showLogin === 'function') {
+                  showLogin();
+                } else {
+                  window.location.replace('/');
+                }
+              } catch (error) {
+                console.error('ProtectedRoute: Error after timeout:', error);
+                window.location.replace('/');
+              }
+            }}>
+              Continue
+            </AuthButton>
+          </div>
         </div>
       </div>
     );

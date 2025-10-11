@@ -10,7 +10,16 @@ type Props = {
 
 export default function ListingRow({ href = "#", title, subtitle, thumbnailUrl, rightChip }: Props) {
   return (
-    <Link href={href} className="rounded-2xl border border-neutral-200 bg-white px-4 py-4 flex items-center gap-4 shadow-sm">
+    <Link 
+      href={href} 
+      className="rounded-2xl bg-white px-4 py-4 flex items-center gap-4 hover:bg-white transition-all duration-200"
+      style={{
+        borderWidth: '0.4px',
+        borderColor: '#E5E7EB',
+        borderStyle: 'solid',
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+      }}
+    >
       <div className="w-16 h-16 rounded-lg overflow-hidden bg-neutral-200 flex items-center justify-center">
         {thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

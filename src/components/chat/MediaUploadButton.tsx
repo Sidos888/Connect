@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 interface MediaUploadButtonProps {
   onMediaSelected: (urls: string[]) => void;

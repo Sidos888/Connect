@@ -26,7 +26,16 @@ function SimpleCard({
   className?: string;
 }) {
   return (
-    <div className={`w-[400px] h-[640px] rounded-xl border border-neutral-200 bg-white shadow-sm p-5 ${className}`} style={{ backgroundColor: 'white' }}>
+    <div 
+      className={`w-[400px] h-[640px] rounded-xl bg-white p-5 ${className}`} 
+      style={{ 
+        backgroundColor: 'white',
+        borderWidth: '0.4px',
+        borderColor: '#E5E7EB',
+        borderStyle: 'solid',
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+      }}
+    >
       {children}
     </div>
   );
@@ -144,7 +153,15 @@ function ConnectionsView({
       </div>
 
       {/* Large personal profile card (to match viewing another person's connections) */}
-      <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+      <div 
+        className="bg-white rounded-2xl p-6 mb-6"
+        style={{
+          borderWidth: '0.4px',
+          borderColor: '#E5E7EB',
+          borderStyle: 'solid',
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+        }}
+      >
         <div className="flex items-center gap-4">
           <Avatar
             src={personalProfile?.avatarUrl}
@@ -783,7 +800,13 @@ function MenuView({
         {/* Profile Card - Clickable */}
         <button
           onClick={onViewProfile}
-          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white rounded-lg transition-shadow border border-gray-200 bg-white shadow-sm"
+          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-white rounded-lg transition-all duration-200 bg-white"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+          }}
         >
           <Avatar
             src={currentAccount?.avatarUrl ?? undefined}
@@ -1789,9 +1812,20 @@ export default function ProfileMenu() {
               menuRef.current.style.display = newOpen ? 'block' : 'none';
             }
           }}
-          className={`flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-2 py-1 hover:shadow-md transition-all duration-700 ease-in-out focus:outline-none relative z-50 ${
-            open ? 'opacity-60' : 'opacity-100'
+          className={`flex items-center gap-2 rounded-full bg-white px-2 py-1 transition-all duration-200 focus:outline-none relative z-50 ${
+            open ? 'opacity-100' : 'opacity-100'
           }`}
+          style={open ? {
+            borderWidth: '0.8px',
+            borderColor: '#D1D5DB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+          } : {
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+          }}
         >
           <Menu size={14} className="text-gray-700" />
           <Avatar 
@@ -1970,9 +2004,15 @@ export default function ProfileMenu() {
                     setAboutMeFromProfile(true);
                     setShowCenteredAboutMe(true);
                   }}
-                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow text-center cursor-pointer"
+                  className="w-full bg-white rounded-2xl p-4 mb-6 min-h-[80px] flex items-center justify-center hover:bg-white transition-all duration-200 text-center cursor-pointer"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    pointerEvents: 'auto'
+                  }}
                   aria-label="Open about me"
-                  style={{ pointerEvents: 'auto' }}
                 >
                   <span className="text-black font-medium">About Me</span>
                 </button>
@@ -1985,9 +2025,15 @@ export default function ProfileMenu() {
                     setConnectionsFromProfile(true);
                     setShowCenteredConnections(true);
                   }}
-                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm min-h-[80px] flex items-center justify-center hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow text-center cursor-pointer"
+                  className="w-full bg-white rounded-2xl p-4 mb-6 min-h-[80px] flex items-center justify-center hover:bg-white transition-all duration-200 text-center cursor-pointer"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    pointerEvents: 'auto'
+                  }}
                   aria-label="Open connections"
-                  style={{ pointerEvents: 'auto' }}
                 >
                   <span className="text-black font-medium">Connections</span>
                 </button>

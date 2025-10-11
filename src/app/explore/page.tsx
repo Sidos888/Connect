@@ -114,7 +114,13 @@ export default function ExplorePage() {
             <h1 className="text-3xl font-bold text-gray-900">Explore</h1>
             <button
               aria-label="Search"
-              className="w-10 h-10 rounded-full border border-neutral-200 bg-white shadow-sm flex items-center justify-center hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 ring-brand"
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-white transition-all duration-200 focus:outline-none focus-visible:ring-2 ring-brand"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+              }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
@@ -124,7 +130,15 @@ export default function ExplorePage() {
         {/* Location Filter - matches ProfileStrip styling */}
         <div className="mb-4 lg:mb-6">
           <div className="max-w-lg mx-auto lg:max-w-xl">
-            <div className="rounded-2xl border border-neutral-200 shadow-sm bg-white px-5 py-4">
+            <div 
+              className="rounded-2xl bg-white px-5 py-4"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+              }}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-lg">📍</span>
@@ -149,13 +163,19 @@ export default function ExplorePage() {
                 <button
                   key={category.title}
                   className={`
-                    rounded-2xl border border-neutral-200 bg-white shadow-sm
-                    hover:shadow-md transition-shadow duration-200
+                    rounded-2xl bg-white
+                    hover:bg-white transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1
                     aspect-square w-full
                     ${category.subtitle ? 'opacity-60 cursor-not-allowed' : ''}
                     ${shouldCenter ? 'col-span-3 mx-auto max-w-xs' : ''}
                   `}
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  }}
                   disabled={!!category.subtitle}
                 >
                   <div className="flex flex-col items-center justify-center h-full p-3 sm:p-4 lg:p-6 gap-1 sm:gap-2 lg:gap-3">
