@@ -209,12 +209,13 @@ class SimpleChatService {
           (message as any).wasTyping = wasTyping;
 
           // Only notify callback if this is a NEW message (not a duplicate)
+          // Check if message ID was already processed (prevents duplicates from optimistic updates)
+          const isDuplicateById = this.processedMessages.has(message.id);
+          
           // Extra guard: dedupe by (chatId, sender_id, text) within short window (2s)
           const signatureKey = `${chatId}:${message.sender_id}:${(message.text || '').trim()}`;
           const nowMs = Date.now();
           const lastSeen = this.recentMessageSignatures.get(signatureKey) || 0;
-
-          const isDuplicateById = this.processedMessages.has(message.id);
           const isDuplicateBySignature = nowMs - lastSeen < 2000; // 2s window
 
           if (!existingMessage && !isDuplicateById && !isDuplicateBySignature) {
@@ -223,6 +224,7 @@ class SimpleChatService {
             const listeners = this.messageCallbacks.get(chatId);
             if (listeners) listeners.forEach(cb => cb(message));
           } else {
+            // Message was duplicate - skip callback to prevent double messages
           }
           
           // THEN stop typing indicator after a delay to allow smooth transition
@@ -1235,6 +1237,9 @@ class SimpleChatService {
         cachedMessages[cacheIndex] = realMessage;
         this.chatMessages.set(chatId, cachedMessages);
       }
+
+      // Mark this message as processed to prevent duplicate from subscription
+      this.processedMessages.add(realMessage.id);
       
       return { message: realMessage, error: null };
     } catch (error) {
