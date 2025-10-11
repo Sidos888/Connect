@@ -237,7 +237,13 @@ function ConnectionsView({
                   return (
                     <div
                       key={connection.id}
-                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-6 min-h-[70px] cursor-pointer hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow mx-auto max-w-md"
+                      className="bg-white rounded-2xl p-6 py-6 min-h-[70px] cursor-pointer hover:bg-white transition-all duration-200 mx-auto max-w-md"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      }}
                       onClick={() => onFriendClick(friend)}
                     >
                       <div className="flex items-center gap-4">
@@ -275,7 +281,13 @@ function ConnectionsView({
                   return (
                     <div
                       key={connection.id}
-                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px]"
+                      className="bg-white rounded-2xl p-6 py-8 relative min-h-[70px]"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      }}
                     >
                       <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                         {business.profile_pic ? (
@@ -577,7 +589,13 @@ function AddPersonView({
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-gray-900">Friend Requests</h3>
                     {pendingRequests.map((request) => (
-                      <div key={request.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px] mx-auto max-w-md">
+                      <div key={request.id} className="bg-white rounded-2xl p-6 py-8 relative min-h-[70px] mx-auto max-w-md"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          borderStyle: 'solid',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        }}>
                         <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                           {request.sender?.profile_pic ? (
                             <img src={request.sender.profile_pic} alt={request.sender.name} className="w-full h-full object-cover" />
@@ -652,7 +670,13 @@ function AddPersonView({
                             {searchResults
                               .filter(user => userConnectionStatuses[user.id] !== 'connected')
                               .map((user) => (
-                              <div key={user.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px] mx-auto max-w-md">
+                              <div key={user.id} className="bg-white rounded-2xl p-6 py-8 relative min-h-[70px] mx-auto max-w-md"
+                                style={{
+                                  borderWidth: '0.4px',
+                                  borderColor: '#E5E7EB',
+                                  borderStyle: 'solid',
+                                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                                }}>
                                 <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                                   {user.profile_pic ? (
                                     <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
@@ -716,7 +740,13 @@ function AddPersonView({
                           .filter(user => userConnectionStatuses[user.id] !== 'connected')
                           .slice(0, 5)
                           .map((user) => (
-                          <div key={user.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 py-8 relative min-h-[70px] mx-auto max-w-md">
+                          <div key={user.id} className="bg-white rounded-2xl p-6 py-8 relative min-h-[70px] mx-auto max-w-md"
+                            style={{
+                              borderWidth: '0.4px',
+                              borderColor: '#E5E7EB',
+                              borderStyle: 'solid',
+                              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                            }}>
                             <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
                               {user.profile_pic ? (
                                 <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />

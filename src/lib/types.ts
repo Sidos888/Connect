@@ -80,6 +80,11 @@ export type Message = {
   }>;
   createdAt: string; // ISO
   read?: boolean;
+  attachments?: Array<{
+    id: string;
+    file_type: string;
+    file_url: string;
+  }>;
 };
 
 export type Conversation = {

@@ -134,7 +134,15 @@ export default function TopNavigation() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setAuthOpen(!authOpen)}
-                    className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white shadow-sm px-3 py-2 hover:shadow-md transition-shadow focus:outline-none"
+                    className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 transition-all duration-200 hover:bg-white active:bg-white focus:outline-none"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: authOpen ? '#D1D5DB' : '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: authOpen 
+                        ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    }}
                   >
                     <Menu size={16} className="text-gray-700" />
                     {/* Hollow dotted profile picture when not signed in */}
@@ -143,7 +151,13 @@ export default function TopNavigation() {
                   </button>
 
                   {authOpen && (
-                    <div className="absolute right-0 z-50 mt-2 w-[400px] rounded-xl border border-neutral-200 bg-white shadow-sm p-5">
+                    <div className="absolute right-0 z-50 mt-2 w-[400px] rounded-2xl bg-white p-5"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                      }}>
                       <div className="space-y-3">
                         <button
                           onClick={() => {
