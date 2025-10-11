@@ -11,13 +11,6 @@ interface MediaPreviewProps {
 export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewProps) {
   if (pendingMedia.length === 0) return null;
 
-  console.log('MediaPreview rendering with:', JSON.stringify(pendingMedia, null, 2));
-  console.log('MediaPreview URLs:', pendingMedia.map(m => ({ 
-    file_url: m.file_url, 
-    file_type: m.file_type,
-    thumbnail_url: m.thumbnail_url 
-  })));
-
   return (
     <div className="mb-4">
       <div className="flex gap-3 flex-wrap">
@@ -79,11 +72,7 @@ export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewPro
                     title={`Image: ${media.file_url}`}
                     loading="eager" // Load immediately for instant display
                     decoding="async" // Async decoding for better performance
-                    onLoad={() => {
-                      console.log('✅ Image loaded successfully:', media.file_url);
-                    }}
                     onError={(e) => {
-                      console.error('❌ Failed to load image:', media.file_url);
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
                       

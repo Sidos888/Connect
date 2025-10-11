@@ -91,28 +91,28 @@ export default function MediaUploadButton({
     setUploadProgress(0);
 
     try {
-      // First, create immediate previews with local URLs for instant display
+      // Create immediate previews with local URLs for INSTANT display (<50ms)
       const immediatePreviews: UploadedMedia[] = [];
       
+      // Process files synchronously but very quickly - only essential operations
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Validate file type
+        // Quick validation (no async operations)
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
           throw new Error(`File ${file.name} is not a valid image or video`);
         }
 
-        // Validate file size (10MB limit)
         if (file.size > 10 * 1024 * 1024) {
           throw new Error(`File ${file.name} is too large. Maximum size is 10MB`);
         }
 
         const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
-        const localUrl = URL.createObjectURL(file);
+        const localUrl = URL.createObjectURL(file); // This is instant
         
-        // Create immediate preview with local URL
+        // Create immediate preview - no async operations here!
         const immediatePreview: UploadedMedia = {
-          file_url: localUrl, // Use local URL for instant display
+          file_url: localUrl,
           file_type,
           file_size: file.size,
           width: undefined, // Will be filled later
@@ -120,21 +120,48 @@ export default function MediaUploadButton({
           thumbnail_url: undefined // Will be filled later for videos
         };
 
-        // Generate thumbnail for videos immediately
-        if (file_type === 'video') {
-          try {
-            immediatePreview.thumbnail_url = await generateVideoThumbnail(file);
-          } catch (error) {
-            console.warn('Failed to generate video thumbnail:', error);
-          }
-        }
-
         immediatePreviews.push(immediatePreview);
       }
-
-      // Show immediate previews
+      
+      // Show previews IMMEDIATELY (this should be <50ms)
       onMediaSelected(immediatePreviews);
       setUploadProgress(25);
+
+      // Now generate thumbnails and dimensions asynchronously (don't block UI)
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
+        const localUrl = immediatePreviews[i].file_url;
+        
+        // Generate thumbnail for videos asynchronously
+        if (file_type === 'video') {
+          generateVideoThumbnail(file)
+            .then(thumbnailUrl => {
+              // Update the preview with thumbnail when ready
+              const updatedPreviews = immediatePreviews.map(preview => 
+                preview.file_url === localUrl ? { ...preview, thumbnail_url: thumbnailUrl } : preview
+              );
+              onMediaSelected([...updatedPreviews]); // Create new array to trigger re-render
+            })
+            .catch(error => {
+              console.warn('Failed to generate video thumbnail:', error);
+            });
+        }
+        
+        // Generate dimensions asynchronously for images
+        if (file_type === 'image') {
+          getImageDimensions(file)
+            .then(dimensions => {
+              const updatedPreviews = immediatePreviews.map(preview => 
+                preview.file_url === localUrl ? { ...preview, width: dimensions.width, height: dimensions.height } : preview
+              );
+              onMediaSelected([...updatedPreviews]); // Create new array to trigger re-render
+            })
+            .catch(error => {
+              console.warn('Failed to get image dimensions:', error);
+            });
+        }
+      }
 
       // Now upload to server in background
       const uploadPromises = Array.from(files).map(async (file, index) => {
