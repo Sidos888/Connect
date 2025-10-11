@@ -1159,7 +1159,8 @@ class SimpleChatService {
         created_at: new Date().toISOString(),
         reply_to_message_id: replyToMessageId || null,
         media_urls: mediaUrls || undefined,
-        reactions: []
+        reactions: [],
+        deleted_at: null // Explicitly set to null to prevent "message deleted" display
       };
 
       // Add optimistic message immediately for instant sender feedback
@@ -1219,7 +1220,8 @@ class SimpleChatService {
         created_at: messageData.created_at,
         reply_to_message_id: messageData.reply_to_message_id || null,
         media_urls: messageData.media_urls || undefined,
-        reactions: []
+        reactions: [],
+        deleted_at: messageData.deleted_at || null // Use database value or null
       };
       
       // Replace optimistic message with real message
