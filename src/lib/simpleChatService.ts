@@ -1,5 +1,7 @@
 import { getSupabaseClient } from './supabaseClient';
 import { formatNameForDisplay } from './utils';
+import { withRetry, isOnline } from './utils/network';
+import { DedupeStore, createCompositeKey } from './utils/dedupeStore';
 
 export interface SimpleChat {
   id: string;
@@ -35,6 +37,9 @@ export interface SimpleMessage {
   sender_profile_pic?: string;
   text: string;
   created_at: string;
+  seq?: number; // NEW: Deterministic ordering sequence
+  client_generated_id?: string; // NEW: For idempotency
+  status?: 'sent' | 'delivered' | 'read'; // NEW: Delivery lifecycle
   reply_to_message_id?: string | null;
   reply_to_message?: SimpleMessage | null;
   media_urls?: string[]; // Keep for backward compatibility
@@ -49,6 +54,18 @@ export interface MessageReaction {
   user_id: string;
   emoji: string;
   created_at: string;
+}
+
+export interface PendingMessage {
+  chatId: string;
+  senderId: string;
+  text: string;
+  clientGenId: string;
+  replyToId?: string;
+  mediaUrls?: string[];
+  retries: number;
+  lastAttempt: number;
+  tempId: string; // For UI optimistic updates
 }
 
 class SimpleChatService {
@@ -66,15 +83,22 @@ class SimpleChatService {
   private typingUsers: Map<string, Set<string>> = new Map();
   private typingCallbacks: Map<string, (typingUsers: string[]) => void> = new Map();
   
-  // Global message tracking to prevent duplicates across all subscriptions
-  private processedMessages: Set<string> = new Set();
-  // Recent message signature timestamps to guard against content-duplicate bursts
-  // key = `${chatId}:${sender_id}:${text}` value = epoch ms last seen
-  private recentMessageSignatures: Map<string, number> = new Map();
+  // NEW: Deduplication store (replaces old processedMessages and recentMessageSignatures)
+  private dedupeStore: DedupeStore = new DedupeStore({
+    ttlMs: 2 * 60 * 1000, // 2 minutes
+    maxSize: 1000
+  });
+  
+  // NEW: Offline queue for failed message sends
+  private pendingQueue: PendingMessage[] = [];
+  private isFlushingQueue = false;
   
   // Chat message cache for instant loading
   private chatMessages: Map<string, SimpleMessage[]> = new Map();
   private chatParticipants: Map<string, any[]> = new Map();
+  
+  // Per-chat latest seq tracking for realtime filtering
+  private chatLatestSeq: Map<string, number> = new Map();
   
   // Cleanup interval
   private cleanupInterval: NodeJS.Timeout | null = null;
@@ -85,38 +109,29 @@ class SimpleChatService {
       this.cleanupInterval = setInterval(() => {
         this.cleanupOldTracking();
       }, 5 * 60 * 1000); // 5 minutes
+      
+      // Listen for online event to flush pending queue
+      window.addEventListener('online', () => {
+        console.log('SimpleChatService: Network online, flushing pending queue');
+        this.flushPendingQueue();
+      });
     }
   }
 
-  // Retry mechanism for failed requests
-  private async withRetry<T>(
+  // Retry mechanism now uses utility function from network.ts
+  // Kept as private wrapper for backward compatibility with existing code
+  private async withRetryCompat<T>(
     operation: () => Promise<T>, 
     maxRetries: number = 2,
-    delay: number = 1000
+    baseDelay: number = 1000
   ): Promise<T> {
-    let lastError: Error | null = null;
-    
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Unknown error');
-        
-        // Don't retry on auth errors or 500 errors
-        if (lastError.message.includes('Invalid Refresh Token') || 
-            lastError.message.includes('Refresh Token Not Found') ||
-            lastError.message.includes('500')) {
-          throw lastError;
-        }
-        
-        if (attempt < maxRetries) {
-          console.warn(`SimpleChatService: Retry ${attempt + 1}/${maxRetries} after error:`, lastError.message);
-          await new Promise(resolve => setTimeout(resolve, delay * (attempt + 1)));
-        }
+    return withRetry(operation, {
+      retries: maxRetries,
+      baseDelayMs: baseDelay,
+      onRetry: (attempt, error) => {
+        console.warn(`SimpleChatService: Retry ${attempt}/${maxRetries} after error:`, error.message);
       }
-    }
-    
-    throw lastError;
+    });
   }
 
   // Expose Supabase client for advanced queries from UI components when needed
@@ -503,23 +518,166 @@ class SimpleChatService {
     console.log('SimpleChatService: Cleanup completed successfully');
   }
 
-  // Periodically clean up old processed messages and signatures to prevent unbounded growth
+  // Periodically clean up old tracked data to prevent unbounded growth
   private cleanupOldTracking() {
-    const now = Date.now();
-    const MAX_AGE = 5 * 60 * 1000; // 5 minutes
+    // Cleanup dedupe store (happens automatically in DedupeStore)
+    const removed = this.dedupeStore.cleanup();
+    if (removed > 0) {
+      console.log(`SimpleChatService: Cleaned up ${removed} dedupe entries`);
+    }
     
-    // Clean up old message signatures
-    for (const [key, timestamp] of this.recentMessageSignatures.entries()) {
-      if (now - timestamp > MAX_AGE) {
-        this.recentMessageSignatures.delete(key);
+    // Clean up old pending messages (remove failed ones after 5 minutes)
+    const now = Date.now();
+    const MAX_AGE = 5 * 60 * 1000;
+    const beforeSize = this.pendingQueue.length;
+    
+    this.pendingQueue = this.pendingQueue.filter(msg => {
+      const age = now - msg.lastAttempt;
+      return age < MAX_AGE;
+    });
+    
+    const removedPendingMessages = beforeSize - this.pendingQueue.length;
+    if (removedPendingMessages > 0) {
+      console.log(`SimpleChatService: Removed ${removedPendingMessages} old pending messages`);
+    }
+  }
+
+  // NEW: Offline queue management
+  private async flushPendingQueue(): Promise<void> {
+    if (this.isFlushingQueue || this.pendingQueue.length === 0) {
+      return;
+    }
+    
+    this.isFlushingQueue = true;
+    console.log(`SimpleChatService: Flushing ${this.pendingQueue.length} pending messages`);
+    
+    // Process queue in order
+    const queue = [...this.pendingQueue];
+    this.pendingQueue = [];
+    
+    for (const pending of queue) {
+      try {
+        // Try to send with exponential backoff
+        const maxDelay = 30000; // Max 30 seconds
+        const delay = Math.min(1000 * Math.pow(2, pending.retries), maxDelay);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        const { message, error } = await this.sendMessage(
+          pending.chatId,
+          pending.senderId,
+          pending.text,
+          pending.replyToId,
+          pending.mediaUrls
+        );
+        
+        if (error) {
+          // Re-add to queue if retries remaining
+          if (pending.retries < 5) {
+            pending.retries++;
+            pending.lastAttempt = Date.now();
+            this.pendingQueue.push(pending);
+          } else {
+            console.error(`SimpleChatService: Gave up on pending message after 5 retries:`, error);
+          }
+        } else {
+          console.log(`SimpleChatService: Successfully sent pending message ${pending.clientGenId}`);
+        }
+      } catch (error) {
+        console.error('SimpleChatService: Error flushing pending message:', error);
+        // Re-add to queue
+        if (pending.retries < 5) {
+          pending.retries++;
+          pending.lastAttempt = Date.now();
+          this.pendingQueue.push(pending);
+        }
       }
     }
     
-    // Limit processedMessages size (keep only last 1000 messages)
-    if (this.processedMessages.size > 1000) {
-      const toKeep = Array.from(this.processedMessages).slice(-1000);
-      this.processedMessages.clear();
-      toKeep.forEach(id => this.processedMessages.add(id));
+    this.isFlushingQueue = false;
+  }
+
+  // NEW: Add message to offline queue
+  private addToPendingQueue(pending: PendingMessage): void {
+    this.pendingQueue.push(pending);
+    console.log(`SimpleChatService: Added message to pending queue (${this.pendingQueue.length} pending)`);
+  }
+
+  // NEW: Get pending messages (for UI display)
+  getPendingMessages(): PendingMessage[] {
+    return [...this.pendingQueue];
+  }
+
+  // NEW: Delivery lifecycle - Mark messages as delivered
+  async markMessagesAsDelivered(chatId: string, receiverId: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase.rpc('mark_messages_as_delivered', {
+        p_chat_id: chatId,
+        p_receiver_id: receiverId
+      });
+      
+      if (error) {
+        console.error('SimpleChatService: Error marking messages as delivered:', error);
+        return { error };
+      }
+      
+      // Invalidate cache to force reload with updated status
+      this.chatMessages.delete(chatId);
+      
+      return { error: null };
+    } catch (error) {
+      console.error('SimpleChatService: Error in markMessagesAsDelivered:', error);
+      return { error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // NEW: Delivery lifecycle - Mark messages as read (overrides existing method)
+  async markMessagesAsRead(chatId: string, userId: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase.rpc('mark_messages_as_read', {
+        p_chat_id: chatId,
+        p_user_id: userId
+      });
+      
+      if (error) {
+        console.error('SimpleChatService: Error marking messages as read:', error);
+        return { error };
+      }
+      
+      // Invalidate cache to force reload with updated status
+      this.chatMessages.delete(chatId);
+      
+      return { error: null };
+    } catch (error) {
+      console.error('SimpleChatService: Error in markMessagesAsRead:', error);
+      return { error: error instanceof Error ? error : new Error('Unknown error') };
+    }
+  }
+
+  // NEW: Get latest seq for a chat
+  async getLatestSeq(chatId: string): Promise<number> {
+    // Check cache first
+    const cached = this.chatLatestSeq.get(chatId);
+    if (cached !== undefined) {
+      return cached;
+    }
+    
+    try {
+      const { data, error } = await this.supabase.rpc('get_latest_seq', {
+        p_chat_id: chatId
+      });
+      
+      if (error) {
+        console.error('SimpleChatService: Error getting latest seq:', error);
+        return 0;
+      }
+      
+      const latestSeq = data || 0;
+      this.chatLatestSeq.set(chatId, latestSeq);
+      return latestSeq;
+    } catch (error) {
+      console.error('SimpleChatService: Error in getLatestSeq:', error);
+      return 0;
     }
   }
 
@@ -1092,22 +1250,30 @@ class SimpleChatService {
     }
   }
 
-  // Get chat messages (now loads from Supabase)
-  async getChatMessages(chatId: string, userId: string): Promise<{ messages: SimpleMessage[]; error: Error | null }> {
+  // Get chat messages (now loads from Supabase with seq-based ordering and pagination)
+  async getChatMessages(
+    chatId: string, 
+    userId: string, 
+    beforeSeq?: number, 
+    limit: number = 50
+  ): Promise<{ messages: SimpleMessage[]; error: Error | null; hasMore: boolean }> {
     try {
-      // Check cache first for instant loading
-      const cachedMessages = this.chatMessages.get(chatId);
-      if (cachedMessages) {
-        return { messages: cachedMessages, error: null };
+      // Don't use cache for paginated queries (they need fresh data)
+      if (!beforeSeq) {
+        // Check cache first for initial load
+        const cachedMessages = this.chatMessages.get(chatId);
+        if (cachedMessages) {
+          return { messages: cachedMessages, error: null, hasMore: false };
+        }
       }
       
       const chat = this.chats.get(chatId);
       if (!chat) {
-        return { messages: [], error: new Error('Chat not found') };
+        return { messages: [], error: new Error('Chat not found'), hasMore: false };
       }
 
-      // Load messages from Supabase with reactions, reply data, and attachments
-      const { data: messagesData, error: fetchError } = await this.supabase
+      // Build query with keyset pagination
+      let query = this.supabase
         .from('chat_messages')
         .select(`
           *,
@@ -1116,21 +1282,42 @@ class SimpleChatService {
           attachments:attachments(id, file_url, file_type, file_size, thumbnail_url, width, height, created_at)
         `)
         .eq('chat_id', chatId)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: true });
+        .is('deleted_at', null);
+      
+      // Add keyset pagination filter
+      if (beforeSeq !== undefined) {
+        query = query.lt('seq', beforeSeq);
+      }
+      
+      // Order by seq (deterministic ordering), falling back to created_at for legacy messages
+      // Fetch one extra to check if there are more
+      query = query.order('seq', { ascending: false, nullsFirst: false })
+                   .order('created_at', { ascending: false })
+                   .limit(limit + 1);
+      
+      const { data: messagesData, error: fetchError } = await query;
 
       if (fetchError) {
         console.error('Error loading messages from Supabase:', fetchError);
-        return { messages: [], error: fetchError };
+        return { messages: [], error: fetchError, hasMore: false };
       }
 
+      // Check if there are more messages
+      const hasMore = messagesData && messagesData.length > limit;
+      const messagesDataToDisplay = messagesData ? messagesData.slice(0, limit) : [];
+      
+      // Messages come in DESC order (newest first), reverse for display (oldest first)
+      const orderedData = [...messagesDataToDisplay].reverse();
+      
       // Convert Supabase messages to SimpleMessage format
-      const messages: SimpleMessage[] = (messagesData || []).map(msg => {
+      const messages: SimpleMessage[] = orderedData.map(msg => {
         // Get sender info from chat participants
         const sender = chat.participants.find(p => p.id === msg.sender_id);
         
-        // Debug: Log message data to see what's being loaded
-        // (console.log removed for performance)
+        // Update latest seq tracking
+        if (msg.seq && (!this.chatLatestSeq.has(chatId) || msg.seq > this.chatLatestSeq.get(chatId)!)) {
+          this.chatLatestSeq.set(chatId, msg.seq);
+        }
         
         return {
           id: msg.id,
@@ -1140,13 +1327,16 @@ class SimpleChatService {
           sender_profile_pic: sender?.profile_pic || undefined,
           text: msg.message_text || '',
           created_at: msg.created_at,
+          seq: msg.seq || undefined, // NEW
+          client_generated_id: msg.client_generated_id || undefined, // NEW
+          status: msg.status || undefined, // NEW
           reply_to_message_id: msg.reply_to_message_id || null,
           reply_to_message: (msg.reply_to && msg.reply_to.id) ? {
             id: msg.reply_to.id,
             chat_id: msg.chat_id,
             sender_id: msg.reply_to.sender_id,
             sender_name: msg.reply_to.sender_id === userId ? 'You' : 'Other',
-            sender_profile_pic: undefined, // We'd need to fetch this separately if needed
+            sender_profile_pic: undefined,
             text: msg.reply_to.message_text || '',
             created_at: msg.created_at
           } : null,
@@ -1157,16 +1347,17 @@ class SimpleChatService {
         };
       });
 
-      // Cache the messages for instant future access
-      this.chatMessages.set(chatId, messages);
+      // Cache only the initial load (not paginated results)
+      if (!beforeSeq) {
+        this.chatMessages.set(chatId, messages);
+        // Update in-memory chat with messages from Supabase
+        chat.messages = messages;
+      }
       
-      // Update in-memory chat with messages from Supabase
-      chat.messages = messages;
-      
-      return { messages, error: null };
+      return { messages, error: null, hasMore };
     } catch (error) {
       console.error('Error in getChatMessages:', error);
-      return { messages: [], error: error instanceof Error ? error : new Error('Unknown error') };
+      return { messages: [], error: error instanceof Error ? error : new Error('Unknown error'), hasMore: false };
     }
   }
 
@@ -1235,7 +1426,7 @@ class SimpleChatService {
     }
   }
 
-  // Send a message (now saves to Supabase with optional reply and media)
+  // Send a message (now IDEMPOTENT with client_generated_id and offline queue support)
   async sendMessage(
     chatId: string, 
     senderId: string, 
@@ -1244,6 +1435,44 @@ class SimpleChatService {
     mediaUrls?: string[]
   ): Promise<{ message: SimpleMessage | null; error: Error | null }> {
     try {
+      // Check if offline - add to queue instead
+      if (!isOnline()) {
+        const clientGenId = crypto.randomUUID();
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const pending: PendingMessage = {
+          chatId,
+          senderId,
+          text: messageText,
+          clientGenId,
+          replyToId: replyToMessageId,
+          mediaUrls,
+          retries: 0,
+          lastAttempt: Date.now(),
+          tempId
+        };
+        
+        this.addToPendingQueue(pending);
+        
+        // Return optimistic message for UI
+        const optimisticMessage: SimpleMessage = {
+          id: tempId,
+          chat_id: chatId,
+          sender_id: senderId,
+          sender_name: 'You',
+          text: messageText,
+          created_at: new Date().toISOString(),
+          client_generated_id: clientGenId,
+          status: 'sent',
+          reply_to_message_id: replyToMessageId || null,
+          media_urls: mediaUrls,
+          reactions: [],
+          deleted_at: null
+        };
+        
+        return { message: optimisticMessage, error: null };
+      }
+      
       let chat = this.chats.get(chatId);
       if (!chat) {
         // Chat not in cache, try to load it
@@ -1255,26 +1484,31 @@ class SimpleChatService {
         chat = loadedChat;
       }
 
+      // Generate client_generated_id for idempotency
+      const clientGenId = crypto.randomUUID();
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       // Create optimistic message for instant UI feedback
       const optimisticMessage: SimpleMessage = {
-        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // More unique temporary ID
+        id: tempId,
         chat_id: chatId,
         sender_id: senderId,
         sender_name: 'You',
-        sender_profile_pic: undefined, // Current user's profile pic will be handled by Avatar component
+        sender_profile_pic: undefined,
         text: messageText,
         created_at: new Date().toISOString(),
+        client_generated_id: clientGenId, // NEW
+        status: 'sent', // NEW
         reply_to_message_id: replyToMessageId || null,
         media_urls: mediaUrls || undefined,
         reactions: [],
-        deleted_at: null // Explicitly set to null to prevent "message deleted" display
+        deleted_at: null
       };
 
       // Add optimistic message immediately for instant sender feedback
       chat.messages.push(optimisticMessage);
       chat.last_message = messageText;
       chat.last_message_at = optimisticMessage.created_at;
-      chat.updated_at = optimisticMessage.created_at;
       
       // Update the message cache immediately for instant UI updates
       const cachedMessages = this.chatMessages.get(chatId) || [];
@@ -1287,13 +1521,15 @@ class SimpleChatService {
         callbacks.forEach(callback => callback(optimisticMessage));
       }
 
-      // Save message to Supabase
+      // Save message to Supabase with idempotency key
       const { data: messageData, error: insertError } = await this.supabase
         .from('chat_messages')
         .insert({
           chat_id: chatId,
           sender_id: senderId,
           message_text: messageText,
+          client_generated_id: clientGenId, // NEW: Idempotency key
+          status: 'sent', // NEW: Initial status
           reply_to_message_id: replyToMessageId || null,
           media_urls: mediaUrls || null,
           created_at: new Date().toISOString()
@@ -1302,18 +1538,73 @@ class SimpleChatService {
         .single();
 
       if (insertError) {
+        // Check if this is an idempotency conflict (duplicate client_generated_id)
+        if (insertError.code === '23505' && insertError.message?.includes('client_generated_id')) {
+          console.log('SimpleChatService: Idempotency conflict detected, fetching existing message');
+          
+          // Fetch the existing message
+          const { data: existing, error: fetchError } = await this.supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('sender_id', senderId)
+            .eq('client_generated_id', clientGenId)
+            .single();
+          
+          if (!fetchError && existing) {
+            // Replace optimistic message with real message
+            const realMessage: SimpleMessage = {
+              id: existing.id,
+              chat_id: chatId,
+              sender_id: senderId,
+              sender_name: 'You',
+              text: messageText,
+              created_at: existing.created_at,
+              seq: existing.seq,
+              client_generated_id: clientGenId,
+              status: existing.status || 'sent',
+              reply_to_message_id: existing.reply_to_message_id,
+              media_urls: existing.media_urls,
+              reactions: [],
+              deleted_at: existing.deleted_at
+            };
+            
+            // Replace in cache
+            const messageIndex = chat.messages.findIndex(m => m.id === optimisticMessage.id);
+            if (messageIndex > -1) {
+              chat.messages[messageIndex] = realMessage;
+            }
+            
+            const cacheIndex = cachedMessages.findIndex(m => m.id === optimisticMessage.id);
+            if (cacheIndex > -1) {
+              cachedMessages[cacheIndex] = realMessage;
+              this.chatMessages.set(chatId, cachedMessages);
+            }
+            
+            // Mark as processed to prevent duplicate from realtime
+            this.dedupeStore.add(realMessage.id);
+            this.dedupeStore.add(createCompositeKey(chatId, senderId, clientGenId));
+            
+            return { message: realMessage, error: null };
+          }
+        }
+        
         console.error('Error saving message to Supabase:', insertError);
-        // Remove optimistic message on error
-        const messageIndex = chat.messages.findIndex(m => m.id === optimisticMessage.id);
-        if (messageIndex > -1) {
-          chat.messages.splice(messageIndex, 1);
-        }
-        const cacheIndex = cachedMessages.findIndex(m => m.id === optimisticMessage.id);
-        if (cacheIndex > -1) {
-          cachedMessages.splice(cacheIndex, 1);
-          this.chatMessages.set(chatId, cachedMessages);
-        }
-        return { message: null, error: insertError };
+        
+        // Add to pending queue for retry
+        const pending: PendingMessage = {
+          chatId,
+          senderId,
+          text: messageText,
+          clientGenId,
+          replyToId: replyToMessageId,
+          mediaUrls,
+          retries: 0,
+          lastAttempt: Date.now(),
+          tempId
+        };
+        this.addToPendingQueue(pending);
+        
+        return { message: optimisticMessage, error: insertError };
       }
 
       // Replace optimistic message with real message
@@ -1322,14 +1613,22 @@ class SimpleChatService {
         chat_id: chatId,
         sender_id: senderId,
         sender_name: 'You',
-        sender_profile_pic: undefined, // Current user's profile pic will be handled by Avatar component
+        sender_profile_pic: undefined,
         text: messageText,
         created_at: messageData.created_at,
+        seq: messageData.seq, // NEW
+        client_generated_id: clientGenId, // NEW
+        status: messageData.status || 'sent', // NEW
         reply_to_message_id: messageData.reply_to_message_id || null,
         media_urls: messageData.media_urls || undefined,
         reactions: [],
-        deleted_at: messageData.deleted_at || null // Use database value or null
+        deleted_at: messageData.deleted_at || null
       };
+      
+      // Update latest seq tracking
+      if (realMessage.seq) {
+        this.chatLatestSeq.set(chatId, realMessage.seq);
+      }
       
       // Replace optimistic message with real message
       const messageIndex = chat.messages.findIndex(m => m.id === optimisticMessage.id);
@@ -1344,11 +1643,29 @@ class SimpleChatService {
       }
 
       // Mark this message as processed to prevent duplicate from subscription
-      this.processedMessages.add(realMessage.id);
+      this.dedupeStore.add(realMessage.id);
+      this.dedupeStore.add(createCompositeKey(chatId, senderId, clientGenId));
       
       return { message: realMessage, error: null };
     } catch (error) {
       console.error('Error in sendMessage:', error);
+      
+      // Add to pending queue for retry on any error
+      if (error instanceof Error && error.message.includes('network')) {
+        const pending: PendingMessage = {
+          chatId,
+          senderId,
+          text: messageText,
+          clientGenId: crypto.randomUUID(),
+          replyToId: replyToMessageId,
+          mediaUrls,
+          retries: 0,
+          lastAttempt: Date.now(),
+          tempId: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        };
+        this.addToPendingQueue(pending);
+      }
+      
       return { message: null, error: error instanceof Error ? error : new Error('Unknown error') };
     }
   }
