@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { usePathname } from 'next/navigation';
 import AuthButton from './AuthButton';
@@ -247,27 +247,26 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   // Profile loading is now handled naturally without timeouts
 
-  // Enhanced debug logging to see what's happening
-  console.log('🔍 ProtectedRoute Debug:', {
-    hasUser: !!user,
-    userId: user?.id,
-    userEmail: user?.email,
-    userPhone: user?.phone,
-    hasPersonalProfile: !!personalProfile,
-    personalProfileId: personalProfile?.id,
-    personalProfileName: personalProfile?.name,
-    isLoadingProfile,
-    isHydrated,
-    loadingTimeout,
-    pathname,
-    loading
-  });
+  // Memoize the rendered content to prevent excessive re-renders
+  const content = useMemo(() => {
+    // Enhanced debug logging to see what's happening (only when memoized value changes)
+    console.log('🔍 ProtectedRoute Debug:', {
+      hasUser: !!user,
+      userId: user?.id,
+      hasPersonalProfile: !!personalProfile,
+      personalProfileId: personalProfile?.id,
+      isLoadingProfile,
+      isHydrated,
+      loadingTimeout,
+      pathname,
+      loading
+    });
 
-  // 🚀 BULLETPROOF: If we have profile data, show content immediately (no loading screens)
-  if (personalProfile && !loadingTimeout) {
-    console.log('🚀 BULLETPROOF: Profile exists, showing content immediately - no loading screens');
-    return <>{children}</>;
-  }
+    // 🚀 BULLETPROOF: If we have profile data, show content immediately (no loading screens)
+    if (personalProfile && !loadingTimeout) {
+      console.log('🚀 BULLETPROOF: Profile exists, showing content immediately - no loading screens');
+      return <>{children}</>;
+    }
 
   // Wait for store to hydrate - but only if user exists AND no profile yet
   if (!isHydrated && !loadingTimeout && user && !personalProfile) {
@@ -413,12 +412,15 @@ export default function ProtectedRoute({ children, fallback, title, description,
     );
   }
 
-  // If we have a user but timeout occurred, still show content (auth is working)
-  if (loadingTimeout && user && personalProfile) {
-    console.log('ProtectedRoute: Timeout occurred but user is authenticated, showing content');
-    return <>{children}</>;
-  }
+    // If we have a user but timeout occurred, still show content (auth is working)
+    if (loadingTimeout && user && personalProfile) {
+      console.log('ProtectedRoute: Timeout occurred but user is authenticated, showing content');
+      return <>{children}</>;
+    }
 
-  // User is authenticated, render children
-  return <>{children}</>;
+    // User is authenticated, render children
+    return <>{children}</>;
+  }, [user, personalProfile, isLoadingProfile, isHydrated, loadingTimeout, pathname, loading, children]);
+  
+  return content;
 }

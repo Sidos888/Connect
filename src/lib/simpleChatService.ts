@@ -77,8 +77,11 @@ class SimpleChatService {
   
   // Real-time subscriptions
   private messageSubscriptions: Map<string, any> = new Map();
-  // Allow multiple listeners per chat
-  private messageCallbacks: Map<string, Set<(message: SimpleMessage) => void>> = new Map();
+  // Allow multiple listeners per chat - now with subscription IDs for robust cleanup
+  private messageCallbacks: Map<string, Map<string, (message: SimpleMessage) => void>> = new Map();
+  // Track subscription IDs for each component to enable forced cleanup
+  private subscriptionIds: Map<string, string> = new Map(); // callbackId -> subscriptionId
+  private nextSubscriptionId = 0;
   private typingSubscriptions: Map<string, any> = new Map();
   private typingUsers: Map<string, Set<string>> = new Map();
   private typingCallbacks: Map<string, (typingUsers: string[]) => void> = new Map();
@@ -168,17 +171,35 @@ class SimpleChatService {
 
   // Real-time messaging methods
   subscribeToMessages(chatId: string, onNewMessage: (message: SimpleMessage) => void): () => void {
-    console.log(`🔍 SimpleChatService - subscribeToMessages called - Chat: ${chatId} - Callback: ${onNewMessage} - Existing callbacks: ${this.messageCallbacks.get(chatId)?.size || 0}`);
+    // Generate unique subscription ID for robust cleanup
+    const subscriptionId = `sub_${this.nextSubscriptionId++}_${Date.now()}`;
     
-    // Store the callback for fan-out
+    console.log(`🔍 SimpleChatService - subscribeToMessages called - Chat: ${chatId} - Subscription ID: ${subscriptionId} - Existing callbacks: ${this.messageCallbacks.get(chatId)?.size || 0}`);
+    
+    // Store the callback with ID for reliable removal
     if (!this.messageCallbacks.has(chatId)) {
-      this.messageCallbacks.set(chatId, new Set());
-      console.log(`🔍 SimpleChatService - Created new callback set for chat: ${chatId}`);
+      this.messageCallbacks.set(chatId, new Map());
+      console.log(`🔍 SimpleChatService - Created new callback map for chat: ${chatId}`);
     }
-    const cbSet = this.messageCallbacks.get(chatId)!;
-    const beforeSize = cbSet.size;
-    cbSet.add(onNewMessage);
-    console.log(`🔍 SimpleChatService - Added callback to chat: ${chatId} - Callbacks before: ${beforeSize} - Callbacks after: ${cbSet.size}`);
+    const cbMap = this.messageCallbacks.get(chatId)!;
+    
+    // Prevent duplicate subscriptions for the same component
+    // Check if this exact callback is already registered
+    for (const [existingId, existingCallback] of cbMap.entries()) {
+      if (existingCallback === onNewMessage) {
+        console.log(`🔍 SimpleChatService - DUPLICATE DETECTED - Same callback already registered with ID: ${existingId} - Returning existing cleanup function`);
+        // Return a cleanup function that removes by the existing ID
+        return () => {
+          console.log(`🔍 SimpleChatService - CLEANUP (duplicate) - Chat: ${chatId} - ID: ${existingId}`);
+          this.removeSubscription(chatId, existingId);
+        };
+      }
+    }
+    
+    const beforeSize = cbMap.size;
+    cbMap.set(subscriptionId, onNewMessage);
+    this.subscriptionIds.set(subscriptionId, chatId);
+    console.log(`🔍 SimpleChatService - Added callback to chat: ${chatId} - Callbacks before: ${beforeSize} - Callbacks after: ${cbMap.size} - ID: ${subscriptionId}`);
     
     // Create subscription once per chat
     if (!this.messageSubscriptions.has(chatId)) {
@@ -278,8 +299,8 @@ class SimpleChatService {
             console.log(`🔍 SimpleChatService - Executing callbacks for chat: ${chatId} - Listeners count: ${listeners?.size || 0} - Message ID: ${message.id}`);
             if (listeners) {
               let callbackIndex = 0;
-              listeners.forEach(cb => {
-                console.log(`🔍 SimpleChatService - Executing callback #${callbackIndex + 1} for chat: ${chatId} - Message ID: ${message.id}`);
+              listeners.forEach((cb, subId) => {
+                console.log(`🔍 SimpleChatService - Executing callback #${callbackIndex + 1} (ID: ${subId}) for chat: ${chatId} - Message ID: ${message.id}`);
                 cb(message);
                 callbackIndex++;
               });
@@ -310,12 +331,12 @@ class SimpleChatService {
           // Retry subscription after 3 seconds
           setTimeout(() => {
             console.log(`SimpleChatService: Retrying message subscription for chat ${chatId}`);
-            const cbSet = this.messageCallbacks.get(chatId);
-            if (cbSet && cbSet.size > 0) {
+            const cbMap = this.messageCallbacks.get(chatId);
+            if (cbMap && cbMap.size > 0) {
               // Resubscribe if there are still listeners
               this.messageSubscriptions.delete(chatId);
               // Trigger resubscription by calling subscribeToMessages again
-              const firstCallback = Array.from(cbSet)[0];
+              const firstCallback = Array.from(cbMap.values())[0];
               this.subscribeToMessages(chatId, firstCallback);
             }
           }, 3000);
@@ -324,10 +345,10 @@ class SimpleChatService {
           // Retry after timeout
           setTimeout(() => {
             console.log(`SimpleChatService: Retrying message subscription after timeout for chat ${chatId}`);
-            const cbSet = this.messageCallbacks.get(chatId);
-            if (cbSet && cbSet.size > 0) {
+            const cbMap = this.messageCallbacks.get(chatId);
+            if (cbMap && cbMap.size > 0) {
               this.messageSubscriptions.delete(chatId);
-              const firstCallback = Array.from(cbSet)[0];
+              const firstCallback = Array.from(cbMap.values())[0];
               this.subscribeToMessages(chatId, firstCallback);
             }
           }, 5000);
@@ -337,30 +358,43 @@ class SimpleChatService {
       this.messageSubscriptions.set(chatId, subscription);
     }
     
+    // Return cleanup function with subscription ID for reliable removal
     return () => {
-      console.log(`🔍 SimpleChatService - UNSUBSCRIBE called for chat: ${chatId} - Callback: ${onNewMessage}`);
-      // Remove this listener; keep channel if others are listening
-      const set = this.messageCallbacks.get(chatId);
-      if (set) {
-        const beforeSize = set.size;
-        const deleted = set.delete(onNewMessage);
-        console.log(`🔍 SimpleChatService - Removed callback from chat: ${chatId} - Deleted: ${deleted} - Callbacks before: ${beforeSize} - Callbacks after: ${set.size}`);
-        
-        if (set.size === 0) {
-          console.log(`🔍 SimpleChatService - No more callbacks for chat: ${chatId} - Cleaning up subscription`);
-          this.messageCallbacks.delete(chatId);
-          const sub = this.messageSubscriptions.get(chatId);
-          if (sub) {
-            console.log(`🔍 SimpleChatService - Unsubscribing from Supabase channel for chat: ${chatId}`);
-            sub.unsubscribe();
-          }
-          this.messageSubscriptions.delete(chatId);
-          console.log(`🔍 SimpleChatService - Cleanup complete for chat: ${chatId} - Remaining subscriptions: ${this.messageSubscriptions.size}`);
-        }
-      } else {
-        console.log(`🔍 SimpleChatService - No callback set found for chat: ${chatId} during unsubscribe`);
-      }
+      console.log(`🔍 SimpleChatService - CLEANUP called - Chat: ${chatId} - Subscription ID: ${subscriptionId}`);
+      this.removeSubscription(chatId, subscriptionId);
     };
+  }
+  
+  // Robust subscription removal by ID - works even if callback reference changed
+  private removeSubscription(chatId: string, subscriptionId: string): void {
+    const cbMap = this.messageCallbacks.get(chatId);
+    if (!cbMap) {
+      console.log(`🔍 SimpleChatService - No callback map found for chat: ${chatId} during cleanup`);
+      return;
+    }
+    
+    const beforeSize = cbMap.size;
+    const deleted = cbMap.delete(subscriptionId);
+    this.subscriptionIds.delete(subscriptionId);
+    
+    console.log(`🔍 SimpleChatService - Removed callback from chat: ${chatId} - Deleted: ${deleted} - Callbacks before: ${beforeSize} - Callbacks after: ${cbMap.size} - ID: ${subscriptionId}`);
+    
+    // Clean up channel subscription if no more listeners
+    if (cbMap.size === 0) {
+      console.log(`🔍 SimpleChatService - No more callbacks for chat: ${chatId} - Cleaning up Supabase subscription`);
+      this.messageCallbacks.delete(chatId);
+      const sub = this.messageSubscriptions.get(chatId);
+      if (sub) {
+        console.log(`🔍 SimpleChatService - Unsubscribing from Supabase channel for chat: ${chatId}`);
+        try {
+          sub.unsubscribe();
+        } catch (error) {
+          console.error(`SimpleChatService - Error unsubscribing from chat ${chatId}:`, error);
+        }
+      }
+      this.messageSubscriptions.delete(chatId);
+      console.log(`🔍 SimpleChatService - Cleanup complete for chat: ${chatId} - Remaining subscriptions: ${this.messageSubscriptions.size}`);
+    }
   }
 
   subscribeToTyping(chatId: string, userId: string, onTypingUpdate: (typingUsers: string[]) => void): () => void {
@@ -1669,8 +1703,8 @@ class SimpleChatService {
       console.log(`🔍 SimpleChatService - Sending optimistic message - Chat: ${chatId} - Message ID: ${optimisticMessage.id} - Callbacks: ${callbacks?.size || 0}`);
       if (callbacks && callbacks.size > 0) {
         let callbackIndex = 0;
-        callbacks.forEach(callback => {
-          console.log(`🔍 SimpleChatService - Executing optimistic callback #${callbackIndex + 1} for chat: ${chatId} - Message ID: ${optimisticMessage.id}`);
+        callbacks.forEach((callback, subId) => {
+          console.log(`🔍 SimpleChatService - Executing optimistic callback #${callbackIndex + 1} (ID: ${subId}) for chat: ${chatId} - Message ID: ${optimisticMessage.id}`);
           callback(optimisticMessage);
           callbackIndex++;
         });
