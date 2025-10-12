@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Avatar from "@/components/Avatar";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
@@ -89,7 +89,7 @@ interface PersonalChatPanelProps {
   conversation: Conversation;
 }
 
-export default function PersonalChatPanel({ conversation }: PersonalChatPanelProps) {
+const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   
   // Add error boundary for missing conversation
   if (!conversation || !conversation.id) {
@@ -134,6 +134,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   // Real-time state
   const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sendingRef = useRef(false); // Prevent duplicate sends
 
   // Message action handlers
   const handleMessageLongPress = (message: SimpleMessage) => {
@@ -164,6 +165,81 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const handleProfileClick = (userId: string) => {
     setProfileUserId(userId);
     setShowUserProfile(true);
+  };
+
+  // Use ref to store stable callback reference
+  const handleNewMessageRef = useRef<(message: SimpleMessage) => void>(() => {});
+  
+  // Update the ref whenever the component re-renders
+  handleNewMessageRef.current = (newMessage: SimpleMessage) => {
+    setMessages(prev => {
+      // Check if message already exists to prevent duplicates
+      const exists = prev.some(msg => msg.id === newMessage.id);
+      if (exists) {
+        return prev;
+      }
+      // NEW: Add new message and sort by seq (deterministic ordering)
+      const updated = [...prev, newMessage];
+      
+      // Sort by seq if available, fallback to created_at for legacy messages
+      updated.sort((a, b) => {
+        if (a.seq !== undefined && b.seq !== undefined) {
+          return a.seq - b.seq;
+        }
+        // Fallback to created_at for messages without seq
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+      
+      return updated;
+    });
+  };
+
+  // Stable callback that always calls the current ref
+  const handleNewMessage = useCallback((newMessage: SimpleMessage) => {
+    handleNewMessageRef.current?.(newMessage);
+  }, []);
+
+  // Consolidated message sending handler - prevents duplicates
+  const handleSendMessage = async () => {
+    // Prevent duplicate sends
+    if (sendingRef.current || !account?.id || (!text.trim() && pendingMedia.length === 0)) {
+      return;
+    }
+
+    sendingRef.current = true;
+    
+    try {
+      // Stop typing indicator when sending
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+      }
+      
+      // Send message - let real-time subscription handle adding to UI
+      const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
+        conversation.id,
+        account.id,
+        text.trim(),
+        replyToMessage?.id
+      );
+
+      if (messageError || !newMessage) {
+        console.error('Failed to send message:', messageError);
+        return;
+      }
+
+      // Don't add to local state - real-time subscription will handle it
+      // This prevents duplicate messages
+
+      // Clear the form
+      setText("");
+      setReplyToMessage(null);
+      setPendingMedia([]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      sendingRef.current = false;
+    }
   };
 
   const handleMediaSelected = (media: UploadedMedia[]) => {
@@ -389,13 +465,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           setRefreshedConversation(conversation);
         }
         
-        // Load messages directly - simple and bulletproof
-        // NEW: getChatMessages now returns hasMore for pagination
+        // Load messages with optimized parallel queries
         const { messages: chatMessages, error: messagesError, hasMore } = await simpleChatService.getChatMessages(conversation.id, account.id);
         if (messagesError) {
           console.error('PersonalChatPanel: Error loading messages:', messagesError);
         } else {
-          // NEW: Messages are now ordered by seq (deterministic ordering)
+          // Messages are now ordered by seq (deterministic ordering) with full functionality
           setMessages(chatMessages || []);
         }
 
@@ -415,30 +490,14 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         }
         
         // Simple real-time subscription for this chat only
-        unsubscribeMessages = simpleChatService.subscribeToMessages(
-          conversation.id,
-          (newMessage) => {
-            setMessages(prev => {
-              // Check if message already exists to prevent duplicates
-              const exists = prev.some(msg => msg.id === newMessage.id);
-              if (exists) return prev;
-              
-              // NEW: Add new message and sort by seq (deterministic ordering)
-              const updated = [...prev, newMessage];
-              
-              // Sort by seq if available, fallback to created_at for legacy messages
-              updated.sort((a, b) => {
-                if (a.seq !== undefined && b.seq !== undefined) {
-                  return a.seq - b.seq;
-                }
-                // Fallback to created_at for messages without seq
-                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-              });
-              
-              return updated;
-            });
-          }
-        );
+        // Skip subscription on mobile devices to prevent conflicts with IndividualChatPage
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+        if (!isMobile) {
+          unsubscribeMessages = simpleChatService.subscribeToMessages(
+            conversation.id,
+            handleNewMessage // Use the memoized callback
+          );
+        }
         
         setLoading(false);
         
@@ -457,7 +516,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         unsubscribeMessages();
       }
     };
-  }, [conversation.id, account?.id]);
+  }, [conversation.id, account?.id, handleNewMessage]);
 
   useEffect(() => {
     if (!hasMarkedAsRead.current && account?.id) {
@@ -834,41 +893,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               onKeyDown={async (e) => {
                 if (e.key === 'Enter' && !e.shiftKey && (text.trim() || pendingMedia.length > 0) && account?.id) {
                   e.preventDefault();
-                  // Stop typing indicator when sending
-                  if (typingTimeoutRef.current) {
-                    clearTimeout(typingTimeoutRef.current);
-                    simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
-                  }
-                  
-                  try {
-                    // Send message directly - simple and bulletproof
-                    const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
-                      conversation.id,
-                      account.id,
-                      text.trim(),
-                      replyToMessage?.id
-                    );
-
-                    if (messageError || !newMessage) {
-                      console.error('Failed to send message:', messageError);
-                      return;
-                    }
-
-                    // Add to local state immediately for instant UI feedback
-                    setMessages(prev => [...prev, newMessage]);
-
-                // Attachments will be handled by the store's sendMessage and real-time updates
-                if (pendingMedia.length > 0) {
-                  console.log('Attachments will be processed via real-time subscription');
-                }
-
-                // Clear the form
-                setText("");
-                setReplyToMessage(null);
-                setPendingMedia([]);
-              } catch (error) {
-                console.error('Error sending message:', error);
-              }
+                  await handleSendMessage();
                 }
               }}
             />
@@ -876,45 +901,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           
           {/* Send Button - White card that turns black when active */}
           <button
-            onClick={async () => {
-              if ((text.trim() || pendingMedia.length > 0) && account?.id) {
-                // Stop typing indicator when sending
-                if (typingTimeoutRef.current) {
-                  clearTimeout(typingTimeoutRef.current);
-                  simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
-                }
-                
-                try {
-                  // Send message directly - simple and bulletproof
-                  const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
-                    conversation.id,
-                    account.id,
-                    text.trim(),
-                    replyToMessage?.id
-                  );
-
-                  if (messageError || !newMessage) {
-                    console.error('Failed to send message:', messageError);
-                    return;
-                  }
-
-                  // Add to local state immediately for instant UI feedback
-                  setMessages(prev => [...prev, newMessage]);
-
-                  // Attachments will be handled by the store's sendMessage and real-time updates
-                  if (pendingMedia.length > 0) {
-                    console.log('Attachments will be processed via real-time subscription');
-                  }
-
-                  // Clear the form
-                  setText("");
-                  setReplyToMessage(null);
-                  setPendingMedia([]);
-                } catch (error) {
-                  console.error('Error sending message:', error);
-                }
-              }
-            }}
+            onClick={handleSendMessage}
             className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB] ${
               text.trim() || pendingMedia.length > 0
                 ? "bg-gray-900 text-white hover:bg-gray-800" 
@@ -1023,4 +1010,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
     </div>
   );
-}
+};
+
+// Memoize the component to prevent unnecessary re-renders
+const MemoizedPersonalChatPanel = React.memo(PersonalChatPanel, (prevProps, nextProps) => {
+  // Only re-render if the conversation ID changes
+  return prevProps.conversation.id === nextProps.conversation.id;
+});
+
+export default MemoizedPersonalChatPanel;

@@ -1331,7 +1331,7 @@ export default function ProfileMenu() {
   const [showSettings, setShowSettings] = useState(false);
   const [showConnections, setShowConnections] = useState(false);
   
-  console.log('🔥 ProfileMenu rendering with connections view:', showConnections);
+  // Removed debugging log for performance
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<ConnectionUser | null>(null);
   const [showProfile, setShowProfile] = useState(false);

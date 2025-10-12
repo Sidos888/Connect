@@ -142,7 +142,7 @@ export default function MenuPage() {
           className="w-full"
           onClick={() => {
             clearAll();
-            router.push("/onboarding");
+            router.push("/explore");
           }}
         >
           Log out (clear local)

@@ -1,7 +1,7 @@
 # Auth System Upgrade - Operations Runbook
 
 **Last Updated:** October 12, 2025  
-**Target Environment:** Connect-Staging (rxlqtyfhsocxnsnnnlwl)  
+**Target Environment:** Connect-Prod (rxlqtyfhsocxnsnnnlwl)  
 **Version:** 1.0
 
 ---
@@ -9,7 +9,7 @@
 ## Pre-Deployment Checklist
 
 - [x] Environment variables set (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
-- [x] Migrations tested on STAGING
+- [x] Migrations tested locally
 - [x] Backfill script verified (phone normalization complete)
 - [x] Rate limit thresholds confirmed (5 OTP/15min per identifier, 30/15min per IP)
 - [x] Business account limit confirmed (3 per user, enforced by trigger)
@@ -20,7 +20,7 @@
 
 ## What Was Changed
 
-### Database Changes (✅ Applied to STAGING)
+### Database Changes (✅ Applied to Production)
 
 1. **account_identities constraints:**
    - Added `UNIQUE(method, identifier)` - prevents duplicate emails/phones
@@ -63,7 +63,7 @@
 
 ---
 
-## Deployment Steps (STAGING)
+## Deployment Steps (Production)
 
 ### Step 1: Database Migrations ✅ COMPLETE
 
@@ -486,8 +486,8 @@ For issues or questions, refer to:
 Copy-paste this checklist for manual testing:
 
 ```
-STAGING TESTING CHECKLIST
-=========================
+PRODUCTION TESTING CHECKLIST
+=============================
 
 □ Email OTP - New User
   □ Enter email in login modal

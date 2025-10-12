@@ -1,0 +1,14 @@
+schemaname,tablename,rls_enabled,policy_count
+public,account_identities,true,2
+public,accounts,true,3
+public,attachments,true,1
+public,auth_audit_log,true,1
+public,business_accounts,true,3
+public,chat_messages,true,4
+public,chat_participants,true,2
+public,chats,true,2
+public,connections,true,2
+public,current_session_accounts,true,4
+public,friend_requests,true,4
+public,message_reactions,true,3
+public,rate_limits,false,0

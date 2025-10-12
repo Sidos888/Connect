@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
@@ -17,7 +17,7 @@ import { Plus } from "lucide-react";
 import { simpleChatService } from "@/lib/simpleChatService";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
-export default function ChatLayout() {
+const ChatLayout = () => {
   const { conversations, loadConversations, isHydrated, getChatTyping, setConversations, getConversations } = useAppStore();
   const { account } = useAuth();
   useModal();
@@ -235,7 +235,12 @@ export default function ChatLayout() {
   useEffect(() => {
     const fetchSelectedConversation = async () => {
       if (selectedChatId) {
-        const { chat } = await simpleChatService.getChatById(selectedChatId);
+        const { chat, error } = await simpleChatService.getChatById(selectedChatId);
+        if (error) {
+          console.error('ChatLayout: Error fetching chat:', error);
+          setSelectedConversation(null);
+          return;
+        }
         if (chat && account?.id) {
           // Convert SimpleChat to Conversation format
           const conversation: Conversation = {
@@ -516,4 +521,9 @@ export default function ChatLayout() {
 
     </div>
   );
-}
+};
+
+// Memoize ChatLayout to prevent excessive re-renders
+const MemoizedChatLayout = React.memo(ChatLayout);
+
+export default MemoizedChatLayout;

@@ -17,6 +17,15 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [profileSnapshot, setProfileSnapshot] = useState(personalProfile);
+
+  // Keep profile snapshot updated (but not during logout)
+  useEffect(() => {
+    if (!isLoggingOut && personalProfile) {
+      setProfileSnapshot(personalProfile);
+    }
+  }, [personalProfile, isLoggingOut]);
 
   // Hide bottom nav on mobile settings page
   useEffect(() => {
@@ -51,14 +60,17 @@ export default function SettingsPage() {
 
   const handleSignOut = async () => {
     try {
+      // Set logging out state to freeze the profile display
+      setIsLoggingOut(true);
+      
       await signOut();
       clearAll();
-      router.replace("/onboarding");
+      router.replace("/explore");
     } catch (error) {
       console.error('Sign out error:', error);
       // Fallback to local clear
       clearAll();
-      router.replace("/onboarding");
+      router.replace("/explore");
     }
   };
 
@@ -264,30 +276,31 @@ export default function SettingsPage() {
 
       {/* Settings content */}
       <div className="flex-1 flex flex-col px-4 py-4">
-        {/* Profile Card */}
+        {/* Profile Card - Use snapshot during logout to prevent flicker */}
         <div className="bg-gray-100 rounded-2xl p-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-              {personalProfile?.avatarUrl ? (
+              {profileSnapshot?.avatarUrl ? (
                 <img 
-                  src={personalProfile.avatarUrl} 
-                  alt={personalProfile.name}
+                  src={profileSnapshot.avatarUrl} 
+                  alt={profileSnapshot.name}
                   className="w-12 h-12 rounded-full object-cover"
                 />
               ) : (
                 <span className="text-gray-600 font-medium text-lg">
-                  {personalProfile?.name?.charAt(0).toUpperCase() || 'U'}
+                  {profileSnapshot?.name?.charAt(0).toUpperCase() || 'U'}
                 </span>
               )}
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-medium text-gray-900">
-                {personalProfile?.name || 'Your Name'}
+                {profileSnapshot?.name || 'Your Name'}
               </h3>
             </div>
             <button
               onClick={() => router.push('/settings/edit')}
               className="text-blue-600 underline text-sm font-medium hover:text-blue-700"
+              disabled={isLoggingOut}
             >
               Edit
             </button>
@@ -301,15 +314,17 @@ export default function SettingsPage() {
         <div className="space-y-3 pb-safe-bottom mb-4">
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-lg"
+            disabled={isLoggingOut}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogOut size={20} className="text-gray-600" />
-            <span className="font-medium">Log out</span>
+            <span className="font-medium">{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
           </button>
           
           <button
             onClick={handleDeleteAccount}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors text-lg"
+            disabled={isLoggingOut}
+            className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 size={20} className="text-red-500" />
             <span className="font-medium">Delete Account</span>

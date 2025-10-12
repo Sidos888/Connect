@@ -1,0 +1,53 @@
+File Path,Type,Reason,Safe to Delete,Notes
+src/lib/authContext.backup.tsx.disabled,Backup File,Explicitly disabled backup file,YES,Can be deleted immediately
+src/lib/authContextFinal.tsx.disabled,Backup File,Explicitly disabled backup file,YES,Can be deleted immediately
+src/lib/authContextClean.tsx.disabled,Backup File,Explicitly disabled backup file,YES,Can be deleted immediately
+src/lib/authContextBroken.tsx.disabled,Backup File,Explicitly disabled backup file,YES,Can be deleted immediately
+src/lib/authContextOld.tsx.disabled,Backup File,Explicitly disabled backup file,YES,Can be deleted immediately
+src/app/debug-auth/page.tsx,Debug Page,Exposes authentication internals,YES (or gate with auth),Production security risk
+src/app/debug-tables/page.tsx,Debug Page,Exposes database structure,YES (or gate with auth),Production security risk
+src/app/supabase-test/page.tsx,Test Page,Connection testing page,YES (or gate with auth),Not needed in production
+src/app/delete-test-chat/page.tsx,Test Page,Testing utility page,YES,Not needed in production
+src/app/migration-test/page.tsx,Test Page,Migration testing page,YES,Not needed in production
+src/app/(personal)/debug/page.tsx,Debug Page,Debug utilities page,YES (or gate with auth),Production security risk
+src/app/edit-profile/,Empty Directory,No files present,YES,Clean up empty directory
+src/app/stack-test/,Empty Directory,No files present,YES,Clean up empty directory
+src/app/onboarding/account/,Empty Directory,No files present,YES,Clean up empty directory
+src/app/onboarding/profile/,Empty Directory,No files present,YES,Clean up empty directory
+src/app/(personal)/connections/,Empty Directory,No files present,YES,Clean up empty directory or implement feature
+src/app/(business)/business/connections/,Empty Directory,No files present,YES,Clean up empty directory or implement feature
+src/components/BaseLayout.tsx,Component,Possibly replaced by layout components,MAYBE,Verify no usage before deleting
+src/components/TopBar.tsx,Component,Possibly replaced by TopNavigation,MAYBE,Verify no usage before deleting
+src/components/EmptyState.tsx,Component,Simple utility component,MAYBE,Check usage count before deciding
+src/lib/fakeChatService.ts,Mock Service,Development-only mock service,MAYBE,Keep if used in development/testing
+src/lib/migration.ts,Migration Script,One-time migration script,MAYBE,Archive after confirming migration complete
+src/components/chat/FilePickerModal.tsx,Component,May be unused - check if feature exists,MAYBE,Verify file upload functionality
+src/components/menu/BusinessSwitcher.tsx,Component,Reported unused by knip,NO,Likely Next.js dynamic import false positive
+src/components/menu/MenuItem.tsx,Component,Reported unused by knip,NO,Likely used in menu rendering
+src/components/menu/NotificationMenu.tsx,Component,Reported unused by knip,NO,Likely used in menu rendering
+src/components/AccountSwitcherModal.tsx,Component,Reported unused by knip,NO,Likely dynamically imported
+src/components/FriendProfileModal.tsx,Component,Reported unused by knip,NO,Likely dynamically imported
+src/lib/types/accounts.ts,Type Definition,Reported unused by knip,NO,Types may be used implicitly
+sql/debug-current-bio.sql,SQL Script,Debug query script,ARCHIVE,"Move to sql/archive/, don't delete"
+sql/debug-phone-storage.sql,SQL Script,Debug query script,ARCHIVE,"Move to sql/archive/, don't delete"
+sql/debug-user-discovery.sql,SQL Script,Debug query script,ARCHIVE,"Move to sql/archive/, don't delete"
+sql/cleanup-duplicate-user.sql,SQL Script,One-time cleanup script,ARCHIVE,"Move to sql/archive/, keep for reference"
+sql/cleanup-duplicate-phone-identities.sql,SQL Script,One-time cleanup script,ARCHIVE,"Move to sql/archive/, keep for reference"
+sql/cleanup-email-duplicate.sql,SQL Script,One-time cleanup script,ARCHIVE,"Move to sql/archive/, keep for reference"
+sql/cleanup-all-test-data.sql,SQL Script,One-time cleanup script,ARCHIVE,"Move to sql/archive/, keep for reference"
+sql/complete-cleanup.sql,SQL Script,One-time cleanup script,ARCHIVE,"Move to sql/archive/, keep for reference"
+sql/disable-rls-test.sql,SQL Script,Testing script,ARCHIVE,"Move to sql/archive/, dangerous if run accidentally"
+sql/reset-everything.sql,SQL Script,Dangerous reset script,ARCHIVE,"Move to sql/archive/, document clearly"
+dotenv,NPM Package,Unused - Next.js handles env vars,YES,Remove from package.json
+heic2any,NPM Package,Unused - no image conversion found,YES (or document usage),Remove from package.json or implement feature
+@capacitor/android,NPM Package,Build-time dependency,NO,Keep for mobile builds
+@capacitor/ios,NPM Package,Build-time dependency,NO,Keep for mobile builds
+dependency-cruiser,NPM Package,Dev tool for analysis,NO,Keep for future audits
+ts-prune,NPM Package,Dev tool for analysis,NO,Keep for future audits
+unimported,NPM Package,Dev tool for analysis,NO,Keep for future audits
+knip,NPM Package,Dev tool for analysis,NO,Keep for future audits
+ios/App/App/public/_next/,Build Artifact,Generated files from builds,ARCHIVE,Old build artifacts - can be regenerated
+android/app/src/main/assets/public/_next/,Build Artifact,Generated files from builds,ARCHIVE,Old build artifacts - can be regenerated
+ios/DerivedData/,Build Artifact,Xcode derived data,ARCHIVE,Can be regenerated - add to .gitignore
+out/,Build Artifact,Next.js static export output,ARCHIVE,Can be regenerated - add to .gitignore
+

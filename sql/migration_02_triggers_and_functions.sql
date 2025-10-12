@@ -14,12 +14,17 @@ DECLARE
 BEGIN
   -- Only assign seq if not already set (allows manual override for testing)
   IF NEW.seq IS NULL THEN
+    -- Acquire an advisory lock for the specific chat_id to serialize sequence assignment.
+    -- This prevents race conditions for MAX(seq) and avoids FOR UPDATE issues
+    -- by explicitly managing concurrency for this specific chat's sequence.
+    PERFORM pg_advisory_xact_lock(hashtext(NEW.chat_id::text));
+
     -- Get next sequence number for this chat (atomic per chat_id)
-    -- FOR UPDATE locks the max row to prevent race conditions
+    -- This SELECT statement will now be protected by the advisory lock,
+    -- ensuring it runs in a safe, non-conflicting context.
     SELECT COALESCE(MAX(seq), 0) + 1 INTO max_seq
     FROM chat_messages
-    WHERE chat_id = NEW.chat_id
-    FOR UPDATE OF chat_messages; -- Explicit lock for clarity
+    WHERE chat_id = NEW.chat_id;
     
     NEW.seq := max_seq;
   END IF;
@@ -226,7 +231,7 @@ ORDER BY routine_name;
 -- ==============================================================================
 -- NOTES
 -- ==============================================================================
--- - The assign_message_seq() function uses FOR UPDATE to prevent race conditions
+-- - The assign_message_seq() function uses advisory locks to prevent race conditions
 -- - All functions use SECURITY DEFINER to bypass RLS (but still respect it internally)
 -- - Functions are granted to 'authenticated' role only
 -- - The trigger automatically assigns seq and default status on insert

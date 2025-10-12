@@ -1,0 +1,14 @@
+schemaname,tablename,inserts,updates,deletes,live_rows,dead_rows,last_analyze,last_autoanalyze
+public,accounts,2,0,0,2,0,2025-10-12 03:03:14.40385+00,null
+public,connections,2,0,0,2,0,null,null
+public,rate_limits,2,0,1,1,1,null,null
+public,chat_participants,0,0,0,0,0,null,null
+public,chat_messages,0,0,0,0,0,2025-10-12 03:03:17.250111+00,null
+public,message_reactions,0,0,0,0,0,null,null
+public,attachments,0,0,0,0,0,null,null
+public,account_identities,0,0,0,0,0,2025-10-12 03:03:12.977334+00,null
+public,friend_requests,0,0,0,0,0,null,null
+public,business_accounts,0,0,0,0,0,2025-10-12 03:03:15.827712+00,null
+public,auth_audit_log,0,0,0,0,0,null,null
+public,current_session_accounts,0,0,0,0,0,null,null
+public,chats,0,0,0,0,0,2025-10-12 03:03:18.661222+00,null

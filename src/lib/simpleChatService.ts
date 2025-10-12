@@ -789,7 +789,7 @@ class SimpleChatService {
         return { chats: cachedChats, error: null };
       }
 
-      return await this.withRetry(async () => {
+      return await this.withRetryCompat(async () => {
         return await this._getUserChatsInternal(userId);
       });
     } catch (error) {
@@ -1272,6 +1272,96 @@ class SimpleChatService {
     }
   }
 
+  // Get message reactions for a batch of messages
+  async getMessageReactions(messageIds: string[]): Promise<Record<string, any[]>> {
+    if (!messageIds.length) return {};
+    
+    try {
+      const { data, error } = await this.supabase
+        .from('message_reactions')
+        .select('*')
+        .in('message_id', messageIds);
+      
+      if (error) {
+        console.error('Error loading message reactions:', error);
+        return {};
+      }
+      
+      // Group reactions by message_id
+      const reactionsByMessage: Record<string, any[]> = {};
+      (data || []).forEach(reaction => {
+        if (!reactionsByMessage[reaction.message_id]) {
+          reactionsByMessage[reaction.message_id] = [];
+        }
+        reactionsByMessage[reaction.message_id].push(reaction);
+      });
+      
+      return reactionsByMessage;
+    } catch (error) {
+      console.error('Error in getMessageReactions:', error);
+      return {};
+    }
+  }
+
+  // Get message attachments for a batch of messages
+  async getMessageAttachments(messageIds: string[]): Promise<Record<string, any[]>> {
+    if (!messageIds.length) return {};
+    
+    try {
+      const { data, error } = await this.supabase
+        .from('attachments')
+        .select('*')
+        .in('message_id', messageIds);
+      
+      if (error) {
+        console.error('Error loading message attachments:', error);
+        return {};
+      }
+      
+      // Group attachments by message_id
+      const attachmentsByMessage: Record<string, any[]> = {};
+      (data || []).forEach(attachment => {
+        if (!attachmentsByMessage[attachment.message_id]) {
+          attachmentsByMessage[attachment.message_id] = [];
+        }
+        attachmentsByMessage[attachment.message_id].push(attachment);
+      });
+      
+      return attachmentsByMessage;
+    } catch (error) {
+      console.error('Error in getMessageAttachments:', error);
+      return {};
+    }
+  }
+
+  // Get reply message details for messages that have reply_to_message_id
+  async getReplyMessageDetails(messageIds: string[]): Promise<Record<string, any>> {
+    if (!messageIds.length) return {};
+    
+    try {
+      const { data, error } = await this.supabase
+        .from('chat_messages')
+        .select('id, message_text, sender_id, created_at')
+        .in('id', messageIds);
+      
+      if (error) {
+        console.error('Error loading reply message details:', error);
+        return {};
+      }
+      
+      // Create lookup map
+      const replyDetails: Record<string, any> = {};
+      (data || []).forEach(msg => {
+        replyDetails[msg.id] = msg;
+      });
+      
+      return replyDetails;
+    } catch (error) {
+      console.error('Error in getReplyMessageDetails:', error);
+      return {};
+    }
+  }
+
   // Get chat messages (now loads from Supabase with seq-based ordering and pagination)
   async getChatMessages(
     chatId: string, 
@@ -1291,18 +1381,15 @@ class SimpleChatService {
       
       const chat = this.chats.get(chatId);
       if (!chat) {
+        console.error('getChatMessages: Chat not found in cache for ID:', chatId);
         return { messages: [], error: new Error('Chat not found'), hasMore: false };
       }
 
       // Build query with keyset pagination
+      // TEMPORARY: Simplified query to fix hanging issue
       let query = this.supabase
         .from('chat_messages')
-        .select(`
-          *,
-          reply_to:chat_messages!reply_to_message_id(id, message_text, sender_id),
-          reactions:message_reactions(id, user_id, emoji, created_at),
-          attachments:attachments(id, file_url, file_type, file_size, thumbnail_url, width, height, created_at)
-        `)
+        .select('*')
         .eq('chat_id', chatId)
         .is('deleted_at', null);
       
@@ -1331,7 +1418,20 @@ class SimpleChatService {
       // Messages come in DESC order (newest first), reverse for display (oldest first)
       const orderedData = [...messagesDataToDisplay].reverse();
       
-      // Convert Supabase messages to SimpleMessage format
+      // Extract IDs for parallel loading of related data
+      const messageIds = orderedData.map(msg => msg.id);
+      const replyToIds = orderedData
+        .filter(msg => msg.reply_to_message_id)
+        .map(msg => msg.reply_to_message_id);
+      
+      // Load related data in parallel (much faster than joins)
+      const [reactionsData, attachmentsData, replyDetailsData] = await Promise.all([
+        this.getMessageReactions(messageIds),
+        this.getMessageAttachments(messageIds), 
+        this.getReplyMessageDetails(replyToIds)
+      ]);
+      
+      // Convert Supabase messages to SimpleMessage format with enriched data
       const messages: SimpleMessage[] = orderedData.map(msg => {
         // Get sender info from chat participants
         const sender = chat.participants.find(p => p.id === msg.sender_id);
@@ -1341,6 +1441,11 @@ class SimpleChatService {
           this.chatLatestSeq.set(chatId, msg.seq);
         }
         
+        // Get related data for this message
+        const reactions = reactionsData[msg.id] || [];
+        const attachments = attachmentsData[msg.id] || [];
+        const replyDetail = replyDetailsData[msg.reply_to_message_id];
+        
         return {
           id: msg.id,
           chat_id: msg.chat_id,
@@ -1349,22 +1454,22 @@ class SimpleChatService {
           sender_profile_pic: sender?.profile_pic || undefined,
           text: msg.message_text || '',
           created_at: msg.created_at,
-          seq: msg.seq || undefined, // NEW
-          client_generated_id: msg.client_generated_id || undefined, // NEW
-          status: msg.status || undefined, // NEW
+          seq: msg.seq || undefined,
+          client_generated_id: msg.client_generated_id || undefined,
+          status: msg.status || undefined,
           reply_to_message_id: msg.reply_to_message_id || null,
-          reply_to_message: (msg.reply_to && msg.reply_to.id) ? {
-            id: msg.reply_to.id,
+          reply_to_message: replyDetail ? {
+            id: replyDetail.id,
             chat_id: msg.chat_id,
-            sender_id: msg.reply_to.sender_id,
-            sender_name: msg.reply_to.sender_id === userId ? 'You' : 'Other',
-            sender_profile_pic: undefined,
-            text: msg.reply_to.message_text || '',
-            created_at: msg.created_at
+            sender_id: replyDetail.sender_id,
+            sender_name: chat.participants.find(p => p.id === replyDetail.sender_id)?.name || 'Unknown',
+            sender_profile_pic: chat.participants.find(p => p.id === replyDetail.sender_id)?.profile_pic || undefined,
+            text: replyDetail.message_text || '',
+            created_at: replyDetail.created_at
           } : null,
           media_urls: msg.media_urls || undefined,
-          attachments: msg.attachments || [],
-          reactions: msg.reactions || [],
+          attachments: attachments,
+          reactions: reactions,
           deleted_at: msg.deleted_at || null
         };
       });

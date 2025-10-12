@@ -1,0 +1,13 @@
+schema_name,function_name,security_definer,return_type
+public,app_can_send_otp,true,boolean
+public,cleanup_old_rate_limits,true,void
+public,get_latest_seq,true,bigint
+public,mark_messages_as_delivered,true,void
+public,mark_messages_as_read,true,void
+storage,add_prefixes,true,void
+storage,delete_leaf_prefixes,true,void
+storage,delete_prefix,true,boolean
+storage,lock_top_prefixes,true,void
+storage,objects_delete_cleanup,true,trigger
+storage,objects_update_cleanup,true,trigger
+storage,prefixes_delete_cleanup,true,trigger
