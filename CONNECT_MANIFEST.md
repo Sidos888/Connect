@@ -4,13 +4,20 @@
 
 ## 1. 🌍 Mission Statement
 
-**Connect delivers clarity, warmth, and accessibility through fast mobile UX.**
+**Connect is the operating system for business and life.**
 
-**Tech Stack:** Next.js 15, React 19, TypeScript, Tailwind CSS v4, Supabase, Capacitor 7, Zustand, Lucide React
+It brings every part of the real world — events, experiences, communication, and creation — into one seamless system.  
+Connect blends clarity, warmth, and speed through a mobile-first experience that empowers people and businesses to live and operate better together.
 
-**What we build:** Personal profiles, business accounts, real-time messaging, social connections
+**Core Objective:**  
+To unify how humans connect, create, and collaborate in real life — all through one platform.
 
-**Core Principles:** Mobile-first, passwordless auth (OTP), clean interface, WCAG AA compliance, human-centered design
+### Vision Pillars
+1. **Simplicity** — One place to manage life and work. One login, one system.
+2. **Connection** — Designed to bring people together, not keep them scrolling.
+3. **Empowerment** — Tools that help users take action: book, plan, build, host, grow.
+4. **Trust** — Secure by default. Transparent. Human-centered.
+5. **Expansion** — Scalable from one person to an entire ecosystem of businesses.
 
 ---
 
@@ -22,6 +29,7 @@
 3. **Purposeful Color** — Orange `#FF6600` for action, neutrals for calm
 4. **Typography Hierarchy** — Geist Sans, clear size/weight scale
 5. **Accessible by Default** — 4.5:1 contrast, visible focus rings
+> **Design Intent:** Every visual, motion, and interaction must express Connect’s philosophy — that this is the OS for life and business. The interface should feel calm, confident, and action-ready, never cluttered or artificial.
 
 ### Color System
 ```css

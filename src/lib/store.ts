@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { AppStore, Business, PersonalProfile, UUID, Conversation, ChatTypingState, TypingActions } from "./types";
-import { simpleChatService, SimpleChat, SimpleMessage, PendingMessage } from "./simpleChatService";
+import type { SimpleChatService, SimpleChat, SimpleMessage, PendingMessage } from "./simpleChatService";
 import { getSupabaseClient } from "./supabaseClient";
 
 type PersistedShape = {
@@ -40,17 +40,17 @@ function generateId(): UUID {
 }
 
 type ChatActions = {
-  loadConversations: (userId: string) => Promise<void>;
+  loadConversations: (userId: string, chatService: SimpleChatService) => Promise<void>;
   getConversations: () => Conversation[];
   setConversations: (conversations: Conversation[]) => void;
-  sendMessage: (conversationId: UUID, text: string, userId: string, replyToMessageId?: string, mediaUrls?: string[]) => Promise<void>;
-  markAllRead: (conversationId: UUID, userId: string) => Promise<void>;
-  markMessagesAsRead: (conversationId: UUID, userId: string) => Promise<void>;
-  createDirectChat: (otherUserId: string) => Promise<Conversation | null>;
+  sendMessage: (conversationId: UUID, text: string, userId: string, chatService: SimpleChatService, replyToMessageId?: string, mediaUrls?: string[]) => Promise<void>;
+  markAllRead: (conversationId: UUID, userId: string, chatService: SimpleChatService) => Promise<void>;
+  markMessagesAsRead: (conversationId: UUID, userId: string, chatService: SimpleChatService) => Promise<void>;
+  createDirectChat: (otherUserId: string, userId: string, chatService: SimpleChatService) => Promise<Conversation | null>;
   clearConversations: () => void;
   // NEW: Offline queue management
-  getPendingMessages: () => PendingMessage[];
-  retryPendingMessages: () => Promise<void>;
+  getPendingMessages: (chatService: SimpleChatService) => PendingMessage[];
+  retryPendingMessages: (chatService: SimpleChatService) => Promise<void>;
 };
 
 type FullStore = AppStore & ChatActions & { conversations: Conversation[] } & {
@@ -126,7 +126,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
     }
   },
 
-  loadConversations: async (userId: string) => {
+  loadConversations: async (userId: string, chatService: SimpleChatService) => {
     console.log('loadConversations called for user:', userId);
     
     // Don't try to load conversations if user is not authenticated
@@ -136,7 +136,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
     }
     
     try {
-      const { chats, error } = await simpleChatService.getUserChats(userId);
+      const { chats, error } = await chatService.getUserChats();
       if (error) {
         // Only log error if it's not an authentication error
         if (error.message !== 'User not authenticated' && 
@@ -205,9 +205,9 @@ export const useAppStore = create<FullStore>((set, get) => ({
     saveToLocalStorage({ personalProfile, businesses, context, conversations });
   },
 
-  sendMessage: async (conversationId, text, userId, replyToMessageId?, mediaUrls?) => {
+  sendMessage: async (conversationId, text, userId, chatService, replyToMessageId?, mediaUrls?) => {
     try {
-      const { message, error } = await simpleChatService.sendMessage(conversationId, userId, text, replyToMessageId, mediaUrls);
+      const { message, error } = await chatService.sendMessage(conversationId, text, replyToMessageId, mediaUrls);
       if (error) {
         console.error('Error sending message:', error);
         return;
@@ -220,10 +220,10 @@ export const useAppStore = create<FullStore>((set, get) => ({
     }
   },
 
-  markAllRead: async (conversationId, userId) => {
+  markAllRead: async (conversationId, userId, chatService) => {
     try {
       // Mark messages as read in the database
-      const { error } = await simpleChatService.markMessagesAsRead(conversationId, userId);
+      const { error } = await chatService.markMessagesAsRead(conversationId, userId);
       if (error) {
         console.error('Error marking messages as read:', error);
         return;
@@ -241,10 +241,10 @@ export const useAppStore = create<FullStore>((set, get) => ({
     }
   },
 
-  markMessagesAsRead: async (conversationId, userId) => {
+  markMessagesAsRead: async (conversationId, userId, chatService) => {
     try {
       // Mark messages as read in the database
-      const { error } = await simpleChatService.markMessagesAsRead(conversationId, userId);
+      const { error } = await chatService.markMessagesAsRead(conversationId, userId);
       if (error) {
         console.error('Error marking messages as read:', error);
         return;
@@ -262,22 +262,9 @@ export const useAppStore = create<FullStore>((set, get) => ({
     }
   },
 
-  createDirectChat: async (otherUserId) => {
+  createDirectChat: async (otherUserId, userId, chatService) => {
     try {
-      // Get current user ID for conversion
-      const supabase = getSupabaseClient();
-      if (!supabase) {
-        console.error('Supabase client not available');
-        return null;
-      }
-      const response = await supabase.auth.getUser();
-      const user = response.data?.user;
-      if (!user?.id) {
-        console.error('User not authenticated');
-        return null;
-      }
-      
-      const { chat, error } = await simpleChatService.createDirectChat(otherUserId, user.id);
+      const { chat, error } = await chatService.createDirectChat(otherUserId, userId);
       if (error) {
         console.error('Error creating direct chat:', error);
         return null;
@@ -285,7 +272,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
       
       if (chat) {
         // Convert SimpleChat to Conversation format
-        const otherParticipant = chat.participants.find(p => p.id !== user.id);
+        const otherParticipant = chat.participants.find(p => p.id !== userId);
         const conversation: Conversation = {
           id: chat.id,
           title: chat.type === 'direct' 
@@ -323,13 +310,13 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 
   // NEW: Offline queue actions
-  getPendingMessages: () => {
-    return simpleChatService.getPendingMessages();
+  getPendingMessages: (chatService) => {
+    return chatService.getPendingMessages();
   },
 
-  retryPendingMessages: async () => {
+  retryPendingMessages: async (chatService) => {
     // Trigger flush of pending queue
-    await (simpleChatService as any).flushPendingQueue?.();
+    await (chatService as any).flushPendingQueue?.();
   },
 
   // Typing indicator actions

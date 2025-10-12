@@ -17,7 +17,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, fallback, title, description, buttonText }: ProtectedRouteProps) {
-  const { user, loading, loadUserProfile, supabase } = useAuth();
+  const { user, loading, loadUserProfile, supabase, account } = useAuth();
   const { personalProfile, isHydrated, setPersonalProfile } = useAppStore();
   const { showLogin } = useModal();
   const pathname = usePathname();
@@ -25,6 +25,14 @@ export default function ProtectedRoute({ children, fallback, title, description,
   const [profileLoadTimeout, setProfileLoadTimeout] = useState<NodeJS.Timeout | null>(null);
   const [forceStopLoading, setForceStopLoading] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  
+  // Force cleanup all realtime subscriptions on mount to prevent ghost subscriptions
+  useEffect(() => {
+    if (user && account && supabase) {
+      console.log('🧹 ProtectedRoute: Cleaning up all realtime subscriptions');
+      supabase.removeAllChannels();
+    }
+  }, [user, account, supabase]);
 
   // Get custom messages based on the current path if props are not provided
   const getCustomMessages = () => {

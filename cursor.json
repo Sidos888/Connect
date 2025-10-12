@@ -1,0 +1,4 @@
+{
+  "projectDescription": "Connect is the operating system for business and life. All AI agents and human developers must read and comply with CONNECT_MANIFEST.md — especially section 0: AI Development Directive — before writing or editing code. Every change must follow the 8px grid, use design tokens, maintain WCAG AA accessibility, uphold RLS, and include a Mini-ADR if logic changes."
+}
+

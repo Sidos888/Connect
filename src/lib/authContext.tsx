@@ -1,9 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react';
+import { User, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseClient, clearInvalidSession } from './supabaseClient';
 import { formatNameForDisplay, normalizeEmail, normalizePhoneAU } from './utils';
+import { SimpleChatService } from './simpleChatService';
 
 // Account interface (our true user profile)
 interface Account {
@@ -21,7 +22,8 @@ interface AuthContextType {
   user: User | null;
   account: Account | null;
   loading: boolean;
-  supabase: any;
+  supabase: SupabaseClient | null;
+  chatService: SimpleChatService | null;
   
   // Authentication methods (compatible with existing UI)
   sendEmailVerification: (email: string) => Promise<{ error: Error | null }>;
@@ -52,6 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = getSupabaseClient();
+  
+  // Create singleton chat service when account is available
+  const chatService = useMemo(() => {
+    if (!account || !supabase) return null;
+    console.log('🔧 AuthContext: Creating SimpleChatService singleton for account:', account.id);
+    return new SimpleChatService(supabase, account);
+  }, [account, supabase]);
 
   // Debug user state changes
   useEffect(() => {
@@ -101,7 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     }
   }, [account, user]);
-  const supabase = getSupabaseClient();
   const realtimeCleanupRef = useRef<(() => void) | null>(null);
 
   // Initialize auth state
@@ -1340,6 +1349,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     account,
     loading,
     supabase,
+    chatService,
     sendEmailVerification,
     sendPhoneVerification,
     verifyEmailCode,

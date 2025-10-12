@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
-import { simpleChatService } from "@/lib/simpleChatService";
 import { useAppStore } from "@/lib/store";
 import { ArrowLeft } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
@@ -19,7 +18,7 @@ export default function IndividualChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const chatId = searchParams.get('chat');
-  const { account } = useAuth();
+  const { account, chatService } = useAuth();
   const { sendMessage, markMessagesAsRead, getConversations } = useAppStore();
   type Participant = { id: string; name: string; profile_pic?: string | null };
   type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean };
@@ -88,7 +87,7 @@ export default function IndividualChatPage() {
           // For group chats, always refresh from database to get latest photo
           if (storeConversation.isGroup) {
             console.log('Individual chat page: Group chat detected, refreshing from database for latest photo');
-            const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
+            const { chat, error: chatError } = await chatService?.getChatById(chatId);
             if (!chatError && chat) {
               setParticipants(chat.participants || []);
               
@@ -106,7 +105,7 @@ export default function IndividualChatPage() {
             setConversation(storeConversation);
             
             // Still need to load participants for profile modal
-            const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
+            const { chat, error: chatError } = await chatService?.getChatById(chatId);
             if (!chatError && chat) {
               setParticipants(chat.participants || []);
             }
@@ -146,14 +145,14 @@ export default function IndividualChatPage() {
         }
 
         // Load messages
-        const { messages, error: messagesError } = await simpleChatService.getChatMessages(chatId, account.id);
+        const { messages, error: messagesError } = await chatService?.getChatMessages(chatId);
         if (!messagesError) {
           setMessages(messages);
         }
 
         // Load all chat media for the viewer
         try {
-          const chatMedia = await simpleChatService.getChatMedia(chatId);
+          const chatMedia = await chatService?.getChatMedia(chatId);
           setAllChatMedia(chatMedia);
         } catch (error) {
           console.error('Failed to load chat media:', error);
@@ -169,7 +168,7 @@ export default function IndividualChatPage() {
 
         // Subscribe to reaction changes for real-time updates
         if (chatId) {
-          const unsubscribeReactions = simpleChatService.subscribeToReactions(
+          const unsubscribeReactions = chatService?.subscribeToReactions(
             chatId,
             (messageId) => {
               console.log('Individual chat page: Reaction update received for message:', messageId);
@@ -191,7 +190,7 @@ export default function IndividualChatPage() {
         // Subscribe to real-time messages for this chat
         if (chatId && account?.id) {
           console.log('Individual chat page: Subscribing to real-time messages for chat:', chatId);
-          const unsubscribeMessages = simpleChatService.subscribeToMessages(
+          const unsubscribeMessages = chatService?.subscribeToMessages(
             chatId,
             account.id,
             (newMessage) => {
@@ -254,9 +253,8 @@ export default function IndividualChatPage() {
     if ((messageText.trim() || pendingMedia.length > 0) && account?.id && conversation?.id) {
       try {
         // Create the message first
-        const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
+        const { message: newMessage, error: messageError } = await chatService?.sendMessage(
           conversation.id,
-          account.id,
           messageText.trim(),
           replyToMessage?.id
         );
@@ -269,7 +267,7 @@ export default function IndividualChatPage() {
         // Save attachments if any
         if (pendingMedia.length > 0) {
           try {
-            await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
+            await chatService?.saveAttachments(newMessage.id, pendingMedia);
           } catch (attachmentError) {
             console.error('Failed to save attachments:', attachmentError);
             // Continue anyway - the message was sent successfully
@@ -282,7 +280,7 @@ export default function IndividualChatPage() {
         setPendingMedia([]);
 
         // Refresh messages to show the new message with attachments
-        const { messages: updatedMessages } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        const { messages: updatedMessages } = await chatService?.getChatMessages(conversation.id);
         if (updatedMessages) {
           setMessages(updatedMessages);
         }
@@ -308,13 +306,13 @@ export default function IndividualChatPage() {
 
   const handleDelete = async (message: SimpleMessage) => {
     if (account?.id) {
-      await simpleChatService.deleteMessage(message.id, account.id);
+      await chatService?.deleteMessage(message.id, account.id);
     }
   };
 
   const handleReact = async (message: SimpleMessage, emoji: string) => {
     if (account?.id) {
-      await simpleChatService.addReaction(message.id, account.id, emoji);
+      await chatService?.addReaction(message.id, account.id, emoji);
     }
   };
 

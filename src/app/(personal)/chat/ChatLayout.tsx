@@ -14,12 +14,11 @@ import { useModal } from "@/lib/modalContext";
 import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus } from "lucide-react";
-import { simpleChatService } from "@/lib/simpleChatService";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
 const ChatLayout = () => {
   const { conversations, loadConversations, isHydrated, getChatTyping, setConversations, getConversations } = useAppStore();
-  const { account } = useAuth();
+  const { account, chatService } = useAuth();
   useModal();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,7 +37,9 @@ const ChatLayout = () => {
   useEffect(() => {
     if (isHydrated && account?.id) {
       // Use real chat service
-      loadConversations(account.id);
+      if (chatService) {
+        loadConversations(account.id, chatService);
+      }
       
       // On mobile, if there's a selected chat in URL, redirect to individual page
       if (selectedChatId && typeof window !== 'undefined' && window.innerWidth < 640) {
@@ -67,7 +68,7 @@ const ChatLayout = () => {
           const subscriptions: (() => void)[] = [];
           
           conversations.forEach((conversation: any) => {
-            const unsubscribe = simpleChatService.subscribeToTyping(
+            const unsubscribe = chatService?.subscribeToTyping(
               conversation.id,
               account.id,
               (typingUserIds) => {
@@ -76,7 +77,9 @@ const ChatLayout = () => {
               }
             );
             
-            subscriptions.push(unsubscribe);
+            if (unsubscribe) {
+              subscriptions.push(unsubscribe);
+            }
           });
           
           return () => {
@@ -105,7 +108,7 @@ const ChatLayout = () => {
           // Add subscriptions for new conversations
           conversations.forEach((conv: any) => {
             if (!messageSubscriptionsRef.current.has(conv.id)) {
-              const off = simpleChatService.subscribeToMessages(conv.id, (newMessage) => {
+              const off = chatService?.subscribeToMessages(conv.id, (newMessage) => {
                 // Update last message preview and move conversation to top
                 const current = getConversations();
                 const updated = current.map((c: any) => {
@@ -128,7 +131,9 @@ const ChatLayout = () => {
                 });
                 setConversations(sorted);
               });
-              messageSubscriptionsRef.current.set(conv.id, off);
+              if (off) {
+                messageSubscriptionsRef.current.set(conv.id, off);
+              }
             }
           });
 
@@ -241,8 +246,11 @@ const ChatLayout = () => {
   
   useEffect(() => {
     const fetchSelectedConversation = async () => {
-      if (selectedChatId) {
-        const { chat, error } = await simpleChatService.getChatById(selectedChatId);
+      if (selectedChatId && chatService) {
+        const result = await chatService.getChatById(selectedChatId);
+        if (!result) return;
+        
+        const { chat, error } = result;
         if (error) {
           console.error('ChatLayout: Error fetching chat:', error);
           setSelectedConversationData(null);
@@ -253,10 +261,10 @@ const ChatLayout = () => {
           const conversationData = {
             id: chat.id,
             title: chat.type === 'direct' 
-              ? chat.participants.find(p => p.id !== account.id)?.name || 'Unknown'
+              ? chat.participants.find((p: any) => p.id !== account.id)?.name || 'Unknown'
               : chat.name || 'Group Chat',
             avatarUrl: chat.type === 'direct' 
-              ? chat.participants.find(p => p.id !== account.id)?.profile_pic || null
+              ? chat.participants.find((p: any) => p.id !== account.id)?.profile_pic || null
               : null,
             isGroup: chat.type === 'group',
           };
@@ -309,7 +317,9 @@ const ChatLayout = () => {
     setShowGroupSetup(false);
     // Refresh conversations to include the new chat
     if (account?.id) {
-      loadConversations(account.id);
+      if (chatService) {
+        loadConversations(account.id, chatService);
+      }
     }
     // Navigate to the chat within the same layout
     router.push(`/chat?chat=${chatId}`);

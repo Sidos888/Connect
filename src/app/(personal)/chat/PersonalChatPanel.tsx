@@ -5,7 +5,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import Avatar from "@/components/Avatar";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
-import { simpleChatService } from "@/lib/simpleChatService";
 import { useRouter } from "next/navigation";
 import InlineProfileView from "@/components/InlineProfileView";
 import GroupInfoModal from "@/components/chat/GroupInfoModal";
@@ -110,7 +109,18 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   }
   
   const { markAllRead, getChatTyping } = useAppStore();
-  const { account } = useAuth();
+  const { account, chatService } = useAuth();
+  
+  // Guard: chatService must be available
+  if (!chatService) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">Chat service not available</p>
+        </div>
+      </div>
+    );
+  }
   const router = useRouter();
   const [text, setText] = useState("");
   // Simple local state management - bulletproof approach
@@ -158,13 +168,13 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
   const handleDelete = async (message: SimpleMessage) => {
     if (account?.id) {
-      await simpleChatService.deleteMessage(message.id, account.id);
+      await chatService.deleteMessage(message.id, account.id);
     }
   };
 
   const handleReact = async (message: SimpleMessage, emoji: string) => {
     if (account?.id) {
-      await simpleChatService.addReaction(message.id, account.id, emoji);
+      await chatService.addReaction(message.id, account.id, emoji);
     }
   };
 
@@ -230,13 +240,12 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
       // Stop typing indicator when sending
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
-        simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+        chatService.sendTypingIndicator(conversation.id, account.id, false);
       }
       
       // Send message - let real-time subscription handle adding to UI
-      const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
+      const { message: newMessage, error: messageError } = await chatService.sendMessage(
         conversation.id,
-        account.id,
         text.trim(),
         replyToMessage?.id
       );
@@ -456,7 +465,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         }
         
         // Load chat details to get participants
-        const { chat, error: chatError } = await simpleChatService.getChatById(conversation.id);
+        const { chat, error: chatError } = await chatService.getChatById(conversation.id);
         if (chatError) {
           console.error('PersonalChatPanel: Error loading chat details:', chatError);
           setLoading(false);
@@ -485,7 +494,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         }
         
         // Load messages with optimized parallel queries
-        const { messages: chatMessages, error: messagesError, hasMore } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        const { messages: chatMessages, error: messagesError, hasMore } = await chatService.getChatMessages(conversation.id);
         if (messagesError) {
           console.error('PersonalChatPanel: Error loading messages:', messagesError);
         } else {
@@ -495,7 +504,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
         // Load all chat media for the viewer
         try {
-          const chatMedia = await simpleChatService.getChatMedia(conversation.id);
+          const chatMedia = await chatService.getChatMedia(conversation.id);
           setAllChatMedia(chatMedia);
         } catch (error) {
           console.error('Failed to load chat media:', error);
@@ -515,7 +524,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         
         if (!isMobile) {
           console.log(`🔍 PersonalChatPanel - SUBSCRIBING TO MESSAGES - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Callback: ${handleNewMessage}`);
-          unsubscribeMessages = simpleChatService.subscribeToMessages(
+          unsubscribeMessages = chatService.subscribeToMessages(
             conversation.id,
             handleNewMessage // Use the memoized callback
           );
@@ -544,14 +553,14 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
       } else {
         // If no unsubscribe function, force cleanup to prevent orphaned subscriptions
         console.log(`🔍 PersonalChatPanel - FORCE CLEANUP - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
-        simpleChatService.forceCleanupChat(conversation.id);
+        chatService.forceCleanupChat(conversation.id);
       }
     };
   }, [conversation.id, account?.id]); // Remove handleNewMessage from dependencies to prevent infinite re-renders
 
   useEffect(() => {
     if (!hasMarkedAsRead.current && account?.id) {
-      markAllRead(conversation.id, account.id);
+      markAllRead(conversation.id, account.id, chatService);
       hasMarkedAsRead.current = true;
     }
   }, [conversation.id, markAllRead, account?.id]);
@@ -615,7 +624,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     if (!account?.id || !conversation.id) return;
     
     // Send typing indicator
-    simpleChatService.sendTypingIndicator(conversation.id, account.id, true);
+    chatService.sendTypingIndicator(conversation.id, account.id, true);
     
     // Clear any existing timeout - we don't want it to auto-stop while focused
     if (typingTimeoutRef.current) {
@@ -902,7 +911,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
                 // Add a small delay to prevent rapid on/off typing indicators
                 setTimeout(() => {
                   if (account?.id) {
-                    simpleChatService.sendTypingIndicator(conversation.id, account.id, false);
+                    chatService.sendTypingIndicator(conversation.id, account.id, false);
                   }
                 }, 100);
               }}

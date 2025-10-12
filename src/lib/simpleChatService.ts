@@ -1,7 +1,20 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseClient } from './supabaseClient';
 import { formatNameForDisplay } from './utils';
 import { withRetry, isOnline } from './utils/network';
 import { DedupeStore, createCompositeKey } from './utils/dedupeStore';
+
+// Account interface for injected account
+interface Account {
+  id: string;
+  name: string;
+  bio?: string;
+  dob?: string | null;
+  profile_pic?: string;
+  connect_id?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface SimpleChat {
   id: string;
@@ -68,12 +81,19 @@ export interface PendingMessage {
   tempId: string; // For UI optimistic updates
 }
 
-class SimpleChatService {
-  private supabase = getSupabaseClient();
+export class SimpleChatService {
+  private supabase: SupabaseClient;
+  private currentAccount: Account;
   private chats: Map<string, SimpleChat> = new Map();
   private userChats: Map<string, SimpleChat[]> = new Map();
   private userChatsTimestamp: Map<string, number> = new Map();
   private readonly CACHE_DURATION = 30000; // 30 seconds
+  
+  constructor(supabase: SupabaseClient, account: Account) {
+    this.supabase = supabase;
+    this.currentAccount = account;
+    console.log('🔧 SimpleChatService: Initialized with account:', account.id);
+  }
   
   // Real-time subscriptions
   private messageSubscriptions: Map<string, any> = new Map();
@@ -864,7 +884,8 @@ class SimpleChatService {
   }
 
   // Get user's chats (now loads from Supabase with caching)
-  async getUserChats(userId: string): Promise<{ chats: SimpleChat[]; error: Error | null }> {
+  async getUserChats(): Promise<{ chats: SimpleChat[]; error: Error | null }> {
+    const userId = this.currentAccount.id;
     try {
       // Check cache first
       const cachedChats = this.userChats.get(userId);
@@ -1451,10 +1472,10 @@ class SimpleChatService {
   // Get chat messages (now loads from Supabase with seq-based ordering and pagination)
   async getChatMessages(
     chatId: string, 
-    userId: string, 
     beforeSeq?: number, 
     limit: number = 50
   ): Promise<{ messages: SimpleMessage[]; error: Error | null; hasMore: boolean }> {
+    const userId = this.currentAccount.id;
     try {
       // Don't use cache for paginated queries (they need fresh data)
       if (!beforeSeq) {
@@ -1642,11 +1663,11 @@ class SimpleChatService {
   // Send a message (now IDEMPOTENT with client_generated_id and offline queue support)
   async sendMessage(
     chatId: string, 
-    senderId: string, 
     messageText: string,
     replyToMessageId?: string,
     mediaUrls?: string[]
   ): Promise<{ message: SimpleMessage | null; error: Error | null }> {
+    const senderId = this.currentAccount.id;
     try {
       // Check if offline - add to queue instead
       if (!isOnline()) {
@@ -2235,4 +2256,19 @@ class SimpleChatService {
   }
 }
 
-export const simpleChatService = new SimpleChatService();
+// Legacy singleton export - DEPRECATED: Use chatService from AuthContext instead
+// This is kept only for backward compatibility during migration
+export const simpleChatService = (() => {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('SimpleChatService: Supabase client not available');
+  }
+  // Create a temporary account object - this will be replaced by AuthContext injection
+  const tempAccount = {
+    id: 'temp',
+    name: 'Legacy',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  return new SimpleChatService(client, tempAccount);
+})();
