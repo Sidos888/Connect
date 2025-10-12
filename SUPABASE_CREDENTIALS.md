@@ -7,9 +7,9 @@
 
 ---
 
-## 🆕 NEW Staging Project (For Testing)
+## 🆕 Staging Project (For Testing)
 
-**Project Name**: Connect-Staging-New  
+**Project Name**: Connect-Staging  
 **Project ID**: mohctrsopquwoyfweadl  
 **Region**: ap-southeast-2  
 **URL**: https://mohctrsopquwoyfweadl.supabase.co
@@ -23,7 +23,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vaGN0cnN
 
 ## 🏭 Production Project (Your Real Users)
 
-**Project Name**: Connect-Staging (rename to Connect-Production!)  
+**Project Name**: Connect-Production  
 **Project ID**: rxlqtyfhsocxnsnnnlwl  
 **Region**: ap-southeast-2  
 **URL**: https://rxlqtyfhsocxnsnnnlwl.supabase.co

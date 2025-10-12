@@ -6,7 +6,7 @@ Your proper development workflow is now set up! Here's how to use it.
 
 ## 🏗️ Your Infrastructure
 
-### 🧪 Connect-Staging-New (mohctrsopquwoyfweadl)
+### 🧪 Connect-Staging (mohctrsopquwoyfweadl)
 **Purpose**: Testing and development  
 **URL**: https://mohctrsopquwoyfweadl.supabase.co  
 **Data**: Fake test data (safe to break/reset)  
@@ -19,8 +19,6 @@ Your proper development workflow is now set up! Here's how to use it.
 **Data**: Real users, real messages, real connections  
 **Cost**: Included in Pro  
 **Use for**: Deployed apps (iOS, Android, Vercel)
-
-**⚠️ Note**: Rename "Connect-Staging" → "Connect-Production" in Supabase dashboard!
 
 ---
 
