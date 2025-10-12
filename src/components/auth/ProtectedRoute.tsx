@@ -250,21 +250,21 @@ export default function ProtectedRoute({ children, fallback, title, description,
   // Memoize the rendered content to prevent excessive re-renders
   const content = useMemo(() => {
     // Enhanced debug logging to see what's happening (only when memoized value changes)
-    console.log('🔍 ProtectedRoute Debug:', {
-      hasUser: !!user,
-      userId: user?.id,
-      hasPersonalProfile: !!personalProfile,
-      personalProfileId: personalProfile?.id,
-      isLoadingProfile,
-      isHydrated,
-      loadingTimeout,
-      pathname,
-      loading
-    });
+    // console.log('🔍 ProtectedRoute Debug:', {
+    //   hasUser: !!user,
+    //   userId: user?.id,
+    //   hasPersonalProfile: !!personalProfile,
+    //   personalProfileId: personalProfile?.id,
+    //   isLoadingProfile,
+    //   isHydrated,
+    //   loadingTimeout,
+    //   pathname,
+    //   loading
+    // });
 
     // 🚀 BULLETPROOF: If we have profile data, show content immediately (no loading screens)
     if (personalProfile && !loadingTimeout) {
-      console.log('🚀 BULLETPROOF: Profile exists, showing content immediately - no loading screens');
+      // console.log('🚀 BULLETPROOF: Profile exists, showing content immediately - no loading screens');
       return <>{children}</>;
     }
 

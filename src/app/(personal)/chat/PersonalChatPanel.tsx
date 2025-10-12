@@ -95,7 +95,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   const renderCountRef = useRef(0);
   renderCountRef.current++;
   
-  console.log(`🔍 PersonalChatPanel RENDER #${renderCountRef.current} - Mount ID: ${mountIdRef.current} - Chat: ${conversation?.id}`);
+  // console.log(`🔍 PersonalChatPanel RENDER #${renderCountRef.current} - Mount ID: ${mountIdRef.current} - Chat: ${conversation?.id}`);
   
   // Add error boundary for missing conversation
   if (!conversation || !conversation.id) {
@@ -534,12 +534,16 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
     loadData();
     
-    // Cleanup subscription on unmount
+    // Cleanup subscription on unmount - use force cleanup to prevent orphans
     return () => {
       console.log(`🔍 PersonalChatPanel - CLEANUP - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Unsubscribe function: ${!!unsubscribeMessages}`);
       if (unsubscribeMessages) {
         console.log(`🔍 PersonalChatPanel - UNSUBSCRIBING - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
         unsubscribeMessages();
+      } else {
+        // If no unsubscribe function, force cleanup to prevent orphaned subscriptions
+        console.log(`🔍 PersonalChatPanel - FORCE CLEANUP - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
+        simpleChatService.forceCleanupChat(conversation.id);
       }
     };
   }, [conversation.id, account?.id, handleNewMessage]);
@@ -1041,24 +1045,9 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 // Memoize the component to prevent unnecessary re-renders
 const MemoizedPersonalChatPanel = React.memo(PersonalChatPanel, (prevProps, nextProps) => {
   const shouldRerender = prevProps.conversation.id !== nextProps.conversation.id;
-  console.log(`🔍 PersonalChatPanel - React.memo check - Should rerender: ${shouldRerender} - Prev ID: ${prevProps.conversation.id} - Next ID: ${nextProps.conversation.id}`);
+  // console.log(`🔍 PersonalChatPanel - React.memo check - Should rerender: ${shouldRerender} - Prev ID: ${prevProps.conversation.id} - Next ID: ${nextProps.conversation.id}`);
   // Only re-render if the conversation ID changes
   return !shouldRerender;
 });
 
-// Add unmount tracking
-const PersonalChatPanelWithUnmountTracking = (props: PersonalChatPanelProps) => {
-  const mountIdRef = useRef(Date.now());
-  
-  useEffect(() => {
-    console.log(`🔍 PersonalChatPanel - MOUNTED - Mount ID: ${mountIdRef.current} - Chat: ${props.conversation?.id}`);
-    
-    return () => {
-      console.log(`🔍 PersonalChatPanel - UNMOUNTED - Mount ID: ${mountIdRef.current} - Chat: ${props.conversation?.id}`);
-    };
-  }, [props.conversation?.id]);
-  
-  return <MemoizedPersonalChatPanel {...props} />;
-};
-
-export default PersonalChatPanelWithUnmountTracking;
+export default MemoizedPersonalChatPanel;

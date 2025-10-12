@@ -169,37 +169,27 @@ class SimpleChatService {
     return await this.getUserChats(userId);
   }
 
-  // Real-time messaging methods
+  // Real-time messaging methods - SINGLETON APPROACH: Only allow ONE subscription per chat
   subscribeToMessages(chatId: string, onNewMessage: (message: SimpleMessage) => void): () => void {
+    console.log(`🔍 SimpleChatService - subscribeToMessages called - Chat: ${chatId} - Existing callbacks: ${this.messageCallbacks.get(chatId)?.size || 0}`);
+    
+    // SINGLETON: If chat already has subscriptions, replace them with this new one
+    if (this.messageCallbacks.has(chatId)) {
+      console.log(`🔍 SimpleChatService - SINGLETON CLEANUP - Chat ${chatId} already has subscriptions, cleaning up first`);
+      this.forceCleanupChat(chatId);
+    }
+    
     // Generate unique subscription ID for robust cleanup
     const subscriptionId = `sub_${this.nextSubscriptionId++}_${Date.now()}`;
     
-    console.log(`🔍 SimpleChatService - subscribeToMessages called - Chat: ${chatId} - Subscription ID: ${subscriptionId} - Existing callbacks: ${this.messageCallbacks.get(chatId)?.size || 0}`);
-    
     // Store the callback with ID for reliable removal
-    if (!this.messageCallbacks.has(chatId)) {
-      this.messageCallbacks.set(chatId, new Map());
-      console.log(`🔍 SimpleChatService - Created new callback map for chat: ${chatId}`);
-    }
+    this.messageCallbacks.set(chatId, new Map());
     const cbMap = this.messageCallbacks.get(chatId)!;
-    
-    // Prevent duplicate subscriptions for the same component
-    // Check if this exact callback is already registered
-    for (const [existingId, existingCallback] of cbMap.entries()) {
-      if (existingCallback === onNewMessage) {
-        console.log(`🔍 SimpleChatService - DUPLICATE DETECTED - Same callback already registered with ID: ${existingId} - Returning existing cleanup function`);
-        // Return a cleanup function that removes by the existing ID
-        return () => {
-          console.log(`🔍 SimpleChatService - CLEANUP (duplicate) - Chat: ${chatId} - ID: ${existingId}`);
-          this.removeSubscription(chatId, existingId);
-        };
-      }
-    }
     
     const beforeSize = cbMap.size;
     cbMap.set(subscriptionId, onNewMessage);
     this.subscriptionIds.set(subscriptionId, chatId);
-    console.log(`🔍 SimpleChatService - Added callback to chat: ${chatId} - Callbacks before: ${beforeSize} - Callbacks after: ${cbMap.size} - ID: ${subscriptionId}`);
+    console.log(`🔍 SimpleChatService - Added SINGLETON callback to chat: ${chatId} - Callbacks before: ${beforeSize} - Callbacks after: ${cbMap.size} - ID: ${subscriptionId}`);
     
     // Create subscription once per chat
     if (!this.messageSubscriptions.has(chatId)) {
@@ -296,14 +286,19 @@ class SimpleChatService {
             }
             
             const listeners = this.messageCallbacks.get(chatId);
-            console.log(`🔍 SimpleChatService - Executing callbacks for chat: ${chatId} - Listeners count: ${listeners?.size || 0} - Message ID: ${message.id}`);
+            console.log(`🔍 SimpleChatService - Executing SINGLETON callbacks for chat: ${chatId} - Listeners count: ${listeners?.size || 0} - Message ID: ${message.id}`);
             if (listeners) {
               let callbackIndex = 0;
               listeners.forEach((cb, subId) => {
-                console.log(`🔍 SimpleChatService - Executing callback #${callbackIndex + 1} (ID: ${subId}) for chat: ${chatId} - Message ID: ${message.id}`);
+                console.log(`🔍 SimpleChatService - Executing SINGLETON callback #${callbackIndex + 1} (ID: ${subId}) for chat: ${chatId} - Message ID: ${message.id}`);
                 cb(message);
                 callbackIndex++;
               });
+              
+              // Warn if we have more than one callback (shouldn't happen with singleton)
+              if (listeners.size > 1) {
+                console.warn(`🔍 SimpleChatService - WARNING: Multiple real-time callbacks detected (${listeners.size}) - singleton should prevent this!`);
+              }
             }
           }
           
@@ -395,6 +390,41 @@ class SimpleChatService {
       this.messageSubscriptions.delete(chatId);
       console.log(`🔍 SimpleChatService - Cleanup complete for chat: ${chatId} - Remaining subscriptions: ${this.messageSubscriptions.size}`);
     }
+  }
+
+  // Force cleanup ALL subscriptions for a chat - nuclear option to prevent orphans
+  forceCleanupChat(chatId: string): void {
+    console.log(`🔍 SimpleChatService - FORCE CLEANUP for chat: ${chatId}`);
+    
+    // Remove all callbacks for this chat
+    const cbMap = this.messageCallbacks.get(chatId);
+    if (cbMap) {
+      const callbackCount = cbMap.size;
+      console.log(`🔍 SimpleChatService - Removing ${callbackCount} callbacks for chat: ${chatId}`);
+      
+      // Clean up all subscription IDs for this chat
+      for (const [subId, subChatId] of this.subscriptionIds.entries()) {
+        if (subChatId === chatId) {
+          this.subscriptionIds.delete(subId);
+        }
+      }
+      
+      this.messageCallbacks.delete(chatId);
+    }
+    
+    // Clean up Supabase subscription
+    const sub = this.messageSubscriptions.get(chatId);
+    if (sub) {
+      console.log(`🔍 SimpleChatService - Force unsubscribing from Supabase channel for chat: ${chatId}`);
+      try {
+        sub.unsubscribe();
+      } catch (error) {
+        console.error(`SimpleChatService - Error force unsubscribing from chat ${chatId}:`, error);
+      }
+      this.messageSubscriptions.delete(chatId);
+    }
+    
+    console.log(`🔍 SimpleChatService - Force cleanup complete for chat: ${chatId} - Remaining subscriptions: ${this.messageSubscriptions.size}`);
   }
 
   subscribeToTyping(chatId: string, userId: string, onTypingUpdate: (typingUsers: string[]) => void): () => void {
@@ -1698,16 +1728,22 @@ class SimpleChatService {
       cachedMessages.push(optimisticMessage);
       this.chatMessages.set(chatId, cachedMessages);
       
-      // Trigger immediate UI update for the sender
+      // Trigger immediate UI update for the sender - SINGLETON: Only one callback should exist
       const callbacks = this.messageCallbacks.get(chatId);
       console.log(`🔍 SimpleChatService - Sending optimistic message - Chat: ${chatId} - Message ID: ${optimisticMessage.id} - Callbacks: ${callbacks?.size || 0}`);
       if (callbacks && callbacks.size > 0) {
+        // SINGLETON: Should only be one callback, but iterate just in case
         let callbackIndex = 0;
         callbacks.forEach((callback, subId) => {
-          console.log(`🔍 SimpleChatService - Executing optimistic callback #${callbackIndex + 1} (ID: ${subId}) for chat: ${chatId} - Message ID: ${optimisticMessage.id}`);
+          console.log(`🔍 SimpleChatService - Executing SINGLETON optimistic callback #${callbackIndex + 1} (ID: ${subId}) for chat: ${chatId} - Message ID: ${optimisticMessage.id}`);
           callback(optimisticMessage);
           callbackIndex++;
         });
+        
+        // Warn if we have more than one callback (shouldn't happen with singleton)
+        if (callbacks.size > 1) {
+          console.warn(`🔍 SimpleChatService - WARNING: Multiple callbacks detected (${callbacks.size}) - singleton should prevent this!`);
+        }
       }
 
       // Save message to Supabase with idempotency key
