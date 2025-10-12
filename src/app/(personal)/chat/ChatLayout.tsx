@@ -32,7 +32,6 @@ const ChatLayout = () => {
   const [showNewMessageSelector, setShowNewMessageSelector] = useState(false);
   const [showGroupSetup, setShowGroupSetup] = useState(false);
   type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean; unreadCount: number; messages: Array<{ text: string; createdAt?: string }> } | null;
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   type SelectedContact = { id: string; name: string; profile_pic?: string };
   const [selectedContactsForGroup, setSelectedContactsForGroup] = useState<SelectedContact[]>([]);
 
@@ -232,18 +231,26 @@ const ChatLayout = () => {
   }, [conversations]);
 
   // Fetch selected conversation from simple chat service
+  // Store raw conversation data separately to prevent re-renders
+  const [selectedConversationData, setSelectedConversationData] = useState<{
+    id: string;
+    title: string;
+    avatarUrl: string | null;
+    isGroup: boolean;
+  } | null>(null);
+  
   useEffect(() => {
     const fetchSelectedConversation = async () => {
       if (selectedChatId) {
         const { chat, error } = await simpleChatService.getChatById(selectedChatId);
         if (error) {
           console.error('ChatLayout: Error fetching chat:', error);
-          setSelectedConversation(null);
+          setSelectedConversationData(null);
           return;
         }
         if (chat && account?.id) {
-          // Convert SimpleChat to Conversation format
-          const conversation: Conversation = {
+          // Store minimal data to prevent unnecessary re-renders
+          const conversationData = {
             id: chat.id,
             title: chat.type === 'direct' 
               ? chat.participants.find(p => p.id !== account.id)?.name || 'Unknown'
@@ -252,20 +259,41 @@ const ChatLayout = () => {
               ? chat.participants.find(p => p.id !== account.id)?.profile_pic || null
               : null,
             isGroup: chat.type === 'group',
-            unreadCount: 0,
-            messages: []
           };
-          setSelectedConversation(conversation);
+          
+          // Only update if data actually changed
+          setSelectedConversationData(prev => {
+            if (!prev || prev.id !== conversationData.id) {
+              console.log(`🔍 ChatLayout - Conversation data changed: ${conversationData.id}`);
+              return conversationData;
+            }
+            return prev;
+          });
         } else {
-          setSelectedConversation(null);
+          setSelectedConversationData(null);
         }
       } else {
-        setSelectedConversation(null);
+        setSelectedConversationData(null);
       }
     };
 
     fetchSelectedConversation();
   }, [selectedChatId, account?.id]);
+  
+  // Create a STABLE conversation object reference using useMemo
+  const stableSelectedConversation = useMemo(() => {
+    if (!selectedConversationData) return null;
+    
+    console.log(`🔍 ChatLayout - Creating stable conversation object for: ${selectedConversationData.id}`);
+    return {
+      id: selectedConversationData.id,
+      title: selectedConversationData.title,
+      avatarUrl: selectedConversationData.avatarUrl,
+      isGroup: selectedConversationData.isGroup,
+      unreadCount: 0,
+      messages: []
+    };
+  }, [selectedConversationData?.id, selectedConversationData?.title, selectedConversationData?.avatarUrl, selectedConversationData?.isGroup]);
   
   // Auto-select first conversation if none is selected and conversations exist - DISABLED TO TEST SLIDE-UP ISSUE
   // useEffect(() => {
@@ -498,8 +526,8 @@ const ChatLayout = () => {
 
       {/* Chat Panel - Hidden on mobile */}
       <div className="hidden sm:flex flex-1 flex-col h-full overflow-hidden">
-        {selectedConversation ? (
-          <PersonalChatPanel key={selectedConversation.id} conversation={selectedConversation} />
+        {stableSelectedConversation ? (
+          <PersonalChatPanel key={stableSelectedConversation.id} conversation={stableSelectedConversation} />
         ) : (
           <div className="flex flex-col h-full bg-white">
             {/* Empty header to match PersonalChatPanel structure */}

@@ -168,16 +168,21 @@ class SimpleChatService {
 
   // Real-time messaging methods
   subscribeToMessages(chatId: string, onNewMessage: (message: SimpleMessage) => void): () => void {
+    console.log(`🔍 SimpleChatService - subscribeToMessages called - Chat: ${chatId} - Callback: ${onNewMessage} - Existing callbacks: ${this.messageCallbacks.get(chatId)?.size || 0}`);
     
     // Store the callback for fan-out
     if (!this.messageCallbacks.has(chatId)) {
       this.messageCallbacks.set(chatId, new Set());
+      console.log(`🔍 SimpleChatService - Created new callback set for chat: ${chatId}`);
     }
     const cbSet = this.messageCallbacks.get(chatId)!;
+    const beforeSize = cbSet.size;
     cbSet.add(onNewMessage);
+    console.log(`🔍 SimpleChatService - Added callback to chat: ${chatId} - Callbacks before: ${beforeSize} - Callbacks after: ${cbSet.size}`);
     
     // Create subscription once per chat
     if (!this.messageSubscriptions.has(chatId)) {
+      console.log(`🔍 SimpleChatService - Creating NEW subscription for chat: ${chatId} - Total subscriptions: ${this.messageSubscriptions.size}`);
 
     const subscription = this.supabase
       .channel(`chat:${chatId}`)
@@ -270,7 +275,15 @@ class SimpleChatService {
             }
             
             const listeners = this.messageCallbacks.get(chatId);
-            if (listeners) listeners.forEach(cb => cb(message));
+            console.log(`🔍 SimpleChatService - Executing callbacks for chat: ${chatId} - Listeners count: ${listeners?.size || 0} - Message ID: ${message.id}`);
+            if (listeners) {
+              let callbackIndex = 0;
+              listeners.forEach(cb => {
+                console.log(`🔍 SimpleChatService - Executing callback #${callbackIndex + 1} for chat: ${chatId} - Message ID: ${message.id}`);
+                cb(message);
+                callbackIndex++;
+              });
+            }
           }
           
           // THEN stop typing indicator after a delay to allow smooth transition
@@ -325,18 +338,27 @@ class SimpleChatService {
     }
     
     return () => {
+      console.log(`🔍 SimpleChatService - UNSUBSCRIBE called for chat: ${chatId} - Callback: ${onNewMessage}`);
       // Remove this listener; keep channel if others are listening
       const set = this.messageCallbacks.get(chatId);
       if (set) {
-        set.delete(onNewMessage);
+        const beforeSize = set.size;
+        const deleted = set.delete(onNewMessage);
+        console.log(`🔍 SimpleChatService - Removed callback from chat: ${chatId} - Deleted: ${deleted} - Callbacks before: ${beforeSize} - Callbacks after: ${set.size}`);
+        
         if (set.size === 0) {
+          console.log(`🔍 SimpleChatService - No more callbacks for chat: ${chatId} - Cleaning up subscription`);
           this.messageCallbacks.delete(chatId);
           const sub = this.messageSubscriptions.get(chatId);
           if (sub) {
+            console.log(`🔍 SimpleChatService - Unsubscribing from Supabase channel for chat: ${chatId}`);
             sub.unsubscribe();
           }
           this.messageSubscriptions.delete(chatId);
+          console.log(`🔍 SimpleChatService - Cleanup complete for chat: ${chatId} - Remaining subscriptions: ${this.messageSubscriptions.size}`);
         }
+      } else {
+        console.log(`🔍 SimpleChatService - No callback set found for chat: ${chatId} during unsubscribe`);
       }
     };
   }
@@ -1644,8 +1666,14 @@ class SimpleChatService {
       
       // Trigger immediate UI update for the sender
       const callbacks = this.messageCallbacks.get(chatId);
+      console.log(`🔍 SimpleChatService - Sending optimistic message - Chat: ${chatId} - Message ID: ${optimisticMessage.id} - Callbacks: ${callbacks?.size || 0}`);
       if (callbacks && callbacks.size > 0) {
-        callbacks.forEach(callback => callback(optimisticMessage));
+        let callbackIndex = 0;
+        callbacks.forEach(callback => {
+          console.log(`🔍 SimpleChatService - Executing optimistic callback #${callbackIndex + 1} for chat: ${chatId} - Message ID: ${optimisticMessage.id}`);
+          callback(optimisticMessage);
+          callbackIndex++;
+        });
       }
 
       // Save message to Supabase with idempotency key

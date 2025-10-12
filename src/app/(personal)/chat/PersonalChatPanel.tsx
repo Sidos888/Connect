@@ -90,6 +90,12 @@ interface PersonalChatPanelProps {
 }
 
 const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
+  // 🔍 DEBUG: Component mount tracking
+  const mountIdRef = useRef(Date.now());
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+  
+  console.log(`🔍 PersonalChatPanel RENDER #${renderCountRef.current} - Mount ID: ${mountIdRef.current} - Chat: ${conversation?.id}`);
   
   // Add error boundary for missing conversation
   if (!conversation || !conversation.id) {
@@ -172,12 +178,18 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   
   // Update the ref whenever the component re-renders
   handleNewMessageRef.current = (newMessage: SimpleMessage) => {
+    console.log(`🔍 PersonalChatPanel - handleNewMessage called - Mount ID: ${mountIdRef.current} - Message ID: ${newMessage.id} - Text: "${newMessage.text?.substring(0, 20)}..."`);
+    
     setMessages(prev => {
       // Check if message already exists to prevent duplicates
       const exists = prev.some(msg => msg.id === newMessage.id);
       if (exists) {
+        console.log(`🔍 PersonalChatPanel - DUPLICATE PREVENTED - Mount ID: ${mountIdRef.current} - Message ID: ${newMessage.id} already exists`);
         return prev;
       }
+      
+      console.log(`🔍 PersonalChatPanel - ADDING NEW MESSAGE - Mount ID: ${mountIdRef.current} - Message ID: ${newMessage.id} - Total messages before: ${prev.length}`);
+      
       // NEW: Add new message and sort by seq (deterministic ordering)
       const updated = [...prev, newMessage];
       
@@ -190,22 +202,28 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
       
+      console.log(`🔍 PersonalChatPanel - MESSAGE ADDED - Mount ID: ${mountIdRef.current} - Total messages after: ${updated.length}`);
       return updated;
     });
   };
 
   // Stable callback that always calls the current ref
   const handleNewMessage = useCallback((newMessage: SimpleMessage) => {
+    console.log(`🔍 PersonalChatPanel - useCallback handleNewMessage - Mount ID: ${mountIdRef.current} - Message ID: ${newMessage.id}`);
     handleNewMessageRef.current?.(newMessage);
   }, []);
 
   // Consolidated message sending handler - prevents duplicates
   const handleSendMessage = async () => {
+    console.log(`🔍 PersonalChatPanel - handleSendMessage called - Mount ID: ${mountIdRef.current} - Text: "${text.trim()}" - Media count: ${pendingMedia.length}`);
+    
     // Prevent duplicate sends
     if (sendingRef.current || !account?.id || (!text.trim() && pendingMedia.length === 0)) {
+      console.log(`🔍 PersonalChatPanel - SEND BLOCKED - Mount ID: ${mountIdRef.current} - Sending: ${sendingRef.current} - Account: ${!!account?.id} - Has content: ${!!text.trim() || pendingMedia.length > 0}`);
       return;
     }
 
+    console.log(`🔍 PersonalChatPanel - SENDING MESSAGE - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
     sendingRef.current = true;
     
     try {
@@ -492,11 +510,17 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         // Simple real-time subscription for this chat only
         // Skip subscription on mobile devices to prevent conflicts with IndividualChatPage
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+        console.log(`🔍 PersonalChatPanel - SUBSCRIPTION CHECK - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - isMobile: ${isMobile}`);
+        
         if (!isMobile) {
+          console.log(`🔍 PersonalChatPanel - SUBSCRIBING TO MESSAGES - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Callback: ${handleNewMessage}`);
           unsubscribeMessages = simpleChatService.subscribeToMessages(
             conversation.id,
             handleNewMessage // Use the memoized callback
           );
+          console.log(`🔍 PersonalChatPanel - SUBSCRIPTION CREATED - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Unsubscribe function: ${!!unsubscribeMessages}`);
+        } else {
+          console.log(`🔍 PersonalChatPanel - SKIPPING SUBSCRIPTION (MOBILE) - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
         }
         
         setLoading(false);
@@ -512,7 +536,9 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     
     // Cleanup subscription on unmount
     return () => {
+      console.log(`🔍 PersonalChatPanel - CLEANUP - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Unsubscribe function: ${!!unsubscribeMessages}`);
       if (unsubscribeMessages) {
+        console.log(`🔍 PersonalChatPanel - UNSUBSCRIBING - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
         unsubscribeMessages();
       }
     };
@@ -1014,8 +1040,25 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
 // Memoize the component to prevent unnecessary re-renders
 const MemoizedPersonalChatPanel = React.memo(PersonalChatPanel, (prevProps, nextProps) => {
+  const shouldRerender = prevProps.conversation.id !== nextProps.conversation.id;
+  console.log(`🔍 PersonalChatPanel - React.memo check - Should rerender: ${shouldRerender} - Prev ID: ${prevProps.conversation.id} - Next ID: ${nextProps.conversation.id}`);
   // Only re-render if the conversation ID changes
-  return prevProps.conversation.id === nextProps.conversation.id;
+  return !shouldRerender;
 });
 
-export default MemoizedPersonalChatPanel;
+// Add unmount tracking
+const PersonalChatPanelWithUnmountTracking = (props: PersonalChatPanelProps) => {
+  const mountIdRef = useRef(Date.now());
+  
+  useEffect(() => {
+    console.log(`🔍 PersonalChatPanel - MOUNTED - Mount ID: ${mountIdRef.current} - Chat: ${props.conversation?.id}`);
+    
+    return () => {
+      console.log(`🔍 PersonalChatPanel - UNMOUNTED - Mount ID: ${mountIdRef.current} - Chat: ${props.conversation?.id}`);
+    };
+  }, [props.conversation?.id]);
+  
+  return <MemoizedPersonalChatPanel {...props} />;
+};
+
+export default PersonalChatPanelWithUnmountTracking;
