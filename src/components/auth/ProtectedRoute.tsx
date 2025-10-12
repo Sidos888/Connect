@@ -26,13 +26,8 @@ export default function ProtectedRoute({ children, fallback, title, description,
   const [forceStopLoading, setForceStopLoading] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   
-  // Force cleanup all realtime subscriptions on mount to prevent ghost subscriptions
-  useEffect(() => {
-    if (user && account && supabase) {
-      console.log('🧹 ProtectedRoute: Cleaning up all realtime subscriptions');
-      supabase.removeAllChannels();
-    }
-  }, [user, account, supabase]);
+  // Note: Removed aggressive subscription cleanup that was causing chat freezing
+  // The SimpleChatService now handles subscription management properly
 
   // Get custom messages based on the current path if props are not provided
   const getCustomMessages = () => {

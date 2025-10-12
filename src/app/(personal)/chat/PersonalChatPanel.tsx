@@ -710,7 +710,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
       </div>
 
       {/* Messages Container - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-6 py-4 pb-8 space-y-4 min-h-0">
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
