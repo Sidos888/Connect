@@ -190,7 +190,6 @@ class SimpleChatService {
         }, 
         async (payload) => {
           try {
-            
             // Get sender name from participants
             const chat = this.chats.get(chatId);
             const sender = chat?.participants.find(p => p.id === payload.new.sender_id);
@@ -203,16 +202,37 @@ class SimpleChatService {
             sender_profile_pic: sender?.profile_pic || undefined,
             text: payload.new.message_text,
             created_at: payload.new.created_at,
+            seq: payload.new.seq || undefined, // NEW
+            client_generated_id: payload.new.client_generated_id || undefined, // NEW
+            status: payload.new.status || 'sent', // NEW
             reply_to_message_id: payload.new.reply_to_message_id || null,
             media_urls: payload.new.media_urls || undefined,
             reactions: [],
             deleted_at: payload.new.deleted_at || null
           };
 
-          // Check if this message already exists (avoid duplicates from optimistic updates)
+          // NEW: Seq-based filtering - ignore old messages
+          const latestSeq = this.chatLatestSeq.get(chatId) || 0;
+          if (message.seq && message.seq <= latestSeq) {
+            console.log(`SimpleChatService: Ignoring old message with seq ${message.seq} (latest: ${latestSeq})`);
+            return;
+          }
+
+          // NEW: DedupeStore check (replaces old processedMessages + recentMessageSignatures)
+          const messageIdKey = message.id;
+          const clientGenKey = message.client_generated_id 
+            ? createCompositeKey(chatId, message.sender_id, message.client_generated_id)
+            : null;
+          
+          if (this.dedupeStore.has(messageIdKey) || (clientGenKey && this.dedupeStore.has(clientGenKey))) {
+            console.log(`SimpleChatService: Duplicate message detected (id or client_gen_id), skipping`);
+            return;
+          }
+
+          // Check if this message already exists in cache (optimistic update check)
           const existingMessage = chat?.messages.find(m => 
             m.id === message.id || 
-            (m.text === message.text && m.sender_id === message.sender_id && Math.abs(new Date(m.created_at).getTime() - new Date(message.created_at).getTime()) < 1000)
+            (m.client_generated_id && m.client_generated_id === message.client_generated_id)
           );
           
           if (!existingMessage) {
@@ -228,6 +248,11 @@ class SimpleChatService {
             cachedMessages.push(message);
             this.chatMessages.set(chatId, cachedMessages);
           }
+          
+          // Update latest seq tracking
+          if (message.seq) {
+            this.chatLatestSeq.set(chatId, message.seq);
+          }
 
           // Check if sender was typing BEFORE removing them
           const typingSet = this.typingUsers.get(chatId);
@@ -237,22 +262,15 @@ class SimpleChatService {
           (message as any).wasTyping = wasTyping;
 
           // Only notify callback if this is a NEW message (not a duplicate)
-          // Check if message ID was already processed (prevents duplicates from optimistic updates)
-          const isDuplicateById = this.processedMessages.has(message.id);
-          
-          // Extra guard: dedupe by (chatId, sender_id, text) within short window (2s)
-          const signatureKey = `${chatId}:${message.sender_id}:${(message.text || '').trim()}`;
-          const nowMs = Date.now();
-          const lastSeen = this.recentMessageSignatures.get(signatureKey) || 0;
-          const isDuplicateBySignature = nowMs - lastSeen < 2000; // 2s window
-
-          if (!existingMessage && !isDuplicateById && !isDuplicateBySignature) {
-            this.processedMessages.add(message.id);
-            this.recentMessageSignatures.set(signatureKey, nowMs);
+          if (!existingMessage) {
+            // Mark as processed in DedupeStore
+            this.dedupeStore.add(messageIdKey);
+            if (clientGenKey) {
+              this.dedupeStore.add(clientGenKey);
+            }
+            
             const listeners = this.messageCallbacks.get(chatId);
             if (listeners) listeners.forEach(cb => cb(message));
-          } else {
-            // Message was duplicate - skip callback to prevent double messages
           }
           
           // THEN stop typing indicator after a delay to allow smooth transition
@@ -511,9 +529,11 @@ class SimpleChatService {
     this.typingUsers.clear();
     this.typingCallbacks.clear();
     
-    // Clear processed messages to prevent memory leaks
-    this.processedMessages.clear();
-    this.recentMessageSignatures.clear();
+    // NEW: Cleanup DedupeStore (replaces old processedMessages and recentMessageSignatures)
+    this.dedupeStore.destroy();
+    
+    // Clear pending queue
+    this.pendingQueue = [];
     
     console.log('SimpleChatService: Cleanup completed successfully');
   }
@@ -888,15 +908,17 @@ class SimpleChatService {
             }
 
             // Get last message with attachments (only non-deleted messages)
+            // NEW: Order by seq for deterministic ordering
             const { data: lastMessageData, error: lastMessageError } = await this.supabase
               .from('chat_messages')
               .select(`
-                id, message_text, sender_id, created_at,
+                id, message_text, sender_id, created_at, seq, status,
                 attachments:attachments(id, file_url, file_type, file_size, thumbnail_url, width, height, created_at)
               `)
               .eq('chat_id', chatId)
               .is('deleted_at', null)
-              .order('created_at', { ascending: false })
+              .order('seq', { ascending: false, nullsFirst: false })
+              .order('created_at', { ascending: false }) // Fallback for legacy messages
               .limit(1)
               .single();
 
