@@ -243,6 +243,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
       if (messageError || !newMessage) {
         console.error('Failed to send message:', messageError);
+        sendingRef.current = false; // Reset sending state on error
         return;
       }
 
@@ -546,7 +547,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         simpleChatService.forceCleanupChat(conversation.id);
       }
     };
-  }, [conversation.id, account?.id, handleNewMessage]);
+  }, [conversation.id, account?.id]); // Remove handleNewMessage from dependencies to prevent infinite re-renders
 
   useEffect(() => {
     if (!hasMarkedAsRead.current && account?.id) {
