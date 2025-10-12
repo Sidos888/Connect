@@ -187,6 +187,31 @@ export default function IndividualChatPage() {
           );
           unsubscribeReactionsRef.current = unsubscribeReactions;
         }
+
+        // Subscribe to real-time messages for this chat
+        if (chatId && account?.id) {
+          console.log('Individual chat page: Subscribing to real-time messages for chat:', chatId);
+          const unsubscribeMessages = simpleChatService.subscribeToMessages(
+            chatId,
+            account.id,
+            (newMessage) => {
+              console.log('Individual chat page: New message received:', newMessage);
+              setMessages(prev => {
+                // Check if message already exists to avoid duplicates
+                const exists = prev.some(msg => msg.id === newMessage.id);
+                if (exists) {
+                  console.log('Individual chat page: Message already exists, skipping');
+                  return prev;
+                }
+                console.log('Individual chat page: Adding new message to list');
+                return [...prev, newMessage];
+              });
+            }
+          );
+          
+          // Store the unsubscribe function for cleanup
+          return unsubscribeMessages;
+        }
       } catch (error) {
         console.error('Error loading data:', error);
         setError('Failed to load conversation');
@@ -194,13 +219,16 @@ export default function IndividualChatPage() {
       }
     };
 
-    loadData();
+    const unsubscribeMessages = loadData();
 
     // Cleanup function
     return () => {
       if (unsubscribeReactionsRef.current) {
         unsubscribeReactionsRef.current();
         unsubscribeReactionsRef.current = null;
+      }
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
       }
     };
   }, [account?.id, chatId]);

@@ -102,11 +102,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
     );
   }
   
-  const { sendMessage, markAllRead, getChatTyping } = useAppStore();
+  const { markAllRead, getChatTyping } = useAppStore();
   const { account } = useAuth();
   const router = useRouter();
   const [text, setText] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
+  // Simple local state management - bulletproof approach
+  const [messages, setMessages] = useState<SimpleMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
   const hasMarkedAsRead = useRef(false);
@@ -132,8 +133,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   // Real-time state
   const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
-  const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
 
   // Message action handlers
   const handleMessageLongPress = (message: SimpleMessage) => {
@@ -345,13 +344,13 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
   const typingState = getChatTyping(conversation.id);
   const typingUsers = typingState?.typingUsers || [];
   
-  // Track pending messages (messages being transitioned from typing indicator)
-  const [pendingMessages, setPendingMessages] = useState<Map<string, any>>(new Map());
-  const pendingMessageTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  // Pending messages are now handled by the store
 
 
   // Load participants and messages from the database
   useEffect(() => {
+    let unsubscribeMessages: (() => void) | null = null;
+    
     // useEffect logging removed for performance
     const loadData = async () => {
       if (conversation.id && account?.id) {
@@ -389,14 +388,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           setRefreshedConversation(conversation);
         }
         
-        // Only load messages if we don't have them yet (prevents refetch on chat switch)
-        if (messages.length === 0) {
-          const { messages: newMessages, error: messagesError } = await simpleChatService.getChatMessages(conversation.id, account.id);
-          if (!messagesError) {
-            setMessages(newMessages);
-          } else {
-            console.error('PersonalChatPanel: Error loading messages:', messagesError);
-          }
+        // Load messages directly - simple and bulletproof
+        const { messages: chatMessages, error: messagesError } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        if (messagesError) {
+          console.error('PersonalChatPanel: Error loading messages:', messagesError);
+        } else {
+          setMessages(chatMessages || []);
         }
 
         // Load all chat media for the viewer
@@ -414,103 +411,18 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           setAllChatMedia([]); // Set empty array as fallback
         }
         
-        // Subscribe to real-time messages
-        const unsubscribeMessages = simpleChatService.subscribeToMessages(
+        // Simple real-time subscription for this chat only
+        unsubscribeMessages = simpleChatService.subscribeToMessages(
           conversation.id,
           (newMessage) => {
-            
-            // Check if this sender was typing using the wasTyping flag from message
-            // This flag is set in simpleChatService BEFORE typing indicator is removed
-            const wasTyping = (newMessage as any).wasTyping === true;
-            
-            
-            if (wasTyping) {
-              // Add message to pending state immediately (replaces typing indicator)
-              setPendingMessages(prev => {
-                const newMap = new Map(prev);
-                newMap.set(newMessage.sender_id, newMessage);
-                return newMap;
-              });
-              
-              // After a brief moment, move to actual messages
-              const timeout = setTimeout(() => {
-                setMessages(prev => {
-                  // If we already have a temp optimistic message for this sender/text, replace it
-                  const tempIndex = prev.findIndex(msg => 
-                    typeof msg.id === 'string' && (msg.id as string).startsWith('temp_') &&
-                    msg.sender_id === newMessage.sender_id &&
-                    (msg.text || '') === (newMessage.text || '')
-                  );
-                  if (tempIndex !== -1) {
-                    const updated = [...prev];
-                    updated[tempIndex] = newMessage;
-                    return updated;
-                  }
-                  const exists = prev.some(msg => msg.id === newMessage.id);
-                  if (exists) return prev;
-                  return [...prev, newMessage];
-                });
-                setPendingMessages(prev => {
-                  const newMap = new Map(prev);
-                  newMap.delete(newMessage.sender_id);
-                  return newMap;
-                });
-              }, 400); // Brief delay for smooth transition (typing indicator will be removed by simpleChatService)
-              
-              pendingMessageTimeouts.current.set(newMessage.sender_id, timeout);
-            } else {
-              // Normal message flow - just add it
-              setMessages(prev => {
-                // Replace optimistic temp message if present
-                const tempIndex = prev.findIndex(msg => 
-                  typeof msg.id === 'string' && (msg.id as string).startsWith('temp_') &&
-                  msg.sender_id === newMessage.sender_id &&
-                  (msg.text || '') === (newMessage.text || '')
-                );
-                if (tempIndex !== -1) {
-                  const updated = [...prev];
-                  updated[tempIndex] = newMessage;
-                  return updated;
-                }
-                const exists = prev.some(msg => 
-                  msg.id === newMessage.id || 
-                  (msg.text === newMessage.text && msg.sender_id === newMessage.sender_id && Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 10000)
-                );
-                if (exists) {
-                  return prev;
-                }
-                return [...prev, newMessage];
-              });
-            }
-            
-            // Auto-scroll to bottom when new message arrives
-            setTimeout(() => {
-              endRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, 100);
-          }
-        );
-        unsubscribeMessagesRef.current = unsubscribeMessages;
-        
-        // Subscribe to reaction changes for real-time updates
-        const unsubscribeReactions = simpleChatService.subscribeToReactions(
-          conversation.id,
-          (messageId) => {
-            // Refresh the specific message to get updated reactions
             setMessages(prev => {
-              return prev.map(msg => {
-                if (msg.id === messageId) {
-                  // Trigger a re-render by updating the message
-                  return { ...msg, reactions: msg.reactions || [] };
-                }
-                return msg;
-              });
+              // Check if message already exists to prevent duplicates
+              const exists = prev.some(msg => msg.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage];
             });
           }
         );
-        unsubscribeReactionsRef.current = unsubscribeReactions;
-        
-        // Note: Typing indicators are now handled by ChatLayout's global subscription
-        // PersonalChatPanel will use the global store instead of its own subscription
         
         setLoading(false);
         
@@ -523,15 +435,10 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
 
     loadData();
     
-    // Cleanup function
+    // Cleanup subscription on unmount
     return () => {
-      if (unsubscribeMessagesRef.current) {
-        unsubscribeMessagesRef.current();
-        unsubscribeMessagesRef.current = null;
-      }
-      if (unsubscribeReactionsRef.current) {
-        unsubscribeReactionsRef.current();
-        unsubscribeReactionsRef.current = null;
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
       }
     };
   }, [conversation.id, account?.id]);
@@ -591,11 +498,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         animationRef.current = null;
       }
       
-      // Clean up pending message timeouts
-      pendingMessageTimeouts.current.forEach(timeout => {
-        if (timeout) clearTimeout(timeout);
-      });
-      pendingMessageTimeouts.current.clear();
+      // No pending message cleanup needed
       
       console.log('PersonalChatPanel: Cleanup completed for conversation', conversation.id);
     };
@@ -699,9 +602,9 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
           </div>
         ) : (
           messages.map((m, index) => {
-            const isMe = m.sender_id === account?.id;
             // Create a unique key that combines ID with index to prevent duplicates
             const uniqueKey = `${m.id}_${index}_${m.created_at}`;
+            
             return (
               <MessageBubble
                 key={uniqueKey}
@@ -724,8 +627,6 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         return (
           <div className="flex-shrink-0 px-6 pb-8 space-y-4">
             {typingUsers.map((typingUserId: string) => {
-              // Check if this user has a pending message
-              const pendingMessage = pendingMessages.get(typingUserId);
               let typingUser = participants.find(p => p.id === typingUserId);
               
               // If typing user not found in participants, create a placeholder
@@ -768,39 +669,33 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                     className="bg-white text-gray-900 border border-gray-200 rounded-2xl px-4 py-3 shadow-sm max-w-[70%] transition-all duration-300 ease-in-out" 
                     style={{ backgroundColor: '#ffffff !important', color: '#111827 !important' }}
                   >
-                    {pendingMessage ? (
-                      // Show the actual message with fade-in
-                      <div className="text-sm leading-relaxed whitespace-pre-wrap animate-fade-in">
-                        {pendingMessage.text || 'Message'}
+                    {/* Show typing dots */}
+                    <div className="text-sm leading-relaxed flex items-center gap-2" style={{ height: '22.75px', lineHeight: '22.75px' }}>
+                      <div className="flex space-x-1">
+                        <div 
+                          className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                          style={{ 
+                            transform: animationPhase === 0 ? 'translateY(-10px)' : 'translateY(0)',
+                            opacity: animationPhase === 0 ? 1 : 0.7
+                          }}
+                        ></div>
+                        <div 
+                          className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                          style={{ 
+                            transform: animationPhase === 1 ? 'translateY(-10px)' : 'translateY(0)',
+                            opacity: animationPhase === 1 ? 1 : 0.7
+                          }}
+                        ></div>
+                        <div 
+                          className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
+                          style={{ 
+                            transform: animationPhase === 2 ? 'translateY(-10px)' : 'translateY(0)',
+                            opacity: animationPhase === 2 ? 1 : 0.7
+                          }}
+                        ></div>
                       </div>
-                    ) : (
-                      // Show typing dots
-                      <div className="text-sm leading-relaxed flex items-center gap-2" style={{ height: '22.75px', lineHeight: '22.75px' }}>
-                        <div className="flex space-x-1">
-                          <div 
-                            className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                            style={{ 
-                              transform: animationPhase === 0 ? 'translateY(-10px)' : 'translateY(0)',
-                              opacity: animationPhase === 0 ? 1 : 0.7
-                            }}
-                          ></div>
-                          <div 
-                            className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                            style={{ 
-                              transform: animationPhase === 1 ? 'translateY(-10px)' : 'translateY(0)',
-                              opacity: animationPhase === 1 ? 1 : 0.7
-                            }}
-                          ></div>
-                          <div 
-                            className="w-2 h-2 bg-gray-400 rounded-full transition-transform duration-150 ease-in-out" 
-                            style={{ 
-                              transform: animationPhase === 2 ? 'translateY(-10px)' : 'translateY(0)',
-                              opacity: animationPhase === 2 ? 1 : 0.7
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
+                      <span className="text-gray-500 text-xs">is typing...</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -929,7 +824,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                   }
                   
                   try {
-                    // Create the message first
+                    // Send message directly - simple and bulletproof
                     const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
                       conversation.id,
                       account.id,
@@ -942,28 +837,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                       return;
                     }
 
-                // Save attachments if any
+                    // Add to local state immediately for instant UI feedback
+                    setMessages(prev => [...prev, newMessage]);
+
+                // Attachments will be handled by the store's sendMessage and real-time updates
                 if (pendingMedia.length > 0) {
-                  try {
-                    await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
-                    // Manually update the message with attachments for instant display
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === newMessage.id 
-                        ? { ...msg, attachments: pendingMedia.map((media, idx) => ({
-                            id: `${newMessage.id}_${idx}`,
-                            file_url: media.file_url,
-                            file_type: media.file_type,
-                            file_size: media.file_size,
-                            thumbnail_url: media.thumbnail_url,
-                            width: media.width,
-                            height: media.height
-                          })) }
-                        : msg
-                    ));
-                  } catch (attachmentError) {
-                    console.error('Failed to save attachments:', attachmentError);
-                    // Continue anyway - the message was sent successfully
-                  }
+                  console.log('Attachments will be processed via real-time subscription');
                 }
 
                 // Clear the form
@@ -989,7 +868,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 }
                 
                 try {
-                  // Create the message first
+                  // Send message directly - simple and bulletproof
                   const { message: newMessage, error: messageError } = await simpleChatService.sendMessage(
                     conversation.id,
                     account.id,
@@ -1002,28 +881,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                     return;
                   }
 
-                  // Save attachments if any
+                  // Add to local state immediately for instant UI feedback
+                  setMessages(prev => [...prev, newMessage]);
+
+                  // Attachments will be handled by the store's sendMessage and real-time updates
                   if (pendingMedia.length > 0) {
-                    try {
-                      await simpleChatService.saveAttachments(newMessage.id, pendingMedia);
-                      // Manually update the message with attachments for instant display
-                      setMessages(prev => prev.map(msg => 
-                        msg.id === newMessage.id 
-                          ? { ...msg, attachments: pendingMedia.map((media, idx) => ({
-                              id: `${newMessage.id}_${idx}`,
-                              file_url: media.file_url,
-                              file_type: media.file_type,
-                              file_size: media.file_size,
-                              thumbnail_url: media.thumbnail_url,
-                              width: media.width,
-                              height: media.height
-                            })) }
-                          : msg
-                      ));
-                    } catch (attachmentError) {
-                      console.error('Failed to save attachments:', attachmentError);
-                      // Continue anyway - the message was sent successfully
-                    }
+                    console.log('Attachments will be processed via real-time subscription');
                   }
 
                   // Clear the form

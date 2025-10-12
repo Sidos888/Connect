@@ -43,7 +43,7 @@ type ChatActions = {
   loadConversations: (userId: string) => Promise<void>;
   getConversations: () => Conversation[];
   setConversations: (conversations: Conversation[]) => void;
-  sendMessage: (conversationId: UUID, text: string, userId: string) => Promise<void>;
+  sendMessage: (conversationId: UUID, text: string, userId: string, replyToMessageId?: string, mediaUrls?: string[]) => Promise<void>;
   markAllRead: (conversationId: UUID, userId: string) => Promise<void>;
   markMessagesAsRead: (conversationId: UUID, userId: string) => Promise<void>;
   createDirectChat: (otherUserId: string) => Promise<Conversation | null>;
@@ -121,9 +121,11 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 
   loadConversations: async (userId: string) => {
+    console.log('loadConversations called for user:', userId);
     
     // Don't try to load conversations if user is not authenticated
     if (!userId) {
+      console.log('No userId provided, skipping conversation loading');
       return;
     }
     
@@ -136,9 +138,9 @@ export const useAppStore = create<FullStore>((set, get) => ({
             error.message !== 'User ID mismatch') {
           console.error('Error loading conversations:', {
             message: error.message || 'Unknown error',
-            code: error.code || 'UNKNOWN',
-            details: error.details || null,
-            hint: error.hint || null
+            code: (error as any).code || 'UNKNOWN',
+            details: (error as any).details || null,
+            hint: (error as any).hint || null
           });
         }
         return;
@@ -146,6 +148,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
       
       // Convert SimpleChat to Conversation format - use last_message data that's now included
       const conversations: Conversation[] = chats.map((chat) => {
+        console.log('Converting chat:', chat.id, 'type:', chat.type, 'photo:', chat.photo);
         const otherParticipant = chat.participants.find(p => p.id !== userId);
         
         // Use the last_message data that's now loaded with the chat
@@ -175,9 +178,14 @@ export const useAppStore = create<FullStore>((set, get) => ({
         };
       });
       
+      console.log('Loaded conversations:', conversations.length);
       set({ conversations });
       const { personalProfile, businesses, context } = get();
       saveToLocalStorage({ personalProfile, businesses, context, conversations });
+      
+      // Real-time subscriptions are now handled by individual components
+      // This keeps the store simple and focused on conversation list management
+      
     } catch (error) {
       console.error('Error in loadConversations:', error);
     }
@@ -191,36 +199,16 @@ export const useAppStore = create<FullStore>((set, get) => ({
     saveToLocalStorage({ personalProfile, businesses, context, conversations });
   },
 
-  sendMessage: async (conversationId, text, userId) => {
+  sendMessage: async (conversationId, text, userId, replyToMessageId?, mediaUrls?) => {
     try {
-      const { message, error } = await simpleChatService.sendMessage(conversationId, userId, text);
+      const { message, error } = await simpleChatService.sendMessage(conversationId, userId, text, replyToMessageId, mediaUrls);
       if (error) {
         console.error('Error sending message:', error);
         return;
       }
       
-      // Update local state with the new message
-      const conversations = get().conversations.map((c) => {
-        if (c.id === conversationId) {
-          const newMessage = {
-            id: message!.id,
-            conversationId,
-            sender: "me" as const,
-            text: message!.text || '',
-            createdAt: message!.created_at,
-            read: true
-          };
-          return { ...c, messages: [...c.messages, newMessage] };
-        }
-        return c;
-      });
-      
-      set({ conversations });
-      const { personalProfile, businesses, context } = get();
-      saveToLocalStorage({ personalProfile, businesses, context, conversations });
-      
-      // Clear cache to ensure fresh data on next load
-      simpleChatService.clearChatCache(conversationId);
+      // Don't update local state here - let real-time subscription handle it
+      // This prevents duplication
     } catch (error) {
       console.error('Error in sendMessage:', error);
     }
@@ -271,8 +259,14 @@ export const useAppStore = create<FullStore>((set, get) => ({
   createDirectChat: async (otherUserId) => {
     try {
       // Get current user ID for conversion
-      const { data: { user } } = await getSupabaseClient().auth.getUser();
-      if (!user) {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        console.error('Supabase client not available');
+        return null;
+      }
+      const response = await supabase.auth.getUser();
+      const user = response.data?.user;
+      if (!user?.id) {
         console.error('User not authenticated');
         return null;
       }
@@ -316,6 +310,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 
   clearConversations: () => {
+    console.log('Store: Clearing all conversations');
     set({ conversations: [] });
     const { personalProfile, businesses, context } = get();
     saveToLocalStorage({ personalProfile, businesses, context, conversations: [] });
@@ -323,6 +318,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
 
   // Typing indicator actions
   updateChatTyping: (chatId: string, typingUsers: string[]) => {
+    console.log('Store: Updating typing state for chat:', chatId, 'users:', typingUsers);
     const { chatTypingStates } = get();
     const newTypingStates = new Map(chatTypingStates);
     
@@ -340,6 +336,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
   },
 
   clearChatTyping: (chatId: string) => {
+    console.log('Store: Clearing typing state for chat:', chatId);
     const { chatTypingStates } = get();
     const newTypingStates = new Map(chatTypingStates);
     newTypingStates.delete(chatId);
@@ -366,10 +363,12 @@ if (typeof window !== "undefined") {
           conversations: [], // Always start with empty conversations to load real data
           isHydrated: true, // Mark as hydrated after loading from localStorage
         });
+        console.log('✅ Store hydrated from localStorage');
       } else {
         useAppStore.setState({
           isHydrated: true, // Mark as hydrated even with empty state
         });
+        console.log('✅ Store hydrated with empty state');
       }
     } catch (error) {
       console.error('Error hydrating store:', error);
@@ -377,6 +376,7 @@ if (typeof window !== "undefined") {
       useAppStore.setState({
         isHydrated: true,
       });
+      console.log('✅ Store hydrated with error fallback');
     }
   }, 0);
 }
