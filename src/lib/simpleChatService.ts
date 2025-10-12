@@ -93,6 +93,19 @@ export class SimpleChatService {
     this.supabase = supabase;
     this.currentAccount = account;
     console.log('🔧 SimpleChatService: Initialized with account:', account.id);
+    
+    // Run cleanup every 5 minutes
+    if (typeof window !== 'undefined') {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanupOldTracking();
+      }, 5 * 60 * 1000); // 5 minutes
+      
+      // Listen for online event to flush pending queue
+      window.addEventListener('online', () => {
+        console.log('SimpleChatService: Network online, flushing pending queue');
+        this.flushPendingQueue();
+      });
+    }
   }
   
   // Real-time subscriptions
@@ -125,21 +138,6 @@ export class SimpleChatService {
   
   // Cleanup interval
   private cleanupInterval: NodeJS.Timeout | null = null;
-
-  constructor() {
-    // Run cleanup every 5 minutes
-    if (typeof window !== 'undefined') {
-      this.cleanupInterval = setInterval(() => {
-        this.cleanupOldTracking();
-      }, 5 * 60 * 1000); // 5 minutes
-      
-      // Listen for online event to flush pending queue
-      window.addEventListener('online', () => {
-        console.log('SimpleChatService: Network online, flushing pending queue');
-        this.flushPendingQueue();
-      });
-    }
-  }
 
   // Retry mechanism now uses utility function from network.ts
   // Kept as private wrapper for backward compatibility with existing code
