@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { AppStore, Business, PersonalProfile, UUID, Conversation, ChatTypingState, TypingActions } from "./types";
-import { simpleChatService, SimpleChat, SimpleMessage } from "./simpleChatService";
+import { simpleChatService, SimpleChat, SimpleMessage, PendingMessage } from "./simpleChatService";
 import { getSupabaseClient } from "./supabaseClient";
 
 type PersistedShape = {
@@ -48,11 +48,16 @@ type ChatActions = {
   markMessagesAsRead: (conversationId: UUID, userId: string) => Promise<void>;
   createDirectChat: (otherUserId: string) => Promise<Conversation | null>;
   clearConversations: () => void;
+  // NEW: Offline queue management
+  getPendingMessages: () => PendingMessage[];
+  retryPendingMessages: () => Promise<void>;
 };
 
 type FullStore = AppStore & ChatActions & { conversations: Conversation[] } & {
   // Typing indicator state
   chatTypingStates: Map<string, ChatTypingState>;
+  // NEW: Offline message queue
+  pendingMessages: PendingMessage[];
 } & TypingActions;
 
 export const useAppStore = create<FullStore>((set, get) => ({
@@ -63,6 +68,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
   conversations: [],
   isAccountSwitching: false,
   chatTypingStates: new Map(),
+  pendingMessages: [], // NEW: Offline message queue
 
   setAccountSwitching: (loading: boolean) => {
     set({ isAccountSwitching: loading });
@@ -314,6 +320,16 @@ export const useAppStore = create<FullStore>((set, get) => ({
     set({ conversations: [] });
     const { personalProfile, businesses, context } = get();
     saveToLocalStorage({ personalProfile, businesses, context, conversations: [] });
+  },
+
+  // NEW: Offline queue actions
+  getPendingMessages: () => {
+    return simpleChatService.getPendingMessages();
+  },
+
+  retryPendingMessages: async () => {
+    // Trigger flush of pending queue
+    await (simpleChatService as any).flushPendingQueue?.();
   },
 
   // Typing indicator actions

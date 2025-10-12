@@ -389,10 +389,12 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
         }
         
         // Load messages directly - simple and bulletproof
-        const { messages: chatMessages, error: messagesError } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        // NEW: getChatMessages now returns hasMore for pagination
+        const { messages: chatMessages, error: messagesError, hasMore } = await simpleChatService.getChatMessages(conversation.id, account.id);
         if (messagesError) {
           console.error('PersonalChatPanel: Error loading messages:', messagesError);
         } else {
+          // NEW: Messages are now ordered by seq (deterministic ordering)
           setMessages(chatMessages || []);
         }
 
@@ -419,7 +421,20 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
               // Check if message already exists to prevent duplicates
               const exists = prev.some(msg => msg.id === newMessage.id);
               if (exists) return prev;
-              return [...prev, newMessage];
+              
+              // NEW: Add new message and sort by seq (deterministic ordering)
+              const updated = [...prev, newMessage];
+              
+              // Sort by seq if available, fallback to created_at for legacy messages
+              updated.sort((a, b) => {
+                if (a.seq !== undefined && b.seq !== undefined) {
+                  return a.seq - b.seq;
+                }
+                // Fallback to created_at for messages without seq
+                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+              });
+              
+              return updated;
             });
           }
         );
