@@ -18,6 +18,7 @@ import GalleryModal from "@/components/chat/GalleryModal";
 import MediaViewer from "@/components/chat/MediaViewer";
 import AttachmentMenu from "@/components/chat/AttachmentMenu";
 import type { SimpleMessage, MediaAttachment } from "@/lib/simpleChatService";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 // Generate video thumbnail using HTML5 video + canvas API
 const generateVideoThumbnail = async (file: File): Promise<string> => {
@@ -628,6 +629,7 @@ export default function PersonalChatPanel({ conversation }: PersonalChatPanelPro
                 onAttachmentClick={handleAttachmentClick}
                 onReply={handleReply}
                 showOptions={true}
+                showDeliveryStatus={FEATURE_FLAGS.SHOW_DELIVERY_STATUS_TICKS}
               />
             );
           })

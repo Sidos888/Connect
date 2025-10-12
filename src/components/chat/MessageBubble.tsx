@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   onReply?: (message: SimpleMessage) => void;
   onDelete?: (messageId: string) => void;
   showOptions?: boolean;
+  showDeliveryStatus?: boolean; // NEW: Optional delivery status ticks (default: false)
 }
 
 const MessageBubble = React.memo(({ 
@@ -22,7 +23,8 @@ const MessageBubble = React.memo(({
   onAttachmentClick,
   onReply,
   onDelete,
-  showOptions = true
+  showOptions = true,
+  showDeliveryStatus = false // Default: disabled (backwards compatible)
 }: MessageBubbleProps) => {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
@@ -374,6 +376,21 @@ const MessageBubble = React.memo(({
             <div className="text-sm italic text-gray-500">
               This message was deleted
             </div>
+          </div>
+        )}
+
+        {/* NEW: Optional delivery status ticks (only for own messages) */}
+        {showDeliveryStatus && isOwnMessage && !isDeleted && message.status && (
+          <div className="text-xs text-gray-400 mt-1 flex justify-end items-center gap-1">
+            {message.status === 'sent' && (
+              <span className="text-gray-400">✓</span>
+            )}
+            {message.status === 'delivered' && (
+              <span className="text-gray-400">✓✓</span>
+            )}
+            {message.status === 'read' && (
+              <span className="text-blue-500">✓✓</span>
+            )}
           </div>
         )}
 
