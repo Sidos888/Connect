@@ -1,0 +1,16 @@
+schema,table_name,trigger_name,event,timing,function_called
+public,accounts,update_accounts_updated_at,UPDATE,BEFORE,update_updated_at_column()
+public,business_accounts,trg_limit_business_accounts,INSERT,BEFORE,limit_business_accounts()
+public,business_accounts,update_business_accounts_updated_at,UPDATE,BEFORE,update_updated_at_column()
+public,chat_messages,trg_assign_seq,INSERT,BEFORE,assign_message_seq()
+public,chat_messages,trigger_update_chat_last_message_at,INSERT,AFTER,update_chat_last_message_at()
+public,friend_requests,trigger_create_connection,UPDATE,AFTER,create_connection_on_accept()
+storage,buckets,enforce_bucket_name_length_trigger,UPDATE,BEFORE,storage.enforce_bucket_name_length()
+storage,buckets,enforce_bucket_name_length_trigger,INSERT,BEFORE,storage.enforce_bucket_name_length()
+storage,objects,objects_delete_delete_prefix,DELETE,AFTER,storage.delete_prefix_hierarchy_trigger()
+storage,objects,objects_insert_create_prefix,INSERT,BEFORE,storage.objects_insert_prefix_trigger()
+storage,objects,objects_update_create_prefix,UPDATE,BEFORE,storage.objects_update_prefix_trigger()
+storage,objects,update_objects_updated_at,UPDATE,BEFORE,storage.update_updated_at_column()
+storage,prefixes,prefixes_create_hierarchy,INSERT,BEFORE,storage.prefixes_insert_trigger()
+storage,prefixes,prefixes_delete_hierarchy,DELETE,AFTER,storage.delete_prefix_hierarchy_trigger()
+

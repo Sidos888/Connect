@@ -8,7 +8,12 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    include: [
+      'tests/**/*.test.ts', 
+      'tests/**/*.test.tsx',
+      'src/lib/__tests__/**/*.test.ts',  // Added for auth tests
+      'src/lib/__tests__/**/*.test.tsx'
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

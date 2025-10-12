@@ -1,0 +1,13 @@
+pid,role,application_name,client_addr,backend_start,state,backend_type,wait_event,seconds_in_state
+857,,,"",2025-10-11 10:34:19,,"checkpointer","CheckpointerMain",
+858,,,"",2025-10-11 10:34:19,,"background writer","BgwriterHibernate",
+860,,,"",2025-10-11 10:34:19,,"walwriter","WalWriterMain",
+861,,,"",2025-10-11 10:34:19,,"autovacuum launcher","AutovacuumMain",
+863,supabase_admin,"pg_cron scheduler","",2025-10-11 10:34:19,,"pg_cron launcher","Extension",
+864,supabase_admin,"","",2025-10-11 10:34:19,,"logical replication launcher","LogicalLauncherMain",
+862,supabase_admin,"pg_net 0.19.5","",2025-10-11 10:34:19,,"pg_net 0.19.5 worker","Extension",
+881,authenticator,"postgrest","::1",2025-10-11 10:34:20,"idle","client backend","ClientRead",53272.7
+1814,supabase_admin,"postgres_exporter","::1",2025-10-11 10:34:33,"idle","client backend","ClientRead",41.0
+7868,supabase_admin,"","::1",2025-10-11 13:29:00,"idle","client backend","ClientRead",42793.1
+28344,authenticator,"postgrest","::1",2025-10-12 01:22:00,"idle","client backend","ClientRead",12.0
+

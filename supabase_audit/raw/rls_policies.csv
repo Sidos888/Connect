@@ -1,0 +1,46 @@
+schema,table,policy_name,permissive,roles,command,qual,with_check
+public,account_identities,authenticated_users_account_identities_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,account_identities,authenticated_users_account_identities_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,account_identities,authenticated_users_account_identities_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,account_identities,authenticated_users_account_identities_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,accounts,authenticated_users_accounts_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,accounts,authenticated_users_accounts_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,accounts,authenticated_users_accounts_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,accounts,authenticated_users_accounts_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,attachments,authenticated_users_attachments_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,attachments,authenticated_users_attachments_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,attachments,authenticated_users_attachments_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,attachments,authenticated_users_attachments_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,chat_messages,authenticated_users_chat_messages_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,chat_messages,authenticated_users_chat_messages_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,chat_messages,authenticated_users_chat_messages_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,chat_messages,authenticated_users_chat_messages_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,chat_participants,authenticated_users_chat_participants_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,chat_participants,authenticated_users_chat_participants_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,chat_participants,authenticated_users_chat_participants_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,chat_participants,authenticated_users_chat_participants_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,chats,authenticated_users_chats_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,chats,authenticated_users_chats_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,chats,authenticated_users_chats_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,chats,authenticated_users_chats_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,connections,authenticated_users_connections_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,connections,authenticated_users_connections_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,connections,authenticated_users_connections_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,connections,authenticated_users_connections_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,friend_requests,authenticated_users_friend_requests_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,friend_requests,authenticated_users_friend_requests_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,friend_requests,authenticated_users_friend_requests_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,friend_requests,authenticated_users_friend_requests_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+public,message_reactions,authenticated_users_message_reactions_delete,PERMISSIVE,"{authenticated}",DELETE,true,
+public,message_reactions,authenticated_users_message_reactions_insert,PERMISSIVE,"{authenticated}",INSERT,,true
+public,message_reactions,authenticated_users_message_reactions_select,PERMISSIVE,"{authenticated}",SELECT,true,
+public,message_reactions,authenticated_users_message_reactions_update,PERMISSIVE,"{authenticated}",UPDATE,true,true
+storage,objects,Authenticated users can upload avatars,PERMISSIVE,"{public}",INSERT,,
+storage,objects,Authenticated users can view avatars,PERMISSIVE,"{public}",SELECT,,
+storage,objects,Users can delete their chat media,PERMISSIVE,"{public}",DELETE,,
+storage,objects,Users can delete their own avatars,PERMISSIVE,"{public}",DELETE,,
+storage,objects,Users can update their chat media,PERMISSIVE,"{public}",UPDATE,,
+storage,objects,Users can update their own avatars,PERMISSIVE,"{public}",UPDATE,,
+storage,objects,Users can upload chat media,PERMISSIVE,"{public}",INSERT,,
+storage,objects,Users can view chat media,PERMISSIVE,"{public}",SELECT,,
+

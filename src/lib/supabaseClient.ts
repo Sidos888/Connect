@@ -47,19 +47,17 @@ export function getSupabaseClient(): SupabaseClient | null {
   if (client) return client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  console.log('Supabase client creation:', { url: url ? 'Set' : 'Missing', anon: anon ? 'Set' : 'Missing' });
   
-  // Fallback to Connect-Staging project if env vars are missing
-  const fallbackUrl = url || 'https://rxlqtyfhsocxnsnnnlwl.supabase.co';
-  const fallbackAnon = anon || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4bHF0eWZoc29jeG5zbm5ubHdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDE0MzEsImV4cCI6MjA3MjM3NzQzMX0.oMDgv8sj7GvoDsSw6RVt0XEezQTQj2l609JJBg43eTg';
-  
+  // Fail-fast if environment variables are missing
   if (!url || !anon) {
-    console.warn('Missing Supabase environment variables, using Connect-Staging project fallback');
+    throw new Error('Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set');
   }
+  
+  console.log('Supabase client creation:', { url: 'Set', anon: 'Set' });
   
   const storage = createMobileCompatibleStorage();
   
-  client = createClient(fallbackUrl, fallbackAnon, {
+  client = createClient(url, anon, {
     auth: {
       persistSession: true,
       storage: storage,
@@ -121,14 +119,14 @@ export const supabase = getSupabaseClient();
 export async function clearInvalidSession() {
   if (typeof window !== 'undefined') {
     try {
-      // Clear all auth-related localStorage
+      // Clear only Supabase-specific auth keys (narrowed scope to avoid clearing app data)
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
-        if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+        if (key.startsWith('sb-') || key.includes('supabase.auth')) {
           localStorage.removeItem(key);
         }
       });
-      console.log('🧹 Cleared invalid auth session data');
+      console.log('🧹 Cleared invalid Supabase auth session data');
     } catch (error) {
       console.error('🧹 Error clearing session:', error);
     }

@@ -1,0 +1,4 @@
+bucket_id,bucket_name,is_public,file_size_limit,object_count,total_size,created_at
+avatars,avatars,true,,61,77 MB,2025-09-13 11:47:35
+chat-media,chat-media,true,10485760,29,35 MB,2025-10-10 02:24:07
+

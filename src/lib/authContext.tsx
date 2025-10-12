@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { getSupabaseClient, clearInvalidSession } from './supabaseClient';
-import { formatNameForDisplay } from './utils';
+import { formatNameForDisplay, normalizeEmail, normalizePhoneAU } from './utils';
 
 // Account interface (our true user profile)
 interface Account {
@@ -590,82 +590,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendEmailVerification = async (email: string) => {
     if (!supabase) return { error: new Error('Supabase client not initialized') };
 
-    // Rate limiting: Check if we've sent an email recently
-    const lastEmailTime = localStorage.getItem('lastEmailVerification');
-    const now = Date.now();
-    const RATE_LIMIT_MS = 30000; // 30 seconds
-
-    if (lastEmailTime && (now - parseInt(lastEmailTime)) < RATE_LIMIT_MS) {
-      const remainingSeconds = Math.ceil((RATE_LIMIT_MS - (now - parseInt(lastEmailTime))) / 1000);
-      console.log(`⏳ Rate limited: Please wait ${remainingSeconds} seconds before sending another verification email`);
-      return { error: new Error(`Please wait ${remainingSeconds} seconds before sending another verification email`) };
-    }
-
     try {
-      console.log('📧 NewAuthContext: ========== SENDING EMAIL OTP ==========');
-      console.log('📧 NewAuthContext: Email:', email);
-      console.log('📧 NewAuthContext: Supabase client available:', !!supabase);
-      console.log('📧 NewAuthContext: Supabase URL:', supabase.supabaseUrl);
-      console.log('📧 NewAuthContext: Supabase Key (anonymized):', supabase.supabaseKey?.substring(0, 10) + '...');
+      console.log('📧 AuthContext: ========== SENDING EMAIL OTP ==========');
       
-      // Test Supabase connection
-      try {
-        const { data: healthCheck, error: healthError } = await supabase.from('accounts').select('count').limit(1);
-        console.log('📧 NewAuthContext: Supabase connection test:', { 
-          hasHealthData: !!healthCheck, 
-          hasHealthError: !!healthError,
-          healthErrorMessage: healthError?.message 
+      // Normalize email (server-side normalization enforced by RPC)
+      const normalizedEmail = normalizeEmail(email);
+      console.log('📧 AuthContext: Normalized email:', normalizedEmail);
+      
+      // Check server-side rate limit
+      const { data: canSend, error: rateLimitError } = await supabase
+        .rpc('app_can_send_otp', {
+          p_identifier: normalizedEmail,
+          p_ip: 'client' // In production, get from request headers server-side
         });
-      } catch (healthErr) {
-        console.warn('📧 NewAuthContext: Supabase connection test failed:', healthErr);
+      
+      console.log('📧 AuthContext: Rate limit check:', { canSend, rateLimitError });
+      
+      if (rateLimitError || !canSend) {
+        console.error('❌ AuthContext: Rate limit exceeded');
+        return { error: new Error('Rate limit exceeded. Please wait before requesting another code.') };
       }
       
+      // Send OTP via Supabase Auth
       const { data, error } = await supabase.auth.signInWithOtp({
-        email: email,
+        email: normalizedEmail,
         options: { 
           emailRedirectTo: undefined,
-          shouldCreateUser: true // Allow user creation for new accounts
+          shouldCreateUser: true
         }
       });
 
-      console.log('📧 NewAuthContext: OTP response:', { 
+      console.log('📧 AuthContext: OTP response:', { 
         hasData: !!data, 
         hasError: !!error, 
-        errorMessage: error?.message,
-        errorCode: error?.status,
-        dataKeys: data ? Object.keys(data) : null
+        errorMessage: error?.message
       });
 
       if (error) {
-        console.error('❌ NewAuthContext: Email OTP error details:', {
-          message: error.message,
-          status: error.status,
-          statusText: error.statusText,
-          name: error.name
-        });
-        
-        // Handle rate limiting error specifically
-        if (error.message.includes('For security purposes')) {
-          localStorage.setItem('lastEmailVerification', now.toString());
-          return { error: new Error('Please wait a moment before requesting another verification email') };
-        }
+        console.error('❌ AuthContext: Email OTP error:', error.message);
         throw error;
       }
       
-      // Store timestamp of successful email send
-      localStorage.setItem('lastEmailVerification', now.toString());
-      console.log('✅ NewAuthContext: Email verification sent successfully');
-      console.log('✅ NewAuthContext: Response data:', data);
+      console.log('✅ AuthContext: Email verification sent successfully');
       return { error: null };
     } catch (error) {
-      console.error('❌ NewAuthContext: ========== EMAIL OTP ERROR ==========');
-      console.error('❌ NewAuthContext: Error sending email verification:', error);
-      console.error('❌ NewAuthContext: Error details:', {
-        message: (error as any)?.message,
-        status: (error as any)?.status,
-        statusText: (error as any)?.statusText,
-        name: (error as any)?.name
-      });
+      console.error('❌ AuthContext: Error sending email verification:', error);
       return { error: error as Error };
     }
   };
@@ -675,21 +644,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return { error: new Error('Supabase client not initialized') };
 
     try {
-      console.log('📱 NewAuthContext: Sending phone verification to:', phone);
+      console.log('📱 AuthContext: ========== SENDING PHONE OTP ==========');
       
+      // Normalize phone (server-side normalization enforced by RPC)
+      let normalizedPhone: string;
+      try {
+        normalizedPhone = normalizePhoneAU(phone);
+        console.log('📱 AuthContext: Normalized phone:', normalizedPhone);
+      } catch (err) {
+        console.error('❌ AuthContext: Invalid phone format:', err);
+        return { error: new Error('Invalid phone number format') };
+      }
+      
+      // Check server-side rate limit
+      const { data: canSend, error: rateLimitError } = await supabase
+        .rpc('app_can_send_otp', {
+          p_identifier: normalizedPhone,
+          p_ip: 'client'
+        });
+      
+      console.log('📱 AuthContext: Rate limit check:', { canSend, rateLimitError });
+      
+      if (rateLimitError || !canSend) {
+        console.error('❌ AuthContext: Rate limit exceeded');
+        return { error: new Error('Rate limit exceeded. Please wait before requesting another code.') };
+      }
+      
+      // Send OTP via Supabase Auth
       const { error } = await supabase.auth.signInWithOtp({
-        phone: phone,
+        phone: normalizedPhone,
         options: { 
-          shouldCreateUser: true // Allow user creation for new accounts
+          shouldCreateUser: true
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ AuthContext: Phone OTP error:', error.message);
+        throw error;
+      }
       
-      console.log('✅ NewAuthContext: Phone verification sent successfully');
+      console.log('✅ AuthContext: Phone verification sent successfully');
       return { error: null };
     } catch (error) {
-      console.error('❌ NewAuthContext: Error sending phone verification:', error);
+      console.error('❌ AuthContext: Error sending phone verification:', error);
       return { error: error as Error };
     }
   };
@@ -699,8 +696,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return { error: new Error('Supabase client not initialized') };
 
     try {
-      console.log('🔐 NewAuthContext: Verifying email code for:', email);
+      console.log('🔐 AuthContext: ========== VERIFYING EMAIL OTP ==========');
       
+      // Step 1: Verify OTP with Supabase Auth
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: code,
@@ -708,8 +706,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        console.error('🔐 NewAuthContext: OTP verification failed:', error.message);
-        // Handle specific token expiration error
+        console.error('🔐 AuthContext: OTP verification failed:', error.message);
         if (error.message?.includes('expired') || error.message?.includes('invalid')) {
           return { error: new Error('Verification code has expired. Please request a new code.') };
         }
@@ -718,60 +715,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (!data.user) throw new Error('No user returned from verification');
 
-      console.log('✅ NewAuthContext: Email verification successful, user ID:', data.user.id);
+      console.log('✅ AuthContext: Email verification successful, user ID:', data.user.id);
 
-      // Check if this email is already linked to an account
-      const { exists, account } = await checkExistingAccount(email);
-      
-      if (exists && account) {
-        console.log('👤 NewAuthContext: Found existing account for email, setting account state');
-        // Set the account immediately so the user is properly authenticated
-        setAccount(account);
-        
-        // Ensure identity mapping exists for future logins
-        try {
-          const { error: identityError } = await supabase
-            .from('account_identities')
-            .upsert({
-              account_id: account.id,
-              auth_user_id: data.user.id,
-              method: 'email',
-              identifier: email.toLowerCase()
-            }, { 
-              onConflict: 'account_id,auth_user_id,method,identifier',
-              ignoreDuplicates: false 
-            });
-          
-          if (identityError) {
-            console.warn('⚠️ NewAuthContext: Failed to create/update identity mapping:', identityError);
-          } else {
-            console.log('✅ NewAuthContext: Identity mapping created/updated successfully');
-          }
-        } catch (identityErr) {
-          console.warn('⚠️ NewAuthContext: Identity mapping error:', identityErr);
-        }
-        
-        // Load the account after a brief delay to ensure database operations complete
-        try {
-          console.log('🔄 NewAuthContext: Loading account after email verification...');
-          // Small delay to ensure identity mapping is committed
-          await new Promise(resolve => setTimeout(resolve, 100));
-          await loadAccountForUser(data.user.id);
-          console.log('✅ NewAuthContext: Account loaded successfully after email verification');
-        } catch (loadError) {
-          console.error('❌ NewAuthContext: Failed to load account after email verification:', loadError);
-        }
-        return { error: null, isExistingAccount: true };
-      } else {
-        console.log('🆕 NewAuthContext: New user, will need to create account');
-        return { 
-          error: null, 
-          isExistingAccount: false,
-          tempUser: { email, authUserId: data.user.id }
-        };
+      // Step 2: Call atomic RPC to create or link account
+      const normalizedEmail = normalizeEmail(email);
+      const { data: account, error: rpcError } = await supabase
+        .rpc('app_create_or_link_account', {
+          p_method: 'email',
+          p_identifier: normalizedEmail,
+          p_name: null,
+          p_bio: null
+        });
+
+      if (rpcError) {
+        console.error('❌ AuthContext: Failed to create/link account:', rpcError);
+        throw rpcError;
       }
+
+      console.log('✅ AuthContext: Account created/linked:', account);
+
+      // Step 3: Set account state
+      setAccount(account);
+
+      // Step 4: Check if this is existing account (has real name) or new (default "User")
+      const isExistingAccount = !!account.name && account.name !== 'User';
+
+      return { 
+        error: null, 
+        isExistingAccount,
+        tempUser: isExistingAccount ? undefined : { email: normalizedEmail, authUserId: data.user.id }
+      };
     } catch (error) {
-      console.error('❌ NewAuthContext: Error verifying email code:', error);
+      console.error('❌ AuthContext: Error verifying email code:', error);
       return { error: error as Error };
     }
   };
@@ -781,8 +756,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return { error: new Error('Supabase client not initialized') };
 
     try {
-      console.log('🔐 NewAuthContext: Verifying phone code for:', phone);
+      console.log('🔐 AuthContext: ========== VERIFYING PHONE OTP ==========');
       
+      // Step 1: Verify OTP with Supabase Auth
       const { data, error } = await supabase.auth.verifyOtp({
         phone,
         token: code,
@@ -790,72 +766,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        // Handle specific token expiration error
+        console.error('🔐 AuthContext: OTP verification failed:', error.message);
         if (error.message?.includes('expired') || error.message?.includes('invalid')) {
-          console.error('🔐 NewAuthContext: OTP token expired or invalid');
           return { error: new Error('Verification code has expired. Please request a new code.') };
         }
         throw error;
       }
+      
       if (!data.user) throw new Error('No user returned from verification');
 
-      console.log('✅ NewAuthContext: Phone verification successful, user ID:', data.user.id);
+      console.log('✅ AuthContext: Phone verification successful, user ID:', data.user.id);
 
-      // Check if this phone is already linked to an account
-      console.log('🔍 NewAuthContext: Checking if phone is linked to existing account:', phone);
-      const { exists, account } = await checkExistingAccount(undefined, phone);
-      
-      console.log('🔍 NewAuthContext: Phone account check result:', { exists, account });
-      
-      if (exists && account) {
-        console.log('👤 NewAuthContext: Found existing account for phone, setting account state');
-        // Set the account immediately so the user is properly authenticated
-        setAccount(account);
-        
-        // Ensure identity mapping exists for future logins
-        try {
-          const { error: identityError } = await supabase
-            .from('account_identities')
-            .upsert({
-              account_id: account.id,
-              auth_user_id: data.user.id,
-              method: 'phone',
-              identifier: phone
-            }, { 
-              onConflict: 'account_id,auth_user_id,method,identifier',
-              ignoreDuplicates: false 
-            });
-          
-          if (identityError) {
-            console.warn('⚠️ NewAuthContext: Failed to create/update identity mapping:', identityError);
-          } else {
-            console.log('✅ NewAuthContext: Identity mapping created/updated successfully');
-          }
-        } catch (identityErr) {
-          console.warn('⚠️ NewAuthContext: Identity mapping error:', identityErr);
-        }
-        
-        // Load the account after a brief delay to ensure database operations complete
-        try {
-          console.log('🔄 NewAuthContext: Loading account after phone verification...');
-          // Small delay to ensure identity mapping is committed
-          await new Promise(resolve => setTimeout(resolve, 100));
-          await loadAccountForUser(data.user.id);
-          console.log('✅ NewAuthContext: Account loaded successfully after phone verification');
-        } catch (loadError) {
-          console.error('❌ NewAuthContext: Failed to load account after phone verification:', loadError);
-        }
-        return { error: null, isExistingAccount: true };
-      } else {
-        console.log('🆕 NewAuthContext: New user, will need to create account');
-        return { 
-          error: null, 
-          isExistingAccount: false,
-          tempUser: { phone, authUserId: data.user.id }
-        };
+      // Step 2: Call atomic RPC to create or link account
+      const normalizedPhone = normalizePhoneAU(phone);
+      const { data: account, error: rpcError } = await supabase
+        .rpc('app_create_or_link_account', {
+          p_method: 'phone',
+          p_identifier: normalizedPhone,
+          p_name: null,
+          p_bio: null
+        });
+
+      if (rpcError) {
+        console.error('❌ AuthContext: Failed to create/link account:', rpcError);
+        throw rpcError;
       }
+
+      console.log('✅ AuthContext: Account created/linked:', account);
+
+      // Step 3: Set account state
+      setAccount(account);
+
+      // Step 4: Check if this is existing account (has real name) or new (default "User")
+      const isExistingAccount = !!account.name && account.name !== 'User';
+
+      return { 
+        error: null, 
+        isExistingAccount,
+        tempUser: isExistingAccount ? undefined : { phone: normalizedPhone, authUserId: data.user.id }
+      };
     } catch (error) {
-      console.error('❌ NewAuthContext: Error verifying phone code:', error);
+      console.error('❌ AuthContext: Error verifying phone code:', error);
       return { error: error as Error };
     }
   };
@@ -1121,76 +1072,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Create new account - SIMPLIFIED VERSION
+  // Create new account (uses atomic RPC)
   const createAccount = async (userData: { name: string; email?: string; phone?: string; bio?: string; dob?: string }) => {
-    console.log('🚀 NewAuthContext: SIMPLE account creation starting...');
-    
-    // Skip all the complex stuff and just create a local account that works
-    const newAccount = {
-      id: user?.id || 'temp-id',
-      name: userData.name,
-      bio: userData.bio || '',
-      dob: userData.dob || null,
-      profile_pic: '',
-      connect_id: generateConnectId(userData.name),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    console.log('✅ NewAuthContext: Simple account created:', newAccount);
-    setAccount(newAccount);
-    
-    // Try database save in background (don't wait for it)
-    if (supabase && user) {
-      console.log('🔄 NewAuthContext: Attempting background database save...');
-      
-      // Save account to database - using async/await for better error handling
-      (async () => {
-        try {
-          const result = await supabase
-            .from('accounts')
-            .insert([{
-              name: userData.name,
-              bio: userData.bio || '',
-              dob: userData.dob || null,
-              connect_id: newAccount.connect_id
-            }])
-            .select('*')
-            .single();
-
-          console.log('✅ NewAuthContext: Background save result:', result);
-          
-          if (result.data) {
-            // Also create identity link for future sign-ins
-            const primaryMethod = userData.email ? 'email' : 'phone';
-            const primaryIdentifier = userData.email || userData.phone;
-            
-            if (primaryIdentifier) {
-              console.log('🔗 NewAuthContext: Creating identity link:', { method: primaryMethod, identifier: primaryIdentifier });
-              
-              const { error: identityError } = await supabase
-                .from('account_identities')
-                .insert({
-                  account_id: result.data.id,
-                  auth_user_id: user.id,
-                  method: primaryMethod,
-                  identifier: primaryIdentifier
-                });
-              
-              if (identityError) {
-                console.log('❌ NewAuthContext: Identity link failed:', identityError);
-              } else {
-                console.log('✅ NewAuthContext: Identity link created successfully');
-              }
-            }
-          }
-        } catch (error) {
-          console.log('❌ NewAuthContext: Background save failed:', error);
-        }
-      })();
+    if (!supabase || !user) {
+      return { error: new Error('Not authenticated') };
     }
-    
-    return { error: null };
+
+    try {
+      console.log('🚀 AuthContext: ========== CREATING ACCOUNT ==========');
+      
+      // Determine method and identifier
+      const method = userData.email ? 'email' : 'phone';
+      const identifier = userData.email || userData.phone;
+      
+      if (!identifier) {
+        return { error: new Error('Email or phone required') };
+      }
+
+      // Call atomic RPC with account details
+      const { data: account, error: rpcError } = await supabase
+        .rpc('app_create_or_link_account', {
+          p_method: method,
+          p_identifier: identifier,
+          p_name: userData.name,
+          p_bio: userData.bio || ''
+        });
+
+      if (rpcError) {
+        console.error('❌ AuthContext: Failed to create account:', rpcError);
+        throw rpcError;
+      }
+
+      console.log('✅ AuthContext: Account created successfully:', account);
+
+      // Set account state
+      setAccount(account);
+
+      return { error: null };
+    } catch (error) {
+      console.error('❌ AuthContext: Error creating account:', error);
+      return { error: error as Error };
+    }
   };
 
   // Upload avatar

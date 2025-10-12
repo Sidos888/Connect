@@ -1,0 +1,12 @@
+schema,table,index_name,index_size,index_size_bytes
+auth,audit_log_entries,audit_log_entries_pkey,168 kB,172032
+auth,audit_log_entries,audit_logs_instance_id_idx,56 kB,57344
+auth,flow_state,idx_auth_code,56 kB,57344
+auth,mfa_amr_claims,mfa_amr_claims_session_id_authentication_method_pkey,40 kB,40960
+auth,refresh_tokens,refresh_tokens_updated_at_idx,40 kB,40960
+auth,sessions,user_id_created_at_idx,40 kB,40960
+auth,refresh_tokens,refresh_tokens_token_unique,40 kB,40960
+auth,flow_state,flow_state_pkey,40 kB,40960
+auth,refresh_tokens,refresh_tokens_session_id_revoked_idx,40 kB,40960
+auth,flow_state,flow_state_created_at_idx,40 kB,40960
+

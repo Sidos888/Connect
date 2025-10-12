@@ -1,0 +1,17 @@
+schema,table_name,total_size,total_size_bytes,table_size,estimated_rows
+public,accounts,10 MB,10706944,8192 bytes,0
+auth,audit_log_entries,1232 kB,1261568,968 kB,175
+auth,refresh_tokens,304 kB,311296,64 kB,177
+auth,flow_state,296 kB,303104,112 kB,48
+realtime,subscription,240 kB,245760,64 kB,0
+storage,objects,232 kB,237568,64 kB,18
+auth,users,224 kB,229376,24 kB,18
+auth,sessions,216 kB,221184,64 kB,87
+public,chat_messages,208 kB,212992,48 kB,183
+auth,one_time_tokens,144 kB,147456,8192 bytes,6
+public,chat_participants,120 kB,122880,8192 bytes,18
+auth,mfa_amr_claims,120 kB,122880,24 kB,87
+public,account_identities,112 kB,114688,8192 bytes,0
+auth,identities,112 kB,114688,8192 bytes,0
+supabase_migrations,schema_migrations,104 kB,106496,40 kB,14
+
