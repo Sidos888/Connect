@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Camera, Users, MoreVertical, Edit3, Settings, Images, MessageCircle, Share } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
-import { simpleChatService } from '@/lib/simpleChatService';
 import { useAppStore } from '@/lib/store';
 import Avatar from '@/components/Avatar';
 
@@ -29,7 +28,7 @@ interface GroupProfile {
 }
 
 export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProfileModalProps) {
-  const { account } = useAuth();
+  const { account, chatService } = useAuth();
   const { loadConversations } = useAppStore();
   const [groupProfile, setGroupProfile] = useState<GroupProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -243,8 +242,8 @@ export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProf
       }
       
       // Reload conversations to update the chat list with the new photo
-      if (account?.id) {
-        await loadConversations(account.id);
+      if (account?.id && chatService) {
+        await loadConversations(account.id, chatService);
         console.log('Conversations reloaded to show updated group photo');
       }
     } catch (error) {

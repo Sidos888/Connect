@@ -14,13 +14,12 @@ import { useModal } from "@/lib/modalContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NewMessageModal from "@/components/chat/NewMessageModal";
 import GroupSetupModal from "@/components/chat/GroupSetupModal";
-import { simpleChatService } from "@/lib/simpleChatService";
 import { Plus, ArrowLeft } from "lucide-react";
 
 export default function MessagesPage() {
   const { conversations, loadConversations, isHydrated, setConversations, getConversations } = useAppStore();
   const router = useRouter();
-  const { account } = useAuth();
+  const { account, chatService } = useAuth();
   const { showAddFriend } = useModal();
   const searchParams = useSearchParams();
   const selectedChatId = searchParams.get("chat");
@@ -81,12 +80,12 @@ export default function MessagesPage() {
   }, [selectedChatId, selectedConversation, account?.id, isHydrated, setConversations, getConversations]);
 
   useEffect(() => {
-    if (isHydrated && account?.id) {
+    if (isHydrated && account?.id && chatService) {
       // Use real chat service
-      loadConversations(account.id);
+      loadConversations(account.id, chatService);
     } else if (isHydrated && !account?.id) {
     }
-  }, [isHydrated, account?.id, loadConversations]);
+  }, [isHydrated, account?.id, loadConversations, chatService]);
 
   // Handle keyboard behavior on mobile
   useEffect(() => {
@@ -150,8 +149,8 @@ export default function MessagesPage() {
     setShowNewMessageModal(false);
     setShowGroupSetupModal(false);
     // Refresh conversations to include the new chat
-    if (account?.id) {
-      loadConversations(account.id);
+    if (account?.id && chatService) {
+      loadConversations(account.id, chatService);
     }
     // Navigate to the main chat page (desktop layout)
     router.push(`/chat?chat=${chatId}`);
