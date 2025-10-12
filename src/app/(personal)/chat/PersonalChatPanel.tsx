@@ -546,13 +546,10 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     
     // Cleanup subscription on unmount - use force cleanup to prevent orphans
     return () => {
-      console.log(`🔍 PersonalChatPanel - CLEANUP - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Unsubscribe function: ${!!unsubscribeMessages}`);
       if (unsubscribeMessages) {
-        console.log(`🔍 PersonalChatPanel - UNSUBSCRIBING - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
         unsubscribeMessages();
       } else {
         // If no unsubscribe function, force cleanup to prevent orphaned subscriptions
-        console.log(`🔍 PersonalChatPanel - FORCE CLEANUP - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
         chatService.forceCleanupChat(conversation.id);
       }
     };

@@ -272,7 +272,6 @@ const ChatLayout = () => {
           // Only update if data actually changed
           setSelectedConversationData(prev => {
             if (!prev || prev.id !== conversationData.id) {
-              console.log(`🔍 ChatLayout - Conversation data changed: ${conversationData.id}`);
               return conversationData;
             }
             return prev;
@@ -292,7 +291,6 @@ const ChatLayout = () => {
   const stableSelectedConversation = useMemo(() => {
     if (!selectedConversationData) return null;
     
-    console.log(`🔍 ChatLayout - Creating stable conversation object for: ${selectedConversationData.id}`);
     return {
       id: selectedConversationData.id,
       title: selectedConversationData.title,
