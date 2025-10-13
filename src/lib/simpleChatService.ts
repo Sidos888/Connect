@@ -85,36 +85,62 @@ export class SimpleChatService {
     try {
       console.log('🔧 SimpleChatService: Getting chats for account:', this.currentAccount.id);
       
+      // First get chat IDs for this user
+      const { data: participantData, error: participantError } = await this.supabase
+        .from('chat_participants')
+        .select('chat_id')
+        .eq('user_id', this.currentAccount.id);
+
+      if (participantError) throw participantError;
+
+      const chatIds = participantData?.map(p => p.chat_id) || [];
+      
+      if (chatIds.length === 0) {
+        console.log('🔧 SimpleChatService: No chats found for user');
+        return { chats: [], error: null };
+      }
+
+      // Then get chat details
       const { data: chats, error } = await this.supabase
         .from('chats')
-        .select(`
-          id,
-          type,
-          name,
-          last_message_at,
-          created_at,
-          chat_participants!inner(
-            user_id,
-            accounts!inner(id, name, profile_pic)
-          )
-        `)
-        .eq('chat_participants.user_id', this.currentAccount.id)
+        .select('id, type, name, last_message_at, created_at')
+        .in('id', chatIds)
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
       console.log('🔧 SimpleChatService: Query result:', { chats: chats?.length, error });
 
       if (error) throw error;
 
+      // Load participants for all chats in parallel
+      const participantPromises = chatIds.map(chatId =>
+        this.supabase
+          .from('chat_participants')
+          .select(`
+            user_id,
+            accounts!inner(id, name, profile_pic)
+          `)
+          .eq('chat_id', chatId)
+      );
+
+      const participantResults = await Promise.all(participantPromises);
+      const participantsMap = new Map();
+
+      participantResults.forEach((result, index) => {
+        if (!result.error && result.data) {
+          participantsMap.set(chatIds[index], result.data.map((p: any) => ({
+            id: p.accounts.id,
+            name: p.accounts.name,
+            profile_pic: p.accounts.profile_pic
+          })));
+        }
+      });
+
       const simpleChats: SimpleChat[] = (chats || []).map((chat: any) => ({
         id: chat.id,
         type: chat.type,
         name: chat.name,
         photo: undefined, // No photo column in chats table
-        participants: chat.chat_participants.map((p: any) => ({
-          id: p.accounts.id,
-          name: p.accounts.name,
-          profile_pic: p.accounts.profile_pic
-        })),
+        participants: participantsMap.get(chat.id) || [],
         messages: [],
         last_message_at: chat.last_message_at,
         unreadCount: 0
@@ -355,7 +381,7 @@ export class SimpleChatService {
     try {
       const { data: chat, error } = await this.supabase
         .from('chats')
-        .select(`
+              .select(`
           id,
           type,
           name,
@@ -367,14 +393,14 @@ export class SimpleChatService {
           )
         `)
         .eq('id', chatId)
-        .single();
+              .single();
 
       if (error) throw error;
 
       const simpleChat: SimpleChat = {
-        id: chat.id,
-        type: chat.type,
-        name: chat.name,
+          id: chat.id,
+          type: chat.type,
+          name: chat.name,
         photo: undefined, // No photo column in chats table
         participants: chat.chat_participants.map((p: any) => ({
           id: p.accounts.id,
@@ -382,7 +408,7 @@ export class SimpleChatService {
           profile_pic: p.accounts.profile_pic
         })),
         messages: [],
-        last_message_at: chat.last_message_at,
+          last_message_at: chat.last_message_at,
         unreadCount: 0
       };
 
@@ -407,8 +433,8 @@ export class SimpleChatService {
         for (const participant of existingChats) {
           if (participant.chats.type === 'direct') {
             const { data: otherParticipants } = await this.supabase
-              .from('chat_participants')
-              .select('user_id')
+          .from('chat_participants')
+          .select('user_id')
               .eq('chat_id', participant.chat_id);
 
             if (otherParticipants?.length === 2 && 
