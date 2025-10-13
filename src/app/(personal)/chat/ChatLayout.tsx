@@ -70,8 +70,7 @@ const ChatLayout = () => {
           conversations.forEach((conversation: any) => {
             const unsubscribe = chatService?.subscribeToTyping(
               conversation.id,
-              account.id,
-              (typingUserIds) => {
+              (typingUserIds: string[]) => {
                 const { updateChatTyping } = useAppStore.getState();
                 updateChatTyping(conversation.id, typingUserIds);
               }
@@ -108,7 +107,7 @@ const ChatLayout = () => {
           // Add subscriptions for new conversations
           conversations.forEach((conv: any) => {
             if (!messageSubscriptionsRef.current.has(conv.id)) {
-              const off = chatService?.subscribeToMessages(conv.id, (newMessage) => {
+              const off = chatService?.subscribeToChat(conv.id, (newMessage) => {
                 // Update last message preview and move conversation to top
                 const current = getConversations();
                 const updated = current.map((c: any) => {
@@ -559,7 +558,4 @@ const ChatLayout = () => {
   );
 };
 
-// Memoize ChatLayout to prevent excessive re-renders
-const MemoizedChatLayout = React.memo(ChatLayout);
-
-export default MemoizedChatLayout;
+export default ChatLayout;

@@ -168,13 +168,13 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
   const handleDelete = async (message: SimpleMessage) => {
     if (account?.id) {
-      await chatService.deleteMessage(message.id, account.id);
+      await chatService.deleteMessage(message.id);
     }
   };
 
   const handleReact = async (message: SimpleMessage, emoji: string) => {
     if (account?.id) {
-      await chatService.addReaction(message.id, account.id, emoji);
+      await chatService.addReaction(message.id, emoji);
     }
   };
 
@@ -240,7 +240,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
       // Stop typing indicator when sending
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
-        chatService.sendTypingIndicator(conversation.id, account.id, false);
+        chatService.sendTypingIndicator(conversation.id, false);
       }
       
       // Send message - let real-time subscription handle adding to UI
@@ -494,7 +494,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         }
         
         // Load messages with optimized parallel queries
-        const { messages: chatMessages, error: messagesError, hasMore } = await chatService.getChatMessages(conversation.id);
+        const { messages: chatMessages, error: messagesError } = await chatService.getChatMessages(conversation.id);
         if (messagesError) {
           console.error('PersonalChatPanel: Error loading messages:', messagesError);
         } else {
@@ -504,7 +504,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
         // Load all chat media for the viewer
         try {
-          const chatMedia = await chatService.getChatMedia(conversation.id);
+          const { media: chatMedia } = await chatService.getChatMedia(conversation.id);
           setAllChatMedia(chatMedia);
         } catch (error) {
           console.error('Failed to load chat media:', error);
@@ -523,12 +523,10 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         console.log(`🔍 PersonalChatPanel - SUBSCRIPTION CHECK - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - isMobile: ${isMobile}`);
         
         if (!isMobile) {
-          console.log(`🔍 PersonalChatPanel - SUBSCRIBING TO MESSAGES - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Callback: ${handleNewMessage}`);
-          unsubscribeMessages = chatService.subscribeToMessages(
+          unsubscribeMessages = chatService.subscribeToChat(
             conversation.id,
-            handleNewMessage // Use the memoized callback
+            handleNewMessage
           );
-          console.log(`🔍 PersonalChatPanel - SUBSCRIPTION CREATED - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - Unsubscribe function: ${!!unsubscribeMessages}`);
         } else {
           console.log(`🔍 PersonalChatPanel - SKIPPING SUBSCRIPTION (MOBILE) - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
         }
@@ -548,9 +546,6 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     return () => {
       if (unsubscribeMessages) {
         unsubscribeMessages();
-      } else {
-        // If no unsubscribe function, force cleanup to prevent orphaned subscriptions
-        chatService.forceCleanupChat(conversation.id);
       }
     };
   }, [conversation.id, account?.id]); // Remove handleNewMessage from dependencies to prevent infinite re-renders
@@ -621,7 +616,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     if (!account?.id || !conversation.id) return;
     
     // Send typing indicator
-    chatService.sendTypingIndicator(conversation.id, account.id, true);
+    chatService.sendTypingIndicator(conversation.id, true);
     
     // Clear any existing timeout - we don't want it to auto-stop while focused
     if (typingTimeoutRef.current) {
@@ -908,7 +903,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
                 // Add a small delay to prevent rapid on/off typing indicators
                 setTimeout(() => {
                   if (account?.id) {
-                    chatService.sendTypingIndicator(conversation.id, account.id, false);
+                    chatService.sendTypingIndicator(conversation.id, false);
                   }
                 }, 100);
               }}
@@ -1049,12 +1044,4 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-const MemoizedPersonalChatPanel = React.memo(PersonalChatPanel, (prevProps, nextProps) => {
-  const shouldRerender = prevProps.conversation.id !== nextProps.conversation.id;
-  // console.log(`🔍 PersonalChatPanel - React.memo check - Should rerender: ${shouldRerender} - Prev ID: ${prevProps.conversation.id} - Next ID: ${nextProps.conversation.id}`);
-  // Only re-render if the conversation ID changes
-  return !shouldRerender;
-});
-
-export default MemoizedPersonalChatPanel;
+export default PersonalChatPanel;

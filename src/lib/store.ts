@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { AppStore, Business, PersonalProfile, UUID, Conversation, ChatTypingState, TypingActions } from "./types";
-import type { SimpleChatService, SimpleChat, SimpleMessage, PendingMessage } from "./simpleChatService";
+import type { SimpleChatService, SimpleChat, SimpleMessage } from "./simpleChatService";
 import { getSupabaseClient } from "./supabaseClient";
 
 type PersistedShape = {
@@ -48,16 +48,11 @@ type ChatActions = {
   markMessagesAsRead: (conversationId: UUID, userId: string, chatService: SimpleChatService) => Promise<void>;
   createDirectChat: (otherUserId: string, userId: string, chatService: SimpleChatService) => Promise<Conversation | null>;
   clearConversations: () => void;
-  // NEW: Offline queue management
-  getPendingMessages: (chatService: SimpleChatService) => PendingMessage[];
-  retryPendingMessages: (chatService: SimpleChatService) => Promise<void>;
 };
 
 type FullStore = AppStore & ChatActions & { conversations: Conversation[] } & {
   // Typing indicator state
   chatTypingStates: Map<string, ChatTypingState>;
-  // NEW: Offline message queue
-  pendingMessages: PendingMessage[];
 } & TypingActions;
 
 export const useAppStore = create<FullStore>((set, get) => ({
@@ -205,9 +200,9 @@ export const useAppStore = create<FullStore>((set, get) => ({
     saveToLocalStorage({ personalProfile, businesses, context, conversations });
   },
 
-  sendMessage: async (conversationId, text, userId, chatService, replyToMessageId?, mediaUrls?) => {
+  sendMessage: async (conversationId, text, userId, chatService, replyToMessageId?) => {
     try {
-      const { message, error } = await chatService.sendMessage(conversationId, text, replyToMessageId, mediaUrls);
+      const { message, error } = await chatService.sendMessage(conversationId, text, replyToMessageId);
       if (error) {
         console.error('Error sending message:', error);
         return;
@@ -223,7 +218,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
   markAllRead: async (conversationId, userId, chatService) => {
     try {
       // Mark messages as read in the database
-      const { error } = await chatService.markMessagesAsRead(conversationId, userId);
+      const { error } = await chatService.markAsRead(conversationId);
       if (error) {
         console.error('Error marking messages as read:', error);
         return;
@@ -244,7 +239,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
   markMessagesAsRead: async (conversationId, userId, chatService) => {
     try {
       // Mark messages as read in the database
-      const { error } = await chatService.markMessagesAsRead(conversationId, userId);
+      const { error } = await chatService.markAsRead(conversationId);
       if (error) {
         console.error('Error marking messages as read:', error);
         return;
@@ -264,7 +259,7 @@ export const useAppStore = create<FullStore>((set, get) => ({
 
   createDirectChat: async (otherUserId, userId, chatService) => {
     try {
-      const { chat, error } = await chatService.createDirectChat(otherUserId, userId);
+      const { chat, error } = await chatService.createDirectChat(otherUserId);
       if (error) {
         console.error('Error creating direct chat:', error);
         return null;
@@ -309,15 +304,6 @@ export const useAppStore = create<FullStore>((set, get) => ({
     saveToLocalStorage({ personalProfile, businesses, context, conversations: [] });
   },
 
-  // NEW: Offline queue actions
-  getPendingMessages: (chatService) => {
-    return chatService.getPendingMessages();
-  },
-
-  retryPendingMessages: async (chatService) => {
-    // Trigger flush of pending queue
-    await (chatService as any).flushPendingQueue?.();
-  },
 
   // Typing indicator actions
   updateChatTyping: (chatId: string, typingUsers: string[]) => {
