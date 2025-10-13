@@ -582,4 +582,164 @@ export default function Button({ variant = "primary", className, ...rest }: Prop
 
 ---
 
-**End of CONNECT_MANIFEST_DRAFT**
+## 🐛 **12. Debugging Protocol**
+
+Before writing any fix, follow this protocol:
+
+### **The Five-Step Debug Process**
+
+1. **Reproduce** — Can you make the bug happen 100% of the time?
+2. **Isolate** — Remove code until the bug disappears (binary search approach)
+3. **Understand** — Write down the root cause in plain English
+4. **Fix** — Only now write code that addresses the root cause
+5. **Verify** — Test that ONLY this bug is fixed (no side effects)
+
+### **Red Flags (Stop and Rethink)**
+
+- ❌ "I'm not sure why this fixes it, but it does"
+- ❌ "This is a workaround until we figure out the real issue"
+- ❌ "It works on my machine"
+- ❌ Adding more code to fix a bug caused by too much code
+
+### **Green Flags (Good to Proceed)**
+
+- ✅ "The bug happens because X, and this fix addresses X directly"
+- ✅ "I removed 50 lines and the bug disappeared"
+- ✅ "I can explain this fix to a non-technical person"
+- ✅ The fix makes the code simpler, not more complex
+
+### **The Three Strikes Rule**
+
+If you fix the same bug three times, the fourth attempt should be a refactor, not another fix.
+
+**Example:**
+- Strike 1: "Double messages" → Try callback fix
+- Strike 2: "Still double messages" → Try memoization fix
+- Strike 3: "STILL double messages" → Try force cleanup fix
+- **Strike 4: STOP. Refactor the entire subscription system.**
+
+---
+
+## 📏 **13. Complexity Budget**
+
+Prevent code from becoming unmaintainable by enforcing hard limits.
+
+### **File Size Limits**
+
+- **Service files** (e.g., `simpleChatService.ts`): **300 lines max**
+- **Component files**: **200 lines max**
+- **Utility files**: **100 lines max**
+- **Hook files**: **50 lines max**
+
+### **Function Complexity Limits**
+
+- **Max 3 levels of nesting** (if/for/while)
+- **Max 5 parameters** per function
+- **Max 30 lines** per function
+- **Max 3 responsibilities** per function
+
+### **If You Exceed These Limits**
+
+1. **Split into multiple files** — Group related functions
+2. **Extract helper functions** — Break down complex logic
+3. **Simplify logic** — Remove unnecessary abstraction
+
+### **Example: Bad vs. Good**
+
+```typescript
+// ❌ BAD: 80-line function with 5 nested ifs and 7 parameters
+function handleMessage(msg, user, chat, opts, flags, meta, ctx) {
+  if (user) {
+    if (chat) {
+      if (opts.validate) {
+        if (flags.enabled) {
+          if (meta.timestamp) {
+            // ... 70 more lines ...
+          }
+        }
+      }
+    }
+  }
+}
+
+// ✅ GOOD: 3 small, focused functions
+function validateMessage(msg: Message): boolean {
+  return msg.text.length > 0 && msg.text.length < 1000;
+}
+
+function enrichMessage(msg: Message, user: User): EnrichedMessage {
+  return { ...msg, sender: user, timestamp: Date.now() };
+}
+
+function saveMessage(msg: EnrichedMessage, chatId: string): Promise<void> {
+  return supabase.from('chat_messages').insert(msg);
+}
+```
+
+### **Monthly Complexity Audit**
+
+Run this checklist on the 1st of every month:
+
+- [ ] Any file over 300 lines? → Split it
+- [ ] Any function over 30 lines? → Break it down
+- [ ] Any component doing 3+ things? → Separate concerns
+- [ ] Any "TODO" or "FIXME" older than 2 weeks? → Do it now or delete it
+- [ ] Any code you can't explain in one sentence? → Simplify it
+
+---
+
+## ✂️ **14. Simplification Checklist**
+
+### **The Delete-First Principle**
+
+When fixing a bug, ask: **"What can I remove?"** before asking "What can I add?"
+
+**Example:**
+- ❌ Bad approach: "Add subscription tracking to prevent duplicates"
+- ✅ Good approach: "Remove the second place that's subscribing"
+
+### **Weekly Code Review (5 Minutes)**
+
+Every Friday, ask yourself:
+
+1. **What's the longest file?** (Should be under 500 lines)
+2. **What's the most complex function?** (Should be explainable in 2 sentences)
+3. **What would I refactor if I had 2 hours?** (There should always be an answer)
+
+### **Monthly Simplification Sprint (4 Hours)**
+
+Once a month, dedicate 4 hours to:
+
+- [ ] **Delete unused code** — Remove commented-out code, unused imports, dead functions
+- [ ] **Combine duplicate logic** — DRY (Don't Repeat Yourself) violations
+- [ ] **Split big files** — Any file over 300 lines gets broken down
+- [ ] **Remove "temporary" workarounds** — If it's been there 2+ weeks, make it permanent or delete it
+- [ ] **Update documentation** — README, comments, manifest
+
+### **The "Explain It Back" Rule**
+
+When implementing a feature or fix:
+
+1. **Explain what you did in plain English** (no jargon)
+2. **Show the before/after line count** (should go down, not up)
+3. **Demonstrate it working** (with screenshots or video)
+
+If you can't do all three clearly, it's probably too complex.
+
+### **Architecture Review Questions**
+
+Ask these quarterly:
+
+- [ ] Any singleton patterns? → Can we inject dependencies instead?
+- [ ] Any global state? → Can we use local state?
+- [ ] Any complex caching? → Can we simplify or remove it?
+- [ ] Any "clever" code? → Can we make it obvious instead?
+- [ ] Any files with multiple responsibilities? → Can we split them?
+
+---
+
+**This manifest is the source of truth for building Connect. Follow it religiously.**
+
+---
+
+**End of CONNECT_MANIFEST**
