@@ -131,19 +131,18 @@ export const useAppStore = create<FullStore>((set, get) => ({
     }
     
     try {
+      console.log('🔧 Store: Loading conversations for user:', userId);
       const { chats, error } = await chatService.getUserChats();
+      console.log('🔧 Store: getUserChats result:', { chats: chats?.length, error });
+      
       if (error) {
-        // Only log error if it's not an authentication error
-        if (error.message !== 'User not authenticated' && 
-            error.message !== 'User ID is required' &&
-            error.message !== 'User ID mismatch') {
-          console.error('Error loading conversations:', {
-            message: error.message || 'Unknown error',
-            code: (error as any).code || 'UNKNOWN',
-            details: (error as any).details || null,
-            hint: (error as any).hint || null
-          });
-        }
+        console.error('🔧 Store: Error loading conversations:', error);
+        console.error('🔧 Store: Error details:', {
+          message: error.message || 'Unknown error',
+          code: (error as any).code || 'UNKNOWN',
+          details: (error as any).details || null,
+          hint: (error as any).hint || null
+        });
         return;
       }
       

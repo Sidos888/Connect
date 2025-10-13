@@ -83,6 +83,8 @@ export class SimpleChatService {
    */
   async getUserChats(): Promise<{ chats: SimpleChat[]; error: Error | null }> {
     try {
+      console.log('🔧 SimpleChatService: Getting chats for account:', this.currentAccount.id);
+      
       const { data: chats, error } = await this.supabase
         .from('chats')
         .select(`
@@ -99,6 +101,8 @@ export class SimpleChatService {
         `)
         .eq('chat_participants.user_id', this.currentAccount.id)
         .order('last_message_at', { ascending: false, nullsFirst: false });
+
+      console.log('🔧 SimpleChatService: Query result:', { chats: chats?.length, error });
 
       if (error) throw error;
 
@@ -117,8 +121,10 @@ export class SimpleChatService {
         unreadCount: 0
       }));
 
+      console.log('🔧 SimpleChatService: Returning chats:', simpleChats.length);
       return { chats: simpleChats, error: null };
     } catch (err) {
+      console.error('🔧 SimpleChatService: Error in getUserChats:', err);
       return { chats: [], error: err as Error };
     }
   }
