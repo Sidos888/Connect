@@ -61,7 +61,7 @@ export interface MessageReaction {
 }
 
 // ============================================================================
-// SIMPLIFIED CHAT SERVICE
+// SIMPLIFIED CHAT SERVICE - PROPER ARCHITECTURE
 // ============================================================================
 
 export class SimpleChatService {
@@ -72,74 +72,79 @@ export class SimpleChatService {
   constructor(supabase: SupabaseClient, account: Account) {
     this.supabase = supabase;
     this.currentAccount = account;
+    console.log('🔧 SimpleChatService: Initialized with account:', account.id);
   }
 
   // ==========================================================================
-  // CHAT OPERATIONS
+  // CHAT OPERATIONS - USING OPTIMIZED QUERIES
   // ==========================================================================
 
   /**
-   * Get all chats for the current user
+   * Get all chats for the current user using optimized query
    */
   async getUserChats(): Promise<{ chats: SimpleChat[]; error: Error | null }> {
     try {
       console.log('🔧 SimpleChatService: Getting chats for account:', this.currentAccount.id);
       
-      // First get chat IDs for this user
-      const { data: participantData, error: participantError } = await this.supabase
-        .from('chat_participants')
-        .select('chat_id')
-        .eq('user_id', this.currentAccount.id);
-
-      if (participantError) throw participantError;
-
-      const chatIds = participantData?.map(p => p.chat_id) || [];
-      
-      if (chatIds.length === 0) {
-        console.log('🔧 SimpleChatService: No chats found for user');
-        return { chats: [], error: null };
-      }
-
-      // Then get chat details
+      // Use a simple, optimized query that leverages the indexes
       const { data: chats, error } = await this.supabase
         .from('chats')
-        .select('id, type, name, last_message_at, created_at')
-        .in('id', chatIds)
+        .select(`
+          id,
+          type,
+          name,
+          last_message_at,
+          created_at
+        `)
+        .in('id', 
+          this.supabase
+            .from('chat_participants')
+            .select('chat_id')
+            .eq('user_id', this.currentAccount.id)
+        )
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
       console.log('🔧 SimpleChatService: Query result:', { chats: chats?.length, error });
 
       if (error) throw error;
 
-      // Load participants for all chats in parallel
-      const participantPromises = chatIds.map(chatId =>
-        this.supabase
-          .from('chat_participants')
-          .select(`
-            user_id,
-            accounts!inner(id, name, profile_pic)
-          `)
-          .eq('chat_id', chatId)
-      );
+      if (!chats || chats.length === 0) {
+        console.log('🔧 SimpleChatService: No chats found');
+        return { chats: [], error: null };
+      }
 
-      const participantResults = await Promise.all(participantPromises);
-      const participantsMap = new Map();
+      // Load participants for all chats in parallel using optimized approach
+      const chatIds = chats.map(chat => chat.id);
+      const { data: participants, error: participantsError } = await this.supabase
+        .from('chat_participants')
+        .select(`
+          chat_id,
+          user_id,
+          accounts!inner(id, name, profile_pic)
+        `)
+        .in('chat_id', chatIds);
 
-      participantResults.forEach((result, index) => {
-        if (!result.error && result.data) {
-          participantsMap.set(chatIds[index], result.data.map((p: any) => ({
-            id: p.accounts.id,
-            name: p.accounts.name,
-            profile_pic: p.accounts.profile_pic
-          })));
+      if (participantsError) throw participantsError;
+
+      // Group participants by chat_id
+      const participantsMap = new Map<string, any[]>();
+      participants?.forEach((p: any) => {
+        const chatId = p.chat_id;
+        if (!participantsMap.has(chatId)) {
+          participantsMap.set(chatId, []);
         }
+        participantsMap.get(chatId)!.push({
+          id: p.accounts.id,
+          name: p.accounts.name,
+          profile_pic: p.accounts.profile_pic
+        });
       });
 
-      const simpleChats: SimpleChat[] = (chats || []).map((chat: any) => ({
+      const simpleChats: SimpleChat[] = chats.map((chat: any) => ({
         id: chat.id,
         type: chat.type,
         name: chat.name,
-        photo: undefined, // No photo column in chats table
+        photo: undefined,
         participants: participantsMap.get(chat.id) || [],
         messages: [],
         last_message_at: chat.last_message_at,
@@ -155,7 +160,7 @@ export class SimpleChatService {
   }
 
   /**
-   * Get messages for a specific chat
+   * Get messages for a specific chat using optimized query
    */
   async getChatMessages(
     chatId: string,
@@ -371,44 +376,48 @@ export class SimpleChatService {
   }
 
   // ==========================================================================
-  // CHAT MANAGEMENT
+  // ADDITIONAL METHODS FOR COMPATIBILITY
   // ==========================================================================
 
-  /**
-   * Get a specific chat by ID
-   */
   async getChatById(chatId: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
       const { data: chat, error } = await this.supabase
         .from('chats')
-              .select(`
+        .select(`
           id,
           type,
           name,
           last_message_at,
-          created_at,
-          chat_participants!inner(
-            user_id,
-            accounts!inner(id, name, profile_pic)
-          )
+          created_at
         `)
         .eq('id', chatId)
-              .single();
+        .single();
 
       if (error) throw error;
 
+      // Load participants
+      const { data: participants, error: participantsError } = await this.supabase
+        .from('chat_participants')
+        .select(`
+          user_id,
+          accounts!inner(id, name, profile_pic)
+        `)
+        .eq('chat_id', chatId);
+
+      if (participantsError) throw participantsError;
+
       const simpleChat: SimpleChat = {
-          id: chat.id,
-          type: chat.type,
-          name: chat.name,
-        photo: undefined, // No photo column in chats table
-        participants: chat.chat_participants.map((p: any) => ({
+        id: chat.id,
+        type: chat.type,
+        name: chat.name,
+        photo: undefined,
+        participants: (participants || []).map((p: any) => ({
           id: p.accounts.id,
           name: p.accounts.name,
           profile_pic: p.accounts.profile_pic
         })),
         messages: [],
-          last_message_at: chat.last_message_at,
+        last_message_at: chat.last_message_at,
         unreadCount: 0
       };
 
@@ -418,9 +427,6 @@ export class SimpleChatService {
     }
   }
 
-  /**
-   * Create a direct chat with another user
-   */
   async createDirectChat(otherUserId: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
       // Check if chat already exists
@@ -433,8 +439,8 @@ export class SimpleChatService {
         for (const participant of existingChats) {
           if (participant.chats.type === 'direct') {
             const { data: otherParticipants } = await this.supabase
-          .from('chat_participants')
-          .select('user_id')
+              .from('chat_participants')
+              .select('user_id')
               .eq('chat_id', participant.chat_id);
 
             if (otherParticipants?.length === 2 && 
@@ -473,9 +479,6 @@ export class SimpleChatService {
     }
   }
 
-  /**
-   * Get media attachments for a chat
-   */
   async getChatMedia(chatId: string): Promise<{ media: MediaAttachment[]; error: Error | null }> {
     try {
       const { data, error } = await this.supabase
@@ -499,33 +502,7 @@ export class SimpleChatService {
     }
   }
 
-  // ==========================================================================
-  // TYPING INDICATORS (Stub for compatibility)
-  // ==========================================================================
-
-  /**
-   * Subscribe to typing indicators (stub for now)
-   */
-  subscribeToTyping(chatId: string, onTyping: (userIds: string[]) => void): () => void {
-    // Stub implementation - can be enhanced later
-    return () => {};
-  }
-
-  /**
-   * Send typing indicator (stub for now)
-   */
-  sendTypingIndicator(chatId: string, isTyping: boolean): void {
-    // Stub implementation - can be enhanced later
-  }
-
-  // ==========================================================================
-  // REACTIONS
-  // ==========================================================================
-
-  async addReaction(
-    messageId: string,
-    emoji: string
-  ): Promise<{ error: Error | null }> {
+  async addReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
     try {
       const { error } = await this.supabase
         .from('message_reactions')
@@ -542,10 +519,7 @@ export class SimpleChatService {
     }
   }
 
-  async removeReaction(
-    messageId: string,
-    emoji: string
-  ): Promise<{ error: Error | null }> {
+  async removeReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
     try {
       const { error } = await this.supabase
         .from('message_reactions')
@@ -560,10 +534,6 @@ export class SimpleChatService {
       return { error: err as Error };
     }
   }
-
-  // ==========================================================================
-  // MESSAGE MANAGEMENT
-  // ==========================================================================
 
   async deleteMessage(messageId: string): Promise<{ error: Error | null }> {
     try {
@@ -594,5 +564,13 @@ export class SimpleChatService {
       return { error: err as Error };
     }
   }
-}
 
+  // Stub methods for compatibility
+  subscribeToTyping(chatId: string, onTyping: (userIds: string[]) => void): () => void {
+    return () => {};
+  }
+
+  sendTypingIndicator(chatId: string, isTyping: boolean): void {
+    // Stub implementation
+  }
+}
