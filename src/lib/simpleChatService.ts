@@ -85,6 +85,11 @@ export class SimpleChatService {
     try {
       console.log('🔧 SimpleChatService: Getting chats for account:', this.currentAccount.id);
       
+      // Debug: Check if auth_account_id() function exists and works
+      const { data: authTest, error: authError } = await this.supabase
+        .rpc('auth_account_id');
+      console.log('🔧 SimpleChatService: auth_account_id() test:', { authTest, authError });
+      
       const { data: chats, error } = await this.supabase
         .from('chats')
         .select(`
