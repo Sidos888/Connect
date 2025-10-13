@@ -91,7 +91,6 @@ export class SimpleChatService {
           id,
           type,
           name,
-          photo_url,
           last_message_at,
           created_at,
           chat_participants!inner(
@@ -110,7 +109,7 @@ export class SimpleChatService {
         id: chat.id,
         type: chat.type,
         name: chat.name,
-        photo: chat.photo_url,
+        photo: undefined, // No photo column in chats table
         participants: chat.chat_participants.map((p: any) => ({
           id: p.accounts.id,
           name: p.accounts.name,
@@ -360,7 +359,6 @@ export class SimpleChatService {
           id,
           type,
           name,
-          photo_url,
           last_message_at,
           created_at,
           chat_participants!inner(
@@ -377,7 +375,7 @@ export class SimpleChatService {
         id: chat.id,
         type: chat.type,
         name: chat.name,
-        photo: chat.photo_url,
+        photo: undefined, // No photo column in chats table
         participants: chat.chat_participants.map((p: any) => ({
           id: p.accounts.id,
           name: p.accounts.name,
