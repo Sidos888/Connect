@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Camera, Users, MoreVertical, Edit3, Settings, Images, MessageCircle, Share } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
+import { useChatService } from '@/lib/chatProvider';
 import { useAppStore } from '@/lib/store';
 import Avatar from '@/components/Avatar';
 
@@ -28,7 +29,8 @@ interface GroupProfile {
 }
 
 export default function GroupProfileModal({ isOpen, onClose, chatId }: GroupProfileModalProps) {
-  const { account, chatService } = useAuth();
+  const { account } = useAuth();
+  const chatService = useChatService();
   const { loadConversations } = useAppStore();
   const [groupProfile, setGroupProfile] = useState<GroupProfile | null>(null);
   const [loading, setLoading] = useState(true);

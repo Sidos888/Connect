@@ -299,34 +299,26 @@ export default function ProtectedRoute({ children, fallback, title, description,
   if (loadingTimeout && !user) {
     console.log('ProtectedRoute: Timeout reached, showing login screen');
     return (
-      <div className="login-screen flex flex-col items-center justify-center h-screen bg-white p-4 overflow-hidden">
-        <div className="text-center w-full max-w-sm">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            {displayTitle}
-          </h1>
-          <div className="text-gray-600 mb-8 flex items-center justify-center">
-            <p className="text-center">
-              {displayDescription}
-            </p>
-          </div>
-          <div className="mt-6 w-full flex justify-center">
-            <AuthButton onClick={() => {
-              console.log('ProtectedRoute: Continue button clicked after timeout');
-              try {
-                if (showLogin && typeof showLogin === 'function') {
-                  showLogin();
-                } else {
-                  window.location.replace('/');
-                }
-              } catch (error) {
-                console.error('ProtectedRoute: Error after timeout:', error);
+      <div className="flex flex-col items-center justify-center h-screen px-4 text-center">
+        <button
+          onClick={() => {
+            console.log('ProtectedRoute: Sign in button clicked after timeout');
+            try {
+              if (showLogin && typeof showLogin === 'function') {
+                showLogin();
+              } else {
                 window.location.replace('/');
               }
-            }}>
-              Continue
-            </AuthButton>
-          </div>
-        </div>
+            } catch (error) {
+              console.error('ProtectedRoute: Error after timeout:', error);
+              window.location.replace('/');
+            }
+          }}
+          className="bg-orange-500 text-white px-8 py-4 font-semibold shadow-md hover:bg-orange-600 transition-colors"
+          style={{ borderRadius: '10px' }}
+        >
+          Sign in
+        </button>
       </div>
     );
   }
@@ -342,76 +334,29 @@ export default function ProtectedRoute({ children, fallback, title, description,
     }
 
     return (
-      <>
-        <div className="login-screen flex flex-col items-center justify-center h-screen bg-white p-4 overflow-hidden">
-          <div className="text-center w-full max-w-sm">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              {displayTitle}
-            </h1>
-            <div className="text-gray-600 mb-8 flex items-center justify-center">
-              <p className="text-center">
-                {displayDescription}
-              </p>
-            </div>
-            <div className="mt-6 w-full flex justify-center">
-              <AuthButton onClick={() => {
-                console.log('ProtectedRoute: Continue button clicked, calling showLogin');
-                console.log('ProtectedRoute: Modal context available:', !!showLogin);
-                console.log('ProtectedRoute: Current user state:', !!user);
-                console.log('ProtectedRoute: Loading state:', loading);
-                
-                try {
-                  // First check if we're in a broken state
-                  if (!showLogin || typeof showLogin !== 'function') {
-                    console.error('ProtectedRoute: showLogin is not available or not a function:', typeof showLogin);
-                    console.log('ProtectedRoute: Forcing immediate page reload to reset state');
-                    window.location.replace('/');
-                    return;
-                  }
-                  
-                  // Try to call showLogin
-                  showLogin();
-                  console.log('ProtectedRoute: showLogin called successfully');
-                  
-                  // Give modal more time to open and check for different modal selectors
-                  setTimeout(() => {
-                    const modalExists = document.querySelector('[role="dialog"]') || 
-                                     document.querySelector('.modal') ||
-                                     document.querySelector('[data-modal]') ||
-                                     document.querySelector('.fixed.inset-0') ||
-                                     document.querySelector('.z-50');
-                    
-                    if (!modalExists) {
-                      console.warn('ProtectedRoute: Modal did not open after 3 seconds, checking if we should reload');
-                      
-                      // Only reload if we're still in a bad state (no user and no modal)
-                      if (!user && !loading) {
-                        console.log('ProtectedRoute: Still in bad state, forcing reload');
-                        window.location.replace('/');
-                      } else {
-                        console.log('ProtectedRoute: State seems OK, not reloading');
-                      }
-                    } else {
-                      console.log('ProtectedRoute: Modal opened successfully');
-                    }
-                  }, 3000); // Increased from 1 second to 3 seconds
-                  
-                } catch (error) {
-                  console.error('ProtectedRoute: Error calling showLogin:', error);
-                  console.error('ProtectedRoute: Error stack:', (error as Error)?.stack);
-                  
-                  // Force immediate page reload as fallback
-                  console.log('ProtectedRoute: Forcing immediate page reload due to error');
-                  window.location.replace('/');
-                }
-              }}>
-                Continue
-              </AuthButton>
-            </div>
-          </div>
-        </div>
-
-      </>
+      <div className="flex flex-col items-center justify-center h-screen px-4 text-center">
+        <button
+          onClick={() => {
+            console.log('ProtectedRoute: Sign in button clicked, calling showLogin');
+            try {
+              if (!showLogin || typeof showLogin !== 'function') {
+                console.error('ProtectedRoute: showLogin is not available or not a function:', typeof showLogin);
+                window.location.replace('/');
+                return;
+              }
+              showLogin();
+              console.log('ProtectedRoute: showLogin called successfully');
+            } catch (error) {
+              console.error('ProtectedRoute: Error calling showLogin:', error);
+              window.location.replace('/');
+            }
+          }}
+          className="bg-orange-500 text-white px-8 py-4 font-semibold shadow-md hover:bg-orange-600 transition-colors"
+          style={{ borderRadius: '10px' }}
+        >
+          Sign in
+        </button>
+      </div>
     );
   }
 

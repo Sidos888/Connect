@@ -1,10 +1,11 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Avatar from "@/components/Avatar";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
+import { useChatService } from "@/lib/chatProvider";
+import { useChatMessages, useSendMessage } from "@/lib/chatQueries";
 import { useRouter } from "next/navigation";
 import InlineProfileView from "@/components/InlineProfileView";
 import GroupInfoModal from "@/components/chat/GroupInfoModal";
@@ -16,7 +17,7 @@ import MediaPreview from "@/components/chat/MediaPreview";
 import GalleryModal from "@/components/chat/GalleryModal";
 import MediaViewer from "@/components/chat/MediaViewer";
 import AttachmentMenu from "@/components/chat/AttachmentMenu";
-import type { SimpleMessage, MediaAttachment } from "@/lib/simpleChatService";
+import type { SimpleMessage, MediaAttachment } from "@/lib/types";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 // Generate video thumbnail using HTML5 video + canvas API
@@ -108,8 +109,23 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     );
   }
   
-  const { markAllRead, getChatTyping } = useAppStore();
-  const { account, chatService } = useAuth();
+  // React Query handles state management - no store needed!
+  const { account } = useAuth();
+  const chatService = useChatService();
+  
+  // Use React Query for initial message load, then manage locally for pagination
+  const { data: initialMessages = [], isLoading: messagesLoading, error: messagesError } = useChatMessages(chatService, conversation.id);
+  const sendMessageMutation = useSendMessage(chatService);
+  
+  // ✅ Local state for messages (includes initial + paginated messages)
+  const [messages, setMessages] = useState<SimpleMessage[]>([]);
+  
+  // ✅ Sync initial messages from React Query to local state
+  useEffect(() => {
+    if (initialMessages.length > 0) {
+      setMessages(initialMessages);
+    }
+  }, [initialMessages]);
   
   // Guard: chatService must be available
   if (!chatService) {
@@ -123,9 +139,11 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   }
   const router = useRouter();
   const [text, setText] = useState("");
-  // Simple local state management - bulletproof approach
-  const [messages, setMessages] = useState<SimpleMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // ✅ STATE DECLARATIONS FIRST (before any useCallback)
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [messageOffset, setMessageOffset] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
   const hasMarkedAsRead = useRef(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -223,51 +241,31 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     handleNewMessageRef.current?.(newMessage);
   }, []);
 
-  // Consolidated message sending handler - prevents duplicates
+  // React Query handles message sending with automatic cache updates
   const handleSendMessage = async () => {
-    console.log(`🔍 PersonalChatPanel - handleSendMessage called - Mount ID: ${mountIdRef.current} - Text: "${text.trim()}" - Media count: ${pendingMedia.length}`);
+    if (!text.trim() && pendingMedia.length === 0) return;
     
-    // Prevent duplicate sends
-    if (sendingRef.current || !account?.id || (!text.trim() && pendingMedia.length === 0)) {
-      console.log(`🔍 PersonalChatPanel - SEND BLOCKED - Mount ID: ${mountIdRef.current} - Sending: ${sendingRef.current} - Account: ${!!account?.id} - Has content: ${!!text.trim() || pendingMedia.length > 0}`);
-      return;
+    // Stop typing indicator when sending
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      chatService?.sendTypingIndicator(conversation.id, false);
     }
-
-    console.log(`🔍 PersonalChatPanel - SENDING MESSAGE - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
-    sendingRef.current = true;
     
-    try {
-      // Stop typing indicator when sending
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        chatService.sendTypingIndicator(conversation.id, false);
+    // Use React Query mutation for sending
+    sendMessageMutation.mutate({
+      chatId: conversation.id,
+      content: text.trim()
+    }, {
+      onSuccess: () => {
+        // Clear the form on success
+        setText("");
+        setReplyToMessage(null);
+        setPendingMedia([]);
+      },
+      onError: (error) => {
+        console.error('Failed to send message:', error);
       }
-      
-      // Send message - let real-time subscription handle adding to UI
-      const { message: newMessage, error: messageError } = await chatService.sendMessage(
-        conversation.id,
-        text.trim(),
-        replyToMessage?.id
-      );
-
-      if (messageError || !newMessage) {
-        console.error('Failed to send message:', messageError);
-        sendingRef.current = false; // Reset sending state on error
-        return;
-      }
-
-      // Don't add to local state - real-time subscription will handle it
-      // This prevents duplicate messages
-
-      // Clear the form
-      setText("");
-      setReplyToMessage(null);
-      setPendingMedia([]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-    } finally {
-      sendingRef.current = false;
-    }
+    });
   };
 
   const handleMediaSelected = (media: UploadedMedia[]) => {
@@ -308,6 +306,37 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   const cancelMedia = () => {
     setPendingMedia([]);
   };
+
+  // Load more messages function for pagination
+  const loadMoreMessages = useCallback(async () => {
+    if (loadingMore || !hasMoreMessages || !conversation.id || !account?.id) return;
+    
+    setLoadingMore(true);
+    try {
+      const { messages: newMessages, hasMore, error } = await chatService.getChatMessages(
+        conversation.id,
+        50, // Load 50 more messages
+        messageOffset + messages.length
+      );
+      
+      if (error) {
+        console.error('Error loading more messages:', error);
+        return;
+      }
+      
+      if (newMessages.length > 0) {
+        // Prepend new messages to the beginning (they're older messages)
+        setMessages(prev => [...newMessages, ...prev]);
+        setMessageOffset(prev => prev + newMessages.length);
+      }
+      
+      setHasMoreMessages(hasMore);
+    } catch (error) {
+      console.error('Error loading more messages:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMoreMessages, conversation.id, account?.id, chatService, messageOffset, messages.length]);
 
   const handleAttachmentMenuOpen = () => {
     setShowAttachmentMenu(true);
@@ -444,41 +473,60 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
     setPendingMedia(prev => prev.filter((_, i) => i !== index));
   };
   const animationRef = useRef<NodeJS.Timeout | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   
-  // Get typing users from global store
-  const typingState = getChatTyping(conversation.id);
-  const typingUsers = typingState?.typingUsers || [];
+  // Get typing users from ChatService real-time subscription
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+
+  // Subscribe to typing indicators using ChatService
+  useEffect(() => {
+    if (!chatService || !conversation.id) return;
+
+    console.log('🔬 PersonalChatPanel: Subscribing to typing indicators for chat:', conversation.id);
+    
+    // Subscribe to typing indicators
+    chatService.subscribeToTyping(conversation.id, (userIds) => {
+      console.log('🔬 PersonalChatPanel: Typing users updated:', userIds);
+      setTypingUsers(userIds);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      console.log('🔬 PersonalChatPanel: Cleaning up typing subscription');
+      // ChatService will handle cleanup automatically
+    };
+  }, [chatService, conversation.id]);
+
+  // Scroll listener for loading more messages
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const scrollTop = container.scrollTop;
+    
+    // If user scrolled near the top (within 200px), load more messages
+    if (scrollTop < 200 && hasMoreMessages && !loadingMore) {
+      loadMoreMessages();
+    }
+  }, [hasMoreMessages, loadingMore, loadMoreMessages]);
   
   // Pending messages are now handled by the store
 
 
-  // Load participants and messages from the database
+  // Load participants and set up real-time subscription
   useEffect(() => {
     let unsubscribeMessages: (() => void) | null = null;
     
-    // useEffect logging removed for performance
-    const loadData = async () => {
-      if (conversation.id && account?.id) {
-        // Only set loading if we don't have messages yet (prevents flicker on chat switch)
-        if (messages.length === 0) {
-          setLoading(true);
-        }
-        
+    const loadParticipants = async () => {
+      if (conversation.id && account?.id && chatService) {
         // Load chat details to get participants
         const { chat, error: chatError } = await chatService.getChatById(conversation.id);
         if (chatError) {
           console.error('PersonalChatPanel: Error loading chat details:', chatError);
-          setLoading(false);
           return;
         }
         if (!chat) {
           console.error('PersonalChatPanel: Chat not found for ID:', conversation.id);
-          setLoading(false);
           return;
         }
-        
-        // Verify chat is properly cached
-        // Note: Chat should now be cached from the getChatById call above
         
         setParticipants(chat.participants || []);
         
@@ -492,15 +540,6 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
         } else {
           setRefreshedConversation(conversation);
         }
-        
-        // Load messages with optimized parallel queries
-        const { messages: chatMessages, error: messagesError } = await chatService.getChatMessages(conversation.id);
-        if (messagesError) {
-          console.error('PersonalChatPanel: Error loading messages:', messagesError);
-        } else {
-          // Messages are now ordered by seq (deterministic ordering) with full functionality
-          setMessages(chatMessages || []);
-        }
 
         // Load all chat media for the viewer
         try {
@@ -508,54 +547,36 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
           setAllChatMedia(chatMedia);
         } catch (error) {
           console.error('Failed to load chat media:', error);
-          console.error('Error details:', {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined,
-            chatId: conversation.id
-          });
-          // Don't fail the entire chat load if media loading fails
-          setAllChatMedia([]); // Set empty array as fallback
+          setAllChatMedia([]);
         }
         
         // Simple real-time subscription for this chat only
         // Skip subscription on mobile devices to prevent conflicts with IndividualChatPage
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-        console.log(`🔍 PersonalChatPanel - SUBSCRIPTION CHECK - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id} - isMobile: ${isMobile}`);
         
         if (!isMobile) {
           unsubscribeMessages = chatService.subscribeToChat(
             conversation.id,
             handleNewMessage
           );
-        } else {
-          console.log(`🔍 PersonalChatPanel - SKIPPING SUBSCRIPTION (MOBILE) - Mount ID: ${mountIdRef.current} - Chat: ${conversation.id}`);
         }
-        
-        setLoading(false);
-        
-        // Scroll to bottom after messages are loaded
-        setTimeout(() => {
-          endRef.current?.scrollIntoView({ behavior: "instant" });
-        }, 100);
       }
     };
 
-    loadData();
+    loadParticipants();
     
-    // Cleanup subscription on unmount - use force cleanup to prevent orphans
+    // Cleanup subscription on unmount
     return () => {
       if (unsubscribeMessages) {
         unsubscribeMessages();
       }
     };
-  }, [conversation.id, account?.id]); // Remove handleNewMessage from dependencies to prevent infinite re-renders
+  }, [conversation.id, account?.id, chatService]);
 
-  useEffect(() => {
-    if (!hasMarkedAsRead.current && account?.id) {
-      markAllRead(conversation.id, account.id, chatService);
-      hasMarkedAsRead.current = true;
-    }
-  }, [conversation.id, markAllRead, account?.id]);
+  // React Query handles read status automatically
+
+  // Use React Query loading state
+  const loading = messagesLoading;
 
   // Auto-scroll to bottom when messages change or typing indicator appears/disappears
   useEffect(() => {
@@ -702,28 +723,54 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
       </div>
 
       {/* Messages Container - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 pb-8 space-y-4 min-h-0">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-6 py-4 pb-8 space-y-4 min-h-0"
+        onScroll={handleScroll}
+      >
         {loading ? (
           <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            {/* Loading animation removed */}
           </div>
         ) : (
-          messages.map((m, index) => {
-            // Create a unique key that combines ID with index to prevent duplicates
-            const uniqueKey = `${m.id}_${index}_${m.created_at}`;
+          <>
+            {/* Load More Button */}
+            {hasMoreMessages && (
+              <div className="flex justify-center py-4">
+                <button
+                  onClick={loadMoreMessages}
+                  disabled={loadingMore}
+                  className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                      Loading more messages...
+                    </div>
+                  ) : (
+                    'Load more messages'
+                  )}
+                </button>
+              </div>
+            )}
             
-            return (
-              <MessageBubble
-                key={uniqueKey}
-                message={m}
-                currentUserId={account?.id || ''}
-                onAttachmentClick={handleAttachmentClick}
-                onReply={handleReply}
-                showOptions={true}
-                showDeliveryStatus={FEATURE_FLAGS.SHOW_DELIVERY_STATUS_TICKS}
-              />
-            );
-          })
+            {messages.map((m, index) => {
+              // Create a unique key that combines ID with index to prevent duplicates
+              const uniqueKey = `${m.id}_${index}_${m.created_at}`;
+              
+              return (
+                <MessageBubble
+                  key={uniqueKey}
+                  message={m}
+                  currentUserId={account?.id || ''}
+                  onAttachmentClick={handleAttachmentClick}
+                  onReply={handleReply}
+                  showOptions={true}
+                  showDeliveryStatus={FEATURE_FLAGS.SHOW_DELIVERY_STATUS_TICKS}
+                />
+              );
+            })}
+          </>
         )}
         
         <div ref={endRef} />

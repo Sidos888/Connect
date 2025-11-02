@@ -103,9 +103,26 @@ export function getSupabaseClient(): SupabaseClient | null {
   };
 
   if (typeof window !== 'undefined') {
-    window.addEventListener('focus', () => {
-      checkAndRecoverSession();
+    // Handle window focus (when user returns to tab)
+    window.addEventListener('focus', async () => {
+      console.log('🔄 Supabase: Window focused, checking session...');
+      const session = await checkAndRecoverSession();
+      if (!session) {
+        console.warn('⚠️ Supabase: No valid session after focus - this may cause data loading issues');
+      }
     });
+    
+    // Handle page visibility changes (more reliable for detecting return to page)
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ Supabase: Page became visible, checking session...');
+        const session = await checkAndRecoverSession();
+        if (!session) {
+          console.warn('⚠️ Supabase: No valid session after page visibility - this may cause data loading issues');
+        }
+      }
+    });
+    
     // Initial check
     checkAndRecoverSession();
   }

@@ -20,7 +20,7 @@ export default function Page() {
             className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Back to my life"
           >
-            <span className="back-btn-circle">
+            <span className="action-btn-circle">
               <ChevronLeftIcon className="h-5 w-5" />
             </span>
           </Link>

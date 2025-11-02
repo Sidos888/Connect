@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
-import { simpleChatService } from "@/lib/simpleChatService";
+// simpleChatService removed - using chatService from useAuth
 import PersonalChatPanel from "../PersonalChatPanel";
 import MobileTitle from "@/components/MobileTitle";
 import { ArrowLeft } from "lucide-react";
@@ -35,7 +35,11 @@ export default function ChatPage({ params }: ChatPageProps) {
         setError(null);
 
         // Get all chats to find the one with this ID
-        const { chats, error: chatsError } = await simpleChatService.getUserChats(account.id);
+        if (!chatService) {
+          console.error('ChatDisabledPage: ChatService not available');
+          return;
+        }
+        const { chats, error: chatsError } = await chatService.getUserChats();
         
         if (chatsError) {
           setError('Failed to load conversation');
@@ -89,9 +93,11 @@ export default function ChatPage({ params }: ChatPageProps) {
             action={
               <button
                 onClick={handleBack}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-0 bg-transparent"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <span className="action-btn-circle">
+                  <ArrowLeft className="w-5 h-5 text-gray-900" />
+                </span>
               </button>
             }
           />
@@ -118,9 +124,11 @@ export default function ChatPage({ params }: ChatPageProps) {
             action={
               <button
                 onClick={handleBack}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-0 bg-transparent"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <span className="action-btn-circle">
+                  <ArrowLeft className="w-5 h-5 text-gray-900" />
+                </span>
               </button>
             }
           />

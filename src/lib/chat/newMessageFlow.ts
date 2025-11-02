@@ -1,5 +1,12 @@
 import { getSupabaseClient } from '../supabaseClient';
-import { simpleChatService } from '../simpleChatService';
+
+// Access simpleChatService from global (set by AuthContext)
+const getSimpleChatService = () => {
+  if (typeof window !== 'undefined') {
+    return (window as any).simpleChatService;
+  }
+  return (globalThis as any).simpleChatService;
+};
 
 export interface Contact {
   id: string;
@@ -93,8 +100,18 @@ export class NewMessageFlow {
   private async loadContacts(): Promise<Contact[]> {
     console.log('NewMessageFlow: loadContacts called');
     
-    // Get current user ID
-    const { data: { user } } = await getSupabaseClient().auth.getUser();
+    // Get current user ID with timeout
+    console.log('NewMessageFlow: Starting getUser()...');
+    const userPromise = getSupabaseClient().auth.getUser();
+    const userTimeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('getUser timeout after 5 seconds')), 5000)
+    );
+    
+    const { data: { user } } = await Promise.race([
+      userPromise,
+      userTimeoutPromise
+    ]) as any;
+    
     console.log('NewMessageFlow: User from auth:', user?.id);
     
     if (!user) {
@@ -104,6 +121,8 @@ export class NewMessageFlow {
     
     // Use real chat service
     console.log('NewMessageFlow: Calling simpleChatService.getContacts with userId:', user.id);
+    const simpleChatService = getSimpleChatService();
+    if (!simpleChatService) throw new Error('Chat service not available');
     const { contacts, error } = await simpleChatService.getContacts(user.id);
     
     console.log('NewMessageFlow: ChatService response:', { contacts, error });
@@ -330,6 +349,8 @@ export class NewMessageFlow {
       }
 
       // Create new group
+      const simpleChatService = getSimpleChatService();
+      if (!simpleChatService) throw new Error('Chat service not available');
       const groupChat = await simpleChatService.createGroupChat(
         groupSetupData.name,
         selectedContacts.map(c => c.id),
@@ -371,23 +392,12 @@ export class NewMessageFlow {
       // Use the current session user ID (exists in REST API accounts table)
       const correctUserId = user.id; // 4f04235f-d166-48d9-ae07-a97a6421a328
       
-      // First, check if a chat already exists
-      const { chat: existingChat, error: findError } = await simpleChatService.findExistingDirectChat(correctUserId, contact.id);
+      // Create or find existing direct chat
+      const simpleChatService = getSimpleChatService();
+      if (!simpleChatService) throw new Error('Chat service not available');
       
-      if (findError) {
-        console.error('Error finding existing chat:', findError);
-        // Continue to create new chat if finding fails
-      } else if (existingChat) {
-        console.log('Found existing chat:', existingChat.id);
-        this.updateContext({
-          state: 'completed',
-          isLoading: false
-        });
-        return existingChat;
-      }
-      
-      // No existing chat found, create a new one
-      const { chat, error } = await simpleChatService.createDirectChat(contact.id, correctUserId);
+      // createDirectChat will find existing chat or create new one
+      const { chat, error } = await simpleChatService.createDirectChat(contact.id);
 
       if (error) {
         throw error;

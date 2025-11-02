@@ -16,6 +16,8 @@ interface SignUpModalProps {
 export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, signOut } = useAuth();
   
+  // Detect device type and set default step
+  const [isMobile, setIsMobile] = useState(false);
   const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-check'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
@@ -28,6 +30,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   const [countryCode, setCountryCode] = useState('+61');
   const [verificationValue, setVerificationValue] = useState('');
   const phoneInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
 
   // Simplified phone input system - handles both 0466310826 and 466310826 formats
@@ -229,6 +232,45 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
     }
   };
 
+  // Detect device type and set default step
+  useEffect(() => {
+    const checkDevice = () => {
+      const mobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+      
+      // Set default step based on device type
+      if (mobile) {
+        setStep('phone'); // Mobile defaults to phone
+      } else {
+        setStep('email'); // Web defaults to email
+      }
+    };
+    
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+
+  // Reset success states when modal opens and auto-focus
+  useEffect(() => {
+    if (isOpen) {
+      // Reset to default step based on device type
+      if (isMobile) {
+        setStep('phone');
+        // Auto-focus phone field on mobile only
+        setTimeout(() => {
+          if (phoneInputRef.current) {
+            phoneInputRef.current.focus();
+          }
+        }, 100);
+      } else {
+        setStep('email');
+        // Don't auto-focus email field on web - let user click to activate
+      }
+    }
+  }, [isOpen, isMobile]);
+
   // Prevent body scrolling when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -244,7 +286,12 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   }, [isOpen]);
 
   const handleClose = () => {
-    setStep('phone');
+    // Reset to default step based on device type
+    if (isMobile) {
+      setStep('phone');
+    } else {
+      setStep('email');
+    }
     setPhoneNumber('');
     setEmail('');
     setError('');
@@ -318,9 +365,20 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               </h2>
               <button
                 onClick={handleClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="action-btn-circle transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Close"
               >
-                <XMarkIcon className="h-6 w-6 text-gray-600" />
+                <XMarkIcon className="h-5 w-5 text-gray-900" />
               </button>
             </div>
 
@@ -415,7 +473,21 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               <button
                 type="button"
                 onClick={() => setStep('email')}
-                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center px-4 py-3 bg-white transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  borderRadius: '12px',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
               >
                 <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
                 Continue with email
@@ -428,6 +500,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               {/* Email Input */}
               <div className="relative">
                 <input
+                  ref={emailInputRef}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -473,22 +546,27 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center px-4 py-3 bg-white transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  borderRadius: '12px',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
               >
                 <DevicePhoneMobileIcon className="w-5 h-5 mr-3 text-gray-600" />
                 Continue with phone
               </button>
             </form>
           )}
-
-
-
-              {/* Error Message */}
-              {error && (
-                <div className="mt-4">
-                  <p className="text-sm text-red-600">{error}</p>
-                </div>
-              )}
             </div>
           </div>
         </div>

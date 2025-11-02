@@ -50,6 +50,10 @@ export default function VerificationModal({
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
+  // Resend countdown timer
+  const [resendCountdown, setResendCountdown] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  
   // Scroll-to-dismiss state
   const [scrollY, setScrollY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -64,12 +68,31 @@ export default function VerificationModal({
     }
   }, [isOpen]);
 
-  // Focus first input when modal opens
+  // Focus first input when modal opens and reset countdown
   useEffect(() => {
-    if (isOpen && inputRefs.current[0]) {
-      inputRefs.current[0].focus();
+    if (isOpen) {
+      if (inputRefs.current[0]) {
+        inputRefs.current[0].focus();
+      }
+      // Reset countdown when modal opens
+      setResendCountdown(30);
+      setCanResend(false);
     }
   }, [isOpen]);
+
+  // Countdown timer for resend
+  useEffect(() => {
+    if (!isOpen || canResend) return;
+
+    if (resendCountdown > 0) {
+      const timer = setTimeout(() => {
+        setResendCountdown(resendCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setCanResend(true);
+    }
+  }, [isOpen, resendCountdown, canResend]);
 
   const handleInputChange = (index: number, value: string) => {
     console.log('VerificationModal: Input change', { index, value, currentCode: code });
@@ -181,10 +204,16 @@ export default function VerificationModal({
   };
 
   const handleResend = async () => {
+    if (!canResend) return;
+    
     await onResend();
     setCode(['', '', '', '', '', '']);
     setActiveIndex(0);
     inputRefs.current[0]?.focus();
+    
+    // Restart countdown
+    setResendCountdown(30);
+    setCanResend(false);
   };
 
   // Prevent body scrolling when modal is open
@@ -285,16 +314,27 @@ export default function VerificationModal({
         <div className="flex items-center justify-between p-6">
           <button
             onClick={onBack}
-            className="p-1 text-gray-600 hover:text-gray-800 transition-colors"
+            className="action-btn-circle transition-all duration-200 hover:-translate-y-[1px]"
+            style={{
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            aria-label="Back"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft className="h-5 w-5 text-gray-900" />
           </button>
           <h2 className="text-xl font-semibold text-gray-900">Verify</h2>
           <div className="w-10" /> {/* Spacer */}
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 flex flex-col justify-center">
+        <div className="flex-1 p-6 flex flex-col justify-center relative">
           <div className="text-center mb-8 max-w-md mx-auto w-full">
             {verificationSuccess && accountRecognized ? (
               <>
@@ -319,7 +359,7 @@ export default function VerificationModal({
             ) : (
               <>
                 <p className="text-sm text-gray-600 mb-1">Code sent to</p>
-                <p className="text-sm text-gray-900 font-medium">
+                <p className="text-lg text-gray-900 font-semibold">
                   {verificationMethod === 'phone' ? `+61 ${formatPhoneNumber(phoneOrEmail)}` : phoneOrEmail}
                 </p>
               </>
@@ -389,32 +429,43 @@ export default function VerificationModal({
                   // Apply selected styling directly using setProperty with !important
                   e.target.style.setProperty('border-width', '0.8px', 'important');
                   e.target.style.setProperty('border-color', '#D1D5DB', 'important');
-                  e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
+                  e.target.style.setProperty('box-shadow', '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
+                  e.target.style.setProperty('transform', 'translateY(-1px)', 'important');
                 }}
                 onBlur={(e) => {
                   // Apply default styling directly
                   e.target.style.setProperty('border-width', '0.4px', 'important');
                   e.target.style.setProperty('border-color', '#E5E7EB', 'important');
                   e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', 'important');
+                  e.target.style.setProperty('transform', 'translateY(0)', 'important');
                 }}
-                className="w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold focus:outline-none focus:ring-0 transition-all duration-75 bg-white"
+                onMouseEnter={(e) => {
+                  if (activeIndex !== index) {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeIndex !== index) {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                className="w-12 h-14 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold focus:outline-none focus:ring-0 transition-all duration-200 bg-white hover:-translate-y-[1px]"
                 style={{ 
                   caretColor: 'transparent',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   borderStyle: 'solid',
                   borderRadius: '12px',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
                 }}
               />
             ))}
           </div>
           )}
 
-          {/* Action Buttons - Hide when verification successful */}
+          {/* Verify Button - Hide when verification successful */}
           {!verificationSuccess && (
-          <div className="space-y-3">
-            {/* Verify Button */}
             <div className="flex justify-center mb-8">
               <button
                 onClick={handleVerify}
@@ -439,17 +490,23 @@ export default function VerificationModal({
                 )}
               </button>
             </div>
+          )}
 
-            {/* Resend Button */}
-            <div className="text-center">
+          {/* Resend Button - Absolute positioned at bottom */}
+          {!verificationSuccess && (
+            <div className="absolute bottom-6 left-0 right-0 text-center">
               <button
                 onClick={handleResend}
-                className="text-gray-600 hover:text-gray-800 transition-colors text-sm"
+                disabled={!canResend}
+                className={`text-sm transition-colors ${
+                  canResend 
+                    ? 'text-gray-900 hover:text-gray-700 cursor-pointer' 
+                    : 'text-gray-400 cursor-not-allowed'
+                }`}
               >
-                Resend code
+                {canResend ? 'Resend code' : `Resend code in ${resendCountdown}s`}
               </button>
             </div>
-          </div>
           )}
         </div>
       </div>

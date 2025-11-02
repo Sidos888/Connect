@@ -171,17 +171,23 @@ export default function UserProfileModal({ isOpen, onClose, userId, onStartChat 
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
           <button
             onClick={showDetailedView ? handleBackToSummary : onClose}
-            className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
+            className="p-0 bg-transparent pointer-events-auto"
           >
             {showDetailedView ? (
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <span className="action-btn-circle">
+                <ArrowLeft className="w-5 h-5 text-gray-900" />
+              </span>
             ) : (
-              <X className="w-5 h-5 text-gray-600" />
+              <span className="action-btn-circle">
+                <X className="w-5 h-5 text-gray-900" />
+              </span>
             )}
           </button>
           {showDetailedView && (
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors pointer-events-auto">
-              <MoreVertical className="w-6 h-6 text-gray-600" />
+            <button onClick={onClose} className="p-0 bg-transparent pointer-events-auto">
+              <span className="action-btn-circle">
+                <MoreVertical className="w-5 h-5 text-gray-900" />
+              </span>
             </button>
           )}
         </div>

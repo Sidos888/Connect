@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { SimpleMessage } from '@/lib/simpleChatService';
+import { SimpleMessage } from '@/lib/types';
 import { X, MoreVertical } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 

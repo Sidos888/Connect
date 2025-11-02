@@ -10,6 +10,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ChatLayout from "./ChatLayout";
 import PersonalChatPanel from "./PersonalChatPanel";
 import { useAuth } from "@/lib/authContext";
+import { useChatService } from "@/lib/chatProvider";
+import { useChats } from "@/lib/chatQueries";
 import { useModal } from "@/lib/modalContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NewMessageModal from "@/components/chat/NewMessageModal";
@@ -17,15 +19,19 @@ import GroupSetupModal from "@/components/chat/GroupSetupModal";
 import { Plus, ArrowLeft } from "lucide-react";
 
 export default function MessagesPage() {
-  const { conversations, loadConversations, isHydrated, setConversations, getConversations } = useAppStore();
+  const { isHydrated } = useAppStore();
   const router = useRouter();
-  const { account, chatService } = useAuth();
+  const { account, user } = useAuth();
+  const chatService = useChatService();
   const { showAddFriend } = useModal();
   const searchParams = useSearchParams();
   const selectedChatId = searchParams.get("chat");
   
+  // Use React Query to fetch chats
+  const { data: chats = [], isLoading, error } = useChats(chatService, user?.id || null);
+  
   // Find the selected conversation
-  const selectedConversation = selectedChatId ? conversations.find(c => c.id === selectedChatId) : null;
+  const selectedConversation = selectedChatId ? chats.find(c => c.id === selectedChatId) : null;
   
   // Mobile-specific state
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
@@ -39,34 +45,17 @@ export default function MessagesPage() {
   // Load specific chat if requested but not in conversations list
   useEffect(() => {
     const loadSpecificChat = async () => {
-      if (selectedChatId && !selectedConversation && account?.id && isHydrated) {
+      if (selectedChatId && !selectedConversation && account?.id && isHydrated && chatService) {
         try {
-          const { chat, error } = await simpleChatService.getChatById(selectedChatId);
+          const { chat, error } = await chatService.getChatById(selectedChatId);
           if (error) {
             console.error('Error loading specific chat:', error);
             // Don't crash the app, just log the error
             return;
           }
           if (chat && !error) {
-            // Add the chat to conversations if it's not already there
-            const currentConversations = getConversations();
-            const existingChat = currentConversations.find(c => c.id === selectedChatId);
-            if (!existingChat) {
-              const otherParticipant = chat.participants.find(p => p.id !== account.id);
-              const newConversation = {
-                id: chat.id,
-                title: chat.type === 'direct' 
-                  ? otherParticipant?.name || 'Unknown User'
-                  : chat.name || 'Group Chat',
-                avatarUrl: chat.type === 'direct' 
-                  ? otherParticipant?.profile_pic || null
-                  : chat.photo || null,
-                isGroup: chat.type === 'group',
-                unreadCount: 0,
-                messages: []
-              };
-              setConversations([...currentConversations, newConversation]);
-            }
+            console.log('Chat loaded successfully:', chat.id);
+            // React Query will handle the cache update automatically
           } else {
             console.error('Error loading specific chat:', error);
           }
@@ -77,15 +66,10 @@ export default function MessagesPage() {
     };
 
     loadSpecificChat();
-  }, [selectedChatId, selectedConversation, account?.id, isHydrated, setConversations, getConversations]);
+  }, [selectedChatId, selectedConversation, account?.id, isHydrated, chatService]);
 
-  useEffect(() => {
-    if (isHydrated && account?.id && chatService) {
-      // Use real chat service
-      loadConversations(account.id, chatService);
-    } else if (isHydrated && !account?.id) {
-    }
-  }, [isHydrated, account?.id, loadConversations, chatService]);
+  // Note: loadConversations is called by ChatLayout, not here
+  // Removed duplicate call to prevent parallel loads
 
   // Handle keyboard behavior on mobile
   useEffect(() => {
@@ -139,20 +123,18 @@ export default function MessagesPage() {
     }
   }, []);
 
-  // Add another effect to log when conversations change
+  // Add another effect to log when chats change
   useEffect(() => {
-  }, [conversations]);
+    console.log('MessagesPage: chats changed:', chats);
+  }, [chats]);
 
 
   // Modal handlers
   const handleNewMessageComplete = (chatId: string) => {
     setShowNewMessageModal(false);
     setShowGroupSetupModal(false);
-    // Refresh conversations to include the new chat
-    if (account?.id && chatService) {
-      loadConversations(account.id, chatService);
-    }
     // Navigate to the main chat page (desktop layout)
+    // ChatLayout will refresh chats via its own effect
     router.push(`/chat?chat=${chatId}`);
   };
 
@@ -225,17 +207,21 @@ export default function MessagesPage() {
 
   // Mobile category filtering
   const getMobileFilteredConversations = () => {
-    const filtered = conversations.filter(conv => 
-      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+    if (!chats || !Array.isArray(chats)) {
+      console.warn('⚠️ getMobileFilteredConversations: chats is not an array:', chats);
+      return [];
+    }
+    const filtered = chats.filter(conv => 
+      (conv.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     switch (mobileActiveCategory) {
       case "unread":
         return filtered.filter(conv => conv.unreadCount > 0);
       case "dm":
-        return filtered.filter(conv => !conv.isGroup);
+        return filtered.filter(conv => conv.type === 'direct');
       case "group":
-        return filtered.filter(conv => conv.isGroup);
+        return filtered.filter(conv => conv.type === 'group');
       default:
         return filtered;
     }
@@ -245,9 +231,9 @@ export default function MessagesPage() {
 
   // Mobile category counts
   const getMobileCategoryCounts = () => {
-    const unreadCount = conversations.filter(conv => conv.unreadCount > 0).length;
-    const dmCount = conversations.filter(conv => !conv.isGroup).length;
-    const groupCount = conversations.filter(conv => conv.isGroup).length;
+    const unreadCount = chats.filter(conv => conv.unreadCount > 0).length;
+    const dmCount = chats.filter(conv => conv.type === 'direct').length;
+    const groupCount = chats.filter(conv => conv.type === 'group').length;
     
     return { unreadCount, dmCount, groupCount };
   };
@@ -286,51 +272,24 @@ export default function MessagesPage() {
         <div 
           className="sm:hidden bg-white chat-mobile-container"
           style={{ 
-            position: 'fixed !important',
+            position: 'fixed' as const,
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            height: '100vh',
             height: '100dvh',
-            overflow: 'hidden !important',
+            overflow: 'hidden',
             WebkitOverflowScrolling: 'touch',
             overscrollBehavior: 'none',
             transform: 'translateZ(0)',
             willChange: 'transform'
           }}
         >
-          {/* Mobile Title - Absolutely positioned header */}
-          <div 
-            className="absolute top-0 left-0 right-0 z-50"
-            style={{
-              zIndex: 60,
-              backgroundColor: 'white',
-              height: '96px'
-            }}
-          >
-            <div className="pt-safe-top px-4 pb-2 pt-8 bg-white h-full flex items-end">
-              <div className="flex items-center justify-between w-full h-full">
-                <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
-                <div className="flex items-center justify-center h-full min-w-[40px] relative z-10">
-                  <button
-                    onClick={handleNewMessageClick}
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  >
-                    <Plus className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-              </div>
-            </div>
-            {/* Horizontal line below title section */}
-            <div className="absolute left-0 right-0 border-b border-gray-200" style={{ bottom: '0px' }}></div>
-          </div>
-
           {/* Content Area - Scrollable within fixed container */}
           <div 
             className="absolute left-0 right-0 overflow-y-auto"
             style={{
-              top: '96px',
+              top: '0px',
               bottom: '0px',
               padding: '24px 16px'
             }}

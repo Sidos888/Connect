@@ -211,23 +211,23 @@ export default function AccountCheckModal({
         return;
       }
       
-      // THIRD: Check account_identities table for this auth user
-      const { data: identityRecord, error: identityError } = await supabase
-        .from('account_identities')
-        .select('account_id, accounts!account_id(*)')
-        .eq('auth_user_id', user.id)
+      // THIRD: Check accounts table directly (UNIFIED IDENTITY)
+      const { data: accountRecord, error: accountError } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('id', user.id)
         .maybeSingle();
       
-      console.log('AccountCheckModal: 🔍 Identity-based lookup result:', {
-        identityRecord,
-        identityError,
-        hasIdentity: !!identityRecord
+      console.log('AccountCheckModal: 🔍 Account lookup result:', {
+        accountRecord,
+        accountError,
+        hasAccount: !!accountRecord
       });
       
-      if (!identityError && identityRecord?.accounts) {
-        console.log('AccountCheckModal: ✅ EXISTING ACCOUNT FOUND via identity lookup!');
+      if (!accountError && accountRecord) {
+        console.log('AccountCheckModal: ✅ EXISTING ACCOUNT FOUND via unified identity!');
         setUserExists(true);
-        setExistingUser(identityRecord.accounts as any);
+        setExistingUser(accountRecord as any);
         setAccountCheckInProgress(false);
         
         // 🚀 SKIP WELCOME BACK PAGE - Auto-redirect existing users
@@ -297,61 +297,39 @@ export default function AccountCheckModal({
       }
       
       // Try each identifier variation
-      for (const identifier of identifiersToTry) {
-        console.log('AccountCheckModal: 🔍 FAST CHECK: Trying identifier:', identifier);
+      // UNIFIED IDENTITY: Check if current session user has an account
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (currentUser) {
+        console.log('AccountCheckModal: 🔍 FAST CHECK: Checking account for current user:', currentUser.id);
         
-        const { data: identityRecord, error: identityError } = await supabase
-          .from('account_identities')
-          .select('account_id')
-          .eq('method', verificationMethod)
-          .eq('identifier', identifier)
+        const { data: accountData, error: accountError } = await supabase
+          .from('accounts')
+          .select('*')
+          .eq('id', currentUser.id)
           .maybeSingle();
         
-        console.log('AccountCheckModal: 🔍 FAST CHECK: Identity lookup result for', identifier, ':', {
-          identityRecord,
-          identityError,
-          hasAccountId: !!identityRecord?.account_id
+        console.log('AccountCheckModal: 🔍 FAST CHECK: Account lookup result:', {
+          accountData,
+          accountError,
+          hasAccount: !!accountData
         });
         
-        if (!identityError && identityRecord?.account_id) {
-          // Step 2: Get the account data
-          const { data: accountData, error: accountError } = await supabase
-            .from('accounts')
-            .select('*')
-            .eq('id', identityRecord.account_id)
-            .maybeSingle();
+        if (!accountError && accountData) {
+          console.log('AccountCheckModal: ✅ FAST CHECK: Found account via unified identity:', accountData);
+          clearTimeout(timeoutId);
+          setUserExists(true);
+          setExistingUser(accountData);
+          setAccountCheckInProgress(false);
           
-          console.log('AccountCheckModal: 🔍 FAST CHECK: Account lookup result:', {
-            accountData,
-            accountError,
-            hasAccount: !!accountData
-          });
-          
-          if (!accountError && accountData) {
-            console.log('AccountCheckModal: ✅ FAST CHECK: Found account with identifier:', identifier, accountData);
-            clearTimeout(timeoutId);
-            setUserExists(true);
-            setExistingUser(accountData);
-            setAccountCheckInProgress(false);
-            
-            // 🚀 SKIP WELCOME BACK PAGE - Auto-redirect existing users
-            console.log('AccountCheckModal: 🚀 SKIPPING WELCOME BACK PAGE - Auto-redirecting to My Life');
-            setTimeout(() => bulletproofAutoRedirect(), 100); // Bulletproof auto-redirect
-            return;
-          }
+          // 🚀 SKIP WELCOME BACK PAGE - Auto-redirect existing users
+          console.log('AccountCheckModal: 🚀 SKIPPING WELCOME BACK PAGE - Auto-redirecting to My Life');
+          setTimeout(() => bulletproofAutoRedirect(), 100); // Bulletproof auto-redirect
+          return;
         }
       }
       
       console.log('AccountCheckModal: ❌ FAST CHECK: No direct match found');
-      console.log('AccountCheckModal: 🔍 FAST CHECK: Checking what exists in account_identities...');
-      
-      // Let's see what's actually in the database
-      const { data: allIdentities, error: allError } = await supabase
-        .from('account_identities')
-        .select('*')
-        .limit(10);
-      
-      console.log('AccountCheckModal: 📊 All identities in database:', allIdentities);
       console.log('AccountCheckModal: FAST CHECK: Falling back to comprehensive check...');
       console.log('AccountCheckModal: Calling checkUserExists with:', {
         verificationMethod,
@@ -997,44 +975,33 @@ export default function AccountCheckModal({
       });
       
       if (secondaryValue && secondaryValue.trim() && secondaryValue !== 'user@example.com' && secondaryValue !== '0000000000') {
-        console.log(`AccountCheckModal: 🔄 BULLETPROOF: Creating secondary identity for ${secondaryMethod}:`, secondaryValue);
-        console.log('AccountCheckModal: 🔍 Secondary identity data to insert:', {
-          account_id: user.id,
-          auth_user_id: user.id,
-          method: secondaryMethod,
-          identifier: secondaryValue
-        });
+        console.log(`AccountCheckModal: 🔄 UNIFIED IDENTITY: Linking secondary ${secondaryMethod}:`, secondaryValue);
         
         try {
-          // BULLETPROOF APPROACH: Use upsert to handle all conflicts gracefully
-          const { data: insertResult, error: secondaryIdentityError } = await supabase
-            .from('account_identities')
-            .upsert({
-              account_id: user.id,
-              auth_user_id: user.id,
-              method: secondaryMethod,
-              identifier: secondaryValue
-            }, {
-              onConflict: 'method,identifier',
-              ignoreDuplicates: false
-            })
-            .select(); // Get the inserted data back
-          
-          console.log('AccountCheckModal: 🔍 Secondary identity insert result:', {
-            data: insertResult,
-            error: secondaryIdentityError
-          });
-          
-          if (secondaryIdentityError) {
-            console.warn(`AccountCheckModal: ⚠️ Secondary identity creation had issue (but continuing):`, secondaryIdentityError.message);
-            console.warn('AccountCheckModal: ⚠️ Full secondary identity error:', secondaryIdentityError);
-            // Don't fail the entire process for secondary identity issues
-          } else {
-            console.log(`AccountCheckModal: ✅ BULLETPROOF: Secondary identity handled successfully for ${secondaryMethod}`);
-            console.log('AccountCheckModal: ✅ Secondary identity data inserted:', insertResult);
+          // UNIFIED IDENTITY: Update auth.users with the secondary method
+          if (secondaryMethod === 'email') {
+            const { error: updateError } = await supabase.auth.updateUser({
+              email: secondaryValue
+            });
+            
+            if (updateError) {
+              console.warn(`AccountCheckModal: ⚠️ Secondary email link had issue (but continuing):`, updateError.message);
+            } else {
+              console.log(`AccountCheckModal: ✅ Secondary email linked successfully`);
+            }
+          } else if (secondaryMethod === 'phone') {
+            const { error: updateError } = await supabase.auth.updateUser({
+              phone: secondaryValue
+            });
+            
+            if (updateError) {
+              console.warn(`AccountCheckModal: ⚠️ Secondary phone link had issue (but continuing):`, updateError.message);
+            } else {
+              console.log(`AccountCheckModal: ✅ Secondary phone linked successfully`);
+            }
           }
-        } catch (secondaryIdentityLinkError) {
-          console.warn('AccountCheckModal: ⚠️ Secondary identity error (but continuing):', secondaryIdentityLinkError);
+        } catch (secondaryLinkError) {
+          console.warn('AccountCheckModal: ⚠️ Secondary identity link error (but continuing):', secondaryLinkError);
           // Don't fail the entire process for secondary identity issues
         }
       } else {

@@ -5,7 +5,7 @@ import { X, Search, Users, Building2 } from 'lucide-react';
 import { newMessageFlow, Contact } from '@/lib/chat/newMessageFlow';
 import UserListItem from './UserListItem';
 import AvatarChip from './AvatarChip';
-import { simpleChatService } from '@/lib/simpleChatService';
+// simpleChatService removed - using chatService from useAuth
 import { getSupabaseClient } from '@/lib/supabaseClient';
 
 interface NewMessageModalProps {
@@ -138,7 +138,7 @@ export default function NewMessageModal({
             className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Go back"
           >
-            <span className="back-btn-circle">
+            <span className="action-btn-circle">
               <X className="h-5 w-5" />
             </span>
           </button>

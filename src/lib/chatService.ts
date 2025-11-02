@@ -84,6 +84,19 @@ export class ChatService {
 
       console.log('ChatService: Getting chats for authenticated user:', userId);
       
+      // Test session status
+      const { data: { user: authUser }, error: authError } = await this.supabase.auth.getUser();
+      console.log('ChatService: Auth check:', { 
+        authUser: authUser?.id, 
+        requestedUserId: userId, 
+        authError: authError?.message 
+      });
+      
+      if (authError || !authUser) {
+        console.error('ChatService: Authentication failed:', authError);
+        return { chats: [], error: new Error('Authentication failed') };
+      }
+      
       // Get all chats where the user is a participant
       const { data: userChats, error: userChatsError } = await this.supabase
         .from('chat_participants')
@@ -91,7 +104,15 @@ export class ChatService {
         .eq('user_id', userId);
 
       if (userChatsError) {
-        console.error('Error getting user chat participants:', userChatsError);
+        console.error('Error getting user chat participants:', {
+          error: userChatsError,
+          message: userChatsError.message,
+          details: userChatsError.details,
+          hint: userChatsError.hint,
+          code: userChatsError.code,
+          userId: userId,
+          authUser: user?.id
+        });
         return { chats: [], error: userChatsError };
       }
 
@@ -108,7 +129,7 @@ export class ChatService {
           id, type, name, listing_id, created_by, created_at, updated_at, last_message_at
         `)
         .in('id', chatIds)
-        .order('last_message_at', { ascending: false });
+        .order('last_message_at', { ascending: false, nullsLast: true });
 
       if (error) {
         // Create a serializable error object first
@@ -153,15 +174,7 @@ export class ChatService {
         created_at: chat.created_at,
         updated_at: chat.updated_at,
         last_message_at: chat.last_message_at,
-        participants: chat.chat_participants.map((cp: any) => ({
-          id: cp.id,
-          chat_id: cp.chat_id,
-          user_id: cp.user_id,
-          joined_at: cp.joined_at,
-          last_read_at: cp.last_read_at,
-          user_name: cp.accounts?.name,
-          user_profile_pic: cp.accounts?.profile_pic
-        }))
+        participants: [] // Will be populated separately if needed
       }));
 
       // Get the last message for each chat
@@ -244,8 +257,8 @@ export class ChatService {
       // Transform messages to our interface
       const transformedMessages: ChatMessage[] = (messages || []).map(msg => ({
         id: msg.id,
-        chat_id: msg.chat_id,
-        sender_id: msg.sender_id,
+          chat_id: msg.chat_id,
+          sender_id: msg.sender_id,
         message_text: msg.message_text,
         message_type: msg.message_type,
         image_url: msg.image_url,
@@ -253,7 +266,7 @@ export class ChatService {
         created_at: msg.created_at,
         read_by: msg.read_by,
         poll_id: msg.poll_id,
-        reply_to_message_id: msg.reply_to_message_id,
+          reply_to_message_id: msg.reply_to_message_id,
         is_pinned: msg.is_pinned,
         sender_name: msg.accounts?.name,
         sender_profile_pic: msg.accounts?.profile_pic
@@ -395,8 +408,8 @@ export class ChatService {
       // Check if any of these chats also has user2Id as a participant
       for (const chat of existingChats || []) {
         const { data: participants, error: participantError } = await this.supabase
-          .from('chat_participants')
-          .select('user_id')
+              .from('chat_participants')
+              .select('user_id')
           .eq('chat_id', chat.id);
 
         if (!participantError && participants) {
@@ -762,7 +775,7 @@ export class ChatService {
           created_by: currentUserId
         })
         .select()
-        .single();
+            .single();
 
       if (createError) {
         console.error('Error creating group chat:', createError);

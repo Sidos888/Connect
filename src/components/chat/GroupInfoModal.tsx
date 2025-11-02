@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { X, MessageCircle, Share, Images, Settings, Users, Camera, Edit, UserPlus, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
-import { simpleChatService } from "@/lib/simpleChatService";
+// simpleChatService removed - using chatService from useAuth
 import { connectionsService } from "@/lib/connectionsService";
 import Avatar from "@/components/Avatar";
 import { useRouter } from "next/navigation";
@@ -188,12 +188,16 @@ export default function GroupInfoModal({ isOpen, onClose, chatId }: GroupInfoMod
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
           <button
             onClick={isEditing ? handleCancelEdit : showMemberProfile ? handleBackToGroup : onClose}
-            className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
+            className="p-0 bg-transparent pointer-events-auto"
           >
             {isEditing || showMemberProfile ? (
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <span className="action-btn-circle">
+                <ArrowLeft className="w-5 h-5 text-gray-900" />
+              </span>
             ) : (
-              <X className="w-5 h-5 text-gray-600" />
+              <span className="action-btn-circle">
+                <X className="w-5 h-5 text-gray-900" />
+              </span>
             )}
           </button>
         </div>

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Camera, Users } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/lib/authContext";
-import { simpleChatService } from "@/lib/simpleChatService";
+// simpleChatService removed - using chatService from useAuth
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Avatar from "@/components/Avatar";
 
@@ -30,7 +30,11 @@ export default function GroupSetupPage() {
         const { data: { user } } = await getSupabaseClient().auth.getUser();
         if (!user) return;
 
-        const { contacts } = await simpleChatService.getContacts(user.id);
+        if (!chatService) {
+          console.error('GroupSetupPage: ChatService not available');
+          return;
+        }
+        const { contacts } = await chatService.getContacts(user.id);
         const selected = contacts.filter(contact => 
           selectedContactIds.includes(contact.id)
         );
@@ -58,7 +62,11 @@ export default function GroupSetupPage() {
       }
 
       // Create group chat
-      const { chat, error } = await simpleChatService.createGroupChat(
+      if (!chatService) {
+        console.error('GroupSetupPage: ChatService not available');
+        return;
+      }
+      const { chat, error } = await chatService.createGroupChat(
         groupName.trim(),
         [user.id, ...selectedContactIds],
         groupPhoto || undefined
@@ -101,9 +109,11 @@ export default function GroupSetupPage() {
           {/* Back Button */}
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-full hover:bg-gray-100"
+            className="p-0 bg-transparent"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <span className="action-btn-circle">
+              <ArrowLeft className="w-5 h-5 text-gray-900" />
+            </span>
           </button>
           
           {/* Title */}

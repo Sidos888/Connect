@@ -1,13 +1,12 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig: NextConfig = {
-  // Only use static export for production builds
-  // Disabled for now due to dynamic route limitations
-  // ...(process.env.NODE_ENV === 'production' && {
-  //   output: 'export',
-  //   distDir: 'out',
-  //   trailingSlash: true,
-  // }),
+  // Enable static export for Capacitor mobile builds (only for production builds)
+  ...(isDev ? {} : { output: 'export' }),
+  distDir: 'out',
+  trailingSlash: true,
   images: {
     unoptimized: true
   },

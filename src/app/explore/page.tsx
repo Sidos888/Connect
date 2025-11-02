@@ -5,7 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { SearchIcon } from "@/components/icons";
 
 export default function ExplorePage() {
-  const { context, isHydrated } = useAppStore();
+  const { context } = useAppStore();
   const [hasError, setHasError] = useState(false);
   
   // Prevent body scrolling on mobile for fixed layout
@@ -24,18 +24,6 @@ export default function ExplorePage() {
       document.body.style.height = '';
     };
   }, []);
-
-  // Loading state while store hydrates
-  if (!isHydrated) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="text-gray-500">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   // Error boundary fallback
   if (hasError) {
@@ -114,12 +102,19 @@ export default function ExplorePage() {
             <h1 className="text-3xl font-bold text-gray-900">Explore</h1>
             <button
               aria-label="Search"
-              className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-white transition-all duration-200 focus:outline-none focus-visible:ring-2 ring-brand"
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-white hover:-translate-y-[1px] transition-all duration-200 focus:outline-none focus-visible:ring-2 ring-brand"
               style={{
                 borderWidth: '0.4px',
                 borderColor: '#E5E7EB',
                 borderStyle: 'solid',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -131,12 +126,19 @@ export default function ExplorePage() {
         <div className="mb-4 lg:mb-6">
           <div className="max-w-lg mx-auto lg:max-w-xl">
             <div 
-              className="rounded-2xl bg-white px-5 py-4"
+              className="rounded-2xl bg-white px-5 py-4 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer"
               style={{
                 borderWidth: '0.4px',
                 borderColor: '#E5E7EB',
                 borderStyle: 'solid',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
             >
               <div className="flex items-center justify-between">
@@ -164,7 +166,7 @@ export default function ExplorePage() {
                   key={category.title}
                   className={`
                     rounded-2xl bg-white
-                    hover:bg-white transition-all duration-200
+                    hover:bg-white hover:-translate-y-[1px] transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1
                     aspect-square w-full
                     ${category.subtitle ? 'opacity-60 cursor-not-allowed' : ''}
@@ -174,7 +176,16 @@ export default function ExplorePage() {
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!category.subtitle) {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
                   disabled={!!category.subtitle}
                 >

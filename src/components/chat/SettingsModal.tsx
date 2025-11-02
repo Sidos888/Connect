@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
-import { simpleChatService } from '@/lib/simpleChatService';
 import { connectionsService } from '@/lib/connectionsService';
 import { formatNameForDisplay } from '@/lib/utils';
 
@@ -24,7 +23,7 @@ interface UserProfile {
 }
 
 export default function SettingsModal({ isOpen, onClose, onBack, userId, userName }: SettingsModalProps) {
-  const { account } = useAuth();
+  const { account, supabase } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +40,6 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
         setError(null);
 
         // Load user profile
-        const supabase = simpleChatService.getSupabaseClient();
         if (!supabase) throw new Error('Supabase client not available');
         
         const { data: userProfile, error: profileError } = await supabase
@@ -124,7 +122,7 @@ export default function SettingsModal({ isOpen, onClose, onBack, userId, userNam
             className="absolute left-6 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label={currentView === 'confirm' ? "Back to settings" : currentView === 'edit' ? "Back to settings" : "Back to profile"}
           >
-            <span className="back-btn-circle">
+            <span className="action-btn-circle">
               <ArrowLeft size={20} className="text-gray-700" />
             </span>
           </button>

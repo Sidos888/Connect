@@ -4,7 +4,10 @@ import "./globals.css";
 import AppShellWrapper from "@/components/layout/AppShellWrapper";
 import AccountSwitchingOverlay from "@/components/AccountSwitchingOverlay";
 import { AuthProvider } from "@/lib/authContext";
+import { ChatProvider } from "@/lib/chatProvider";
 import { ModalProvider } from "@/lib/modalContext";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientWrapper } from '@/components/QueryClientWrapper';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,32 +24,31 @@ export const metadata: Metadata = {
   description: "Connect MVP",
 };
 
+export const viewport = "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content, shrink-to-fit=no";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content, shrink-to-fit=no" />
-        <meta name="cache-control" content="no-cache, no-store, must-revalidate" />
-        <meta name="pragma" content="no-cache" />
-        <meta name="expires" content="0" />
-        <meta name="version" content="CACHE-BUST-2025-01-29-001" />
-      </head>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        <AuthProvider>
-          <ModalProvider>
-            <AppShellWrapper>
-              {children}
-            </AppShellWrapper>
-            <AccountSwitchingOverlay />
-          </ModalProvider>
-        </AuthProvider>
+        <QueryClientWrapper>
+          <AuthProvider>
+            <ChatProvider>
+              <ModalProvider>
+                <AppShellWrapper>
+                  {children}
+                </AppShellWrapper>
+                <AccountSwitchingOverlay />
+              </ModalProvider>
+            </ChatProvider>
+          </AuthProvider>
+        </QueryClientWrapper>
       </body>
     </html>
   );

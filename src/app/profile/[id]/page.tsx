@@ -6,9 +6,9 @@ import ProfileClientWrapper from "./ProfileClientWrapper";
 
 // Required for static export
 export async function generateStaticParams() {
-  // Return empty array for dynamic routes in static export
-  // This allows the page to be built but won't pre-generate specific IDs
-  return [];
+  // Return a placeholder for static export
+  // Actual profile rendering will happen client-side
+  return [{ id: 'placeholder' }];
 }
 
 interface UserProfilePageProps {

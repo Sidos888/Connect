@@ -55,7 +55,7 @@ export default function AboutMeView({
           className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
           aria-label="Back"
         >
-          <span className="back-btn-circle">
+          <span className="action-btn-circle">
             <ArrowLeft size={20} className="text-gray-700" />
           </span>
         </button>

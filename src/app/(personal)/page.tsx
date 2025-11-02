@@ -20,12 +20,8 @@ export default function Page() {
     }
   }, [user, loading, router]);
   
-  // Show minimal loading state while determining where to redirect
-  return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="animate-spin rounded-full h-6 w-6 border-2 border-neutral-200 border-t-brand"></div>
-    </div>
-  );
+  // Return null during loading to prevent flash of content
+  return null;
 }
 
 

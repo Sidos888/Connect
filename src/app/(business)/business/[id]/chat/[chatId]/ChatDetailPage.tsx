@@ -36,7 +36,7 @@ export default function ChatDetailPage() {
             className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Back to chat"
           >
-            <span className="back-btn-circle">
+            <span className="action-btn-circle">
               <ChevronLeftIcon className="h-5 w-5" />
             </span>
           </Link>

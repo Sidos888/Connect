@@ -172,7 +172,7 @@ export default function TopNavigation() {
                             setAuthOpen(false);
                             // Add about page navigation here
                           }}
-                          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
                         >
                           <span className="font-medium">About Connect</span>
                         </button>
@@ -182,7 +182,7 @@ export default function TopNavigation() {
                             setAuthOpen(false);
                             showLogin();
                           }}
-                          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
                         >
                           <span className="font-medium">Log in or sign up</span>
                         </button>

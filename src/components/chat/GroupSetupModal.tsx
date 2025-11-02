@@ -94,19 +94,23 @@ export default function GroupSetupModal({
           <div className="flex items-center gap-3">
             <button
               onClick={handleBack}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-0 bg-transparent"
               aria-label="Back"
             >
-              <X className="w-5 h-5 text-gray-500 rotate-45" />
+              <span className="action-btn-circle">
+                <ArrowLeft className="w-5 h-5 text-gray-900" />
+              </span>
             </button>
             <h2 className="text-xl font-semibold text-gray-900 text-center">Create Group</h2>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            className="p-0 bg-transparent"
             aria-label="Close"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <span className="action-btn-circle">
+              <X className="w-5 h-5 text-gray-900" />
+            </span>
           </button>
         </div>
 

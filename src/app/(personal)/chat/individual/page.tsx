@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
+import { useChatService } from "@/lib/chatProvider";
 import { useAppStore } from "@/lib/store";
 import { ArrowLeft } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
@@ -12,13 +13,14 @@ import MediaUploadButton, { UploadedMedia } from "@/components/chat/MediaUploadB
 import MediaPreview from "@/components/chat/MediaPreview";
 import GalleryModal from "@/components/chat/GalleryModal";
 import MediaViewer from "@/components/chat/MediaViewer";
-import type { SimpleMessage, MediaAttachment } from "@/lib/simpleChatService";
+import type { SimpleMessage, MediaAttachment } from "@/lib/types";
 
 export default function IndividualChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const chatId = searchParams.get('chat');
-  const { account, chatService } = useAuth();
+  const { account } = useAuth();
+  const chatService = useChatService();
   const { sendMessage, markMessagesAsRead, getConversations } = useAppStore();
   type Participant = { id: string; name: string; profile_pic?: string | null };
   type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean };
@@ -113,7 +115,13 @@ export default function IndividualChatPage() {
         } else {
           // Fallback to loading from database
           console.log('Individual chat page: Conversation not in store, loading from database');
-          const { chat, error: chatError } = await simpleChatService.getChatById(chatId);
+          if (!chatService) {
+            console.error('IndividualChatPage: ChatService not available');
+            setError('Chat service not available');
+            setLoading(false);
+            return;
+          }
+          const { chat, error: chatError } = await chatService.getChatById(chatId);
           if (chatError || !chat) {
             setError('Conversation not found');
             setLoading(false);
@@ -493,9 +501,11 @@ export default function IndividualChatPage() {
           {/* Back Button */}
           <button
             onClick={() => router.push('/chat')}
-            className="p-2 rounded-full hover:bg-gray-100 absolute left-4"
+            className="p-0 bg-transparent absolute left-4"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <span className="action-btn-circle">
+              <ArrowLeft className="w-5 h-5 text-gray-900" />
+            </span>
           </button>
           
           {/* Profile Card - Centered and narrower */}

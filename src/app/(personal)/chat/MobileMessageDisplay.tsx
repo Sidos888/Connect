@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
-import { simpleChatService } from "@/lib/simpleChatService";
+import { useChatService } from "@/lib/chatProvider";
+// simpleChatService removed - using chatService from useAuth
 
 interface MobileMessageDisplayProps {
   conversation: Conversation;
@@ -14,6 +15,7 @@ interface MobileMessageDisplayProps {
 export default function MobileMessageDisplay({ conversation }: MobileMessageDisplayProps) {
   const { sendMessage, markAllRead } = useAppStore();
   const { account } = useAuth();
+  const chatService = useChatService();
   type ChatMessage = { id: string; text: string; sender_id: string };
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,13 @@ export default function MobileMessageDisplay({ conversation }: MobileMessageDisp
         setLoading(true);
         console.log('MobileMessageDisplay: Loading messages for chat:', conversation.id);
         console.log('MobileMessageDisplay: Conversation data:', conversation);
-        const { messages, error } = await simpleChatService.getChatMessages(conversation.id, account.id);
+        if (!chatService) {
+          console.error('MobileMessageDisplay: ChatService not available');
+          setError('Chat service not available');
+          setLoading(false);
+          return;
+        }
+        const { messages, error } = await chatService.getChatMessages(conversation.id);
         if (!error) {
           setMessages(messages);
         } else {
@@ -65,7 +73,7 @@ export default function MobileMessageDisplay({ conversation }: MobileMessageDisp
     <div className="space-y-4">
       {loading ? (
         <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          {/* Loading animation removed */}
         </div>
       ) : (
         messages.map((m) => {

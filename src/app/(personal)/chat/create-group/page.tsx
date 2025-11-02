@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
-import { chatService } from '@/lib/chatService';
+import { useChatService } from '@/lib/chatProvider';
 import MobileTitle from '@/components/MobileTitle';
 // No icons used on this page
 
@@ -11,6 +11,7 @@ export default function CreateGroupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { account } = useAuth();
+  const chatService = useChatService();
   
   const [groupName, setGroupName] = useState('');
   const [isCreating, setIsCreating] = useState(false);

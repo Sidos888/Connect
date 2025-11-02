@@ -5,6 +5,24 @@
   --foreground: #111827; /* Neutral-900 */
 }
 
+/* Active state styling - Connect orange for both icon and text */
+.nav-item-active span:first-child {
+  font-weight: 700;
+}
+
+.nav-item-active span:last-child {
+  color: #f97316 !important; /* orange-500 */
+}
+
+.nav-item-inactive {
+  transition: color 0.2s ease;
+  font-weight: 500;
+}
+
+.nav-item-inactive:hover {
+  transform: scale(1.02);
+}
+
 /* Typing indicator animation */
 @keyframes typingBounce {
   0%, 60%, 100% {
@@ -35,7 +53,6 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
 }
 
 /* Force hide bottom nav in settings mode - immediate effect */
@@ -115,6 +132,25 @@ html, body {
 }
 .back-btn-circle:hover { 
   background: rgb(243 244 246); /* bg-gray-100 */
+}
+
+/* Connect action button card (white circular card used across modals) */
+.action-btn-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-width: 0.4px;
+  border-style: solid;
+  border-color: #E5E7EB; /* gray-200 */
+  box-shadow: 0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25);
+  transition: background-color 0.2s ease;
+}
+.action-btn-circle:hover {
+  background: rgba(255, 255, 255, 1);
 }
 
 /* Disable scroll on demand */

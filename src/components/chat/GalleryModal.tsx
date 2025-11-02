@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import type { SimpleMessage } from "@/lib/simpleChatService";
+import type { SimpleMessage } from "@/lib/types";
 
 interface GalleryModalProps {
   isOpen: boolean;
@@ -67,9 +67,11 @@ export default function GalleryModal({ isOpen, message, onClose, onImageClick }:
           </h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-0 bg-transparent"
           >
-            <X className="w-5 h-5" />
+            <span className="action-btn-circle">
+              <X className="w-5 h-5 text-gray-900" />
+            </span>
           </button>
         </div>
 

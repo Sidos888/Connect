@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Users, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
-import { simpleChatService } from '@/lib/simpleChatService';
+import { connectionsService } from '@/lib/connectionsService';
 import Avatar from '@/components/Avatar';
 
 interface ConnectionsModalProps {
@@ -30,7 +30,7 @@ interface Connection {
 }
 
 export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFriend, onBack }: ConnectionsModalProps) {
-  const { account } = useAuth();
+  const { account, supabase } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [following, setFollowing] = useState<Connection[]>([]);
@@ -58,8 +58,8 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
         }
         setError(null);
 
-        // Load user profile
-        const { data: profileData, error: profileError } = await simpleChatService.getSupabaseClient()
+        // Load user profile using Supabase from auth context
+        const { data: profileData, error: profileError } = await supabase
           .from('accounts')
           .select('*')
           .eq('id', userId)
@@ -69,15 +69,28 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
         setProfile(profileData);
 
 
-        // Load connections (friends) - get the profile user's friends, not current user's friends
-        const { connections: friendsData } = await simpleChatService.getUserConnections(userId);
-        console.log('ConnectionsModal: Friends data:', friendsData);
-        
-        // Filter out the selected user (the getUserConnections function already filters for accepted status)
-        const filteredFriends = friendsData.filter(friend => 
-          friend.id !== userId
-        );
-        setConnections(filteredFriends);
+        // Load connections using the unified connectionsService (friends graph)
+        const targetUserId = userId;
+        const { connections: userConnections, error: connError } = await connectionsService.getConnections(targetUserId);
+        if (connError) {
+          console.error('ConnectionsModal: Error loading connections:', connError);
+          setConnections([]);
+        } else {
+          const mapped = (userConnections || [])
+            .map((conn: any) => {
+              const friend = conn.user1?.id === targetUserId ? conn.user2 : conn.user1;
+              if (!friend) return null;
+              return {
+                id: friend.id,
+                name: friend.name,
+                profile_pic: friend.profile_pic,
+                bio: friend.bio,
+                connected_at: conn.connected_at || ''
+              } as Connection;
+            })
+            .filter(Boolean) as Connection[];
+          setConnections(mapped);
+        }
 
         // Load following (placeholder for now)
         setFollowing([]);
@@ -94,21 +107,7 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
   }, [userId, account?.id, isOpen]);
 
 
-  const handleAddFriend = async () => {
-    if (!account?.id || !userId) return;
-
-    try {
-      const { success, error } = await simpleChatService.addConnection(account.id, userId);
-      
-      if (success) {
-        setConnectionStatus('pending');
-      } else {
-        console.error('Error adding friend:', error);
-      }
-    } catch (error) {
-      console.error('Error in handleAddFriend:', error);
-    }
-  };
+  // Add friend functionality intentionally omitted in this modal
 
   if (!isOpen) return null;
 
@@ -130,9 +129,11 @@ export default function ConnectionsModal({ isOpen, onClose, userId, onRemoveFrie
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
           <button
             onClick={onBack || onClose}
-            className="p-2 hover:bg-gray-100 transition-colors rounded-full pointer-events-auto"
+            className="p-0 bg-transparent pointer-events-auto"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <span className="action-btn-circle">
+              <ArrowLeft className="w-5 h-5 text-gray-900" />
+            </span>
           </button>
           <div className="w-9"></div>
         </div>

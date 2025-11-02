@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { SimpleMessage } from "@/lib/simpleChatService";
+import type { SimpleMessage } from "@/lib/types";
 
 interface MessageActionModalProps {
   selectedMessage: SimpleMessage | null;

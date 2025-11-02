@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { useModal } from "@/lib/modalContext";
 import TopNavigation from "./TopNavigation";
+import MobileTopNavigation from "./MobileTopNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
@@ -18,9 +19,18 @@ export default function AppShell({ children }: AppShellProps) {
   const { isAnyModalOpen } = useModal();
   const isChatPage = pathname.startsWith('/chat');
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
-  const isSettingsPage = pathname === '/settings';
+  const isSettingsPage = (
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/gallery') ||
+    pathname.startsWith('/achievements') ||
+    pathname.startsWith('/about-me') ||
+    pathname.startsWith('/saved') ||
+    pathname.startsWith('/share-profile')
+  );
   const isMenuPage = pathname === '/menu';
   const isOnboardingPage = pathname === '/onboarding';
+  const isTimelinePage = pathname.startsWith('/timeline');
   
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test'];
@@ -53,13 +63,20 @@ export default function AppShell({ children }: AppShellProps) {
           <TopNavigation />
         </div>
         
+        {/* Mobile: Top Navigation Bar */}
+        {!isSettingsPage && (
+          <div className="lg:hidden">
+            <MobileTopNavigation />
+          </div>
+        )}
+        
         {/* Main Content Area with proper mobile safe area */}
-        <main className="w-full pb-20 lg:pb-0 lg:pt-20">
+        <main className="w-full pb-24 lg:pb-0 lg:pt-20 pt-32">
           {children}
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -78,8 +95,15 @@ export default function AppShell({ children }: AppShellProps) {
           <TopNavigation />
         </div>
         
+        {/* Mobile: Top Navigation Bar */}
+        {!isSettingsPage && (
+          <div className="sm:hidden">
+            <MobileTopNavigation />
+          </div>
+        )}
+        
         {/* Main Content Area - Mobile has bottom nav, Desktop has top nav offset */}
-        <main className="w-full flex-1 sm:pt-20 sm:h-[calc(100vh-4.5rem)] pb-20 sm:pb-0">
+        <main className="w-full flex-1 sm:pt-20 pt-32 sm:h-[calc(100vh-4.5rem)] pb-24 sm:pb-0">
           <ProtectedRoute>
             {children}
           </ProtectedRoute>
@@ -102,15 +126,22 @@ export default function AppShell({ children }: AppShellProps) {
         <TopNavigation />
       </div>
       
+      {/* Mobile: Top Navigation Bar */}
+      {!isSettingsPage && (
+        <div className="lg:hidden">
+          <MobileTopNavigation />
+        </div>
+      )}
+      
       {/* Main Content Area with proper mobile safe area */}
-      <main className="flex-1 w-full lg:pt-20">
+      <main className="flex-1 w-full lg:pt-20 pt-32 pb-24 lg:pb-0">
         <ProtectedRoute>
           {children}
         </ProtectedRoute>
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>

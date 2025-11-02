@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Share, Images, Settings, Users, ArrowLeft, X, MoreVertical, Trash2, ChevronLeft, ChevronRight, Bell, User } from 'lucide-react';
+import { MessageCircle, Images, Settings, Users, ArrowLeft, X, MoreVertical, Trash2, ChevronLeft, ChevronRight, Bell, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
-import { simpleChatService } from '@/lib/simpleChatService';
+import { useChatService } from '@/lib/chatProvider';
+// import { simpleChatService } from '@/lib/simpleChatService'; // OLD - removed
 import Avatar from '@/components/Avatar';
 import ConnectionsModal from './chat/ConnectionsModal';
 import AboutMeView from './AboutMeView';
 import { formatNameForDisplay } from '@/lib/utils';
+import QRCode from 'qrcode';
 
 interface InlineProfileViewProps {
   userId: string;
@@ -36,7 +39,9 @@ export default function InlineProfileView({
   onSettingsClick,
   entryPoint = 'connections'
 }: InlineProfileViewProps) {
+  const router = useRouter();
   const { account } = useAuth();
+  const chatService = useChatService();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +52,8 @@ export default function InlineProfileView({
   const [mutualCount, setMutualCount] = useState(0);
   const [selfConnections, setSelfConnections] = useState<any[]>([]);
   const [selfConnectionsCount, setSelfConnectionsCount] = useState(0);
+  const [showLinksModal, setShowLinksModal] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   // Reset profile when userId changes to ensure proper loading behavior
   useEffect(() => {
@@ -70,7 +77,7 @@ export default function InlineProfileView({
         setError(null);
 
         // Get user profile from contacts or accounts table
-        const { contacts } = await simpleChatService.getContacts(account?.id || '');
+        const { contacts } = await chatService?.getContacts(account?.id || '') || { contacts: [], error: null };
         const userProfile = contacts.find(contact => contact.id === userId) || (account?.id === userId ? {
           id: account?.id,
           name: account?.name || 'You',
@@ -98,11 +105,10 @@ export default function InlineProfileView({
                 setConnectionStatus('self');
               } else {
                 // Viewing someone else: show mutuals/relationship
-                const [statusRes, mutualCountRes, mutualsRes] = await Promise.all([
-                  simpleChatService.getConnectionStatus(account.id, userId),
-                  simpleChatService.getMutualConnectionsCount(account.id, userId),
-                  simpleChatService.getMutualConnections(account.id, userId, 3)
-                ]);
+                // For now, set default connection status since simpleChatService is removed
+                const statusRes = { status: 'none' };
+                const mutualCountRes = { count: 0 };
+                const mutualsRes = { connections: [] };
                 setConnectionStatus(statusRes.status);
                 setMutualCount(mutualCountRes.count);
                 setMutualConnections(mutualsRes.connections);
@@ -128,25 +134,44 @@ export default function InlineProfileView({
     loadProfile();
   }, [userId, account?.id]);
 
+  // Generate QR when opening links modal
+  useEffect(() => {
+    const generateQr = async () => {
+      if (!showLinksModal) return;
+      try {
+        const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/profile/${userId}` : `/profile/${userId}`;
+        const dataUrl = await QRCode.toDataURL(profileUrl, { width: 240, margin: 1 });
+        setQrDataUrl(dataUrl);
+      } catch (_e) {
+        setQrDataUrl(null);
+      }
+    };
+    generateQr();
+  }, [showLinksModal, userId]);
+
+  // Freeze background when links modal is open
+  useEffect(() => {
+    if (showLinksModal) {
+      document.body.classList.add('no-scroll');
+    } else {
+      document.body.classList.remove('no-scroll');
+    }
+    return () => {
+      document.body.classList.remove('no-scroll');
+    };
+  }, [showLinksModal]);
+
   const handleStartChat = async () => {
     if (!userId || !account?.id) return;
 
     try {
-      // Check if direct chat already exists
-      const { chat: existingChat } = await simpleChatService.findExistingDirectChat(account.id, userId);
-      
-      if (existingChat) {
-        if (onStartChat) {
-          onStartChat(existingChat.id);
-        }
+      // For now, just navigate to chat without creating/finding existing chats
+      // This will be implemented when chatService methods are available
+      if (onStartChat) {
+        // Generate a temporary chat ID for now
+        const tempChatId = `temp-${account.id}-${userId}`;
+        onStartChat(tempChatId);
         onBack();
-      } else {
-        // Create new direct chat
-        const { chat } = await simpleChatService.createDirectChat(userId, account.id);
-        if (chat && onStartChat) {
-          onStartChat(chat.id);
-          onBack();
-        }
       }
     } catch (error) {
       console.error('Error starting chat:', error);
@@ -211,8 +236,8 @@ export default function InlineProfileView({
           className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand pointer-events-auto"
           aria-label="Back to previous view"
         >
-          <span className="back-btn-circle">
-            <ArrowLeft size={20} className="text-gray-700" />
+          <span className="action-btn-circle">
+            <ArrowLeft size={20} className="text-gray-900" />
           </span>
         </button>
         <button 
@@ -236,7 +261,22 @@ export default function InlineProfileView({
               size={140}
             />
           </div>
-          <h3 className="text-3xl font-bold text-gray-900 mb-3">{formatNameForDisplay(profile.name)}</h3>
+          <button
+            onClick={() => router.push('/share-profile')}
+            className="inline-block mb-3"
+            style={{
+              borderRadius: '16px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              padding: '10px 16px'
+            }}
+            aria-label="Open links card"
+          >
+            <span className="text-3xl font-bold text-gray-900">{formatNameForDisplay(profile.name)}</span>
+          </button>
           <p className="text-gray-600 text-lg">{profile.bio}</p>
         </div>
 
@@ -262,11 +302,20 @@ export default function InlineProfileView({
             <span className="text-xs font-medium text-black">About</span>
           </button>
 
-          <button className="flex flex-col items-center space-y-2">
+          <button 
+            onClick={() => {
+              if (onSettingsClick) {
+                onSettingsClick();
+              } else {
+                router.push('/settings');
+              }
+            }}
+            className="flex flex-col items-center space-y-2"
+          >
             <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-              <Share className="w-6 h-6 text-black" />
+              <Settings className="w-6 h-6 text-black" />
             </div>
-            <span className="text-xs font-medium text-black">Share</span>
+            <span className="text-xs font-medium text-black">Settings</span>
           </button>
         </div>
 
@@ -332,10 +381,10 @@ export default function InlineProfileView({
         {/* Content Sections */}
         <div className="space-y-3 mb-4">
           <button 
-            onClick={() => setCurrentView('about')}
+            onClick={() => router.push('/timeline')}
             className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-center font-medium hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow shadow-sm min-h-[80px] flex items-center justify-center"
           >
-            About {formatNameForDisplay(profile.name)}
+            🧭 Timeline
           </button>
           <button className="w-full bg-white border border-gray-200 text-gray-700 rounded-2xl p-4 text-left font-medium hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:bg-white transition-shadow shadow-sm min-h-[80px] flex items-center">
             View Photos
@@ -369,6 +418,35 @@ export default function InlineProfileView({
             profileName={profile?.name}
             profileDob={profile?.dob}
           />
+        </div>
+      )}
+
+      {/* Links/QR Modal */}
+      {showLinksModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowLinksModal(false)} />
+          <div className="relative bg-white rounded-3xl w-full max-w-[420px] h-[520px] shadow-2xl overflow-hidden flex flex-col">
+            <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+              <button
+                onClick={() => setShowLinksModal(false)}
+                className="p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand pointer-events-auto"
+                aria-label="Back"
+              >
+                <span className="back-btn-circle">
+                  <ArrowLeft size={20} className="text-gray-700" />
+                </span>
+              </button>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center px-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Share Profile</h2>
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="Profile QR" className="w-60 h-60" />
+              ) : (
+                <div className="w-60 h-60 bg-gray-100 rounded-lg animate-pulse" />
+              )}
+              <p className="text-sm text-gray-500 mt-4 text-center">Scan to view links and connect</p>
+            </div>
+          </div>
         </div>
       )}
 

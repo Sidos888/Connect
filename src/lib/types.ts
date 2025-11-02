@@ -13,6 +13,80 @@ export type PersonalProfile = {
   updatedAt: string;
 };
 
+// New chat system types
+export interface SimpleChat {
+  id: string;
+  type: 'direct' | 'group';
+  name: string;
+  photo?: string;
+  participants: Array<{
+    id: string;
+    name: string;
+    profile_pic?: string;
+  }>;
+  last_message?: {
+    id: string;
+    content: string;
+    created_at: string;
+    sender: {
+      id: string;
+      name: string;
+      profile_pic?: string;
+    };
+  };
+  last_message_at?: string;
+  unreadCount: number;
+}
+
+export interface SimpleMessage {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_profile_pic?: string;
+  text: string;
+  created_at: string;
+  seq?: number;
+  client_generated_id?: string;
+  status?: 'sent' | 'delivered' | 'read';
+  reply_to_message_id?: string | null;
+  reply_to_message?: SimpleMessage | null;
+  attachments?: MediaAttachment[];
+  reactions?: MessageReaction[];
+  deleted_at?: string | null;
+}
+
+export interface MediaAttachment {
+  id: string;
+  file_url: string;
+  file_type: 'image' | 'video';
+  thumbnail_url?: string;
+}
+
+export interface MessageReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+}
+
+/**
+ * Account interface
+ * 
+ * IMPORTANT: account.id is ALWAYS equal to auth.uid()
+ * This is enforced by foreign key constraint: accounts.id -> auth.users.id
+ * 
+ * Use auth.uid() for all database operations (RLS policies expect this)
+ * Use account object only for display data (name, profile_pic, etc)
+ */
+export interface Account {
+  id: string;  // Always equals auth.uid()
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Business = {
   id: UUID;
   name: string;
@@ -89,6 +163,8 @@ export type Conversation = {
   avatarUrl?: string | null;
   isGroup?: boolean;
   unreadCount: number;
-  messages: Message[];
+  last_message?: string;
+  last_message_at?: string;
+  messages: Message[]; // Keep for backward compatibility during transition
 };
 

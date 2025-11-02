@@ -142,13 +142,13 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       <div className="flex items-center justify-between p-6">
         <button
           onClick={onBack}
-          className="back-btn-circle"
+          className="action-btn-circle"
           aria-label="Back to settings"
         >
           <ArrowLeft size={20} className="text-gray-700" />
         </button>
         <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>
-          Edit Profile
+          Edit Personal Profile
         </h2>
         <div className="w-10" /> {/* Spacer for centering */}
       </div>

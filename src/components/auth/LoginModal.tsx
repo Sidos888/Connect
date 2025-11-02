@@ -18,6 +18,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, user, signOut } = useAuth();
   const router = useRouter();
   
+  // Detect device type and set default step
+  const [isMobile, setIsMobile] = useState(false);
   const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-check'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
@@ -34,6 +36,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [accountRecognized, setAccountRecognized] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const phoneInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
   
   // Scroll-to-dismiss state
   const [scrollY, setScrollY] = useState(0);
@@ -41,14 +44,48 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [startY, setStartY] = useState(0);
   const [currentY, setCurrentY] = useState(0);
 
+  // Detect device type and set default step
+  useEffect(() => {
+    const checkDevice = () => {
+      const mobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+      
+      // Set default step based on device type
+      if (mobile) {
+        setStep('phone'); // Mobile defaults to phone
+      } else {
+        setStep('email'); // Web defaults to email
+      }
+    };
+    
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+
   // Reset success states when modal opens
   useEffect(() => {
     if (isOpen) {
       setVerificationSuccess(false);
       setAccountRecognized(false);
       setIsRedirecting(false);
+      
+      // Reset to default step based on device type
+      if (isMobile) {
+        setStep('phone');
+        // Auto-focus phone field on mobile only
+        setTimeout(() => {
+          if (phoneInputRef.current) {
+            phoneInputRef.current.focus();
+          }
+        }, 100);
+      } else {
+        setStep('email');
+        // Don't auto-focus email field on web - let user click to activate
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
 
   // 🚀 BULLETPROOF AUTH: Disabled AccountCheckModal completely
   // No more automatic step switching to account-check
@@ -342,25 +379,23 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   }, [isOpen]);
 
   const handleClose = () => {
-    setStep('phone');
+    // Reset to default step based on device type
+    if (isMobile) {
+      setStep('phone');
+    } else {
+      setStep('email');
+    }
     setPhoneNumber('');
     setEmail('');
     setError('');
     onClose();
   };
 
-  const handleDismiss = async () => {
+  const handleDismiss = () => {
     console.log('LoginModal: Dismissing modal');
     
-    // Sign out the user to ensure they're not signed in
-    try {
-      await supabase.auth.signOut();
-      console.log('LoginModal: User signed out for dismiss');
-    } catch (error) {
-      console.error('LoginModal: Error signing out on dismiss:', error);
-    }
-
-    // Close modal - the modal context will handle navigation back to original page
+    // Just close the modal directly without signing out
+    // This allows user to dismiss and try again
     handleClose();
   };
 
@@ -447,14 +482,25 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               </h2>
               <button
                 onClick={handleDismiss}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="action-btn-circle transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Close"
               >
-                <XMarkIcon className="h-6 w-6 text-gray-600" />
+                <XMarkIcon className="h-5 w-5 text-gray-900" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-6 flex flex-col justify-center">
+            <div className="flex-1 p-6 flex flex-col justify-center relative">
           {step === 'phone' && (
             <form onSubmit={handlePhoneSubmit} className="max-w-md mx-auto w-full">
               {/* Phone Number Input */}
@@ -478,8 +524,18 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     e.target.style.borderColor = '#E5E7EB';
                     e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
+                  onMouseEnter={(e) => {
+                    if (!phoneFocused) {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!phoneFocused) {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }
+                  }}
                   placeholder=""
-                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-shadow duration-200 ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
                   style={{ 
                     fontSize: '16px',
                     lineHeight: '1.2',
@@ -489,7 +545,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    borderRadius: '12px'
+                    borderRadius: '12px',
+                    willChange: 'box-shadow'
                   }}
                   required
                 />
@@ -506,42 +563,59 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 )}
               </div>
 
-              {/* SMS Instruction - Centered */}
-              <div className="flex items-center justify-center mb-12">
-                <p className="text-xs text-gray-500">
-                  You will get a code by SMS to continue.
-                </p>
-              </div>
-
               {/* Continue Button - Smaller and Centered */}
               <div className="flex justify-center mb-8">
                 <button
                   type="submit"
                   disabled={!phoneNumber || loading}
-                  className="px-8 py-3 bg-brand text-white rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#FF6600' }}
+                  className="px-8 py-3 bg-brand text-white rounded-lg font-medium transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  style={{ 
+                    backgroundColor: '#FF6600',
+                    boxShadow: '0 2px 4px rgba(255, 102, 0, 0.2)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading && phoneNumber) {
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 102, 0, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 102, 0, 0.2)';
+                  }}
                 >
                   {loading ? 'Sending...' : 'Continue'}
                 </button>
               </div>
+            </form>
+          )}
 
-              {/* Email Button */}
+          {/* Email Button - Absolute positioned at bottom - Only show on phone step */}
+          {step === 'phone' && (
+            <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center">
+              <p className="text-xs text-gray-500 mb-2">or</p>
               <button
                 type="button"
                 onClick={() => setStep('email')}
-                className="w-full flex items-center justify-center px-4 py-3 bg-white active:bg-white transition-colors"
+                className="w-80 flex items-center justify-center px-4 py-3 bg-white transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   borderStyle: 'solid',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  borderRadius: '12px'
+                  borderRadius: '12px',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
                 <EnvelopeIcon className="w-5 h-5 mr-3 text-gray-600" />
                 Continue with Email
               </button>
-            </form>
+            </div>
           )}
 
           {step === 'email' && (
@@ -549,6 +623,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               {/* Email Input */}
               <div className="relative mb-8">
                 <input
+                  ref={emailInputRef}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -566,14 +641,25 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     e.target.style.borderColor = '#E5E7EB';
                     e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
+                  onMouseEnter={(e) => {
+                    if (!emailFocused) {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!emailFocused) {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }
+                  }}
                   placeholder={emailFocused ? "" : "Email"}
-                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-shadow duration-200 ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
                   style={{
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    borderRadius: '12px'
+                    borderRadius: '12px',
+                    willChange: 'box-shadow'
                   }}
                   required
                 />
@@ -584,42 +670,59 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 )}
               </div>
               
-              {/* Email Instruction - Centered */}
-              <div className="flex items-center justify-center mb-12">
-                <p className="text-xs text-gray-500">
-                  You will get a code by Email to continue.
-                </p>
-              </div>
-
               {/* Continue Button - Smaller and Centered */}
               <div className="flex justify-center mb-8">
                 <button
                   type="submit"
                   disabled={!email || loading}
-                  className="px-8 py-3 bg-brand text-white rounded-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#FF6600' }}
+                  className="px-8 py-3 bg-brand text-white rounded-lg font-medium transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  style={{ 
+                    backgroundColor: '#FF6600',
+                    boxShadow: '0 2px 4px rgba(255, 102, 0, 0.2)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading && email) {
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 102, 0, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 102, 0, 0.2)';
+                  }}
                 >
                   {loading ? 'Sending...' : 'Continue'}
                 </button>
               </div>
+            </form>
+          )}
 
-              {/* Phone Button */}
+          {/* Phone Button - Absolute positioned at bottom - Only show on email step */}
+          {step === 'email' && (
+            <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center">
+              <p className="text-xs text-gray-500 mb-2">or</p>
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="w-full flex items-center justify-center px-4 py-3 bg-white active:bg-white transition-colors"
+                className="w-80 flex items-center justify-center px-4 py-3 bg-white transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   borderStyle: 'solid',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  borderRadius: '12px'
+                  borderRadius: '12px',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
                 <DevicePhoneMobileIcon className="w-5 h-5 mr-3 text-gray-600" />
                 Continue with Phone
               </button>
-            </form>
+            </div>
           )}
 
 

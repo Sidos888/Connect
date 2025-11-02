@@ -5,10 +5,11 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
-import { useAppStore } from "@/lib/store";
 import PersonalChatPanel from "./PersonalChatPanel";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
+import { useChatService } from "@/lib/chatProvider";
+import { useChats, useRefreshChats } from "@/lib/chatQueries";
 // Removed unused showAddFriend
 import { useModal } from "@/lib/modalContext";
 import InlineContactSelector from "@/components/chat/InlineContactSelector";
@@ -17,8 +18,10 @@ import { Plus } from "lucide-react";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
 const ChatLayout = () => {
-  const { conversations, loadConversations, isHydrated, getChatTyping, setConversations, getConversations } = useAppStore();
-  const { account, chatService } = useAuth();
+  const { account, user } = useAuth();
+  const chatService = useChatService();
+  const { data: chats = [], isLoading, error, refetch } = useChats(chatService, user?.id || null);
+  const refreshChats = useRefreshChats();
   useModal();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,178 +37,101 @@ const ChatLayout = () => {
   type SelectedContact = { id: string; name: string; profile_pic?: string };
   const [selectedContactsForGroup, setSelectedContactsForGroup] = useState<SelectedContact[]>([]);
 
+  // Show empty inbox immediately if not authenticated - no loading screen
+  if (!account || !chatService) {
+    return (
+      <div className="flex h-full bg-white">
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
+            <button
+              onClick={() => setShowNewMessageSelector(true)}
+              className="p-0 bg-transparent"
+            >
+              <span className="action-btn-circle">
+                <Plus className="w-5 h-5 text-gray-900" />
+              </span>
+            </button>
+          </div>
+          
+          {/* Empty state */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <BearEmoji size="6xl" />
+              <p className="text-gray-500 text-lg">Please log in to see your chats</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // React Query handles loading automatically - no manual useEffect needed!
+  console.log('🔬 ChatLayout: React Query state:', {
+    isLoading,
+    hasError: !!error,
+    chatCount: chats.length,
+    hasAccount: !!account,
+    hasChatService: !!chatService
+  });
+
+  // Handle mobile redirect
   useEffect(() => {
-    if (isHydrated && account?.id) {
-      // Use real chat service
-      if (chatService) {
-        loadConversations(account.id, chatService);
-      }
-      
-      // On mobile, if there's a selected chat in URL, redirect to individual page
-      if (selectedChatId && typeof window !== 'undefined' && window.innerWidth < 640) {
-        router.push(`/chat/individual?chat=${selectedChatId}`);
-      }
-    } else if (isHydrated && !account?.id) {
+    if (selectedChatId && typeof window !== 'undefined' && window.innerWidth < 640) {
+      router.push(`/chat/individual?chat=${selectedChatId}`);
     }
-  }, [isHydrated, account?.id, loadConversations, selectedChatId, router]);
+  }, [selectedChatId, router]);
 
-  // Debug logging
-  useEffect(() => {
-  }, [conversations, selectedChatId, searchParams, showNewMessageSelector]);
-
-        // Subscribe to typing indicators for all conversations
-        // Use ref to track conversation IDs to prevent recreation on every render
-        const conversationIdsRef = useRef<string[]>([]);
-        useEffect(() => {
-          if (!account?.id || conversations.length === 0) return;
-
-          // Only recreate subscriptions if conversation IDs actually changed
-          const currentIds = conversations.map((c: any) => c.id).sort().join(',');
-          const prevIds = conversationIdsRef.current.sort().join(',');
-          if (currentIds === prevIds) return;
-          
-          conversationIdsRef.current = conversations.map((c: any) => c.id);
-          const subscriptions: (() => void)[] = [];
-          
-          conversations.forEach((conversation: any) => {
-            const unsubscribe = chatService?.subscribeToTyping(
-              conversation.id,
-              (typingUserIds: string[]) => {
-                const { updateChatTyping } = useAppStore.getState();
-                updateChatTyping(conversation.id, typingUserIds);
-              }
-            );
-            
-            if (unsubscribe) {
-              subscriptions.push(unsubscribe);
-            }
-          });
-          
-          return () => {
-            subscriptions.forEach(unsubscribe => unsubscribe());
-          };
-        }, [account?.id, conversations.length]);
-
-        // Live-update conversation list ordering and previews on new messages
-        // Use ref to prevent recreation on every conversation update
-        const messageSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
-        useEffect(() => {
-          if (!isHydrated || !account?.id || conversations.length === 0) return;
-
-          const currentConvIds = new Set(conversations.map((c: any) => c.id));
-          const existingConvIds = new Set(messageSubscriptionsRef.current.keys());
-          
-          // Remove subscriptions for conversations that no longer exist
-          for (const convId of existingConvIds) {
-            if (!currentConvIds.has(convId)) {
-              const unsubscribe = messageSubscriptionsRef.current.get(convId);
-              if (unsubscribe) unsubscribe();
-              messageSubscriptionsRef.current.delete(convId);
-            }
-          }
-          
-          // Add subscriptions for new conversations
-          conversations.forEach((conv: any) => {
-            if (!messageSubscriptionsRef.current.has(conv.id)) {
-              const off = chatService?.subscribeToChat(conv.id, (newMessage) => {
-                // Update last message preview and move conversation to top
-                const current = getConversations();
-                const updated = current.map((c: any) => {
-                  if (c.id !== conv.id) return c;
-                  const last = {
-                    id: newMessage.id,
-                    conversationId: conv.id,
-                    sender: newMessage.sender_id === account.id ? 'me' as const : 'them' as const,
-                    text: newMessage.text || '',
-                    createdAt: newMessage.created_at,
-                    read: newMessage.sender_id === account.id
-                  };
-                  return { ...c, messages: [...(c.messages || []), last] };
-                });
-                // Move the updated conversation to the top
-                const sorted = updated.sort((a: any, b: any) => {
-                  const at = a.messages.length ? new Date(a.messages[a.messages.length - 1].createdAt).getTime() : 0;
-                  const bt = b.messages.length ? new Date(b.messages[b.messages.length - 1].createdAt).getTime() : 0;
-                  return bt - at;
-                });
-                setConversations(sorted);
-              });
-              if (off) {
-                messageSubscriptionsRef.current.set(conv.id, off);
-              }
-            }
-          });
-
-          return () => {
-            // Cleanup all subscriptions on unmount
-            messageSubscriptionsRef.current.forEach(unsubscribe => unsubscribe());
-            messageSubscriptionsRef.current.clear();
-          };
-        }, [isHydrated, account?.id, conversations.length]);
+  // React Query handles real-time updates automatically
+  // No manual subscriptions needed!
 
   // Using the new intuitive time formatting utility
   // Memoize helper functions to prevent recreation on every render
   const getLastMessage = useCallback((conversation: Conversation) => {
-    if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    // Use the new last_message field from SimpleChat interface
+    if (conversation.last_message && typeof conversation.last_message === 'object') {
+      // last_message is now an object with content, sender, etc.
+      return conversation.last_message.content || "No messages yet";
+    }
     
-    // Check if message has attachments
-    if (lastMessage.attachments && lastMessage.attachments.length > 0) {
-      const attachment = lastMessage.attachments[0];
-      const mediaType = attachment.file_type === 'video' ? 'video' : 'photo';
-      const mediaIcon = attachment.file_type === 'video' ? '🎥' : '📷';
-      
-      // For group chats, include sender name
-      if (conversation.isGroup && lastMessage.senderName) {
-        return `${lastMessage.senderName}: ${mediaIcon} ${mediaType}`;
+    // Fallback for string format (backward compatibility)
+    if (conversation.last_message && typeof conversation.last_message === 'string') {
+      if (conversation.last_message.trim()) {
+        return conversation.last_message;
       }
-      
-      return `${mediaIcon} ${mediaType}`;
+      // Special case: if last_message is exactly "..." (failed attachment), show it
+      if (conversation.last_message === "...") {
+        return "...";
+      }
     }
     
-    // For text messages in group chats, include sender name
-    if (conversation.isGroup && lastMessage.senderName && lastMessage.text) {
-      return `${lastMessage.senderName}: ${lastMessage.text}`;
-    }
-    
-    // If message has text, show it
-    if (lastMessage.text && lastMessage.text.trim()) {
-      return lastMessage.text;
-    }
-    
-    // If no text and no attachments, show "No messages yet"
     return "No messages yet";
   }, []);
 
   const getDisplayMessage = useCallback((conversation: Conversation) => {
-    // Check if anyone is typing in this chat
-    const typingState = getChatTyping(conversation.id);
-    
-    if (typingState && typingState.typingUsers.length > 0 && !typingState.typingUsers.includes(account?.id || '')) {
-      // Someone is typing - show typing indicator
-      if (conversation.isGroup) {
-        // For groups, show the first name of the person typing
-        if (typingState.typingUsers.length === 1) {
-          // For now, use a placeholder - we'll improve this with participant caching
-          return "Someone: Typing...";
-        } else {
-          return `${typingState.typingUsers.length} people: Typing...`;
-        }
-      } else {
-        // For DMs, just show "Typing..."
-        return "Typing...";
-      }
-    }
-    
-    // No one is typing - show normal last message
+    // For now, just show the last message - typing indicators will be added later with React Query
     return getLastMessage(conversation);
-  }, [getChatTyping, account?.id, getLastMessage]);
+  }, [getLastMessage]);
 
-  const getLastMessageTime = useCallback((conversation: { messages: Array<{ createdAt: string }> }) => {
-    if (!conversation.messages || conversation.messages.length === 0) return "";
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return lastMessage.createdAt ? formatMessageTimeShort(lastMessage.createdAt) : "";
+  const getLastMessageTime = useCallback((conversation: Conversation) => {
+    // Use the new last_message_at field from SimpleChat interface
+    return conversation.last_message_at ? formatMessageTimeShort(conversation.last_message_at) : "";
   }, []);
+
+  // Convert chats to conversations format for compatibility
+  const conversations = useMemo(() => {
+    return chats.map(chat => ({
+      id: chat.id,
+      title: chat.name || 'Unknown Chat',
+      avatarUrl: chat.photo || (chat.participants?.[0]?.profile_pic) || null,
+      isGroup: chat.type === 'group',
+      unreadCount: chat.unreadCount || 0,
+      last_message: chat.last_message,
+      last_message_at: chat.last_message_at,
+      participants: chat.participants || []
+    }));
+  }, [chats]);
 
   // Memoize filtered conversations to prevent recalculation on every render
   const filteredConversations = useMemo(() => {
@@ -246,7 +172,12 @@ const ChatLayout = () => {
   useEffect(() => {
     const fetchSelectedConversation = async () => {
       if (selectedChatId && chatService) {
+        console.log('🔬 ChatLayout: Fetching selected conversation for chatId:', selectedChatId);
+        console.log('🔬 ChatLayout: chatService available:', !!chatService);
+        console.log('🔬 ChatLayout: account available:', !!account);
         const result = await chatService.getChatById(selectedChatId);
+        console.log('🔬 ChatLayout: getChatById result:', { result, hasChat: !!result?.chat, hasError: !!result?.error });
+        console.log('🔬 ChatLayout: Full result object:', result);
         if (!result) return;
         
         const { chat, error } = result;
@@ -256,26 +187,35 @@ const ChatLayout = () => {
           return;
         }
         if (chat && account?.id) {
+          console.log('🔬 ChatLayout: Chat data received:', chat);
+          console.log('🔬 ChatLayout: Chat participants:', chat.participants);
+          console.log('🔬 ChatLayout: Chat name:', chat.name);
+          console.log('🔬 ChatLayout: Chat photo:', chat.photo);
+          console.log('🔬 ChatLayout: Chat type:', chat.type);
+          console.log('🔬 ChatLayout: Account ID:', account.id);
+          
           // Store minimal data to prevent unnecessary re-renders
           const conversationData = {
             id: chat.id,
-            title: chat.type === 'direct' 
-              ? chat.participants.find((p: any) => p.id !== account.id)?.name || 'Unknown'
-              : chat.name || 'Group Chat',
-            avatarUrl: chat.type === 'direct' 
-              ? chat.participants.find((p: any) => p.id !== account.id)?.profile_pic || null
-              : null,
+            title: chat.name || 'Unknown Chat',
+            avatarUrl: chat.photo || null,
             isGroup: chat.type === 'group',
           };
           
+          console.log('🔬 ChatLayout: Conversation data created:', conversationData);
+          
           // Only update if data actually changed
           setSelectedConversationData(prev => {
+            console.log('🔬 ChatLayout: Previous conversation data:', prev);
             if (!prev || prev.id !== conversationData.id) {
+              console.log('🔬 ChatLayout: Updating conversation data');
               return conversationData;
             }
+            console.log('🔬 ChatLayout: No update needed');
             return prev;
           });
         } else {
+          console.log('🔬 ChatLayout: No chat or account, setting conversation data to null');
           setSelectedConversationData(null);
         }
       } else {
@@ -288,9 +228,13 @@ const ChatLayout = () => {
   
   // Create a STABLE conversation object reference using useMemo
   const stableSelectedConversation = useMemo(() => {
-    if (!selectedConversationData) return null;
+    console.log('🔬 ChatLayout: Creating stable conversation from data:', selectedConversationData);
+    if (!selectedConversationData) {
+      console.log('🔬 ChatLayout: No conversation data, returning null');
+      return null;
+    }
     
-    return {
+    const stable = {
       id: selectedConversationData.id,
       title: selectedConversationData.title,
       avatarUrl: selectedConversationData.avatarUrl,
@@ -298,6 +242,9 @@ const ChatLayout = () => {
       unreadCount: 0,
       messages: []
     };
+    
+    console.log('🔬 ChatLayout: Stable conversation created:', stable);
+    return stable;
   }, [selectedConversationData?.id, selectedConversationData?.title, selectedConversationData?.avatarUrl, selectedConversationData?.isGroup]);
   
   // Auto-select first conversation if none is selected and conversations exist - DISABLED TO TEST SLIDE-UP ISSUE
@@ -312,13 +259,8 @@ const ChatLayout = () => {
   const handleNewMessageComplete = (chatId: string) => {
     setShowNewMessageSelector(false);
     setShowGroupSetup(false);
-    // Refresh conversations to include the new chat
-    if (account?.id) {
-      if (chatService) {
-        loadConversations(account.id, chatService);
-      }
-    }
     // Navigate to the chat within the same layout
+    // The existing effect will refresh conversations automatically
     router.push(`/chat?chat=${chatId}`);
   };
 
@@ -343,6 +285,7 @@ const ChatLayout = () => {
   };
 
   const handleSelectChat = (chatId: string, e?: React.MouseEvent | React.TouchEvent) => {
+    console.log('🔬 ChatLayout: handleSelectChat called with chatId:', chatId);
     
     if (e) {
       e.preventDefault();
@@ -351,13 +294,15 @@ const ChatLayout = () => {
     
     // Check if we're on mobile (screen width < 640px which is sm breakpoint)
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    
+    console.log('🔬 ChatLayout: isMobile:', isMobile);
     
     if (isMobile) {
       // On mobile, navigate to the individual chat page
+      console.log('🔬 ChatLayout: Navigating to mobile chat page:', `/chat/individual?chat=${chatId}`);
       router.push(`/chat/individual?chat=${chatId}`);
     } else {
       // On desktop, stay on the main chat page with selected chat
+      console.log('🔬 ChatLayout: Navigating to desktop chat:', `/chat?chat=${chatId}`);
       router.push(`/chat?chat=${chatId}`);
     }
   };
@@ -370,18 +315,7 @@ const ChatLayout = () => {
   ];
 
   
-  // Show loading state while store is hydrating
-  if (!isHydrated) {
-    return (
-      <div className="flex h-full bg-white items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="text-gray-500">Loading chats...</p>
-          <p className="text-xs text-gray-400">Debug: isHydrated = {isHydrated ? 'true' : 'false'}</p>
-        </div>
-      </div>
-    );
-  }
+  // Show inbox immediately with subtle loading indicator - no full screen loading
 
   return (
     <div className="chat-container flex h-full min-h-0 bg-white overflow-hidden relative">
@@ -409,8 +343,10 @@ const ChatLayout = () => {
                 <div className="px-4 py-3 lg:p-6 border-b border-gray-200 bg-white sticky top-0 z-20">
                   <div className="flex items-center justify-between">
                     <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Chats</h1>
-                    <button onClick={handleNewMessageClick} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                      <Plus className="w-5 h-5 text-gray-600" />
+                    <button onClick={handleNewMessageClick} className="p-0 bg-transparent">
+                      <span className="action-btn-circle">
+                        <Plus className="w-5 h-5 text-gray-900" />
+                      </span>
                     </button>
                   </div>
                 </div>

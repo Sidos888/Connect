@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Camera, Users } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
-import { simpleChatService } from '@/lib/simpleChatService';
+import { useChatService } from '@/lib/chatProvider';
+// simpleChatService removed - using chatService from useAuth
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import Avatar from '@/components/Avatar';
 
@@ -21,6 +22,7 @@ export default function InlineGroupSetup({
   onComplete 
 }: InlineGroupSetupProps) {
   const { account } = useAuth();
+  const chatService = useChatService();
   const [groupName, setGroupName] = useState("");
   const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -41,10 +43,14 @@ export default function InlineGroupSetup({
       }
 
       // Create group chat
-      const { chat, error } = await simpleChatService.createGroupChat(
+      if (!chatService) {
+        alert('Chat service not available. Please try again.');
+        return;
+      }
+      
+      const { chat, error } = await chatService.createGroupChat(
         groupName.trim(),
-        [user.id, ...selectedContacts.map(c => c.id)],
-        groupPhoto || undefined
+        selectedContacts.map(c => c.id)
       );
 
       if (error) {

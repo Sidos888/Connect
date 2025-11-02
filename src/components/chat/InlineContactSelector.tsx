@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
+import { useChatService } from '@/lib/chatProvider';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { X, Search, Users, Building2, ArrowLeft } from 'lucide-react';
 import { newMessageFlow, Contact } from '@/lib/chat/newMessageFlow';
 import UserListItem from './UserListItem';
 import AvatarChip from './AvatarChip';
-import { simpleChatService } from '@/lib/simpleChatService';
 
 interface InlineContactSelectorProps {
   onClose: () => void;
@@ -25,6 +25,7 @@ export default function InlineContactSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { account } = useAuth();
+  const chatService = useChatService();
   const router = useRouter();
 
   useEffect(() => {
@@ -48,8 +49,12 @@ export default function InlineContactSelector({
       }
       
       // Use real chat service
+      if (!chatService) {
+        setError('Chat service not available');
+        return;
+      }
       console.log('InlineContactSelector: Calling chatService.getContacts with userId:', user.id);
-      const { contacts, error: contactsError } = await simpleChatService.getContacts(user.id);
+      const { contacts, error: contactsError } = await chatService.getContacts(user.id);
       console.log('InlineContactSelector: ChatService response:', { contacts, error: contactsError });
       
       if (contactsError) {
@@ -130,23 +135,15 @@ export default function InlineContactSelector({
         // Use the current session user ID (exists in REST API accounts table)
         const correctUserId = user.id; // 4f04235f-d166-48d9-ae07-a97a6421a328
         
-        console.log('Looking for existing chat between:', correctUserId, 'and', context.selectedContacts[0].id);
+        console.log('Creating or finding direct chat between:', correctUserId, 'and', context.selectedContacts[0].id);
         
-        // First, check if a chat already exists
-        const { chat: existingChat, error: findError } = await simpleChatService.findExistingDirectChat(correctUserId, context.selectedContacts[0].id);
-        
-        if (findError) {
-          console.error('Error finding existing chat:', findError);
-          // Continue to create new chat if finding fails
-        } else if (existingChat) {
-          console.log('Found existing chat:', existingChat.id);
-          onComplete(existingChat.id);
+        if (!chatService) {
+          alert('Chat service not available. Please try again.');
           return;
         }
         
-        // No existing chat found, create a new one
-        console.log('Creating new direct chat between:', correctUserId, 'and', context.selectedContacts[0].id);
-        const { chat, error } = await simpleChatService.createDirectChat(context.selectedContacts[0].id, correctUserId);
+        // createDirectChat will find existing chat or create new one
+        const { chat, error } = await chatService.createDirectChat(context.selectedContacts[0].id);
         
         if (error) {
           console.error('Error creating direct chat:', error);
@@ -156,7 +153,7 @@ export default function InlineContactSelector({
         }
         
         if (chat) {
-          console.log('Chat created successfully:', chat.id);
+          console.log('Chat ready:', chat.id);
           onComplete(chat.id);
         } else {
           console.error('No chat returned from createDirectChat');

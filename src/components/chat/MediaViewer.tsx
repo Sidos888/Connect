@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import type { MediaAttachment } from "@/lib/simpleChatService";
+import type { MediaAttachment } from "@/lib/types";
 
 interface MediaViewerProps {
   isOpen: boolean;
