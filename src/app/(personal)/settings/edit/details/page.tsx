@@ -130,15 +130,7 @@ export default function EditPersonalDetailsPage() {
         <div className="relative w-full h-14 flex items-center justify-center" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '56px' }}>
           <button
             onClick={() => router.back()}
-            className="absolute left-0 flex items-center justify-center w-10 h-10"
-            style={{
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-            }}
+            className="absolute left-0 action-btn-circle"
             aria-label="Back"
           >
             <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
@@ -166,8 +158,21 @@ export default function EditPersonalDetailsPage() {
                 onFocus={() => setFirstNameFocused(true)}
                 onBlur={() => setFirstNameFocused(false)}
                 placeholder=""
-                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(firstNameFocused || firstName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
-                style={{ caretColor: 'black', fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}
+                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white text-black ${(firstNameFocused || firstName) ? 'pt-6 pb-2' : 'py-5'}`}
+                style={{ 
+                  fontSize: '16px', 
+                  lineHeight: '1.2', 
+                  fontFamily: 'inherit',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = '';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="words"
@@ -176,17 +181,11 @@ export default function EditPersonalDetailsPage() {
               {!firstNameFocused && !firstName && (
                 <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">First Name</label>
               )}
-              {firstNameFocused && !firstName && (
-                <>
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">First Name</label>
-                  <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>Your first name</div>
-                </>
+              {(firstNameFocused || firstName) && (
+                <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>First Name</label>
               )}
-              {firstName && (
-                <>
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">First Name</label>
-                  <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>{firstName}</div>
-                </>
+              {firstNameFocused && !firstName && (
+                <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>Your first name</div>
               )}
             </div>
 
@@ -199,8 +198,21 @@ export default function EditPersonalDetailsPage() {
                 onFocus={() => setLastNameFocused(true)}
                 onBlur={() => setLastNameFocused(false)}
                 placeholder=""
-                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(lastNameFocused || lastName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
-                style={{ caretColor: 'black', fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}
+                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white text-black ${(lastNameFocused || lastName) ? 'pt-6 pb-2' : 'py-5'}`}
+                style={{ 
+                  fontSize: '16px', 
+                  lineHeight: '1.2', 
+                  fontFamily: 'inherit',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = '';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="words"
@@ -209,17 +221,11 @@ export default function EditPersonalDetailsPage() {
               {!lastNameFocused && !lastName && (
                 <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">Last Name</label>
               )}
-              {lastNameFocused && !lastName && (
-                <>
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">Last Name</label>
-                  <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>Your last name</div>
-                </>
+              {(lastNameFocused || lastName) && (
+                <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>Last Name</label>
               )}
-              {lastName && (
-                <>
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">Last Name</label>
-                  <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>{lastName}</div>
-                </>
+              {lastNameFocused && !lastName && (
+                <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>Your last name</div>
               )}
             </div>
           </div>
@@ -235,23 +241,30 @@ export default function EditPersonalDetailsPage() {
               placeholder=""
               rows={3}
               maxLength={150}
-              className={`w-full pl-4 pr-4 pt-3 pb-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white resize-none text-transparent ${(bioFocused || bio) ? 'pt-5 pb-3' : 'py-3'}`}
-              style={{ caretColor: 'black', fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit' }}
+              className={`w-full pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white resize-none text-black ${(bioFocused || bio) ? 'pt-6 pb-8' : 'py-3'}`}
+              style={{ 
+                fontSize: '16px', 
+                lineHeight: '1.4', 
+                fontFamily: 'inherit',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = '';
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
             />
             {!bioFocused && !bio && (
               <label className="absolute left-4 top-4 text-base text-gray-500 pointer-events-none">Bio</label>
             )}
-            {bioFocused && !bio && (
-              <>
-                <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">Bio</label>
-                <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit' }}>Tell us about yourself...</div>
-              </>
+            {(bioFocused || bio) && (
+              <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>Bio</label>
             )}
-            {bio && (
-              <>
-                <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">Bio</label>
-                <div className="absolute left-4 top-6 text-black pointer-events-none whitespace-pre-wrap" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit' }}>{bio}</div>
-              </>
+            {bioFocused && !bio && (
+              <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit', top: '24px' }}>Tell us about yourself...</div>
             )}
             <div className="absolute bottom-2 right-3">
               <span className={`text-xs font-medium ${bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>{bio.length}/150</span>
@@ -287,26 +300,31 @@ export default function EditPersonalDetailsPage() {
               onFocus={() => setDobFocused(true)}
               onBlur={() => setDobFocused(false)}
               placeholder=""
-              className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(dobFocused || dob) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
-              style={{ caretColor: 'black', fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}
+              className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white text-black ${(dobFocused || dob) ? 'pt-6 pb-2' : 'py-5'}`}
+              style={{ 
+                fontSize: '16px', 
+                lineHeight: '1.2', 
+                fontFamily: 'inherit',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = '';
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
               required
             />
             {!dobFocused && !dob && (
               <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">Date of birth</label>
             )}
-            {dobFocused && !dob && (
-              <>
-                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">Date of birth</label>
-                <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>DD/MM/YYYY</div>
-              </>
+            {(dobFocused || dob) && (
+              <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>Date of birth</label>
             )}
-            {dob && (
-              <>
-                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">Date of birth</label>
-                <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                  {new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/')}
-                </div>
-              </>
+            {dobFocused && !dob && (
+              <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>DD/MM/YYYY</div>
             )}
           </div>
         </div>
@@ -323,5 +341,4 @@ export default function EditPersonalDetailsPage() {
     </div>
   );
 }
-
 

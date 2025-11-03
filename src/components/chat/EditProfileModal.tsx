@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabaseClient';
@@ -14,13 +14,14 @@ interface EditProfileModalProps {
 }
 
 export default function EditProfileModal({ onBack, onSave }: EditProfileModalProps) {
-  const { account } = useAuth();
+  const { account, uploadAvatar } = useAuth();
   const { personalProfile, setPersonalProfile } = useAppStore();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dob, setDob] = useState('');
   const [bio, setBio] = useState('');
   const [profilePic, setProfilePic] = useState('');
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
@@ -71,14 +72,26 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       const formattedLastName = lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase();
       const fullName = `${formattedFirstName} ${formattedLastName}`.trim();
 
-      // Update profile in Supabase
+      // Upload profile picture to Supabase storage if a new file was selected
+      let avatarUrl = profilePic; // Keep existing URL by default
+      if (profilePicFile && uploadAvatar) {
+        const { url, error: uploadError } = await uploadAvatar(profilePicFile);
+        if (uploadError) {
+          console.error('Error uploading avatar:', uploadError);
+          setError('Failed to upload profile picture. Please try again.');
+          return;
+        }
+        avatarUrl = url || profilePic;
+      }
+
+      // Update profile in Supabase with the new avatar URL
       const { error: updateError } = await supabase
         .from('accounts')
         .update({
           name: fullName,
           dob: dob || null,
           bio: bio || null,
-          profile_pic: profilePic || null,
+          profile_pic: avatarUrl || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', account.id);
@@ -89,16 +102,15 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
         return;
       }
 
-      // Update local state (keep both legacy and new fields for compatibility)
+      // Update local state (use the uploaded URL, not base64)
       setPersonalProfile({
         ...personalProfile,
         name: fullName,
-        // local store uses dateOfBirth; db uses dob
         dateOfBirth: dob,
         dob: dob as any,
         bio: bio,
-        avatarUrl: profilePic,
-        profile_pic: profilePic as any,
+        avatarUrl: avatarUrl,
+        profile_pic: avatarUrl as any,
       } as any);
 
       // Call onSave callback if provided
@@ -120,8 +132,9 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // For now, we'll just store the file name
-      // In a real implementation, you'd upload to Supabase Storage
+      // Store the file for upload when saving
+      setProfilePicFile(file);
+      // Create a local preview URL
       setProfilePic(URL.createObjectURL(file));
     }
   };
@@ -142,10 +155,29 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
       <div className="flex items-center justify-between p-6">
         <button
           onClick={onBack}
-          className="action-btn-circle"
+          className="flex items-center justify-center flex-shrink-0 transition-all duration-200 hover:-translate-y-[1px]"
+          style={{
+            width: '40px',
+            height: '40px',
+            minWidth: '40px',
+            minHeight: '40px',
+            borderRadius: '100px',
+            background: 'rgba(255, 255, 255, 0.9)',
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
           aria-label="Back to settings"
         >
-          <ArrowLeft size={20} className="text-gray-700" />
+          <ChevronLeft size={20} className="text-gray-900" />
         </button>
         <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>
           Edit Personal Profile
@@ -180,13 +212,32 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
                 onChange={(e) => setFirstName(e.target.value)}
                 onFocus={handleFirstNameFocus}
                 onBlur={handleFirstNameBlur}
+                onMouseEnter={(e) => {
+                  if (!firstNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!firstNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
                 placeholder=""
-                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(firstNameFocused || firstName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(firstNameFocused || firstName) ? 'pt-6 pb-2' : 'py-5'} text-black`}
                 style={{ 
                   caretColor: 'black',
                   fontSize: '16px',
                   lineHeight: '1.2',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inherit',
+                  border: '0.4px solid #E5E7EB',
+                  borderRadius: '12px',
+                  transform: firstNameFocused ? 'translateY(-1px)' : 'translateY(0)',
+                  boxShadow: firstNameFocused 
+                    ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
                 }}
                 required
               />
@@ -204,22 +255,17 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                     First Name
                   </label>
-                  <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                  <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>
                     Your first name
                   </div>
                 </>
               )}
               
-              {/* Step 3: Typing state - actual name replaces placeholder */}
+              {/* Step 3: Typing state - label stays up */}
               {firstName && (
-                <>
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                    First Name
-                  </label>
-                  <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                    {firstName}
-                  </div>
-                </>
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  First Name
+                </label>
               )}
             </div>
 
@@ -232,13 +278,32 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
                 onChange={(e) => setLastName(e.target.value)}
                 onFocus={handleLastNameFocus}
                 onBlur={handleLastNameBlur}
+                onMouseEnter={(e) => {
+                  if (!lastNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!lastNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
                 placeholder=""
-                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(lastNameFocused || lastName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(lastNameFocused || lastName) ? 'pt-6 pb-2' : 'py-5'} text-black`}
                 style={{ 
                   caretColor: 'black',
                   fontSize: '16px',
                   lineHeight: '1.2',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inherit',
+                  border: '0.4px solid #E5E7EB',
+                  borderRadius: '12px',
+                  transform: lastNameFocused ? 'translateY(-1px)' : 'translateY(0)',
+                  boxShadow: lastNameFocused 
+                    ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
                 }}
                 required
               />
@@ -256,22 +321,17 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                     Last Name
                   </label>
-                  <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
+                  <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>
                     Your last name
                   </div>
                 </>
               )}
               
-              {/* Step 3: Typing state - actual name replaces placeholder */}
+              {/* Step 3: Typing state - label stays up */}
               {lastName && (
-                <>
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                    Last Name
-                  </label>
-                  <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                    {lastName}
-                  </div>
-                </>
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  Last Name
+                </label>
               )}
             </div>
           </div>
@@ -284,15 +344,34 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               onChange={(e) => setBio(e.target.value)}
               onFocus={handleBioFocus}
               onBlur={handleBioBlur}
+              onMouseEnter={(e) => {
+                if (!bioFocused) {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!bioFocused) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
+              }}
               placeholder=""
               rows={3}
               maxLength={150}
-              className={`w-full pl-4 pr-4 pt-3 pb-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white resize-none text-transparent ${(bioFocused || bio) ? 'pt-5 pb-3' : 'py-3'}`}
+              className={`w-full pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 resize-none text-black ${(bioFocused || bio) ? 'pt-6 pb-2' : 'py-3'}`}
               style={{ 
                 caretColor: 'black',
                 fontSize: '16px',
                 lineHeight: '1.4',
-                fontFamily: 'inherit'
+                fontFamily: 'inherit',
+                border: '0.4px solid #E5E7EB',
+                borderRadius: '12px',
+                transform: bioFocused ? 'translateY(-1px)' : 'translateY(0)',
+                boxShadow: bioFocused 
+                  ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
               }}
             />
             
@@ -303,29 +382,24 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               </label>
             )}
             
-            {/* Step 2: Focused state - label moves up, placeholder appears */}
-            {bioFocused && !bio && (
-              <>
-                <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
-                  Bio
-                </label>
-                <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit' }}>
-                  Tell us about yourself...
-                </div>
-              </>
-            )}
+              {/* Step 2: Focused state - label moves up, placeholder appears */}
+              {bioFocused && !bio && (
+                <>
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Bio
+                  </label>
+                  <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit', top: '24px' }}>
+                    Tell us about yourself...
+                  </div>
+                </>
+              )}
             
-            {/* Step 3: Typing state - actual bio replaces placeholder */}
-            {bio && (
-              <>
-                <label className="absolute left-4 top-2 text-xs text-gray-500 pointer-events-none">
+              {/* Step 3: Typing state - label stays up */}
+              {bio && (
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                   Bio
                 </label>
-                <div className="absolute left-4 top-6 text-black pointer-events-none whitespace-pre-wrap" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit' }}>
-                  {bio}
-                </div>
-              </>
-            )}
+              )}
             
             {/* Character counter */}
             <div className="absolute bottom-2 right-3">
@@ -378,13 +452,32 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               }}
               onFocus={handleDobFocus}
               onBlur={handleDobBlur}
+              onMouseEnter={(e) => {
+                if (!dobFocused) {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!dobFocused) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
+              }}
               placeholder=""
-              className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(dobFocused || dob) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+              className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(dobFocused || dob) ? 'pt-6 pb-2' : 'py-5'} text-black`}
               style={{ 
                 caretColor: 'black',
                 fontSize: '16px',
                 lineHeight: '1.2',
-                fontFamily: 'inherit'
+                fontFamily: 'inherit',
+                border: '0.4px solid #E5E7EB',
+                borderRadius: '12px',
+                transform: dobFocused ? 'translateY(-1px)' : 'translateY(0)',
+                boxShadow: dobFocused 
+                  ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
               }}
               required
             />
@@ -396,30 +489,24 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               </label>
             )}
             
-            {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
-            {dobFocused && !dob && (
-              <>
-                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                  Date of birth
-                </label>
-                {/* DD/MM/YYYY placeholder */}
-                <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                  DD/MM/YYYY
-                </div>
-              </>
-            )}
+              {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
+              {dobFocused && !dob && (
+                <>
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Date of birth
+                  </label>
+                  {/* DD/MM/YYYY placeholder */}
+                  <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>
+                    DD/MM/YYYY
+                  </div>
+                </>
+              )}
             
-            {/* Step 3: Typing state - actual date replaces placeholder */}
+            {/* Step 3: Typing state - label stays up */}
             {dob && (
-              <>
-                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                  Date of birth
-                </label>
-                {/* Actual date content */}
-                <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                  {new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/')}
-                </div>
-              </>
+              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                Date of birth
+              </label>
             )}
           </div>
 

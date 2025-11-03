@@ -556,8 +556,8 @@ export default function Page() {
             });
             
             if (!cancelled) {
-              setPeopleConnections(people);
-              setBusinessConnections(businesses);
+            setPeopleConnections(people);
+            setBusinessConnections(businesses);
               setHasLoadedOnce(true);
               // Update module-level cache
               connectionsCache = {
@@ -573,7 +573,7 @@ export default function Page() {
           console.error('Error loading connections:', error);
         } finally {
           if (!cancelled) {
-            setLoading(false);
+          setLoading(false);
             setHasLoadedOnce(true);
           }
         }
@@ -790,92 +790,92 @@ export default function Page() {
         {loading && !hasLoadedOnce ? (
           <div className="flex items-center justify-center h-full">
             <ThreeDotLoadingBounce />
-          </div>
+            </div>
         ) : (
           <div className="space-y-3">
             {activeTab === 'friends' ? (
-              peopleConnections.length > 0 ? (
-                peopleConnections.map((connection) => {
-                  // Get the friend (not the current user) from the connection
-                  const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
-                  if (!friend) return null;
+            peopleConnections.length > 0 ? (
+              peopleConnections.map((connection) => {
+                // Get the friend (not the current user) from the connection
+                const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+                if (!friend) return null;
 
-                  return (
-                    <div
-                      key={connection.id}
-                      className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px] cursor-pointer hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:border-[#D1D5DB] transition-all duration-200"
-                      style={{
-                        boxShadow: `
-                          0 0 1px rgba(100, 100, 100, 0.25),
-                          inset 0 0 2px rgba(27, 27, 27, 0.25)
-                        `
-                      }}
-                      onClick={() => handleFriendClick(friend)}
-                    >
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                        {friend.profile_pic ? (
-                          <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-gray-500 text-lg font-medium">
-                            {friend.name?.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-full text-center flex items-center justify-center h-full">
-                        <h3 className="text-base font-semibold text-gray-900">{friend.name}</h3>
-                      </div>
+                return (
+                  <div
+                    key={connection.id}
+                    className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px] cursor-pointer hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:border-[#D1D5DB] transition-all duration-200"
+                    style={{
+                      boxShadow: `
+                        0 0 1px rgba(100, 100, 100, 0.25),
+                        inset 0 0 2px rgba(27, 27, 27, 0.25)
+                      `
+                    }}
+                    onClick={() => handleFriendClick(friend)}
+                  >
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                      {friend.profile_pic ? (
+                        <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-gray-500 text-lg font-medium">
+                          {friend.name?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-4">👥</div>
-                  <p className="text-gray-500 text-sm">No friends yet</p>
-                  <p className="text-gray-400 text-xs mt-1">Start adding friends to see them here</p>
-                </div>
-              )
+                    <div className="w-full text-center flex items-center justify-center h-full">
+                      <h3 className="text-base font-semibold text-gray-900">{friend.name}</h3>
+                    </div>
+                  </div>
+                );
+              })
             ) : (
-              businessConnections.length > 0 ? (
-                businessConnections.map((connection) => {
-                  // Get the business (not the current user) from the connection
-                  const business = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
-                  if (!business) return null;
+              <div className="text-center py-8">
+                <div className="text-4xl mb-4">👥</div>
+                <p className="text-gray-500 text-sm">No friends yet</p>
+                <p className="text-gray-400 text-xs mt-1">Start adding friends to see them here</p>
+              </div>
+            )
+          ) : (
+            businessConnections.length > 0 ? (
+              businessConnections.map((connection) => {
+                // Get the business (not the current user) from the connection
+                const business = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+                if (!business) return null;
 
-                  return (
-                    <div
-                      key={connection.id}
-                      className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px]"
-                      style={{
-                        boxShadow: `
-                          0 0 1px rgba(100, 100, 100, 0.25),
-                          inset 0 0 2px rgba(27, 27, 27, 0.25)
-                        `
-                      }}
-                    >
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                        {business.profile_pic ? (
-                          <img src={business.profile_pic} alt={business.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-gray-500 text-lg font-medium">
-                            {business.name?.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-full text-center flex items-center justify-center h-full">
-                        <h3 className="text-base font-semibold text-gray-900">{business.name}</h3>
-                      </div>
+                return (
+                  <div
+                    key={connection.id}
+                    className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px]"
+                    style={{
+                      boxShadow: `
+                        0 0 1px rgba(100, 100, 100, 0.25),
+                        inset 0 0 2px rgba(27, 27, 27, 0.25)
+                      `
+                    }}
+                  >
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                      {business.profile_pic ? (
+                        <img src={business.profile_pic} alt={business.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-gray-500 text-lg font-medium">
+                          {business.name?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-4">🏢</div>
-                  <p className="text-gray-500 text-sm">No businesses followed yet</p>
-                  <p className="text-gray-400 text-xs mt-1">Start following businesses to see them here</p>
-                </div>
-              )
-            )}
-          </div>
+                    <div className="w-full text-center flex items-center justify-center h-full">
+                      <h3 className="text-base font-semibold text-gray-900">{business.name}</h3>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-4">🏢</div>
+                <p className="text-gray-500 text-sm">No businesses followed yet</p>
+                <p className="text-gray-400 text-xs mt-1">Start following businesses to see them here</p>
+              </div>
+            )
+          )}
+        </div>
         )}
       </div>
 
@@ -1152,9 +1152,9 @@ export default function Page() {
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <div className="space-y-4">
             {/* Search + Suggested */}
-            <div className="space-y-4">
+              <div className="space-y-4">
                     {/* Search Bar */}
-                <div className="relative">
+                    <div className="relative">
                       <input
                         type="text"
                     placeholder="Search..."
@@ -1265,11 +1265,11 @@ export default function Page() {
                     <span className="text-sm font-medium text-gray-700">{pendingRequests.length}</span>
                   </div>
                 </button>
-              )}
+                  )}
 
-              {/* Suggested Friends Section */}
-              {!searchQuery.trim() && (
-                <div className="space-y-3">
+                {/* Suggested Friends Section */}
+                {!searchQuery.trim() && (
+                  <div className="space-y-3">
                   <h3 className="text-lg font-semibold text-gray-900 text-center">Suggested Friends</h3>
                     {loading ? (
                       <div className="text-center py-4">
@@ -1344,7 +1344,7 @@ export default function Page() {
                     )}
                   </div>
                 )}
-            </div>
+              </div>
           </div>
         </div>
       </div>
@@ -1403,8 +1403,8 @@ export default function Page() {
                           <img src={request.sender.profile_pic} alt={request.sender.name} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-gray-500 text-lg font-medium">{request.sender?.name?.charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
+            )}
+          </div>
                       <div>
                         <h4 className="font-medium text-gray-900">{request.sender?.name}</h4>
                       </div>

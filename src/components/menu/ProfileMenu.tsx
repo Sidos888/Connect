@@ -1613,26 +1613,21 @@ export default function ProfileMenu() {
               menuRef.current.style.display = newOpen ? 'block' : 'none';
             }
           }}
-          className={`flex items-center gap-2 rounded-full bg-white px-2 py-1 transition-all duration-200 focus:outline-none relative z-50 ${
-            open ? 'opacity-100' : 'opacity-100'
-          }`}
-          style={open ? {
-            borderWidth: '0.8px',
-            borderColor: '#D1D5DB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
-          } : {
+          className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 transition-all duration-200 hover:bg-white active:bg-white focus:outline-none relative z-50"
+          style={{
             borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
+            borderColor: open ? '#D1D5DB' : '#E5E7EB',
             borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+            boxShadow: open 
+              ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+              : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
           }}
         >
-          <Menu size={14} className="text-gray-700" />
+          <Menu size={16} className="text-gray-700" />
           <Avatar 
             src={currentAccount?.avatarUrl ?? undefined} 
             name={currentAccount?.name ?? "User"} 
-            size={32} 
+            size={24} 
           />
         </button>
 
@@ -2025,20 +2020,18 @@ export default function ProfileMenu() {
               <div className="flex items-center justify-between p-6">
                 <button
                   onClick={() => setShowCenteredSaved(false)}
-                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                  className="action-btn-circle"
+                  aria-label="Close"
                 >
-                  <X className="w-5 h-5 text-gray-600" />
+                  <X className="w-5 h-5 text-gray-900" />
                 </button>
                 <h2 className="text-xl font-semibold text-gray-900">Saved</h2>
-                <div className="w-9"></div> {/* Spacer for centering */}
+                <div className="w-10"></div> {/* Spacer for centering */}
               </div>
 
               {/* Content */}
               <div className="flex-1 flex items-center justify-center p-6">
-                <div className="flex gap-4 items-center">
-                  <ThreeDotLoading />
-                  <ThreeDotLoadingBounce />
-                </div>
+                {/* Empty for now */}
               </div>
             </div>
           </div>
