@@ -482,11 +482,11 @@ textarea {
   caret-shape: block; /* Make cursor more bold/block-like */
 }
 
-/* Keep input background consistent on focus */
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="tel"]:focus,
-select:focus {
+/* Keep input background consistent on focus - only for chat/message inputs */
+.chat-mobile-container input[type="text"]:focus,
+.chat-mobile-container input[type="email"]:focus,
+.chat-mobile-container input[type="tel"]:focus,
+.chat-mobile-container select:focus {
   background-color: #ffffff !important; /* Keep white background on focus */
   border-color: #d1d5db !important; /* Force light gray border on focus */
   outline: none !important; /* Remove default browser outline */
@@ -592,6 +592,63 @@ body.chat-active {
   position: relative !important;
   overflow: hidden !important;
 }
+
+/* Force fixed elements to stay in place regardless of viewport changes */
+.chat-mobile-container [style*="position: fixed"] {
+  position: fixed !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
+/* Prevent iOS from moving fixed elements */
+@supports (-webkit-touch-callout: none) {
+  .chat-mobile-container [style*="position: fixed"] {
+    position: fixed !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
+}
+
+
+/* Force fixed elements to stay in place regardless of viewport changes */
+.chat-mobile-container [style*="position: fixed"] {
+  position: fixed !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
+/* Prevent iOS from moving fixed elements */
+@supports (-webkit-touch-callout: none) {
+  .chat-mobile-container [style*="position: fixed"] {
+    position: fixed !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
+}
+
+
+/* Force fixed elements to stay in place regardless of viewport changes */
+.chat-mobile-container [style*="position: fixed"] {
+  position: fixed !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
+/* Prevent iOS from moving fixed elements */
+@supports (-webkit-touch-callout: none) {
+  .chat-mobile-container [style*="position: fixed"] {
+    position: fixed !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
+}
+
 
 /* Force fixed elements to stay in place regardless of viewport changes */
 .chat-mobile-container [style*="position: fixed"] {

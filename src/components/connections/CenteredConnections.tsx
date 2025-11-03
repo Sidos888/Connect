@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/authContext";
 import { useAppStore } from "@/lib/store";
 import { connectionsService, User as ConnectionUser } from "@/lib/connectionsService";
 import Avatar from "@/components/Avatar";
+import ThreeDotLoading from "@/components/ThreeDotLoading";
+import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 
 export default function CenteredConnections({
   onBack,
@@ -97,19 +99,68 @@ export default function CenteredConnections({
       </div>
 
       {/* Tabs */}
-      <div className="mb-4">
-        <div className="flex justify-center space-x-8">
-          <button onClick={() => setActiveTab('friends')} className={`py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'friends' ? 'text-gray-900 border-gray-900' : 'text-gray-500 border-transparent'}`}>Friends</button>
-          <button onClick={() => setActiveTab('following')} className={`py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'following' ? 'text-gray-900 border-gray-900' : 'text-gray-500 border-transparent'}`}>Following</button>
+      <div className="mb-4 px-6 pt-2">
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={() => setActiveTab('friends')}
+            className={`px-6 py-2 text-sm font-medium rounded-2xl transition-all duration-200 ${
+              activeTab === 'friends'
+                ? 'text-gray-900 bg-white'
+                : 'text-gray-500 bg-white'
+            }`}
+            style={
+              activeTab === 'friends'
+                ? {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    transform: 'translateY(-1px)',
+                  }
+                : {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }
+            }
+          >
+            Friends
+          </button>
+          <button
+            onClick={() => setActiveTab('following')}
+            className={`px-6 py-2 text-sm font-medium rounded-2xl transition-all duration-200 ${
+              activeTab === 'following'
+                ? 'text-gray-900 bg-white'
+                : 'text-gray-500 bg-white'
+            }`}
+            style={
+              activeTab === 'following'
+                ? {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    transform: 'translateY(-1px)',
+                  }
+                : {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }
+            }
+          >
+            Following
+          </button>
         </div>
       </div>
 
       {/* List */}
       <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-6">
         {loading ? (
-          <div className="text-center py-8">
-            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500 text-sm">Loading connections...</p>
+          <div className="flex items-center justify-center h-full">
+            <ThreeDotLoadingBounce />
           </div>
         ) : activeTab === 'friends' ? (
           <div className="space-y-3">

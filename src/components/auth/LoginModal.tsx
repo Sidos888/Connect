@@ -510,43 +510,22 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   type="tel"
                   value={phoneFocused || phoneNumber ? `+61 ${formatPhoneNumber(phoneNumber)}` : ''}
                   onChange={handlePhoneChange}
-                  onFocus={(e) => {
-                    handlePhoneFocus(e);
-                    // Apply selected styling directly with more contrast
-                    e.target.style.borderWidth = '0.8px';
-                    e.target.style.borderColor = '#D1D5DB';
-                    e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
-                  }}
-                  onBlur={(e) => {
-                    handlePhoneBlur(e);
-                    // Apply default styling directly
-                    e.target.style.borderWidth = '0.4px';
-                    e.target.style.borderColor = '#E5E7EB';
-                    e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!phoneFocused) {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!phoneFocused) {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
+                  onFocus={handlePhoneFocus}
+                  onBlur={handlePhoneBlur}
                   placeholder=""
-                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-shadow duration-200 ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
                   style={{ 
                     fontSize: '16px',
                     lineHeight: '1.2',
                     fontFamily: 'inherit',
                     color: 'black',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    border: '0.4px solid #E5E7EB',
                     borderRadius: '12px',
-                    willChange: 'box-shadow'
+                    transform: phoneFocused ? 'translateY(-1px)' : 'translateY(0)',
+                    boxShadow: phoneFocused 
+                      ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
                   }}
                   required
                 />
@@ -591,7 +570,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
           {/* Email Button - Absolute positioned at bottom - Only show on phone step */}
           {step === 'phone' && (
-            <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center">
+            <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center">
               <p className="text-xs text-gray-500 mb-2">or</p>
               <button
                 type="button"
@@ -627,39 +606,22 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onFocus={(e) => {
-                    setEmailFocused(true);
-                    // Apply selected styling directly with more contrast
-                    e.target.style.borderWidth = '0.8px';
-                    e.target.style.borderColor = '#D1D5DB';
-                    e.target.style.setProperty('box-shadow', '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)', 'important');
-                  }}
-                  onBlur={(e) => {
-                    setEmailFocused(false);
-                    // Apply default styling directly
-                    e.target.style.borderWidth = '0.4px';
-                    e.target.style.borderColor = '#E5E7EB';
-                    e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!emailFocused) {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!emailFocused) {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                   placeholder={emailFocused ? "" : "Email"}
-                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-shadow duration-200 ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
                   style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    fontSize: '16px',
+                    lineHeight: '1.2',
+                    fontFamily: 'inherit',
+                    color: 'black',
+                    border: '0.4px solid #E5E7EB',
                     borderRadius: '12px',
-                    willChange: 'box-shadow'
+                    transform: emailFocused ? 'translateY(-1px)' : 'translateY(0)',
+                    boxShadow: emailFocused
+                      ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
                   }}
                   required
                 />
@@ -669,7 +631,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   </label>
                 )}
               </div>
-              
+
               {/* Continue Button - Smaller and Centered */}
               <div className="flex justify-center mb-8">
                 <button
@@ -698,7 +660,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
           {/* Phone Button - Absolute positioned at bottom - Only show on email step */}
           {step === 'email' && (
-            <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center">
+            <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center">
               <p className="text-xs text-gray-500 mb-2">or</p>
               <button
                 type="button"

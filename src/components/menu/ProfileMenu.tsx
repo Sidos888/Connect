@@ -18,6 +18,8 @@ import CenteredAddPerson from "@/components/connections/CenteredAddPerson";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
+import ThreeDotLoading from "@/components/ThreeDotLoading";
+import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SettingsContent from "@/components/settings/SettingsContent";
@@ -105,8 +107,8 @@ function ConnectionsView({
           // Connection logging removed for performance
           
           if (!cancelled) {
-            setPeopleConnections(people);
-            setBusinessConnections(businesses);
+          setPeopleConnections(people);
+          setBusinessConnections(businesses);
           }
         } else {
           console.error('Error loading connections:', error);
@@ -629,20 +631,20 @@ function AddPersonView({
             {!showRequests && (
               <div className="space-y-4">
                     {/* Search Bar */}
-                   <div className="relative">
-                     <input
-                       type="text"
+                    <div className="relative">
+                      <input
+                        type="text"
                        placeholder="Search..."
                        className="w-full px-4 py-3 pl-10 bg-white rounded-2xl focus:outline-none focus:ring-0"
-                       value={searchQuery}
-                       onChange={(e) => setSearchQuery(e.target.value)}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                        style={{
                          borderWidth: '0.4px',
                          borderColor: '#E5E7EB',
                          borderStyle: 'solid',
                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                        }}
-                     />
+                      />
                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -878,14 +880,14 @@ function MenuView({
           }}
         >
           <div className="flex items-center px-4 py-4 gap-3">
-            <Avatar
-              src={currentAccount?.avatarUrl ?? undefined}
-              name={currentAccount?.name ?? "User"}
-              size={48}
-            />
+          <Avatar
+            src={currentAccount?.avatarUrl ?? undefined}
+            name={currentAccount?.name ?? "User"}
+            size={48}
+          />
             <div className="flex-1 text-center">
               <h3 className="text-base font-semibold text-gray-900">{currentAccount?.name ?? "Your Name"}</h3>
-            </div>
+          </div>
             <div 
               className="relative"
               onClick={(e) => e.stopPropagation()}
@@ -903,7 +905,7 @@ function MenuView({
                 aria-expanded={isProfileMenuOpen}
               >
                 <MoreVertical size={20} className="text-gray-900" />
-              </button>
+        </button>
               {isProfileMenuOpen && (
                 <div
                   ref={profileMenuRef}
@@ -1837,14 +1839,14 @@ export default function ProfileMenu() {
             />
 
             <CenteredAddPerson
-              onBack={() => {
-                setShowCenteredAddPerson(false);
-                setShowCenteredConnections(true);
-              }}
+                  onBack={() => {
+                    setShowCenteredAddPerson(false);
+                    setShowCenteredConnections(true);
+                  }}
               onOpenRequests={() => {
                 // TODO: wire Friend Requests centered modal if needed
               }}
-            />
+                />
           </div>
         )}
 
@@ -2033,9 +2035,9 @@ export default function ProfileMenu() {
 
               {/* Content */}
               <div className="flex-1 flex items-center justify-center p-6">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🔖</div>
-                  <p className="text-gray-500 text-lg">You don't have any saved items yet ;(</p>
+                <div className="flex gap-4 items-center">
+                  <ThreeDotLoading />
+                  <ThreeDotLoadingBounce />
                 </div>
               </div>
             </div>
@@ -2063,14 +2065,14 @@ export default function ProfileMenu() {
             <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
               <SettingsContent
                 onBack={() => {
-                  setShowCenteredSettings(false);
-                  setShowDeleteConfirm(false);
-                  setShowFinalConfirm(false);
-                  if (settingsFromProfile) {
-                    setShowCenteredProfile(true);
-                  }
-                  setSettingsFromProfile(false);
-                }}
+                    setShowCenteredSettings(false);
+                    setShowDeleteConfirm(false);
+                    setShowFinalConfirm(false);
+                    if (settingsFromProfile) {
+                      setShowCenteredProfile(true);
+                    }
+                    setSettingsFromProfile(false);
+                  }}
                 onSignOut={handleSignOut}
                 onDeleteAccount={handleDeleteAccount}
                 showDeleteConfirm={showDeleteConfirm}
@@ -2083,10 +2085,10 @@ export default function ProfileMenu() {
                 personalProfile={personalProfile}
                 showBackButton={true}
                 onViewProfile={() => {
-                  setShowCenteredSettings(false);
+                            setShowCenteredSettings(false);
                   setProfileFromSettings(true);
                   setShowCenteredProfile(true);
-                }}
+                          }}
                 onEditProfile={handleEditProfileFromSettings}
                 onAccountSettings={() => {
                   setShowCenteredSettings(false);
@@ -2118,19 +2120,19 @@ export default function ProfileMenu() {
               isOwnProfile={false}
               showBackButton={true}
               onClose={() => {
-                setShowCenteredFriendProfile(false);
-                setSelectedFriend(null);
-                setShowCenteredConnections(true);
-              }}
+                    setShowCenteredFriendProfile(false);
+                    setSelectedFriend(null);
+                    setShowCenteredConnections(true);
+                  }}
               onThreeDotsMenu={() => {
                 // Inactive for now
               }}
               onOpenConnections={() => {
-                setShowCenteredFriendProfile(false);
+                    setShowCenteredFriendProfile(false);
                 setConnectionsModalUserId(selectedFriend.id);
                 setShowCenteredConnectionsModal(true);
-              }}
-            />
+                  }}
+                />
           </div>
         )}
 

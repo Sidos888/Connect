@@ -422,12 +422,19 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
                   onFocus={handlePhoneFocus}
                   onBlur={handlePhoneBlur}
                   placeholder=""
-                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
                   style={{ 
                     fontSize: '16px',
                     lineHeight: '1.2',
                     fontFamily: 'inherit',
-                    color: 'black'
+                    color: 'black',
+                    border: '0.4px solid #E5E7EB',
+                    borderRadius: '12px',
+                    transform: phoneFocused ? 'translateY(-1px)' : 'translateY(0)',
+                    boxShadow: phoneFocused
+                      ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
                   }}
                   required
                 />
@@ -507,7 +514,20 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
                   onFocus={() => setEmailFocused(true)}
                   onBlur={() => setEmailFocused(false)}
                   placeholder={emailFocused ? "" : "Email"}
-                  className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-600 focus:outline-none transition-colors bg-white ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
+                  style={{ 
+                    fontSize: '16px',
+                    lineHeight: '1.2',
+                    fontFamily: 'inherit',
+                    color: 'black',
+                    border: '0.4px solid #E5E7EB',
+                    borderRadius: '12px',
+                    transform: emailFocused ? 'translateY(-1px)' : 'translateY(0)',
+                    boxShadow: emailFocused
+                      ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
                   required
                 />
                 {(emailFocused || email) && (
@@ -566,7 +586,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
                 Continue with phone
               </button>
             </form>
-          )}
+              )}
             </div>
           </div>
         </div>

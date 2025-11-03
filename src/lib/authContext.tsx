@@ -72,14 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (account && typeof window !== 'undefined') {
       import('./store').then(({ useAppStore }) => {
         try {
-          const store = useAppStore.getState();
-          console.log('🔍 AuthContext: Store state before sync:', { 
-            hasPersonalProfile: !!store.personalProfile,
-            personalProfileId: store.personalProfile?.id 
-          });
-          
-          if (store.setPersonalProfile) {
-            store.setPersonalProfile({
+        const store = useAppStore.getState();
+        console.log('🔍 AuthContext: Store state before sync:', { 
+          hasPersonalProfile: !!store.personalProfile,
+          personalProfileId: store.personalProfile?.id 
+        });
+        
+        if (store.setPersonalProfile) {
+          store.setPersonalProfile({
               id: String(account.id || ''),
               name: String(account.name || ''),
               bio: String(account.bio || ''),
@@ -90,17 +90,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               connectId: String(account.connect_id || ''),
               createdAt: String(account.created_at || ''),
               updatedAt: String(account.updated_at || '')
-            });
-            console.log('✅ AuthContext: Synced account to personalProfile in store');
-            
-            // Verify the sync worked
-            const updatedStore = useAppStore.getState();
-            console.log('🔍 AuthContext: Store state after sync:', { 
-              hasPersonalProfile: !!updatedStore.personalProfile,
-              personalProfileId: updatedStore.personalProfile?.id,
-              personalProfileName: updatedStore.personalProfile?.name
-            });
-          }
+          });
+          console.log('✅ AuthContext: Synced account to personalProfile in store');
+          
+          // Verify the sync worked
+          const updatedStore = useAppStore.getState();
+          console.log('🔍 AuthContext: Store state after sync:', { 
+            hasPersonalProfile: !!updatedStore.personalProfile,
+            personalProfileId: updatedStore.personalProfile?.id,
+            personalProfileName: updatedStore.personalProfile?.name
+          });
+        }
         } catch (error) {
           console.error('❌ AuthContext: Error syncing to store:', error);
         }
@@ -249,8 +249,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await loadAccountForUser(recheck.user.id);
             } else {
               console.log('🔐 AuthContext: Confirmed no session after recheck, clearing');
-              setUser(null);
-              setAccount(null);
+          setUser(null);
+          setAccount(null);
             }
           } catch (e) {
             console.warn('Auth recheck failed, proceeding to clear:', e);

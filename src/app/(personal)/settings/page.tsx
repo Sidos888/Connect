@@ -70,8 +70,8 @@ export default function SettingsPage() {
   }, []);
 
   const handleSignOut = async () => {
-    await signOut();
-    clearAll();
+      await signOut();
+      clearAll();
     router.replace("/");
   };
 
@@ -82,8 +82,8 @@ export default function SettingsPage() {
   const confirmDeleteAccount = async () => {
     setIsDeletingAccount(true);
     await deleteAccount();
-    setIsDeletingAccount(false);
-    clearAll();
+        setIsDeletingAccount(false);
+      clearAll();
     router.replace('/');
   };
 

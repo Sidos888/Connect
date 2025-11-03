@@ -63,8 +63,8 @@ export default function AccountSettingsPage() {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 pt-6 flex flex-col">
+        {/* Content - scrollable area */}
+        <div className="flex-1 overflow-y-auto px-4 pt-6">
           {/* Email and Phone Card */}
           <div 
             className="bg-white rounded-2xl p-4 mb-6 border border-gray-200 shadow-sm space-y-4" 
@@ -85,21 +85,18 @@ export default function AccountSettingsPage() {
               <span className="text-sm text-gray-900">{user?.phone || 'Not set'}</span>
             </div>
           </div>
+        </div>
 
-          {/* Spacer to push Delete Account to bottom */}
-          <div className="flex-1" />
-
-          {/* Delete Account Button at bottom */}
-          <div className="pb-6">
-            <button
-              onClick={handleDeleteAccount}
-              className="w-full flex items-center justify-center gap-3 px-4 py-4 text-red-600 bg-white hover:bg-red-50 rounded-2xl transition-colors border border-gray-200 shadow-sm"
-              style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)' }}
-            >
-              <Trash2 size={20} className="text-red-500" />
-              <span className="font-medium">Delete Account</span>
-            </button>
-          </div>
+        {/* Delete Account Button - positioned at bottom */}
+        <div className="px-4 pb-32">
+          <button
+            onClick={handleDeleteAccount}
+            className="w-full flex items-center justify-center gap-3 px-4 py-4 text-red-600 bg-white hover:bg-red-50 rounded-2xl transition-colors border border-gray-200 shadow-sm"
+            style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)' }}
+          >
+            <Trash2 size={20} className="text-red-500" />
+            <span className="font-medium">Delete Account</span>
+          </button>
         </div>
       </div>
 

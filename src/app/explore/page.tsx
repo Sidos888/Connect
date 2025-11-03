@@ -1,29 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
-import MobileTitle from "@/components/MobileTitle";
+import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { SearchIcon } from "@/components/icons";
 
 export default function ExplorePage() {
   const { context } = useAppStore();
   const [hasError, setHasError] = useState(false);
-  
-  // Prevent body scrolling on mobile for fixed layout
-  useEffect(() => {
-    // Prevent scrolling on mobile
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.height = '100%';
-    
-    return () => {
-      // Restore scrolling when leaving page
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    };
-  }, []);
 
   // Error boundary fallback
   if (hasError) {
@@ -73,27 +55,13 @@ export default function ExplorePage() {
   try {
     return (
     <div 
-      className="h-screen bg-white overflow-hidden" 
+      className="h-screen bg-white" 
       style={{ 
-        height: '100dvh',
-        touchAction: 'none',
-        WebkitOverflowScrolling: 'touch'
+        height: '100dvh'
       }}
     >
-      <MobileTitle 
-        title="Explore" 
-        action={
-          <button
-            className="p-2 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 ring-brand"
-            aria-label="Search"
-          >
-            <SearchIcon className="h-5 w-5 text-black" />
-          </button>
-        }
-      />
-      
       <div 
-        className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-[120px] lg:pt-6 flex flex-col"
+        className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 lg:pt-6 flex flex-col"
         style={{ height: '100%', minHeight: '0' }}
       >
         {/* Desktop title with right-aligned search icon */}
@@ -152,15 +120,10 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        {/* Categories Section - Mobile optimized layout */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 content-start mt-4 lg:mt-6">
-            {categories.map((category, index) => {
-              // For business categories, center the last item (Open Invitations) if it's alone
-              const isLastItem = index === categories.length - 1;
-              const isBusinessMode = context.type === "business";
-              const shouldCenter = isBusinessMode && isLastItem && categories.length % 3 === 1;
-              
+        {/* Categories Section - 2x6 Grid Layout matching Menu */}
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mt-4 lg:mt-6 pb-6">
+            {categories.map((category) => {
               return (
                 <button
                   key={category.title}
@@ -168,9 +131,8 @@ export default function ExplorePage() {
                     rounded-2xl bg-white
                     hover:bg-white hover:-translate-y-[1px] transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1
-                    aspect-square w-full
+                    w-full h-28 lg:aspect-square lg:h-auto
                     ${category.subtitle ? 'opacity-60 cursor-not-allowed' : ''}
-                    ${shouldCenter ? 'col-span-3 mx-auto max-w-xs' : ''}
                   `}
                   style={{
                     borderWidth: '0.4px',
@@ -189,11 +151,11 @@ export default function ExplorePage() {
                   }}
                   disabled={!!category.subtitle}
                 >
-                  <div className="flex flex-col items-center justify-center h-full p-3 sm:p-4 lg:p-6 gap-1 sm:gap-2 lg:gap-3">
-                    <div className="text-2xl sm:text-3xl lg:text-5xl xl:text-6xl">
+                  <div className="flex flex-col items-center justify-center h-full p-4 gap-6">
+                    <div className="text-4xl sm:text-4xl lg:text-5xl">
                       {category.icon}
                     </div>
-                    <span className="text-xs sm:text-xs lg:text-sm font-medium text-neutral-900 text-center leading-tight">
+                    <span className="text-sm sm:text-sm lg:text-sm font-medium text-neutral-900 text-center leading-tight">
                       {category.title}
                     </span>
                     {category.subtitle && (

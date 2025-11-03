@@ -40,7 +40,7 @@ export default function UnifiedProfileCard({
   return (
     <div className="bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-full lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
       {/* Floating Action Buttons */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+      <div className="absolute left-4 right-4 z-10 flex items-center justify-between pointer-events-none lg:top-4" style={{ top: 'max(calc(env(safe-area-inset-top) + 16px), 86px)' }}>
         <button
           onClick={onClose}
           className="flex items-center justify-center w-10 h-10 pointer-events-auto transition-all duration-200 hover:-translate-y-[1px]"
@@ -144,9 +144,9 @@ export default function UnifiedProfileCard({
 
       {/* Content - Mobile: top-aligned with proper spacing, Desktop: centered */}
       <div 
-        className="flex-1 flex flex-col lg:justify-center px-6 overflow-hidden" 
+        className="flex-1 flex flex-col lg:justify-center px-6 overflow-hidden lg:pt-0" 
         style={{ 
-          paddingTop: '70px',
+          paddingTop: 'max(calc(env(safe-area-inset-top) + 122px), 172px)',
           paddingBottom: 'max(24px, env(safe-area-inset-bottom))'
         }}
       >

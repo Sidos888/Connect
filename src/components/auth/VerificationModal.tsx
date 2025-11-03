@@ -72,7 +72,7 @@ export default function VerificationModal({
   useEffect(() => {
     if (isOpen) {
       if (inputRefs.current[0]) {
-        inputRefs.current[0].focus();
+      inputRefs.current[0].focus();
       }
       // Reset countdown when modal opens
       setResendCountdown(30);
@@ -506,7 +506,7 @@ export default function VerificationModal({
               >
                 {canResend ? 'Resend code' : `Resend code in ${resendCountdown}s`}
               </button>
-            </div>
+          </div>
           )}
         </div>
       </div>

@@ -327,8 +327,8 @@ export default function SettingsContent({
           {/* Spacer to push Log out to bottom */}
           <div className="flex-1" />
           
-          {/* Log out button at bottom */}
-          <div className="px-6 pb-6">
+          {/* Log out button - positioned higher on mobile */}
+          <div className="px-6 pb-32 lg:pb-6">
             <button
               onClick={onSignOut}
               className="w-full flex items-center gap-3 px-4 py-4 text-gray-900 bg-white rounded-2xl transition-all duration-200 border border-gray-200 shadow-sm hover:-translate-y-[1px]"
@@ -354,4 +354,5 @@ export default function SettingsContent({
     </div>
   );
 }
+
 

@@ -4,10 +4,12 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { useModal } from "@/lib/modalContext";
+import { useAppStore } from "@/lib/store";
 import TopNavigation from "./TopNavigation";
 import MobileTopNavigation from "./MobileTopNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import LoadingScreen from "@/components/LoadingScreen";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -17,6 +19,24 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const { isAnyModalOpen } = useModal();
+  const { isHydrated } = useAppStore();
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  // Check if mobile on mount
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Show loading screen on mobile during initial load
+  if (isMobile && (loading || !isHydrated)) {
+    return <LoadingScreen />;
+  }
+
   const isChatPage = pathname.startsWith('/chat');
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
   const isSettingsPage = (

@@ -19,6 +19,8 @@ import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
+import ThreeDotLoading from "@/components/ThreeDotLoading";
+import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 
 // Module-level cache for connections (persists across component mounts)
 let connectionsCache: {
@@ -726,25 +728,57 @@ export default function Page() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white px-4 pb-2">
-        <div className="flex justify-center space-x-8">
+      <div className="bg-white px-4 pb-4 pt-2">
+        <div className="flex gap-2 justify-center">
           <button
             onClick={() => setActiveTab('friends')}
-            className={`py-3 text-base font-medium border-b-2 transition-colors ${
+            className={`px-6 py-2 text-sm font-medium rounded-2xl transition-all duration-200 ${
               activeTab === 'friends'
-                ? 'text-gray-900 border-gray-900'
-                : 'text-gray-500 border-transparent'
+                ? 'text-gray-900 bg-white'
+                : 'text-gray-500 bg-white'
             }`}
+            style={
+              activeTab === 'friends'
+                ? {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    transform: 'translateY(-1px)',
+                  }
+                : {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }
+            }
           >
             Friends
           </button>
           <button
             onClick={() => setActiveTab('following')}
-            className={`py-3 text-base font-medium border-b-2 transition-colors ${
+            className={`px-6 py-2 text-sm font-medium rounded-2xl transition-all duration-200 ${
               activeTab === 'following'
-                ? 'text-gray-900 border-gray-900'
-                : 'text-gray-500 border-transparent'
+                ? 'text-gray-900 bg-white'
+                : 'text-gray-500 bg-white'
             }`}
+            style={
+              activeTab === 'following'
+                ? {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    transform: 'translateY(-1px)',
+                  }
+                : {
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }
+            }
           >
             Following
           </button>
@@ -753,90 +787,96 @@ export default function Page() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="space-y-3">
-          {activeTab === 'friends' ? (
-            peopleConnections.length > 0 ? (
-              peopleConnections.map((connection) => {
-                // Get the friend (not the current user) from the connection
-                const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
-                if (!friend) return null;
+        {loading && !hasLoadedOnce ? (
+          <div className="flex items-center justify-center h-full">
+            <ThreeDotLoadingBounce />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activeTab === 'friends' ? (
+              peopleConnections.length > 0 ? (
+                peopleConnections.map((connection) => {
+                  // Get the friend (not the current user) from the connection
+                  const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+                  if (!friend) return null;
 
-                return (
-                  <div
-                    key={connection.id}
-                    className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px] cursor-pointer hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:border-[#D1D5DB] transition-all duration-200"
-                    style={{
-                      boxShadow: `
-                        0 0 1px rgba(100, 100, 100, 0.25),
-                        inset 0 0 2px rgba(27, 27, 27, 0.25)
-                      `
-                    }}
-                    onClick={() => handleFriendClick(friend)}
-                  >
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                      {friend.profile_pic ? (
-                        <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-gray-500 text-lg font-medium">
-                          {friend.name?.charAt(0).toUpperCase()}
-                        </span>
-                      )}
+                  return (
+                    <div
+                      key={connection.id}
+                      className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px] cursor-pointer hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] hover:border-[#D1D5DB] transition-all duration-200"
+                      style={{
+                        boxShadow: `
+                          0 0 1px rgba(100, 100, 100, 0.25),
+                          inset 0 0 2px rgba(27, 27, 27, 0.25)
+                        `
+                      }}
+                      onClick={() => handleFriendClick(friend)}
+                    >
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                        {friend.profile_pic ? (
+                          <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-gray-500 text-lg font-medium">
+                            {friend.name?.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="w-full text-center flex items-center justify-center h-full">
+                        <h3 className="text-base font-semibold text-gray-900">{friend.name}</h3>
+                      </div>
                     </div>
-                    <div className="w-full text-center flex items-center justify-center h-full">
-                      <h3 className="text-base font-semibold text-gray-900">{friend.name}</h3>
-                    </div>
-                  </div>
-                );
-              })
-            ) : hasLoadedOnce ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">👥</div>
-                <p className="text-gray-500 text-sm">No friends yet</p>
-                <p className="text-gray-400 text-xs mt-1">Start adding friends to see them here</p>
-              </div>
-            ) : null
-          ) : (
-            businessConnections.length > 0 ? (
-              businessConnections.map((connection) => {
-                // Get the business (not the current user) from the connection
-                const business = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
-                if (!business) return null;
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">👥</div>
+                  <p className="text-gray-500 text-sm">No friends yet</p>
+                  <p className="text-gray-400 text-xs mt-1">Start adding friends to see them here</p>
+                </div>
+              )
+            ) : (
+              businessConnections.length > 0 ? (
+                businessConnections.map((connection) => {
+                  // Get the business (not the current user) from the connection
+                  const business = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+                  if (!business) return null;
 
-                return (
-                  <div
-                    key={connection.id}
-                    className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px]"
-                    style={{
-                      boxShadow: `
-                        0 0 1px rgba(100, 100, 100, 0.25),
-                        inset 0 0 2px rgba(27, 27, 27, 0.25)
-                      `
-                    }}
-                  >
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                      {business.profile_pic ? (
-                        <img src={business.profile_pic} alt={business.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-gray-500 text-lg font-medium">
-                          {business.name?.charAt(0).toUpperCase()}
-                        </span>
-                      )}
+                  return (
+                    <div
+                      key={connection.id}
+                      className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 py-8 relative min-h-[80px]"
+                      style={{
+                        boxShadow: `
+                          0 0 1px rgba(100, 100, 100, 0.25),
+                          inset 0 0 2px rgba(27, 27, 27, 0.25)
+                        `
+                      }}
+                    >
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                        {business.profile_pic ? (
+                          <img src={business.profile_pic} alt={business.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-gray-500 text-lg font-medium">
+                            {business.name?.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="w-full text-center flex items-center justify-center h-full">
+                        <h3 className="text-base font-semibold text-gray-900">{business.name}</h3>
+                      </div>
                     </div>
-                    <div className="w-full text-center flex items-center justify-center h-full">
-                      <h3 className="text-base font-semibold text-gray-900">{business.name}</h3>
-                    </div>
-                  </div>
-                );
-              })
-            ) : hasLoadedOnce ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">🏢</div>
-                <p className="text-gray-500 text-sm">No businesses followed yet</p>
-                <p className="text-gray-400 text-xs mt-1">Start following businesses to see them here</p>
-              </div>
-            ) : null
-          )}
-        </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">🏢</div>
+                  <p className="text-gray-500 text-sm">No businesses followed yet</p>
+                  <p className="text-gray-400 text-xs mt-1">Start following businesses to see them here</p>
+                </div>
+              )
+            )}
+          </div>
+        )}
       </div>
 
     </div>
