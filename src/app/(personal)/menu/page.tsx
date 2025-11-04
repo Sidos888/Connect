@@ -20,6 +20,7 @@ import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
+import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 
@@ -1090,8 +1091,170 @@ export default function Page() {
       ) : currentView === 'edit-profile' ? (
         <EditProfileView />
       ) : currentView === 'menu' ? (
-        <div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-6 lg:pt-6">
+        <>
+          {/* Mobile Layout with Design System */}
+          <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+            <MobilePage>
+              <PageHeader
+                title="Menu"
+                backButton={false}
+                actions={[
+                  {
+                    icon: <MoreVertical size={20} className="text-gray-900" />,
+                    onClick: () => setIsProfileMenuOpen((v) => !v),
+                    label: "Profile options"
+                  }
+                ]}
+              />
+
+              <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+                paddingTop: 'var(--saved-content-padding-top, 140px)',
+                paddingBottom: '32px',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}>
+                {/* Profile Card */}
+                <div
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 grid grid-cols-[40px_1fr] items-center cursor-pointer mb-6 transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onClick={() => setCurrentView('profile')}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  <div className="flex items-center">
+                    <Avatar 
+                      src={currentAccount?.avatarUrl ?? undefined} 
+                      name={currentAccount?.name ?? "Your Name"} 
+                      size={36} 
+                    />
+                  </div>
+                  <div className="text-base font-semibold text-gray-900 text-center">
+                    {currentAccount?.name ?? "Your Name"}
+                  </div>
+                </div>
+
+                {/* Kebab menu dropdown (positioned absolute) */}
+                {isProfileMenuOpen && (
+                  <div
+                    ref={profileMenuRef}
+                    role="menu"
+                    aria-label="Profile actions"
+                    className="fixed right-8 z-50 w-56 rounded-2xl border border-neutral-200 bg-white shadow-xl p-1"
+                    style={{ top: '72px' }}
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsProfileMenuOpen(false);
+                        setCurrentView('profile');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
+                    >
+                      <Eye className="h-5 w-5 text-gray-700" />
+                      View Profile
+                    </button>
+                    <div className="mx-2 my-1 h-px bg-neutral-200" />
+                    <button
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsProfileMenuOpen(false);
+                        router.push('/settings/edit');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
+                    >
+                      <Pencil className="h-5 w-5 text-gray-700" />
+                      Edit Profile
+                    </button>
+                  </div>
+                )}
+
+                {/* Menu Grid - 2x3 layout */}
+                <div className="grid grid-cols-2 gap-3">
+                  {(context.type === "business" ? 
+                // Business account menu items
+                [
+                  { title: "Bookings", icon: "📅", href: "/business/bookings" },
+                  { title: "Financials", icon: "💰", href: "/business/financials" },
+                  { title: "Connections", icon: "👬", href: "/connections" },
+                  { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
+                ] :
+                // Personal account menu items
+                [
+                  { title: "Memories", icon: "🖼️", href: "/memories" },
+                  { title: "Achievements", icon: "🏆", href: "/achievements" },
+                  { title: "Timeline", icon: "🧭", href: "/timeline" },
+                  { title: "Connections", icon: "👬", href: "/connections" },
+                  { title: "Saved", icon: "❤️", href: "/saved" },
+                  { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
+                ]
+              ).map((item) => (
+                    <button
+                      key={item.title}
+                      className="rounded-2xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 w-full h-28 hover:-translate-y-[1px]"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        willChange: 'transform, box-shadow'
+                      }}
+                      onClick={() => {
+                        if (item.onClick) {
+                          item.onClick();
+                        } else if (item.href) {
+                          if (item.isSettings) {
+                            sessionStorage.setItem('settings_previous_page', '/menu');
+                          }
+                          router.push(item.href);
+                        }
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                    >
+                      <div className="flex flex-col items-center justify-center h-full p-4 gap-6">
+                        <div className="text-4xl">
+                          {item.icon}
+                        </div>
+                        <span className="text-sm font-medium text-neutral-900 text-center leading-tight">
+                          {item.title}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bottom Blur */}
+              <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+                <div className="absolute bottom-0 left-0 right-0" style={{
+                  height: '80px',
+                  background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+                }} />
+                <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+                <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+                <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+                <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+              </div>
+            </MobilePage>
+          </div>
+
+          {/* Desktop/Web Layout (unchanged) */}
+          <div className="hidden lg:block">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-6 lg:pt-6">
               {/* Profile Card only (no bio dropdown) */}
               <div className="mb-6 lg:mb-8">
                 <div className="max-w-lg mx-auto lg:max-w-xl relative">
@@ -1125,7 +1288,7 @@ export default function Page() {
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
                       >
-                        {/* Kebab menu (mobile + web) */}
+                        {/* Kebab menu (web only) */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1178,74 +1341,74 @@ export default function Page() {
                 </div>
               </div>
 
-              <div className="hidden lg:block mb-8">
+              <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Menu</h1>
               </div>
 
               <div className="space-y-6">
-
-          {/* Menu Grid - Mobile 2x3 layout */}
-          <div className="mb-6">
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
-              {(context.type === "business" ? 
-                // Business account menu items
-                [
-                  { title: "Bookings", icon: "📅", href: "/business/bookings" },
-                  { title: "Financials", icon: "💰", href: "/business/financials" },
-                  { title: "Connections", icon: "👬", href: "/connections" },
-                  { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
-                ] :
-                // Personal account menu items
-                [
-                  { title: "Memories", icon: "🖼️", href: "/memories" },
-                  { title: "Achievements", icon: "🏆", href: "/achievements" },
-                  { title: "Timeline", icon: "🧭", href: "/timeline" },
-                  { title: "Connections", icon: "👬", href: "/connections" },
-                  { title: "Saved", icon: "❤️", href: "/saved" },
-                  { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
-                ]
-              ).map((item) => (
-                <button
-                  key={item.title}
-                  className="
-                    rounded-2xl bg-white
-                    hover:bg-white transition-all duration-200
-                    focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1
-                    w-full h-28 lg:aspect-square lg:h-auto
-                  "
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                  }}
-                  onClick={() => {
-                    if (item.onClick) {
-                      item.onClick();
-                    } else if (item.href) {
-                      // If this is settings, store current page before navigating
-                      if (item.isSettings) {
-                        sessionStorage.setItem('settings_previous_page', '/menu');
-                      }
-                      router.push(item.href);
-                    }
-                  }}
-                >
-                  <div className="flex flex-col items-center justify-center h-full p-4 gap-6">
-                    <div className="text-4xl sm:text-4xl lg:text-5xl">
-                      {item.icon}
-                    </div>
-                    <span className="text-sm sm:text-sm lg:text-sm font-medium text-neutral-900 text-center leading-tight">
-                      {item.title}
-                    </span>
+                {/* Menu Grid - Desktop layout */}
+                <div className="mb-6">
+                  <div className="grid grid-cols-6 gap-6">
+                    {(context.type === "business" ? 
+                      // Business account menu items
+                      [
+                        { title: "Bookings", icon: "📅", href: "/business/bookings" },
+                        { title: "Financials", icon: "💰", href: "/business/financials" },
+                        { title: "Connections", icon: "👬", href: "/connections" },
+                        { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
+                      ] :
+                      // Personal account menu items
+                      [
+                        { title: "Memories", icon: "🖼️", href: "/memories" },
+                        { title: "Achievements", icon: "🏆", href: "/achievements" },
+                        { title: "Timeline", icon: "🧭", href: "/timeline" },
+                        { title: "Connections", icon: "👬", href: "/connections" },
+                        { title: "Saved", icon: "❤️", href: "/saved" },
+                        { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
+                      ]
+                    ).map((item) => (
+                      <button
+                        key={item.title}
+                        className="rounded-2xl bg-white hover:bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 aspect-square hover:-translate-y-[1px]"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          willChange: 'transform, box-shadow'
+                        }}
+                        onClick={() => {
+                          if (item.onClick) {
+                            item.onClick();
+                          } else if (item.href) {
+                            if (item.isSettings) {
+                              sessionStorage.setItem('settings_previous_page', '/menu');
+                            }
+                            router.push(item.href);
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        }}
+                      >
+                        <div className="flex flex-col items-center justify-center h-full p-4 gap-6">
+                          <div className="text-5xl">
+                            {item.icon}
+                          </div>
+                          <span className="text-sm font-medium text-neutral-900 text-center leading-tight">
+                            {item.title}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                </button>
-              ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-          </div>
-        </div>
+        </>
       ) : (
         // Fallback - should not happen, but show menu as default
         <div>
