@@ -1097,7 +1097,39 @@ export default function Page() {
             <MobilePage>
               <PageHeader
                 title="Menu"
-                backButton={false}
+                backButton={true}
+                backIcon="arrow"
+                onBack={() => setCurrentView('profile')}
+                customBackButton={
+                  <button
+                    onClick={() => setCurrentView('profile')}
+                    className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] overflow-hidden"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '100px',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    aria-label="View profile"
+                  >
+                    <Avatar 
+                      src={currentAccount?.avatarUrl ?? undefined} 
+                      name={currentAccount?.name ?? "Your Name"} 
+                      size={40} 
+                    />
+                  </button>
+                }
                 actions={[
                   {
                     icon: <MoreVertical size={20} className="text-gray-900" />,
@@ -1113,34 +1145,6 @@ export default function Page() {
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none'
               }}>
-                {/* Profile Card */}
-                <div
-                  className="w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 grid grid-cols-[40px_1fr] items-center cursor-pointer mb-6 transition-all duration-200 hover:-translate-y-[1px]"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onClick={() => setCurrentView('profile')}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                >
-                  <div className="flex items-center">
-                    <Avatar 
-                      src={currentAccount?.avatarUrl ?? undefined} 
-                      name={currentAccount?.name ?? "Your Name"} 
-                      size={36} 
-                    />
-                  </div>
-                  <div className="text-base font-semibold text-gray-900 text-center">
-                    {currentAccount?.name ?? "Your Name"}
-                  </div>
-                </div>
 
                 {/* Kebab menu dropdown (positioned absolute) */}
                 {isProfileMenuOpen && (

@@ -14,6 +14,7 @@ export interface PageHeaderProps {
   backButton?: boolean;
   backIcon?: 'arrow' | 'close';  // 'arrow' for mobile, 'close' (X) for web modals
   onBack?: () => void;
+  customBackButton?: ReactNode;  // Custom back button (e.g., profile avatar)
   actions?: ActionButton[];
   className?: string;
 }
@@ -23,6 +24,7 @@ export default function PageHeader({
   backButton = false,
   backIcon = 'arrow',
   onBack,
+  customBackButton,
   actions = [],
   className = ""
 }: PageHeaderProps) {
@@ -126,8 +128,10 @@ export default function PageHeader({
           height: '40px',
           pointerEvents: 'auto'
         }}>
-          {/* Left: Back Button */}
-          {backButton && (
+          {/* Left: Back Button or Custom Button */}
+          {customBackButton ? (
+            customBackButton
+          ) : backButton ? (
             <button
               onClick={onBack}
               className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
@@ -160,7 +164,7 @@ export default function PageHeader({
                 </svg>
               )}
             </button>
-          )}
+          ) : null}
           
           {/* Center: Title */}
           <h1 
