@@ -71,7 +71,7 @@ export default function UnifiedProfileCard({
     }
   ] : undefined;
 
-  const contentPaddingTop = isMobile ? '155px' : '104px';
+  const contentPaddingTop = isMobile ? '165px' : '104px';
 
   return (
     <div 

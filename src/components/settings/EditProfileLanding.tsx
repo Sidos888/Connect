@@ -1,8 +1,8 @@
 "use client";
 
 import Avatar from "@/components/Avatar";
-import { ChevronLeftIcon } from "@/components/icons";
 import { User, Link as LinkIcon, Calendar, Star, Pencil } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageSystem";
 
 export default function EditProfileLanding({
   name,
@@ -22,27 +22,39 @@ export default function EditProfileLanding({
   onOpenHighlights: () => void;
 }) {
   return (
-    <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-      {/* Header */}
-      <div className="px-4 pb-4 pt-6">
-        <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <button
-            onClick={onBack}
-            className="absolute left-0 action-btn-circle"
-            aria-label="Back"
-          >
-            <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
-          </button>
-          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Edit Profile</h1>
-        </div>
-      </div>
+    <div 
+      className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+      style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+    >
+      <PageHeader
+        title="Edit Profile"
+        backButton
+        backIcon="arrow"
+        onBack={onBack}
+      />
 
       {/* Content */}
-      <div className="flex-1 px-6 py-4 overflow-y-auto">
+      <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+        paddingTop: 'var(--saved-content-padding-top, 104px)',
+        paddingBottom: '32px',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}>
         {/* Profile card */}
         <div
-          className="w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 grid grid-cols-[40px_1fr] items-center mb-6"
-          style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)' }}
+          className="w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 grid grid-cols-[40px_1fr] items-center mb-6 transition-all duration-200 hover:-translate-y-[1px]"
+          style={{ 
+            borderWidth: '0.4px', 
+            borderColor: '#E5E7EB', 
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
         >
           <div className="flex items-center">
             <Avatar src={avatarUrl ?? undefined} name={name ?? 'Your Name'} size={36} />
@@ -51,7 +63,7 @@ export default function EditProfileLanding({
         </div>
 
         {/* Edit Cards - 2x2 Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {/* Personal Details */}
           <button
             onClick={onOpenPersonalDetails}
@@ -140,6 +152,18 @@ export default function EditProfileLanding({
             <span className="text-sm font-semibold text-neutral-900 text-center leading-tight">Highlights</span>
           </button>
         </div>
+      </div>
+
+      {/* Bottom Blur */}
+      <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+        <div className="absolute bottom-0 left-0 right-0" style={{
+          height: '80px',
+          background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+        }} />
+        <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+        <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+        <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+        <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
       </div>
     </div>
   );
