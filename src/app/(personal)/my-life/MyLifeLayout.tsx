@@ -17,7 +17,6 @@ import EditProfileLanding from "@/components/settings/EditProfileLanding";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import SettingsContent from "@/components/settings/SettingsContent";
 import CenteredAccountSettings from "@/components/settings/CenteredAccountSettings";
-import CenteredShareProfile from "@/components/profile/CenteredShareProfile";
 import { PageHeader } from "@/components/layout/PageSystem";
 import ConnectionsModal from "@/components/chat/ConnectionsModal";
 import CenteredConnections from "@/components/connections/CenteredConnections";
@@ -60,7 +59,6 @@ export default function MyLifeLayout(): JSX.Element {
   const [selectedFriend, setSelectedFriend] = React.useState<any>(null);
   const [showCenteredAchievements, setShowCenteredAchievements] = React.useState(false);
   const [showCenteredHighlights, setShowCenteredHighlights] = React.useState(false);
-  const [showCenteredShareProfile, setShowCenteredShareProfile] = React.useState(false);
   const { account, signOut, deleteAccount, user } = useAuth();
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
   const profileMenuButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -91,8 +89,7 @@ export default function MyLifeLayout(): JSX.Element {
       showCenteredAddPerson ||
       showCenteredFriendProfile ||
       showCenteredAchievements ||
-      showCenteredHighlights ||
-      showCenteredShareProfile
+      showCenteredHighlights
     ) {
       const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -100,7 +97,7 @@ export default function MyLifeLayout(): JSX.Element {
         document.body.style.overflow = prevOverflow;
       };
     }
-  }, [showCenteredProfile, showCenteredEditLanding, showCenteredEditPersonal, showCenteredSettings, showCenteredAccountSettings, showCenteredConnections, showCenteredAddPerson, showCenteredFriendProfile, showCenteredAchievements, showCenteredHighlights, showCenteredShareProfile]);
+  }, [showCenteredProfile, showCenteredEditLanding, showCenteredEditPersonal, showCenteredSettings, showCenteredAccountSettings, showCenteredConnections, showCenteredAddPerson, showCenteredFriendProfile, showCenteredAchievements, showCenteredHighlights]);
 
   const setTab = (id: string) => {
     const sp = new URLSearchParams(searchParams as any);
@@ -253,7 +250,7 @@ export default function MyLifeLayout(): JSX.Element {
             }}
             onEdit={() => { setShowCenteredProfile(false); setEditProfileFromProfile(true); setShowCenteredEditLanding(true); }}
             onSettings={() => { setShowCenteredProfile(false); setProfileFromSettings(true); setShowCenteredSettings(true); }}
-            onShare={() => { setShowCenteredProfile(false); setShowCenteredShareProfile(true); }}
+            onShare={() => { setShowCenteredProfile(false); router.push('/share-profile'); }}
             onOpenTimeline={() => { setShowCenteredProfile(false); router.push('/timeline'); }}
             onOpenHighlights={() => { setShowCenteredProfile(false); setShowCenteredHighlights(true); }}
             onOpenBadges={() => { setShowCenteredProfile(false); setShowCenteredAchievements(true); }}
@@ -573,19 +570,6 @@ export default function MyLifeLayout(): JSX.Element {
           }}
           onDeleteAccount={() => setShowDeleteConfirm(true)}
         />
-      )}
-
-      {/* Centered Share Profile Modal */}
-      {showCenteredShareProfile && (
-        <div className="hidden lg:flex fixed inset-0 z-50 items-center justify-center p-4">
-          {/* Dimming overlay */}
-          <div
-            className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-            onClick={() => setShowCenteredShareProfile(false)}
-          />
-          <CenteredShareProfile onBack={() => setShowCenteredShareProfile(false)} />
-        </div>
       )}
     </>
   );
