@@ -1097,98 +1097,44 @@ export default function Page() {
             <MobilePage>
               <PageHeader
                 title="Menu"
-                backButton={false}
-                leftSection={
-                  <div className="flex items-center gap-3">
-                    {/* Profile Card */}
-                    <div 
-                      className="flex-1 cursor-pointer"
-                      onClick={() => setCurrentView('profile')}
-                    >
-                      <ProfileStrip
-                        name={currentAccount?.name ?? "Your Name"}
-                        avatarUrl={currentAccount?.avatarUrl}
-                        action={
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsProfileMenuOpen((v) => !v);
-                            }}
-                            ref={profileMenuButtonRef}
-                            className="p-2 -m-2 rounded-full hover:bg-gray-100 transition-colors"
-                            aria-label="Open profile menu"
-                            aria-expanded={isProfileMenuOpen}
-                          >
-                            <MoreVertical className="h-5 w-5 text-gray-700" />
-                          </button>
-                        }
-                      />
-                    </div>
-
-                    {/* Notification Button */}
-                    <button
-                      onClick={() => router.push('/notifications')}
-                      className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '100px',
-                        background: 'rgba(255, 255, 255, 0.9)',
-                        borderWidth: '0.4px',
-                        borderColor: '#E5E7EB',
-                        borderStyle: 'solid',
-                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                        willChange: 'transform, box-shadow'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                      }}
-                      aria-label="Notifications"
-                    >
-                      <BellIcon className="h-5 w-5 text-gray-900" />
-                    </button>
-
-                    {/* Kebab menu dropdown */}
-                    {isProfileMenuOpen && (
-                      <div
-                        ref={profileMenuRef}
-                        role="menu"
-                        aria-label="Profile actions"
-                        className="fixed right-8 z-50 w-56 rounded-2xl border border-neutral-200 bg-white shadow-xl p-1"
-                        style={{ top: '118px' }}
-                      >
-                        <button
-                          role="menuitem"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsProfileMenuOpen(false);
-                            setCurrentView('profile');
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                        >
-                          <Eye className="h-5 w-5 text-gray-700" />
-                          View Profile
-                        </button>
-                        <div className="mx-2 my-1 h-px bg-neutral-200" />
-                        <button
-                          role="menuitem"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsProfileMenuOpen(false);
-                            router.push('/settings/edit');
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                        >
-                          <Pencil className="h-5 w-5 text-gray-700" />
-                          Edit Profile
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                backButton={true}
+                customBackButton={
+                  <button
+                    onClick={() => setCurrentView('profile')}
+                    className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] overflow-hidden"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '100px',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    aria-label="View profile"
+                  >
+                    <Avatar 
+                      src={currentAccount?.avatarUrl ?? undefined} 
+                      name={currentAccount?.name ?? "Your Name"} 
+                      size={40} 
+                    />
+                  </button>
                 }
+                actions={[
+                  {
+                    icon: <BellIcon size={20} className="text-gray-900" />,
+                    onClick: () => router.push('/notifications'),
+                    label: "Notifications"
+                  }
+                ]}
               />
 
               <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
@@ -1197,6 +1143,67 @@ export default function Page() {
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none'
               }}>
+                {/* Profile Card */}
+                <div 
+                  className="cursor-pointer mb-6"
+                  onClick={() => setCurrentView('profile')}
+                >
+                  <ProfileStrip
+                    name={currentAccount?.name ?? "Your Name"}
+                    avatarUrl={currentAccount?.avatarUrl}
+                    action={
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsProfileMenuOpen((v) => !v);
+                        }}
+                        ref={profileMenuButtonRef}
+                        className="p-2 -m-2 rounded-full hover:bg-gray-100 transition-colors"
+                        aria-label="Open profile menu"
+                        aria-expanded={isProfileMenuOpen}
+                      >
+                        <MoreVertical className="h-5 w-5 text-gray-700" />
+                      </button>
+                    }
+                  />
+                </div>
+
+                {/* Kebab menu dropdown */}
+                {isProfileMenuOpen && (
+                  <div
+                    ref={profileMenuRef}
+                    role="menu"
+                    aria-label="Profile actions"
+                    className="fixed left-8 right-8 z-50 rounded-2xl border border-neutral-200 bg-white shadow-xl p-1"
+                    style={{ top: '182px', maxWidth: 'calc(100% - 64px)' }}
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsProfileMenuOpen(false);
+                        setCurrentView('profile');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
+                    >
+                      <Eye className="h-5 w-5 text-gray-700" />
+                      View Profile
+                    </button>
+                    <div className="mx-2 my-1 h-px bg-neutral-200" />
+                    <button
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsProfileMenuOpen(false);
+                        router.push('/settings/edit');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
+                    >
+                      <Pencil className="h-5 w-5 text-gray-700" />
+                      Edit Profile
+                    </button>
+                  </div>
+                )}
 
                 {/* Menu Grid - 2x3 layout */}
                 <div className="grid grid-cols-2 gap-3">
