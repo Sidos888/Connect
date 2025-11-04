@@ -249,7 +249,7 @@ export default function MyLifeLayout(): JSX.Element {
               }
             }}
             onEdit={() => { setShowCenteredProfile(false); setEditProfileFromProfile(true); setShowCenteredEditLanding(true); }}
-            onSettings={() => { setShowCenteredProfile(false); setShowCenteredSettings(true); }}
+            onSettings={() => { setShowCenteredProfile(false); setProfileFromSettings(true); setShowCenteredSettings(true); }}
             onShare={() => router.push('/share-profile')}
             onOpenTimeline={() => { setShowCenteredProfile(false); router.push('/timeline'); }}
             onOpenHighlights={() => { setShowCenteredProfile(false); setShowCenteredHighlights(true); }}
@@ -327,7 +327,7 @@ export default function MyLifeLayout(): JSX.Element {
             <PageHeader
               title="Settings"
               backButton
-              backIcon="close"
+              backIcon={profileFromSettings ? "arrow" : "close"}
               onBack={() => {
                 setShowCenteredSettings(false);
                 if (profileFromSettings) {

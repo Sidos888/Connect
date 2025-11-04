@@ -1788,7 +1788,7 @@ export default function ProfileMenu() {
               <PageHeader
                 title="Settings"
                 backButton
-                backIcon="close"
+                backIcon={settingsFromProfile ? "arrow" : "close"}
                 onBack={() => {
                   setShowCenteredSettings(false);
                   setShowDeleteConfirm(false);
