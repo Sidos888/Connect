@@ -1,4 +1,4 @@
-# Saved Page Design System
+# Connect Page Design System
 ## The Standard for All Content Pages in Connect
 
 Created: November 2025  
