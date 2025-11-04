@@ -1571,7 +1571,7 @@ export default function Page() {
                 [
                   { title: "Bookings", icon: "📅", href: "/business/bookings" },
                   { title: "Financials", icon: "💰", href: "/business/financials" },
-                  { title: "Connections", icon: "👬", onClick: () => setCurrentView('connections') },
+                  { title: "Connections", icon: "👬", href: "/connections" },
                   { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
                 ] :
                 // Personal account menu items
@@ -1579,7 +1579,7 @@ export default function Page() {
                   { title: "Memories", icon: "🖼️", href: "/memories" },
                   { title: "Achievements", icon: "🏆", href: "/achievements" },
                   { title: "Timeline", icon: "🧭", href: "/timeline" },
-                  { title: "Connections", icon: "👬", onClick: () => setCurrentView('connections') },
+                  { title: "Connections", icon: "👬", href: "/connections" },
                   { title: "Saved", icon: "❤️", href: "/saved" },
                   { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
                 ]
