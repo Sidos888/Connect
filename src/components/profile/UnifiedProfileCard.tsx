@@ -1,7 +1,8 @@
 "use client";
 
 import Avatar from "@/components/Avatar";
-import { Pencil, Settings, X, MoreVertical, ArrowLeft } from "lucide-react";
+import { Pencil, Settings, MoreVertical } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageSystem";
 
 type Profile = {
   id?: string;
@@ -37,131 +38,49 @@ export default function UnifiedProfileCard({
   onThreeDotsMenu?: () => void;
   showBackButton?: boolean;
 }) {
-  return (
-    <div className="bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-full lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-      {/* Header with Action Buttons */}
-      <div className="absolute left-4 right-4 z-10 flex items-center justify-between lg:static lg:relative lg:p-6 lg:pb-3 lg:left-0 lg:right-0 lg:pointer-events-auto pointer-events-none lg:bg-transparent" style={{ top: 'max(calc(env(safe-area-inset-top) + 16px), 86px)' }}>
-        <button
-          onClick={onClose}
-          className="flex items-center justify-center w-10 h-10 pointer-events-auto transition-all duration-200 hover:-translate-y-[1px]"
-          style={{
-            borderRadius: '100px',
-            background: 'rgba(255, 255, 255, 0.9)',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            willChange: 'transform, box-shadow'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          aria-label={showBackButton ? "Back" : "Close profile"}
-        >
-          {showBackButton ? (
-            <ArrowLeft className="h-5 w-5 text-gray-900" />
-          ) : (
-            <X className="h-5 w-5 text-gray-900" />
-          )}
-        </button>
-        
-        {isOwnProfile ? (
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <button 
-              onClick={onEdit}
-              className="flex items-center justify-center w-10 h-10 transition-all duration-200 hover:-translate-y-[1px]"
-              style={{
-                borderRadius: '100px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                borderStyle: 'solid',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                willChange: 'transform, box-shadow'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              aria-label="Edit profile"
-            >
-              <Pencil className="h-5 w-5 text-gray-900" />
-            </button>
-            <button 
-              onClick={onSettings}
-              className="flex items-center justify-center w-10 h-10 transition-all duration-200 hover:-translate-y-[1px]"
-              style={{
-                borderRadius: '100px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                borderStyle: 'solid',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                willChange: 'transform, box-shadow'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              aria-label="Open settings"
-            >
-              <Settings className="h-5 w-5 text-gray-900" />
-            </button>
-          </div>
-        ) : (
-          <button 
-            onClick={onThreeDotsMenu || (() => {})}
-            className="flex items-center justify-center w-10 h-10 pointer-events-auto transition-all duration-200 hover:-translate-y-[1px]"
-            style={{
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            aria-label="More options"
-            disabled={!onThreeDotsMenu}
-          >
-            <MoreVertical className="h-5 w-5 text-gray-900" />
-          </button>
-        )}
-      </div>
+  // Build action buttons for PageHeader
+  const actionButtons = isOwnProfile && onEdit && onSettings ? [
+    {
+      icon: <Pencil className="h-5 w-5 text-gray-900" />,
+      onClick: onEdit,
+      label: "Edit profile"
+    },
+    {
+      icon: <Settings className="h-5 w-5 text-gray-900" />,
+      onClick: onSettings,
+      label: "Open settings"
+    }
+  ] : !isOwnProfile && onThreeDotsMenu ? [
+    {
+      icon: <MoreVertical className="h-5 w-5 text-gray-900" />,
+      onClick: onThreeDotsMenu,
+      label: "More options"
+    }
+  ] : undefined;
 
-      {/* Content - Mobile: top-aligned with proper spacing, Desktop: centered */}
-      <div 
-        className="flex-1 flex flex-col lg:justify-center px-6 overflow-hidden lg:pb-6 lg:pt-0" 
-        style={{ 
-          paddingTop: 'max(calc(env(safe-area-inset-top) + 122px), 172px)',
-          paddingBottom: 'max(24px, env(safe-area-inset-bottom))'
-        }}
-      >
-        <style jsx>{`
-          @media (min-width: 1024px) {
-            div {
-              padding-top: 0 !important;
-              padding-bottom: 24px !important;
-            }
-          }
-        `}</style>
+  return (
+    <div 
+      className="bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-full lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+      style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+    >
+      <PageHeader
+        title="Profile"
+        backButton
+        backIcon={showBackButton ? "arrow" : "close"}
+        onBack={onClose}
+        actions={actionButtons}
+      />
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-8 pb-8 scrollbar-hide flex flex-col" style={{ 
+        paddingTop: 'var(--saved-content-padding-top, 104px)',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}>
         {/* Profile Header - Centered */}
         <div className="text-center mb-6">
           <div className="relative inline-block mb-4">
-            <Avatar src={profile?.avatarUrl ?? undefined} name={profile?.name ?? 'User'} size={120} className="lg:!w-[100px] lg:!h-[100px]" />
+            <Avatar src={profile?.avatarUrl ?? undefined} name={profile?.name ?? 'User'} size={100} />
           </div>
           <button
             onClick={onShare || (() => {})}
@@ -265,6 +184,18 @@ export default function UnifiedProfileCard({
             <span className="text-sm font-semibold text-neutral-900 text-center leading-tight">Connections</span>
           </button>
         </div>
+      </div>
+
+      {/* Bottom Blur */}
+      <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+        <div className="absolute bottom-0 left-0 right-0" style={{
+          height: '80px',
+          background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+        }} />
+        <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+        <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+        <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+        <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
       </div>
     </div>
   );

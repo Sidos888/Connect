@@ -1015,98 +1015,6 @@ function MenuView({
   );
 }
 
-// Simple profile view
-function ProfileView({ 
-  onBack, 
-  onEditProfile,
-  onShare,
-  onConnections,
-  onSettings,
-  currentAccount 
-}: { 
-  onBack: () => void; 
-  onEditProfile: () => void;
-  onShare: () => void;
-  onConnections: () => void;
-  onSettings: () => void;
-  currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null;
-}) {
-  return (
-    <SimpleCard>
-      <div className="space-y-4">
-        {/* Header with back button */}
-        <div className="flex items-center justify-center relative w-full mb-6" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <button
-            onClick={onBack}
-            className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
-            aria-label="Back to menu"
-          >
-            <span className="action-btn-circle">
-              <ChevronLeft size={20} className="text-gray-900" />
-            </span>
-          </button>
-          <h2 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Profile</h2>
-        </div>
-
-        {/* Profile Card */}
-        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm p-6 relative">
-          {/* Edit Profile link in top right */}
-          <button
-            onClick={onEditProfile}
-            className="absolute top-4 right-4 text-sm font-medium text-gray-900 hover:text-gray-700 underline transition-colors"
-          >
-            Edit
-          </button>
-          
-          <div className="flex flex-col items-center text-center space-y-4">
-            <Avatar
-              src={currentAccount?.avatarUrl ?? undefined}
-              name={currentAccount?.name ?? "User"}
-              size={80}
-            />
-            <div>
-              <button
-                onClick={() => {
-                  setShowCenteredProfile(false);
-                  router.push('/share-profile');
-                }}
-                className="inline-block mb-3"
-                style={{
-                  borderRadius: '16px',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  padding: '10px 16px'
-                }}
-                aria-label="Open links card"
-              >
-                <span className="text-3xl font-bold text-gray-900">{personalProfile?.name ?? 'Your Name'}</span>
-              </button>
-              {personalProfile?.bio && (
-                <p className="text-gray-600 text-lg">{personalProfile?.bio}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Profile actions */}
-        <div className="space-y-1">
-          <button
-            onClick={onShare}
-            className="w-full flex items-center gap-3 px-3 py-3 text-left text-gray-700 hover:shadow-sm hover:bg-white rounded-lg transition-all"
-          >
-            <Share2 size={20} className="text-gray-600" />
-            <span className="font-medium">Share Profile</span>
-          </button>
-        </div>
-      </div>
-    </SimpleCard>
-  );
-}
-
-
 export default function ProfileMenu() {
   const { personalProfile, clearAll, setPersonalProfile } = useAppStore();
   const { signOut, deleteAccount, updateProfile, uploadAvatar, supabase, user } = useAuth();
@@ -1117,7 +1025,6 @@ export default function ProfileMenu() {
   // Removed debugging log for performance
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<ConnectionUser | null>(null);
-  const [showProfile, setShowProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
@@ -1171,7 +1078,6 @@ export default function ProfileMenu() {
     setShowMenu(false); // Immediately hide menu on navigation
     setShowConnections(false);
     setShowAddPerson(false);
-    setShowProfile(false);
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
     setShowCenteredProfile(false);
@@ -1301,7 +1207,6 @@ export default function ProfileMenu() {
     setShowConnections(false);
     setShowAddPerson(false);
     setSelectedFriend(null);
-    setShowProfile(false);
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
     setShowCenteredProfile(false);
@@ -1368,7 +1273,6 @@ export default function ProfileMenu() {
     setOpen(false);
     setShowConnections(false);
     setShowAddPerson(false);
-    setShowProfile(false);
     
     try {
       console.log('ProfileMenu: Starting sign out...');
@@ -1508,7 +1412,6 @@ export default function ProfileMenu() {
     setShowFinalConfirm(false);
     setShowConnections(false);
     setShowAddPerson(false);
-    // Keep the menu open - don't set setOpen(false)
   };
 
   const handleViewProfile = () => {
@@ -1588,27 +1491,6 @@ export default function ProfileMenu() {
                   setShowAddPerson(false);
                   setShowConnections(true);
                 }}
-              />
-            ) : showProfile ? (
-              <ProfileView
-                onBack={() => setShowProfile(false)}
-                onEditProfile={handleEditProfile}
-                onShare={() => {
-                  setOpen(false);
-                  setShowShareModal(true);
-                }}
-                onConnections={() => {
-                  console.log('ProfileView: Opening connections');
-                  setShowProfile(false);
-                  setShowConnections(true);
-                }}
-                onSettings={() => {
-                  console.log('ProfileView: Opening centered settings');
-                  setShowProfile(false);
-                  setOpen(false);
-                  setShowCenteredSettings(true);
-                }}
-                currentAccount={currentAccount}
               />
             ) : (
               <MenuView
