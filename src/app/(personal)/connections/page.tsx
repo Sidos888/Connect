@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import Connections from "@/components/connections/Connections";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,37 @@ import { User as ConnectionUser } from "@/lib/connectionsService";
 
 export default function ConnectionsPage() {
   const router = useRouter();
+
+  // Hide bottom nav on mobile connections page
+  useEffect(() => {
+    const hideBottomNav = () => {
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = 'none';
+        (bottomNav as HTMLElement).style.visibility = 'hidden';
+        (bottomNav as HTMLElement).style.opacity = '0';
+        (bottomNav as HTMLElement).style.transform = 'translateY(100%)';
+      }
+      document.body.style.paddingBottom = '0';
+    };
+
+    const showBottomNav = () => {
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = '';
+        (bottomNav as HTMLElement).style.visibility = '';
+        (bottomNav as HTMLElement).style.opacity = '';
+        (bottomNav as HTMLElement).style.transform = '';
+      }
+      document.body.style.paddingBottom = '';
+    };
+    
+    hideBottomNav();
+    
+    return () => {
+      showBottomNav();
+    };
+  }, []);
 
   const handleFriendClick = (friend: ConnectionUser) => {
     router.push(`/profile/${friend.id}`);
