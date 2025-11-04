@@ -3,6 +3,7 @@
 import Avatar from "@/components/Avatar";
 import { Pencil, Settings, MoreVertical } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageSystem";
+import { useEffect, useState } from "react";
 
 type Profile = {
   id?: string;
@@ -38,6 +39,18 @@ export default function UnifiedProfileCard({
   onThreeDotsMenu?: () => void;
   showBackButton?: boolean;
 }) {
+  // Platform detection for responsive padding
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Build action buttons for PageHeader
   const actionButtons = isOwnProfile && onEdit && onSettings ? [
     {
@@ -58,10 +71,12 @@ export default function UnifiedProfileCard({
     }
   ] : undefined;
 
+  const contentPaddingTop = isMobile ? '140px' : '104px';
+
   return (
     <div 
       className="bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-full lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
-      style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+      style={{ '--saved-content-padding-top': contentPaddingTop } as React.CSSProperties}
     >
       <PageHeader
         title="Profile"
