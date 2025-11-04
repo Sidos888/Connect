@@ -263,9 +263,9 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               
               {/* Step 3: Typing state - label stays up */}
               {firstName && (
-                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                  First Name
-                </label>
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    First Name
+                  </label>
               )}
             </div>
 
@@ -329,9 +329,9 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               
               {/* Step 3: Typing state - label stays up */}
               {lastName && (
-                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                  Last Name
-                </label>
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Last Name
+                  </label>
               )}
             </div>
           </div>
@@ -382,24 +382,24 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               </label>
             )}
             
-              {/* Step 2: Focused state - label moves up, placeholder appears */}
-              {bioFocused && !bio && (
-                <>
+            {/* Step 2: Focused state - label moves up, placeholder appears */}
+            {bioFocused && !bio && (
+              <>
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                    Bio
-                  </label>
+                  Bio
+                </label>
                   <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit', top: '24px' }}>
-                    Tell us about yourself...
-                  </div>
-                </>
-              )}
+                  Tell us about yourself...
+                </div>
+              </>
+            )}
             
               {/* Step 3: Typing state - label stays up */}
-              {bio && (
+            {bio && (
                 <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
                   Bio
                 </label>
-              )}
+            )}
             
             {/* Character counter */}
             <div className="absolute bottom-2 right-3">
@@ -489,24 +489,24 @@ export default function EditProfileModal({ onBack, onSave }: EditProfileModalPro
               </label>
             )}
             
-              {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
-              {dobFocused && !dob && (
-                <>
-                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                    Date of birth
-                  </label>
-                  {/* DD/MM/YYYY placeholder */}
+            {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
+            {dobFocused && !dob && (
+              <>
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  Date of birth
+                </label>
+                {/* DD/MM/YYYY placeholder */}
                   <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>
-                    DD/MM/YYYY
-                  </div>
-                </>
-              )}
+                  DD/MM/YYYY
+                </div>
+              </>
+            )}
             
             {/* Step 3: Typing state - label stays up */}
             {dob && (
-              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                Date of birth
-              </label>
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  Date of birth
+                </label>
             )}
           </div>
 

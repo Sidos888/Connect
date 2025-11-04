@@ -159,6 +159,15 @@ html, body {
   height: 100vh !important;
 }
 
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

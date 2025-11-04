@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
     // Allow mobile asset builds even if there are stray type errors in debug pages
     ignoreBuildErrors: true,
   },
+  reactStrictMode: false, // Disable for Capacitor iOS compatibility
+  compiler: {
+    removeConsole: false, // Keep console logs for debugging
+  },
 };
 
 export default nextConfig;

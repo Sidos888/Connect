@@ -78,7 +78,7 @@ export const useAppStore = create<StoreState>()(
       resetMenuState: () => {},
       
       // Hydration
-      isHydrated: false,
+      isHydrated: typeof window !== 'undefined', // Start as hydrated on client
       setHydrated: (hydrated) => set({ isHydrated: hydrated }),
       isAccountSwitching: false,
       setAccountSwitching: (switching) => set({ isAccountSwitching: switching }),
@@ -93,9 +93,24 @@ export const useAppStore = create<StoreState>()(
       partialize: (state) => ({
         personalProfile: state.personalProfile,
         currentBusiness: state.currentBusiness,
-        isHydrated: state.isHydrated,
+        // Don't persist isHydrated - it should reset on each session
         // Don't persist chat data - React Query handles this
       }),
+      onRehydrateStorage: () => (state) => {
+        // Ensure hydration completes even if there's an error
+        try {
+          if (state) {
+            state.setHydrated(true);
+          }
+        } catch (error) {
+          console.error('Store rehydration error:', error);
+          // Set hydrated anyway to prevent blocking
+          if (state) {
+            state.setHydrated(true);
+          }
+        }
+      },
+      skipHydration: false, // Enable hydration
     }
   )
 );
