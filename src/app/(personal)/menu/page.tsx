@@ -19,6 +19,7 @@ import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
+import EditProfileLanding from "@/components/settings/EditProfileLanding";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 
@@ -184,8 +185,25 @@ export default function Page() {
     }
   };
 
-  // Edit Profile Component
+  // Edit Profile Component - Using new design system
   const EditProfileView = () => {
+    return (
+      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex items-center justify-center">
+        <EditProfileLanding
+          name={currentAccount?.name}
+          avatarUrl={currentAccount?.avatarUrl}
+          onBack={() => setCurrentView('profile')}
+          onOpenLinks={() => router.push('/settings/edit/links')}
+          onOpenPersonalDetails={() => router.push('/settings/edit/details')}
+          onOpenTimeline={() => router.push('/timeline')}
+          onOpenHighlights={() => router.push('/highlights')}
+        />
+      </div>
+    );
+  };
+
+  // Old Edit Profile Component (keeping for reference/backup)
+  const OldEditProfileView = () => {
     const [formData, setFormData] = React.useState({
       name: account?.name || currentAccount?.name || '',
       bio: account?.bio || currentAccount?.bio || '',
