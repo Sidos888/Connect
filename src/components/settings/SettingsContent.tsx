@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, LogOut, Trash2, MoreVertical, Eye, Pencil, User } from "lucide-react";
+import { LogOut, Trash2, MoreVertical, Eye, Pencil, User } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { useState, useRef, useEffect } from "react";
 
@@ -155,37 +155,8 @@ export default function SettingsContent({
         </div>
       ) : (
         <>
-          {/* Header with back button - matches UnifiedProfileCard positioning */}
-          {showBackButton && (
-            <>
-              <button
-                onClick={onBack}
-                className="absolute top-4 left-4 z-10 flex items-center justify-center w-10 h-10 transition-all duration-200 hover:-translate-y-[1px]"
-                style={{
-                  borderRadius: '100px',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                aria-label="Back"
-              >
-                <ChevronLeft size={20} className="text-gray-900" />
-              </button>
-              <h2 className="absolute top-6 left-1/2 -translate-x-1/2 z-10 text-xl font-semibold text-gray-900">Settings</h2>
-            </>
-          )}
-          
           {/* Settings content */}
-          <div className="flex-1 px-6 relative" style={{ paddingTop: showBackButton ? '80px' : '24px' }}>
+          <div className="flex-1 px-6 relative" style={{ paddingTop: 'var(--saved-content-padding-top, 24px)' }}>
             {/* Profile Card + Edit Profile - Combined */}
             <div 
               className="bg-white rounded-2xl mb-6 border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-[1px] relative" 

@@ -4,13 +4,13 @@ import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
-import { ChevronLeftIcon } from "@/components/icons";
+import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import SettingsContent from "@/components/settings/SettingsContent";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { clearAll, personalProfile } = useAppStore();
-  const { signOut, deleteAccount, user } = useAuth();
+  const { signOut, deleteAccount } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -36,7 +36,6 @@ export default function SettingsPage() {
       router.back();
     }
   };
-
 
   // Hide bottom nav on mobile settings page
   useEffect(() => {
@@ -70,8 +69,8 @@ export default function SettingsPage() {
   }, []);
 
   const handleSignOut = async () => {
-      await signOut();
-      clearAll();
+    await signOut();
+    clearAll();
     router.replace("/");
   };
 
@@ -82,8 +81,8 @@ export default function SettingsPage() {
   const confirmDeleteAccount = async () => {
     setIsDeletingAccount(true);
     await deleteAccount();
-        setIsDeletingAccount(false);
-      clearAll();
+    setIsDeletingAccount(false);
+    clearAll();
     router.replace('/');
   };
 
@@ -98,57 +97,55 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col lg:max-w-2xl lg:mx-auto">
-      {/* Header */}
-      <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
-        <div className="flex items-center justify-between w-full">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex items-center justify-center w-10 h-10"
-            style={{
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-            }}
-            aria-label="Go back"
-          >
-            <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
-          </button>
-          <h1 className="absolute left-1/2 -translate-x-1/2 font-semibold text-[18px] leading-6 text-gray-900">Settings</h1>
-          <div className="w-10"></div>
-        </div>
-      </div>
-
-      {/* Settings content - use shared component */}
-      <div className="flex-1 overflow-hidden">
-        <SettingsContent
+    <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+      <MobilePage>
+        <PageHeader
+          title="Settings"
+          backButton
           onBack={handleBack}
-          onSignOut={handleSignOut}
-          onDeleteAccount={handleDeleteAccount}
-          showDeleteConfirm={showDeleteConfirm}
-          showFinalConfirm={showFinalConfirm}
-          onConfirmDelete={confirmDeleteAccount}
-          onCancelDelete={cancelDeleteAccount}
-          onProceedToFinalConfirm={() => setShowFinalConfirm(true)}
-          onBackToMenu={backToMenu}
-          isDeletingAccount={isDeletingAccount}
-          personalProfile={personalProfile}
-          showBackButton={false}
-          onViewProfile={() => {
-            router.push('/menu?view=profile');
-          }}
-          onEditProfile={() => {
-            router.push('/settings/edit');
-          }}
-          onAccountSettings={() => {
-            router.push('/settings/account-settings');
-          }}
         />
-      </div>
+        
+        <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}>
+          <SettingsContent
+            onBack={handleBack}
+            onSignOut={handleSignOut}
+            onDeleteAccount={handleDeleteAccount}
+            showDeleteConfirm={showDeleteConfirm}
+            showFinalConfirm={showFinalConfirm}
+            onConfirmDelete={confirmDeleteAccount}
+            onCancelDelete={cancelDeleteAccount}
+            onProceedToFinalConfirm={() => setShowFinalConfirm(true)}
+            onBackToMenu={backToMenu}
+            isDeletingAccount={isDeletingAccount}
+            personalProfile={personalProfile}
+            showBackButton={false}
+            onViewProfile={() => {
+              router.push('/menu?view=profile');
+            }}
+            onEditProfile={() => {
+              router.push('/settings/edit');
+            }}
+            onAccountSettings={() => {
+              router.push('/settings/account-settings');
+            }}
+          />
+        </div>
+        
+        {/* Bottom Blur */}
+        <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+          <div className="absolute bottom-0 left-0 right-0" style={{
+            height: '80px',
+            background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+          }} />
+          <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+          <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+          <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+          <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+        </div>
+      </MobilePage>
     </div>
   );
 }
