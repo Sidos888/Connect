@@ -21,10 +21,13 @@ export default function EditProfileLanding({
   onOpenTimeline: () => void;
   onOpenHighlights: () => void;
 }) {
+  // Detect platform
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  
   return (
     <div 
-      className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
-      style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+      className="bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-full lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+      style={{ '--saved-content-padding-top': isMobile ? '140px' : '104px' } as React.CSSProperties}
     >
       <PageHeader
         title="Edit Profile"

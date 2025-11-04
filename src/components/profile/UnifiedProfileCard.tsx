@@ -71,7 +71,7 @@ export default function UnifiedProfileCard({
     }
   ] : undefined;
 
-  const contentPaddingTop = isMobile ? '180px' : '104px';
+  const contentPaddingTop = isMobile ? '140px' : '104px';
 
   return (
     <div 
@@ -94,6 +94,8 @@ export default function UnifiedProfileCard({
       }}>
         {/* Profile Header - Centered */}
         <div className="text-center mb-6">
+          {/* Extra spacing on mobile to push avatar well below blur */}
+          {isMobile && <div style={{ height: '60px' }} />}
           <div className="relative inline-block mb-4">
             <Avatar src={profile?.avatarUrl ?? undefined} name={profile?.name ?? 'User'} size={100} />
           </div>
