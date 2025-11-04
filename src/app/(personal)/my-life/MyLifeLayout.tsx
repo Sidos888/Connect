@@ -61,6 +61,7 @@ export default function MyLifeLayout(): JSX.Element {
   const [showCenteredAchievements, setShowCenteredAchievements] = React.useState(false);
   const [showCenteredHighlights, setShowCenteredHighlights] = React.useState(false);
   const [showCenteredShareProfile, setShowCenteredShareProfile] = React.useState(false);
+  const [shareFromProfile, setShareFromProfile] = React.useState(false);
   const { account, signOut, deleteAccount, user } = useAuth();
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
   const profileMenuButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -253,7 +254,7 @@ export default function MyLifeLayout(): JSX.Element {
             }}
             onEdit={() => { setShowCenteredProfile(false); setEditProfileFromProfile(true); setShowCenteredEditLanding(true); }}
             onSettings={() => { setShowCenteredProfile(false); setProfileFromSettings(true); setShowCenteredSettings(true); }}
-            onShare={() => { setShowCenteredProfile(false); setShowCenteredShareProfile(true); }}
+            onShare={() => { setShowCenteredProfile(false); setShareFromProfile(true); setShowCenteredShareProfile(true); }}
             onOpenTimeline={() => { setShowCenteredProfile(false); router.push('/timeline'); }}
             onOpenHighlights={() => { setShowCenteredProfile(false); setShowCenteredHighlights(true); }}
             onOpenBadges={() => { setShowCenteredProfile(false); setShowCenteredAchievements(true); }}
@@ -582,9 +583,23 @@ export default function MyLifeLayout(): JSX.Element {
           <div
             className="fixed inset-0 transition-opacity duration-300 ease-in-out"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-            onClick={() => setShowCenteredShareProfile(false)}
+            onClick={() => {
+              setShowCenteredShareProfile(false);
+              if (shareFromProfile) {
+                setShowCenteredProfile(true);
+                setShareFromProfile(false);
+              }
+            }}
           />
-          <CenteredShareProfile onBack={() => setShowCenteredShareProfile(false)} />
+          <CenteredShareProfile 
+            onBack={() => {
+              setShowCenteredShareProfile(false);
+              if (shareFromProfile) {
+                setShowCenteredProfile(true);
+                setShareFromProfile(false);
+              }
+            }} 
+          />
         </div>
       )}
     </>
