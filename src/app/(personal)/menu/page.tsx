@@ -20,6 +20,7 @@ import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
+import ProfileMenu from "@/components/menu/ProfileMenu";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
@@ -1099,34 +1100,9 @@ export default function Page() {
                 title="Menu"
                 backButton={true}
                 customBackButton={
-                  <button
-                    onClick={() => setCurrentView('profile')}
-                    className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] overflow-hidden"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '100px',
-                      background: 'rgba(255, 255, 255, 0.9)',
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    aria-label="View profile"
-                  >
-                    <Avatar 
-                      src={currentAccount?.avatarUrl ?? undefined} 
-                      name={currentAccount?.name ?? "Your Name"} 
-                      size={40} 
-                    />
-                  </button>
+                  <div className="absolute left-0">
+                    <ProfileMenu />
+                  </div>
                 }
                 actions={[
                   {
