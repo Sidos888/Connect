@@ -1097,13 +1097,46 @@ export default function Page() {
             <MobilePage>
               <PageHeader
                 title="Menu"
-                backButton={true}
-                backIcon="arrow"
-                onBack={() => setCurrentView('profile')}
-                customBackButton={
-                  <button
+                backButton={false}
+              />
+
+              <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+                paddingTop: 'var(--saved-content-padding-top, 140px)',
+                paddingBottom: '32px',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}>
+                {/* Top Section: Profile Card + Notification Button */}
+                <div className="flex items-center gap-3 mb-6">
+                  {/* Profile Card */}
+                  <div 
+                    className="flex-1 cursor-pointer"
                     onClick={() => setCurrentView('profile')}
-                    className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] overflow-hidden"
+                  >
+                    <ProfileStrip
+                      name={currentAccount?.name ?? "Your Name"}
+                      avatarUrl={currentAccount?.avatarUrl}
+                      action={
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsProfileMenuOpen((v) => !v);
+                          }}
+                          ref={profileMenuButtonRef}
+                          className="p-2 -m-2 rounded-full hover:bg-gray-100 transition-colors"
+                          aria-label="Open profile menu"
+                          aria-expanded={isProfileMenuOpen}
+                        >
+                          <MoreVertical className="h-5 w-5 text-gray-700" />
+                        </button>
+                      }
+                    />
+                  </div>
+
+                  {/* Notification Button */}
+                  <button
+                    onClick={() => router.push('/notifications')}
+                    className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                     style={{
                       width: '40px',
                       height: '40px',
@@ -1121,30 +1154,11 @@ export default function Page() {
                     onMouseLeave={(e) => {
                       e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }}
-                    aria-label="View profile"
+                    aria-label="Notifications"
                   >
-                    <Avatar 
-                      src={currentAccount?.avatarUrl ?? undefined} 
-                      name={currentAccount?.name ?? "Your Name"} 
-                      size={40} 
-                    />
+                    <BellIcon className="h-5 w-5 text-gray-900" />
                   </button>
-                }
-                actions={[
-                  {
-                    icon: <MoreVertical size={20} className="text-gray-900" />,
-                    onClick: () => setIsProfileMenuOpen((v) => !v),
-                    label: "Profile options"
-                  }
-                ]}
-              />
-
-              <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
-                paddingTop: 'var(--saved-content-padding-top, 140px)',
-                paddingBottom: '32px',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-              }}>
+                </div>
 
                 {/* Kebab menu dropdown (positioned absolute) */}
                 {isProfileMenuOpen && (
