@@ -1102,7 +1102,7 @@ export default function Page() {
                 customBackButton={
                   <button
                     onClick={() => setShowAccountSwitcher(true)}
-                    className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] overflow-hidden"
+                    className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                     style={{
                       width: '40px',
                       height: '40px',
@@ -1112,7 +1112,9 @@ export default function Page() {
                       borderColor: '#E5E7EB',
                       borderStyle: 'solid',
                       boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow'
+                      willChange: 'transform, box-shadow',
+                      padding: '0',
+                      overflow: 'hidden'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -1122,11 +1124,13 @@ export default function Page() {
                     }}
                     aria-label="Switch account"
                   >
-                    <Avatar 
-                      src={currentAccount?.avatarUrl ?? undefined} 
-                      name={currentAccount?.name ?? "Your Name"} 
-                      size={40} 
-                    />
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      <Avatar 
+                        src={currentAccount?.avatarUrl ?? undefined} 
+                        name={currentAccount?.name ?? "Your Name"} 
+                        size={40} 
+                      />
+                    </div>
                   </button>
                 }
                 actions={[
