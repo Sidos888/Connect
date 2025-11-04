@@ -17,6 +17,7 @@ import EditProfileLanding from "@/components/settings/EditProfileLanding";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import SettingsContent from "@/components/settings/SettingsContent";
 import CenteredAccountSettings from "@/components/settings/CenteredAccountSettings";
+import { PageHeader } from "@/components/layout/PageSystem";
 import ConnectionsModal from "@/components/chat/ConnectionsModal";
 import CenteredConnections from "@/components/connections/CenteredConnections";
 import CenteredAddPerson from "@/components/connections/CenteredAddPerson";
@@ -319,50 +320,83 @@ export default function MyLifeLayout(): JSX.Element {
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
             onClick={() => setShowCenteredSettings(false)}
           />
-          <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-            <SettingsContent
-              onBack={() => setShowCenteredSettings(false)}
-              onSignOut={async () => {
-                await signOut();
-                router.push('/');
-              }}
-              onDeleteAccount={() => setShowDeleteConfirm(true)}
-              showDeleteConfirm={showDeleteConfirm}
-              showFinalConfirm={showFinalConfirm}
-              onConfirmDelete={async () => {
-                setIsDeletingAccount(true);
-                await deleteAccount();
-                setIsDeletingAccount(false);
-                router.push('/');
-              }}
-              onCancelDelete={() => {
-                setShowDeleteConfirm(false);
-                setShowFinalConfirm(false);
-              }}
-              onProceedToFinalConfirm={() => setShowFinalConfirm(true)}
-              onBackToMenu={() => {
-                setShowDeleteConfirm(false);
-                setShowFinalConfirm(false);
+          <div 
+            className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+            style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+          >
+            <PageHeader
+              title="Settings"
+              backButton
+              backIcon="close"
+              onBack={() => {
                 setShowCenteredSettings(false);
-              }}
-              isDeletingAccount={isDeletingAccount}
-              personalProfile={personalProfile}
-              showBackButton={true}
-              onViewProfile={() => {
-                setShowCenteredSettings(false);
-                setProfileFromSettings(true);
-                setShowCenteredProfile(true);
-              }}
-              onEditProfile={() => {
-                setShowCenteredSettings(false);
-                setEditProfileFromProfile(false);
-                setShowCenteredEditLanding(true);
-              }}
-              onAccountSettings={() => {
-                setShowCenteredSettings(false);
-                setShowCenteredAccountSettings(true);
+                if (profileFromSettings) {
+                  setShowCenteredProfile(true);
+                  setProfileFromSettings(false);
+                }
               }}
             />
+            
+            <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}>
+              <SettingsContent
+                onBack={() => setShowCenteredSettings(false)}
+                onSignOut={async () => {
+                  await signOut();
+                  router.push('/');
+                }}
+                onDeleteAccount={() => setShowDeleteConfirm(true)}
+                showDeleteConfirm={showDeleteConfirm}
+                showFinalConfirm={showFinalConfirm}
+                onConfirmDelete={async () => {
+                  setIsDeletingAccount(true);
+                  await deleteAccount();
+                  setIsDeletingAccount(false);
+                  router.push('/');
+                }}
+                onCancelDelete={() => {
+                  setShowDeleteConfirm(false);
+                  setShowFinalConfirm(false);
+                }}
+                onProceedToFinalConfirm={() => setShowFinalConfirm(true)}
+                onBackToMenu={() => {
+                  setShowDeleteConfirm(false);
+                  setShowFinalConfirm(false);
+                  setShowCenteredSettings(false);
+                }}
+                isDeletingAccount={isDeletingAccount}
+                personalProfile={personalProfile}
+                showBackButton={false}
+                onViewProfile={() => {
+                  setShowCenteredSettings(false);
+                  setProfileFromSettings(true);
+                  setShowCenteredProfile(true);
+                }}
+                onEditProfile={() => {
+                  setShowCenteredSettings(false);
+                  setEditProfileFromProfile(false);
+                  setShowCenteredEditLanding(true);
+                }}
+                onAccountSettings={() => {
+                  setShowCenteredSettings(false);
+                  setShowCenteredAccountSettings(true);
+                }}
+              />
+            </div>
+            
+            {/* Bottom Blur */}
+            <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+              <div className="absolute bottom-0 left-0 right-0" style={{
+                height: '80px',
+                background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+              }} />
+              <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+              <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+              <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+              <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+            </div>
           </div>
         </div>
       )}

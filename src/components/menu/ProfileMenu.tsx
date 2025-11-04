@@ -1107,69 +1107,11 @@ function ProfileView({
 }
 
 
-// Simple settings view wrapper for dropdown
-function SettingsView({ 
-  onBack, 
-  onSignOut, 
-  onDeleteAccount, 
-  showDeleteConfirm,
-  showFinalConfirm,
-  onConfirmDelete,
-  onCancelDelete,
-  onProceedToFinalConfirm,
-  onBackToFirstConfirm,
-  onBackToMenu,
-  isDeletingAccount,
-  personalProfile,
-  onViewProfile,
-  onEditProfile,
-  onAccountSettings,
-}: { 
-  onBack: () => void; 
-  onSignOut: () => void; 
-  onDeleteAccount: () => void; 
-  showDeleteConfirm: boolean;
-  showFinalConfirm: boolean;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
-  onProceedToFinalConfirm: () => void;
-  onBackToFirstConfirm: () => void;
-  onBackToMenu: () => void;
-  isDeletingAccount: boolean;
-  personalProfile: any;
-  onViewProfile?: () => void;
-  onEditProfile?: () => void;
-  onAccountSettings?: () => void;
-}) {
-  return (
-    <SimpleCard>
-      <SettingsContent
-        onBack={onBack}
-        onSignOut={onSignOut}
-        onDeleteAccount={onDeleteAccount}
-        showDeleteConfirm={showDeleteConfirm}
-        showFinalConfirm={showFinalConfirm}
-        onConfirmDelete={onConfirmDelete}
-        onCancelDelete={onCancelDelete}
-        onProceedToFinalConfirm={onProceedToFinalConfirm}
-        onBackToMenu={onBackToMenu}
-        isDeletingAccount={isDeletingAccount}
-        personalProfile={personalProfile}
-        showBackButton={true}
-        onViewProfile={onViewProfile}
-        onEditProfile={onEditProfile}
-        onAccountSettings={onAccountSettings}
-      />
-    </SimpleCard>
-  );
-}
-
 export default function ProfileMenu() {
   const { personalProfile, clearAll, setPersonalProfile } = useAppStore();
   const { signOut, deleteAccount, updateProfile, uploadAvatar, supabase, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [showDim, setShowDim] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showConnections, setShowConnections] = useState(false);
   
   // Removed debugging log for performance
@@ -1227,7 +1169,6 @@ export default function ProfileMenu() {
     console.log('ProfileMenu: Pathname changed to', pathname, '- Resetting all modal states');
     setOpen(false);
     setShowMenu(false); // Immediately hide menu on navigation
-    setShowSettings(false);
     setShowConnections(false);
     setShowAddPerson(false);
     setShowProfile(false);
@@ -1357,7 +1298,6 @@ export default function ProfileMenu() {
     if (menuRef.current) {
       menuRef.current.style.display = 'none';
     }
-    setShowSettings(false);
     setShowConnections(false);
     setShowAddPerson(false);
     setSelectedFriend(null);
@@ -1426,7 +1366,6 @@ export default function ProfileMenu() {
     setIsLoading(true);
     setLoadingMessage('Signing out...');
     setOpen(false);
-    setShowSettings(false);
     setShowConnections(false);
     setShowAddPerson(false);
     setShowProfile(false);
@@ -1567,7 +1506,6 @@ export default function ProfileMenu() {
   const backToMenu = () => {
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
-    setShowSettings(false);
     setShowConnections(false);
     setShowAddPerson(false);
     // Keep the menu open - don't set setOpen(false)
@@ -1635,28 +1573,7 @@ export default function ProfileMenu() {
         {/* Dropdown menu */}
       {showMenu && (
         <div ref={menuRef} role="menu" className="profile-menu-card absolute right-0 z-50 mt-2">
-            {showSettings ? (
-              <SettingsView
-                onBack={() => setShowSettings(false)}
-                onSignOut={handleSignOut}
-                onDeleteAccount={handleDeleteAccount}
-                showDeleteConfirm={showDeleteConfirm}
-                showFinalConfirm={showFinalConfirm}
-                onConfirmDelete={confirmDeleteAccount}
-                onCancelDelete={cancelDeleteAccount}
-                onProceedToFinalConfirm={proceedToFinalConfirm}
-                onBackToFirstConfirm={backToFirstConfirm}
-                onBackToMenu={backToMenu}
-                isDeletingAccount={isDeletingAccount}
-                personalProfile={personalProfile}
-                onViewProfile={handleViewProfile}
-                onEditProfile={handleEditProfile}
-                onAccountSettings={() => {
-                  setShowSettings(false);
-                  setShowCenteredAccountSettings(true);
-                }}
-              />
-            ) : showConnections ? (
+            {showConnections ? (
               <ConnectionsView
                 onBack={() => setShowConnections(false)}
                 onAddPerson={() => {
@@ -1686,9 +1603,10 @@ export default function ProfileMenu() {
                   setShowConnections(true);
                 }}
                 onSettings={() => {
-                  console.log('ProfileView: Opening settings');
+                  console.log('ProfileView: Opening centered settings');
                   setShowProfile(false);
-                  setShowSettings(true);
+                  setOpen(false);
+                  setShowCenteredSettings(true);
                 }}
                 currentAccount={currentAccount}
               />
