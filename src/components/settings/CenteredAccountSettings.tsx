@@ -29,7 +29,7 @@ export default function CenteredAccountSettings({
         <PageHeader
           title="Account Settings"
           backButton
-          backIcon="close"
+          backIcon="arrow"
           onBack={onClose}
         />
         
