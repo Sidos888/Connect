@@ -18,6 +18,7 @@ import CenteredAddPerson from "@/components/connections/CenteredAddPerson";
 import CenteredNotifications from "@/components/notifications/CenteredNotifications";
 import CenteredMemories from "@/components/memories/CenteredMemories";
 import CenteredAchievements from "@/components/achievements/CenteredAchievements";
+import CenteredShareProfile from "@/components/profile/CenteredShareProfile";
 import { PageHeader } from "@/components/layout/PageSystem";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -1026,6 +1027,7 @@ export default function ProfileMenu() {
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<ConnectionUser | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showCenteredShareProfile, setShowCenteredShareProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -1122,6 +1124,7 @@ export default function ProfileMenu() {
       showCenteredConnectionsModal ||
       showCenteredEditLanding ||
       showCenteredEditProfile ||
+      showCenteredShareProfile ||
       showShareModal;
 
     if (isAnyCenteredOpen) {
@@ -1144,6 +1147,7 @@ export default function ProfileMenu() {
     showCenteredConnectionsModal,
     showCenteredEditLanding,
     showCenteredEditProfile,
+    showCenteredShareProfile,
     showShareModal
   ]);
 
@@ -1560,7 +1564,7 @@ export default function ProfileMenu() {
               }}
               onEdit={handleEditProfile}
               onSettings={() => { setShowCenteredProfile(false); setSettingsFromProfile(true); setShowCenteredSettings(true); }}
-              onShare={() => router.push('/share-profile')}
+              onShare={() => { setShowCenteredProfile(false); setShowCenteredShareProfile(true); }}
               onOpenTimeline={() => { setShowCenteredProfile(false); router.push('/timeline'); }}
               onOpenHighlights={() => { setShowCenteredProfile(false); setShowCenteredHighlights(true); }}
               onOpenBadges={() => { setShowCenteredProfile(false); setShowCenteredAchievements(true); }}
@@ -1911,6 +1915,19 @@ export default function ProfileMenu() {
         )}
 
         {/* Centered About Me modal removed in favor of Timeline route */}
+
+        {/* Centered Share Profile Modal */}
+        {showCenteredShareProfile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
+              onClick={() => setShowCenteredShareProfile(false)}
+            />
+            <CenteredShareProfile onBack={() => setShowCenteredShareProfile(false)} />
+          </div>
+        )}
 
         {/* Share Profile Modal */}
         <ShareProfileModal
