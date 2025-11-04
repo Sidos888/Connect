@@ -1113,8 +1113,7 @@ export default function Page() {
                       borderStyle: 'solid',
                       boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                       willChange: 'transform, box-shadow',
-                      padding: '0',
-                      overflow: 'hidden'
+                      padding: '2px'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -1124,11 +1123,11 @@ export default function Page() {
                     }}
                     aria-label="Switch account"
                   >
-                    <div className="w-full h-full rounded-full overflow-hidden">
+                    <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
                       <Avatar 
                         src={currentAccount?.avatarUrl ?? undefined} 
                         name={currentAccount?.name ?? "Your Name"} 
-                        size={40} 
+                        size={36} 
                       />
                     </div>
                   </button>
