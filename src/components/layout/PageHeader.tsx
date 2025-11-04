@@ -15,6 +15,7 @@ export interface PageHeaderProps {
   backIcon?: 'arrow' | 'close';  // 'arrow' for mobile, 'close' (X) for web modals
   onBack?: () => void;
   customBackButton?: ReactNode;  // Custom back button (e.g., profile avatar)
+  leftSection?: ReactNode;  // Custom left section (e.g., profile card)
   actions?: ActionButton[];
   className?: string;
 }
@@ -25,6 +26,7 @@ export default function PageHeader({
   backIcon = 'arrow',
   onBack,
   customBackButton,
+  leftSection,
   actions = [],
   className = ""
 }: PageHeaderProps) {
@@ -120,104 +122,111 @@ export default function PageHeader({
         paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
         paddingBottom: '16px' 
       }}>
-        <div className="relative w-full flex items-center justify-center" style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          width: '100%', 
-          height: '40px',
-          pointerEvents: 'auto'
-        }}>
-          {/* Left: Back Button or Custom Button */}
-          {customBackButton ? (
-            customBackButton
-          ) : backButton ? (
-            <button
-              onClick={onBack}
-              className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '100px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                borderStyle: 'solid',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                willChange: 'transform, box-shadow'
+        {/* Left Section (e.g., profile card) OR Standard Layout */}
+        {leftSection ? (
+          <div style={{ pointerEvents: 'auto' }}>
+            {leftSection}
+          </div>
+        ) : (
+          <div className="relative w-full flex items-center justify-center" style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            width: '100%', 
+            height: '40px',
+            pointerEvents: 'auto'
+          }}>
+            {/* Left: Back Button or Custom Button */}
+            {customBackButton ? (
+              customBackButton
+            ) : backButton ? (
+              <button
+                onClick={onBack}
+                className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '100px',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label={backIcon === 'close' ? 'Close' : 'Back'}
+              >
+                {backIcon === 'close' ? (
+                  <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                )}
+              </button>
+            ) : null}
+            
+            {/* Center: Title */}
+            <h1 
+              className="font-semibold text-gray-900 text-center" 
+              style={{ 
+                textAlign: 'center', 
+                width: '100%', 
+                display: 'block',
+                fontSize: isMobile ? '22px' : '20px',
+                lineHeight: isMobile ? '28px' : '24px'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              aria-label={backIcon === 'close' ? 'Close' : 'Back'}
             >
-              {backIcon === 'close' ? (
-                <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              )}
-            </button>
-          ) : null}
-          
-          {/* Center: Title */}
-          <h1 
-            className="font-semibold text-gray-900 text-center" 
-            style={{ 
-              textAlign: 'center', 
-              width: '100%', 
-              display: 'block',
-              fontSize: isMobile ? '22px' : '20px',
-              lineHeight: isMobile ? '28px' : '24px'
-            }}
-          >
-            {title}
-          </h1>
-          
-          {/* Right: Action Buttons (max 2) */}
-          {actions.length > 0 && (
-            <div className="absolute right-0 flex items-center gap-3">
-              {actions.slice(0, 2).map((action, index) => (
-                <button
-                  key={index}
-                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '100px',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow',
-                    cursor: action.disabled ? 'default' : 'pointer',
-                    opacity: action.disabled ? 0.5 : 1
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!action.disabled) {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onClick={action.disabled ? undefined : action.onClick}
-                  aria-label={action.label}
-                  disabled={action.disabled}
-                >
-                  {action.icon}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+              {title}
+            </h1>
+            
+            {/* Right: Action Buttons (max 2) */}
+            {actions.length > 0 && (
+              <div className="absolute right-0 flex items-center gap-3">
+                {actions.slice(0, 2).map((action, index) => (
+                  <button
+                    key={index}
+                    className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '100px',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow',
+                      cursor: action.disabled ? 'default' : 'pointer',
+                      opacity: action.disabled ? 0.5 : 1
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!action.disabled) {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onClick={action.disabled ? undefined : action.onClick}
+                    aria-label={action.label}
+                    disabled={action.disabled}
+                  >
+                    {action.icon}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
