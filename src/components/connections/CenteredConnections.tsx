@@ -54,10 +54,10 @@ export default function CenteredConnections({
   return (
     <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
       {/* Header */}
-      <div className="flex items-center justify-center relative w-full p-6 pb-3" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+      <div className="flex items-center justify-center relative w-full pt-8 pb-3" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
         <button
           onClick={onBack}
-          className="absolute left-6 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+          className="absolute left-8 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
           aria-label="Close connections"
         >
           <span className="action-btn-circle">
@@ -72,14 +72,14 @@ export default function CenteredConnections({
         {showAddPersonButton && onAddPerson ? (
           <button
             onClick={onAddPerson}
-            className="absolute right-6 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
+            className="absolute right-8 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
             aria-label="Add person"
           >
             <span className="action-btn-circle">
               <Plus size={20} className="text-gray-700" />
             </span>
           </button>
-        ) : (<div className="w-9 absolute right-6" />)}
+        ) : (<div className="w-8 absolute right-8" />)}
       </div>
 
       {/* Profile summary */}

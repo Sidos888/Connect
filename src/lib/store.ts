@@ -18,6 +18,8 @@ interface PersonalProfile {
   id: string;
   name: string;
   profile_pic?: string;
+  avatarUrl?: string;
+  bio?: string;
   connectId?: string;
 }
 

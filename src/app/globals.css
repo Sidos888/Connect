@@ -136,8 +136,8 @@ html, body {
 
 /* Connect action button card (white circular card used across modals) */
 .action-btn-circle {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 9999px;
   display: inline-flex;
   align-items: center;

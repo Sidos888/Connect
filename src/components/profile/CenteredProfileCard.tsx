@@ -33,52 +33,32 @@ export default function CenteredProfileCard({
   return (
     <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
       {/* Floating Action Buttons */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+      <div className="absolute top-8 left-8 right-8 z-10 flex items-center justify-between pointer-events-none">
         <button
           onClick={onClose}
-          className="flex items-center justify-center w-10 h-10 pointer-events-auto"
-          style={{
-            borderRadius: '100px',
-            background: 'rgba(255, 255, 255, 0.9)',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-          }}
+          className="pointer-events-auto"
           aria-label="Close profile"
         >
-          <X className="h-5 w-5 text-gray-900" />
+          <span className="action-btn-circle">
+            <X className="h-5 w-5 text-gray-900" />
+          </span>
         </button>
         <div className="flex items-center gap-2 pointer-events-auto">
           <button 
             onClick={onEdit}
-            className="flex items-center justify-center w-10 h-10"
-            style={{
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-            }}
             aria-label="Edit profile"
           >
-            <Pencil className="h-5 w-5 text-gray-900" />
+            <span className="action-btn-circle">
+              <Pencil className="h-5 w-5 text-gray-900" />
+            </span>
           </button>
           <button 
             onClick={onSettings}
-            className="flex items-center justify-center w-10 h-10"
-            style={{
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-            }}
             aria-label="Open settings"
           >
-            <Settings className="h-5 w-5 text-gray-900" />
+            <span className="action-btn-circle">
+              <Settings className="h-5 w-5 text-gray-900" />
+            </span>
           </button>
         </div>
       </div>
