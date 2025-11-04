@@ -1558,7 +1558,7 @@ export default function Page() {
                 ] :
                 // Personal account menu items
                 [
-                  { title: "Memories", icon: "🖼️", href: "/gallery" },
+                  { title: "Memories", icon: "🖼️", href: "/memories" },
                   { title: "Achievements", icon: "🏆", href: "/achievements" },
                   { title: "Timeline", icon: "🧭", href: "/timeline" },
                   { title: "Connections", icon: "👬", onClick: () => setCurrentView('connections') },

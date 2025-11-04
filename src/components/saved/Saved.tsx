@@ -30,7 +30,7 @@ export default function Saved() {
     <div 
       className="flex-1 overflow-y-auto px-8 pb-8 scrollbar-hide" 
       style={{ 
-        paddingTop: '96px',
+        paddingTop: 'var(--saved-content-padding-top, 104px)',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}

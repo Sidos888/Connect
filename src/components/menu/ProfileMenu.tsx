@@ -15,6 +15,10 @@ import Avatar from "@/components/Avatar";
 import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
 import CenteredConnections from "@/components/connections/CenteredConnections";
 import CenteredAddPerson from "@/components/connections/CenteredAddPerson";
+import CenteredNotifications from "@/components/notifications/CenteredNotifications";
+import CenteredMemories from "@/components/memories/CenteredMemories";
+import CenteredAchievements from "@/components/achievements/CenteredAchievements";
+import { PageHeader } from "@/components/layout/PageSystem";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
@@ -1183,7 +1187,6 @@ export default function ProfileMenu() {
   const [connectionsFromProfile, setConnectionsFromProfile] = useState(false);
   const [showCenteredAddPerson, setShowCenteredAddPerson] = useState(false);
   const [showCenteredNotifications, setShowCenteredNotifications] = useState(false);
-  const [showCenteredGallery, setShowCenteredGallery] = useState(false);
   const [showCenteredMemories, setShowCenteredMemories] = useState(false);
   const [showCenteredHighlights, setShowCenteredHighlights] = useState(false);
   const [showCenteredAchievements, setShowCenteredAchievements] = useState(false);
@@ -1234,7 +1237,6 @@ export default function ProfileMenu() {
     setShowCenteredConnections(false);
     setShowCenteredAddPerson(false);
     setShowCenteredNotifications(false);
-    setShowCenteredGallery(false);
     setShowCenteredAchievements(false);
     setShowCenteredSaved(false);
     setShowCenteredSettings(false);
@@ -1264,7 +1266,7 @@ export default function ProfileMenu() {
       showCenteredConnections ||
       showCenteredAddPerson ||
       showCenteredNotifications ||
-      showCenteredGallery || showCenteredMemories || showCenteredHighlights ||
+      showCenteredMemories || showCenteredHighlights ||
       showCenteredAchievements ||
       showCenteredSaved ||
       showCenteredSettings ||
@@ -1287,7 +1289,6 @@ export default function ProfileMenu() {
     showCenteredConnections,
     showCenteredAddPerson,
     showCenteredNotifications,
-    showCenteredGallery,
     showCenteredAchievements,
     showCenteredSaved,
     showCenteredAccountSettings,
@@ -1307,7 +1308,6 @@ export default function ProfileMenu() {
       setShowCenteredProfile(false);
       setShowCenteredAddPerson(false);
       setShowCenteredNotifications(false);
-      setShowCenteredGallery(false);
       setShowCenteredAchievements(false);
       setShowCenteredSettings(false);
       setShowCenteredFriendProfile(false);
@@ -1368,7 +1368,6 @@ export default function ProfileMenu() {
     setShowCenteredConnections(false);
     setShowCenteredAddPerson(false);
     setShowCenteredNotifications(false);
-    setShowCenteredGallery(false);
     setShowCenteredAchievements(false);
     setShowCenteredSaved(false);
     setShowCenteredSettings(false);
@@ -1858,66 +1857,7 @@ export default function ProfileMenu() {
               onClick={() => setShowCenteredNotifications(false)}
             />
 
-            {/* Modal content */}
-            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-              {/* Header (no bottom border) */}
-              <div className="flex items-center justify-between p-6">
-                <button
-                  onClick={() => setShowCenteredNotifications(false)}
-                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
-                >
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-                <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
-                <div className="w-9"></div> {/* Spacer for centering */}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 flex items-center justify-center p-6">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🔔</div>
-                  <p className="text-gray-500 text-lg">You don't have any notifications yet ;(</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Centered Gallery Modal */}
-        {showCenteredGallery && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => setShowCenteredGallery(false)}
-            />
-
-            {/* Modal content */}
-            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-              {/* Header without border */}
-              <div className="flex items-center justify-between p-6">
-                <button
-                  onClick={() => setShowCenteredGallery(false)}
-                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
-                >
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-                <h2 className="text-xl font-semibold text-gray-900">Gallery</h2>
-                <div className="w-9"></div> {/* Spacer for centering */}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 flex items-center justify-center p-6">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">📸</div>
-                  <p className="text-gray-500 text-lg">You don't have any photos yet ;(</p>
-                </div>
-              </div>
-            </div>
+            <CenteredNotifications onBack={() => setShowCenteredNotifications(false)} />
           </div>
         )}
 
@@ -1929,16 +1869,7 @@ export default function ProfileMenu() {
               style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
               onClick={() => setShowCenteredMemories(false)}
             />
-            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-              <div className="flex items-center justify-between p-6">
-                <button onClick={() => setShowCenteredMemories(false)} className="p-2 hover:bg-gray-100 transition-colors rounded-full">
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-                <h2 className="text-xl font-semibold text-gray-900">Memories</h2>
-                <div className="w-9"></div>
-              </div>
-              <div className="flex-1" />
-            </div>
+            <CenteredMemories onBack={() => setShowCenteredMemories(false)} />
           </div>
         )}
 
@@ -1969,35 +1900,10 @@ export default function ProfileMenu() {
             {/* Dimming overlay with smooth transition */}
             <div
               className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
               onClick={() => setShowCenteredAchievements(false)}
             />
-
-            {/* Modal content */}
-            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-              {/* Header without border */}
-              <div className="flex items-center justify-between p-6">
-                <button
-                  onClick={() => setShowCenteredAchievements(false)}
-                  className="p-2 hover:bg-gray-100 transition-colors rounded-full"
-                >
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-                <h2 className="text-xl font-semibold text-gray-900">Achievements</h2>
-                <div className="w-9"></div> {/* Spacer for centering */}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 flex items-center justify-center p-6">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🏆</div>
-                  <p className="text-gray-500 text-lg">You don't have any achievements yet ;(</p>
-                </div>
-              </div>
-            </div>
+            <CenteredAchievements onBack={() => setShowCenteredAchievements(false)} />
           </div>
         )}
 
@@ -2015,169 +1921,43 @@ export default function ProfileMenu() {
             />
 
             {/* Modal content */}
-            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-              {/* Header - Floating with Gradient Blur & Opacity */}
-              <div className="absolute top-0 left-0 right-0 z-20" style={{ 
-                pointerEvents: 'none'
-              }}>
-                {/* Opacity gradient layer - Eased curve */}
-                <div className="absolute top-0 left-0 right-0" style={{
-                  height: '104px',
-                  background: 'linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.92) 10%, rgba(255,255,255,0.85) 20%, rgba(255,255,255,0.75) 30%, rgba(255,255,255,0.6) 40%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.3) 60%, rgba(255,255,255,0.2) 75%, rgba(255,255,255,0.12) 90%, rgba(255,255,255,0.05) 100%)'
-                }} />
-                
-                {/* Blur layer 5: 2px blur at top (0-20px) - button area */}
-                <div className="absolute top-0 left-0 right-0" style={{
-                  height: '20px',
-                  backdropFilter: 'blur(2px)',
-                  WebkitBackdropFilter: 'blur(2px)'
-                }} />
-                
-                {/* Blur layer 4: 1.5px blur (20-35px) */}
-                <div className="absolute left-0 right-0" style={{
-                  top: '20px',
-                  height: '15px',
-                  backdropFilter: 'blur(1.5px)',
-                  WebkitBackdropFilter: 'blur(1.5px)'
-                }} />
-                
-                {/* Blur layer 3: 1px blur (35-55px) */}
-                <div className="absolute left-0 right-0" style={{
-                  top: '35px',
-                  height: '20px',
-                  backdropFilter: 'blur(1px)',
-                  WebkitBackdropFilter: 'blur(1px)'
-                }} />
-                
-                {/* Blur layer 2: 0.5px blur (55-80px) */}
-                <div className="absolute left-0 right-0" style={{
-                  top: '55px',
-                  height: '25px',
-                  backdropFilter: 'blur(0.5px)',
-                  WebkitBackdropFilter: 'blur(0.5px)'
-                }} />
-                
-                {/* Blur layer 1: Almost no blur (80-104px) - fade out */}
-                <div className="absolute left-0 right-0" style={{
-                  top: '80px',
-                  height: '24px',
-                  backdropFilter: 'blur(0.2px)',
-                  WebkitBackdropFilter: 'blur(0.2px)'
-                }} />
-              
-                {/* Left: X Button */}
-                <button
-                  onClick={() => setShowCenteredSaved(false)}
-                  className="absolute top-8 left-8 z-10 flex items-center justify-center w-10 h-10 transition-all duration-200 hover:-translate-y-[1px]"
-                  style={{
-                    borderRadius: '100px',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow',
-                    pointerEvents: 'auto'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  aria-label="Close"
-                >
-                  <X size={20} className="text-gray-900" />
-                </button>
-                
-                {/* Center: Title */}
-                <h2 className="absolute top-8 left-1/2 -translate-x-1/2 z-10 text-xl font-semibold text-gray-900 flex items-center h-10" style={{ pointerEvents: 'auto' }}>Saved</h2>
-                
-                {/* Right: Action Buttons */}
-                <div className="absolute top-8 right-8 z-10 flex items-center gap-3" style={{ pointerEvents: 'auto' }}>
-                  <button
-                    className="flex items-center justify-center w-10 h-10 transition-all duration-200 hover:-translate-y-[1px] cursor-default"
-                    style={{
-                      borderRadius: '100px',
-                      background: 'rgba(255, 255, 255, 0.9)',
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onClick={(e) => e.preventDefault()}
-                    aria-label="Action 1 (inactive)"
-                  >
-                    <Plus size={20} className="text-gray-900" />
-                  </button>
-                  
-                  <button
-                    className="flex items-center justify-center w-10 h-10 transition-all duration-200 hover:-translate-y-[1px] cursor-default"
-                    style={{
-                      borderRadius: '100px',
-                      background: 'rgba(255, 255, 255, 0.9)',
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onClick={(e) => e.preventDefault()}
-                    aria-label="Action 2 (inactive)"
-                  >
-                    <Share size={20} className="text-gray-900" />
-                  </button>
-                </div>
-              </div>
+            <div 
+              className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+              style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+            >
+              <PageHeader
+                title="Saved"
+                backButton
+                backIcon="close"
+                onBack={() => setShowCenteredSaved(false)}
+                actions={[
+                  {
+                    icon: <Plus size={20} className="text-gray-900" />,
+                    onClick: () => console.log('Add clicked'),
+                    label: "Add"
+                  },
+                  {
+                    icon: <Share size={20} className="text-gray-900" />,
+                    onClick: () => console.log('Share clicked'),
+                    label: "Share"
+                  }
+                ]}
+              />
 
-              {/* Content - Unified! */}
               <Saved />
               
-              {/* Bottom Blur - Lighter than top */}
+              {/* Bottom Blur */}
               <div className="absolute bottom-0 left-0 right-0 z-20" style={{ 
                 pointerEvents: 'none'
               }}>
-                {/* Opacity gradient layer - Inverted eased curve */}
                 <div className="absolute bottom-0 left-0 right-0" style={{
                   height: '80px',
-                  background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.42) 12%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.28) 40%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0.12) 80%, rgba(255,255,255,0.05) 100%)'
+                  background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
                 }} />
-                
-                {/* Blur layer 3: 1px blur at bottom */}
-                <div className="absolute bottom-0 left-0 right-0" style={{
-                  height: '20px',
-                  backdropFilter: 'blur(1px)',
-                  WebkitBackdropFilter: 'blur(1px)'
-                }} />
-                
-                {/* Blur layer 2: 0.5px blur */}
-                <div className="absolute left-0 right-0" style={{
-                  bottom: '20px',
-                  height: '30px',
-                  backdropFilter: 'blur(0.5px)',
-                  WebkitBackdropFilter: 'blur(0.5px)'
-                }} />
-                
-                {/* Blur layer 1: 0.2px blur (fade out) */}
-                <div className="absolute left-0 right-0" style={{
-                  bottom: '50px',
-                  height: '30px',
-                  backdropFilter: 'blur(0.2px)',
-                  WebkitBackdropFilter: 'blur(0.2px)'
-                }} />
+                <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+                <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+                <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+                <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
               </div>
             </div>
           </div>

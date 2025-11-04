@@ -1,34 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Plus, Share } from "lucide-react";
-import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
-import Saved from "@/components/saved/Saved";
+import { PageHeader, PageContent } from "@/components/layout/PageSystem";
+import Memories from "@/components/memories/Memories";
 
-export default function SavedPage() {
-  const router = useRouter();
-  
+export default function CenteredMemories({
+  onBack,
+}: {
+  onBack: () => void;
+}) {
   return (
-    <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-      <MobilePage>
-        <PageHeader
-        title="Saved"
+    <div 
+      className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+      style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+    >
+      <PageHeader
+        title="Memories"
         backButton
-        onBack={() => router.back()}
-        actions={[
-          {
-            icon: <Plus size={20} className="text-gray-900" />,
-            onClick: () => console.log('Add clicked'),
-            label: "Add"
-          },
-          {
-            icon: <Share size={20} className="text-gray-900" />,
-            onClick: () => console.log('Share clicked'),
-            label: "Share"
-          }
-        ]}
+        backIcon="close"
+        onBack={onBack}
       />
-      <Saved />
+      
+      <Memories />
       
       {/* Bottom Blur */}
       <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
@@ -41,7 +33,7 @@ export default function SavedPage() {
         <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
         <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
       </div>
-      </MobilePage>
     </div>
   );
 }
+
