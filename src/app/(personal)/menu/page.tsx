@@ -496,7 +496,7 @@ export default function Page() {
           onClose={() => setCurrentView('menu')}
           onEdit={() => setCurrentView('edit-profile')}
           onSettings={() => router.push('/settings')}
-          onShare={() => router.push('/share-profile')}
+          onShare={() => router.push('/share-profile?returnTo=profile')}
           onOpenTimeline={() => router.push('/timeline')}
           onOpenHighlights={() => {}}
           onOpenBadges={() => {}}

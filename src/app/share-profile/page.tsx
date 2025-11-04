@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ShareProfile from "@/components/profile/ShareProfile";
 
 export default function ShareProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
 
   // Prevent background scroll while page-level modal is open
   useEffect(() => {
@@ -14,6 +16,14 @@ export default function ShareProfilePage() {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
+
+  const handleBack = () => {
+    if (returnTo === 'profile') {
+      router.push('/menu?view=profile');
+    } else {
+      router.back();
+    }
+  };
 
   return (
     <>
@@ -23,7 +33,7 @@ export default function ShareProfilePage() {
           <PageHeader
             title="Share Profile"
             backButton
-            onBack={() => router.back()}
+            onBack={handleBack}
           />
           
           <ShareProfile />
