@@ -20,7 +20,6 @@ import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
-import ProfileMenu from "@/components/menu/ProfileMenu";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
@@ -42,6 +41,7 @@ export default function Page() {
   const [showAccountSwitcher, setShowAccountSwitcher] = React.useState(false);
   const [selectedFriend, setSelectedFriend] = React.useState<ConnectionUser | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
+  const [showCenteredProfile, setShowCenteredProfile] = React.useState(false);
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
   const profileMenuButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
@@ -1100,9 +1100,34 @@ export default function Page() {
                 title="Menu"
                 backButton={true}
                 customBackButton={
-                  <div className="absolute left-0">
-                    <ProfileMenu />
-                  </div>
+                  <button
+                    onClick={() => setShowCenteredProfile(true)}
+                    className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] overflow-hidden"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '100px',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    aria-label="View profile"
+                  >
+                    <Avatar 
+                      src={currentAccount?.avatarUrl ?? undefined} 
+                      name={currentAccount?.name ?? "Your Name"} 
+                      size={40} 
+                    />
+                  </button>
                 }
                 actions={[
                   {
@@ -1427,6 +1452,31 @@ export default function Page() {
         isOpen={showAccountSwitcher}
         onClose={() => setShowAccountSwitcher(false)}
       />
+
+      {/* Centered Profile Modal - same as My Life/Explore/Chat */}
+      {showCenteredProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center lg:p-4">
+          <div 
+            className="fixed inset-0 transition-opacity duration-300 ease-in-out lg:block"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
+            onClick={() => setShowCenteredProfile(false)}
+          />
+
+          <UnifiedProfileCard
+            profile={{ id: currentAccount?.id, name: currentAccount?.name, avatarUrl: currentAccount?.avatarUrl, bio: currentAccount?.bio }}
+            isOwnProfile={true}
+            showBackButton={true}
+            onClose={() => setShowCenteredProfile(false)}
+            onEdit={() => { setShowCenteredProfile(false); setCurrentView('edit-profile'); }}
+            onSettings={() => { setShowCenteredProfile(false); router.push('/settings'); }}
+            onShare={() => { setShowCenteredProfile(false); router.push('/share-profile?returnTo=profile'); }}
+            onOpenTimeline={() => { setShowCenteredProfile(false); router.push('/timeline'); }}
+            onOpenHighlights={() => { setShowCenteredProfile(false); router.push('/highlights'); }}
+            onOpenBadges={() => { setShowCenteredProfile(false); router.push('/achievements'); }}
+            onOpenConnections={() => { setShowCenteredProfile(false); setCurrentView('add-person'); }}
+          />
+        </div>
+      )}
 
     </ProtectedRoute>
   );
