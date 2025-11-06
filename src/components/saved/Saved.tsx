@@ -35,6 +35,14 @@ export default function Saved() {
         msOverflowStyle: 'none'
       }}
     >
+      {/* Profile Avatar */}
+      <div className="text-center mb-6">
+        <div className="h-[40px] lg:h-[10px]" />
+        <div className="relative inline-block mb-4">
+          <Avatar src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" name="User" size={140} />
+        </div>
+      </div>
+
       {/* Saved Events Section */}
       <div className="mb-6">
         <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Saved Events</h3>

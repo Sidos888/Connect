@@ -19,6 +19,7 @@ import CenteredNotifications from "@/components/notifications/CenteredNotificati
 import CenteredMemories from "@/components/memories/CenteredMemories";
 import CenteredAchievements from "@/components/achievements/CenteredAchievements";
 import CenteredShareProfile from "@/components/profile/CenteredShareProfile";
+import CenteredTimeline from "@/components/timeline/CenteredTimeline";
 import { PageHeader } from "@/components/layout/PageSystem";
 import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
@@ -774,10 +775,13 @@ export default function ProfileMenu() {
   const [showCenteredAchievements, setShowCenteredAchievements] = useState(false);
   const [showCenteredSaved, setShowCenteredSaved] = useState(false);
   const [showCenteredSettings, setShowCenteredSettings] = useState(false);
+  const [showCenteredTimeline, setShowCenteredTimeline] = useState(false);
   const [settingsFromProfile, setSettingsFromProfile] = useState(false);
   const [profileFromSettings, setProfileFromSettings] = useState(false);
   const [showCenteredAccountSettings, setShowCenteredAccountSettings] = useState(false);
   const [shareFromProfile, setShareFromProfile] = useState(false);
+  const [timelineFromProfile, setTimelineFromProfile] = useState(false);
+  const [timelineFromEditProfile, setTimelineFromEditProfile] = useState(false);
   const [showCenteredAboutMe, setShowCenteredAboutMe] = useState(false);
   const [aboutMeFromProfile, setAboutMeFromProfile] = useState(false);
   const [showCenteredEditProfile, setShowCenteredEditProfile] = useState(false);
@@ -1308,7 +1312,7 @@ export default function ProfileMenu() {
               onEdit={handleEditProfile}
               onSettings={() => { setShowCenteredProfile(false); setSettingsFromProfile(true); setShowCenteredSettings(true); }}
               onShare={() => { setShowCenteredProfile(false); setShareFromProfile(true); setShowCenteredShareProfile(true); }}
-              onOpenTimeline={() => { setShowCenteredProfile(false); router.push('/timeline'); }}
+              onOpenTimeline={() => { setShowCenteredProfile(false); setTimelineFromProfile(true); setShowCenteredTimeline(true); }}
               onOpenHighlights={() => { setShowCenteredProfile(false); setShowCenteredHighlights(true); }}
               onOpenBadges={() => { setShowCenteredProfile(false); setShowCenteredAchievements(true); }}
               onOpenConnections={() => { setShowCenteredProfile(false); setConnectionsFromProfile(true); setShowCenteredConnections(true); }}
@@ -1338,7 +1342,7 @@ export default function ProfileMenu() {
               }}
               onOpenLinks={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/links'); }}
               onOpenPersonalDetails={() => { setShowCenteredEditLanding(false); setEditProfileFromProfile(true); setShowCenteredEditProfile(true); }}
-              onOpenTimeline={() => { setShowCenteredEditLanding(false); router.push('/timeline'); }}
+              onOpenTimeline={() => { setShowCenteredEditLanding(false); setTimelineFromEditProfile(true); setShowCenteredTimeline(true); }}
               onOpenHighlights={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/highlights'); }}
             />
           </div>
@@ -1683,6 +1687,42 @@ export default function ProfileMenu() {
                 }
               }} 
             />
+          </div>
+        )}
+
+        {/* Centered Timeline Modal */}
+        {showCenteredTimeline && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Dimming overlay */}
+            <div
+              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
+              onClick={() => {
+                setShowCenteredTimeline(false);
+                if (timelineFromProfile) {
+                  setShowCenteredProfile(true);
+                  setTimelineFromProfile(false);
+                } else if (timelineFromEditProfile) {
+                  setShowCenteredEditLanding(true);
+                  setTimelineFromEditProfile(false);
+                }
+              }}
+            />
+            <div 
+              className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+              style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+            >
+              <CenteredTimeline onClose={() => {
+                setShowCenteredTimeline(false);
+                if (timelineFromProfile) {
+                  setShowCenteredProfile(true);
+                  setTimelineFromProfile(false);
+                } else if (timelineFromEditProfile) {
+                  setShowCenteredEditLanding(true);
+                  setTimelineFromEditProfile(false);
+                }
+              }} />
+            </div>
           </div>
         )}
 

@@ -503,45 +503,41 @@ export default function Page() {
   // Profile View Component
   const ProfileView = () => {
     return (
-      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white">
-        <UnifiedProfileCard
-          profile={{
-            id: currentAccount?.id,
-            name: currentAccount?.name,
-            avatarUrl: currentAccount?.avatarUrl,
-            bio: currentAccount?.bio
-          }}
-          isOwnProfile={true}
-          showBackButton={true}
-          onClose={() => setCurrentView('menu')}
-          onEdit={() => setCurrentView('edit-profile')}
-          onSettings={() => router.push('/settings')}
-          onShare={() => router.push('/share-profile?returnTo=profile')}
-          onOpenTimeline={() => router.push('/timeline')}
-          onOpenHighlights={() => {}}
-          onOpenBadges={() => {}}
-          onOpenConnections={() => setCurrentView('connections')}
-        />
-      </div>
+      <UnifiedProfileCard
+        profile={{
+          id: currentAccount?.id,
+          name: currentAccount?.name,
+          avatarUrl: currentAccount?.avatarUrl,
+          bio: currentAccount?.bio
+        }}
+        isOwnProfile={true}
+        showBackButton={true}
+        onClose={() => setCurrentView('menu')}
+        onEdit={() => setCurrentView('edit-profile')}
+        onSettings={() => router.push('/settings')}
+        onShare={() => router.push('/share-profile?returnTo=profile')}
+        onOpenTimeline={() => router.push('/timeline')}
+        onOpenHighlights={() => {}}
+        onOpenBadges={() => {}}
+        onOpenConnections={() => setCurrentView('connections')}
+      />
     );
   };
 
   // Friend Profile Component
   const FriendProfileView = ({ friend }: { friend: ConnectionUser }) => {
     return (
-      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white">
-        <UnifiedProfileCard
-          profile={{
-            id: friend.id,
-            name: friend.name,
-            avatarUrl: friend.profile_pic,
-            bio: friend.bio
-          }}
-          isOwnProfile={false}
-          showBackButton={true}
-          onClose={() => setCurrentView('connections')}
-        />
-      </div>
+      <UnifiedProfileCard
+        profile={{
+          id: friend.id,
+          name: friend.name,
+          avatarUrl: friend.profile_pic,
+          bio: friend.bio
+        }}
+        isOwnProfile={false}
+        showBackButton={true}
+        onClose={() => setCurrentView('connections')}
+      />
     );
   };
 

@@ -3,7 +3,7 @@
 import Avatar from "@/components/Avatar";
 import { Pencil, Settings, MoreVertical } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageSystem";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 type Profile = {
   id?: string;
@@ -41,6 +41,7 @@ export default function UnifiedProfileCard({
 }) {
   // Platform detection for responsive padding
   const [isMobile, setIsMobile] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const checkMobile = () => {
@@ -50,6 +51,18 @@ export default function UnifiedProfileCard({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Reset scroll position to top whenever component mounts or profile changes
+  useEffect(() => {
+    if (contentRef.current) {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        if (contentRef.current) {
+          contentRef.current.scrollTop = 0;
+        }
+      }, 0);
+    }
+  }, [profile?.id]);
 
   // Build action buttons for PageHeader
   const actionButtons = isOwnProfile && onEdit && onSettings ? [
@@ -75,7 +88,7 @@ export default function UnifiedProfileCard({
 
   return (
     <div 
-      className="bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-full lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+      className="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-screen lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100"
       style={{ '--saved-content-padding-top': contentPaddingTop } as React.CSSProperties}
     >
       <PageHeader
@@ -87,21 +100,20 @@ export default function UnifiedProfileCard({
       />
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 pb-8 scrollbar-hide flex flex-col" style={{ 
+      <div ref={contentRef} className="flex-1 overflow-y-auto lg:overflow-hidden px-8 pb-8 scrollbar-hide" style={{ 
         paddingTop: 'var(--saved-content-padding-top, 104px)',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}>
         {/* Profile Header - Centered */}
-        <div className="text-center mb-6">
-          {/* Extra spacing on mobile to push avatar well below blur */}
-          {isMobile && <div style={{ height: '60px' }} />}
-          <div className="relative inline-block mb-4">
-            <Avatar src={profile?.avatarUrl ?? undefined} name={profile?.name ?? 'User'} size={100} />
+        <div className="text-center mb-4">
+          <div className="h-[40px] lg:h-0" />
+          <div className="relative inline-block mb-3">
+            <Avatar src={profile?.avatarUrl ?? undefined} name={profile?.name ?? 'User'} size={140} />
           </div>
           <button
             onClick={onShare || (() => {})}
-            className="block mx-auto mb-2 transition-all duration-200 hover:-translate-y-[1px]"
+            className="block mx-auto mb-1 transition-all duration-200 hover:-translate-y-[1px]"
             style={{
               borderRadius: '16px',
               background: 'rgba(255, 255, 255, 0.9)',
@@ -123,11 +135,11 @@ export default function UnifiedProfileCard({
           >
             <span className="text-2xl font-bold text-gray-900">{profile?.name ?? (isOwnProfile ? 'Your Name' : 'User')}</span>
           </button>
-          {profile?.bio ? <p className="text-gray-600 text-base">{profile.bio}</p> : null}
+          {profile?.bio ? <p className="text-gray-600 text-base mb-0">{profile.bio}</p> : null}
         </div>
 
         {/* Grid of 4 Boxes */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 mb-8">
           <button 
             onClick={onOpenTimeline || (() => {})}
             className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] h-28 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:-translate-y-[1px]"

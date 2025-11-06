@@ -24,6 +24,7 @@ import CenteredConnections from "@/components/connections/CenteredConnections";
 import CenteredAddPerson from "@/components/connections/CenteredAddPerson";
 import { useAuth } from "@/lib/authContext";
 import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
+import CenteredTimeline from "@/components/timeline/CenteredTimeline";
 
 type TabDef = { id: string; label: string; Icon?: React.ComponentType<{ size?: number; className?: string }> };
 
@@ -62,6 +63,9 @@ export default function MyLifeLayout(): JSX.Element {
   const [showCenteredHighlights, setShowCenteredHighlights] = React.useState(false);
   const [showCenteredShareProfile, setShowCenteredShareProfile] = React.useState(false);
   const [shareFromProfile, setShareFromProfile] = React.useState(false);
+  const [showCenteredTimeline, setShowCenteredTimeline] = React.useState(false);
+  const [timelineFromProfile, setTimelineFromProfile] = React.useState(false);
+  const [timelineFromEditProfile, setTimelineFromEditProfile] = React.useState(false);
   const { account, signOut, deleteAccount, user } = useAuth();
   const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
   const profileMenuButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -255,7 +259,7 @@ export default function MyLifeLayout(): JSX.Element {
             onEdit={() => { setShowCenteredProfile(false); setEditProfileFromProfile(true); setShowCenteredEditLanding(true); }}
             onSettings={() => { setShowCenteredProfile(false); setProfileFromSettings(true); setShowCenteredSettings(true); }}
             onShare={() => { setShowCenteredProfile(false); setShareFromProfile(true); setShowCenteredShareProfile(true); }}
-            onOpenTimeline={() => { setShowCenteredProfile(false); router.push('/timeline'); }}
+            onOpenTimeline={() => { setShowCenteredProfile(false); setTimelineFromProfile(true); setShowCenteredTimeline(true); }}
             onOpenHighlights={() => { setShowCenteredProfile(false); setShowCenteredHighlights(true); }}
             onOpenBadges={() => { setShowCenteredProfile(false); setShowCenteredAchievements(true); }}
             onOpenConnections={() => { setShowCenteredProfile(false); setShowCenteredConnections(true); }}
@@ -286,7 +290,7 @@ export default function MyLifeLayout(): JSX.Element {
             }}
             onOpenLinks={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/links'); }}
             onOpenPersonalDetails={() => { setShowCenteredEditLanding(false); setShowCenteredEditPersonal(true); }}
-            onOpenTimeline={() => { setShowCenteredEditLanding(false); router.push('/timeline'); }}
+            onOpenTimeline={() => { setShowCenteredEditLanding(false); setTimelineFromEditProfile(true); setShowCenteredTimeline(true); }}
             onOpenHighlights={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/highlights'); }}
           />
         </div>
@@ -600,6 +604,42 @@ export default function MyLifeLayout(): JSX.Element {
               }
             }} 
           />
+        </div>
+      )}
+
+      {/* Centered Timeline Modal */}
+      {showCenteredTimeline && (
+        <div className="hidden lg:flex fixed inset-0 z-50 items-center justify-center p-4">
+          {/* Dimming overlay */}
+          <div
+            className="fixed inset-0 transition-opacity duration-300 ease-in-out"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
+            onClick={() => {
+              setShowCenteredTimeline(false);
+              if (timelineFromProfile) {
+                setShowCenteredProfile(true);
+                setTimelineFromProfile(false);
+              } else if (timelineFromEditProfile) {
+                setShowCenteredEditLanding(true);
+                setTimelineFromEditProfile(false);
+              }
+            }}
+          />
+          <div 
+            className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+            style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+          >
+            <CenteredTimeline onClose={() => {
+              setShowCenteredTimeline(false);
+              if (timelineFromProfile) {
+                setShowCenteredProfile(true);
+                setTimelineFromProfile(false);
+              } else if (timelineFromEditProfile) {
+                setShowCenteredEditLanding(true);
+                setTimelineFromEditProfile(false);
+              }
+            }} />
+          </div>
         </div>
       )}
     </>
