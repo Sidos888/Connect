@@ -1489,33 +1489,33 @@ export default function Page() {
                   <button
                     onClick={() => setShowAccountSwitcher(true)}
                     className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                    style={{
+                      style={{
                       width: '40px',
                       height: '40px',
                       borderRadius: '100px',
                       background: 'rgba(255, 255, 255, 0.9)',
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
                       boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                       willChange: 'transform, box-shadow',
                       padding: '2px'
-                    }}
+                      }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
+                      }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }}
                     aria-label="Switch account"
-                  >
+                    >
                     <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
-                      <Avatar 
-                        src={currentAccount?.avatarUrl ?? undefined} 
-                        name={currentAccount?.name ?? "Your Name"} 
-                        size={36} 
-                      />
-                    </div>
+                        <Avatar 
+                          src={currentAccount?.avatarUrl ?? undefined} 
+                        name={currentAccount?.name ?? ""} 
+                          size={36} 
+                        />
+                      </div>
                   </button>
                 }
                 actions={[
@@ -1527,7 +1527,7 @@ export default function Page() {
                 ]}
               />
 
-              <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+              <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
                 paddingTop: 'var(--saved-content-padding-top, 140px)',
                 paddingBottom: '32px',
                 scrollbarWidth: 'none',
@@ -1544,7 +1544,7 @@ export default function Page() {
                   onShareProfile={() => goToView('share-profile', 'menu')}
                   avatarSize={36}
                 />
-              </div>
+                      </div>
 
                 {/* Menu Grid - 2x3 layout */}
                 <div className="grid grid-cols-2 gap-3">
@@ -1566,7 +1566,7 @@ export default function Page() {
                   { title: "Settings", icon: "⚙️", view: "settings" },
                 ]
               ).map((item) => (
-                    <button
+                        <button
                       key={item.title}
                       className="rounded-2xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 w-full h-28 hover:-translate-y-[1px]"
                       style={{
@@ -1599,10 +1599,10 @@ export default function Page() {
                           {item.title}
                         </span>
                       </div>
-                    </button>
+                            </button>
                   ))}
-                </div>
-              </div>
+                          </div>
+                      </div>
 
               {/* Bottom Blur */}
               <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
@@ -1614,9 +1614,9 @@ export default function Page() {
                 <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
                 <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
                 <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
-              </div>
+                    </div>
             </MobilePage>
-          </div>
+                  </div>
 
           {/* Desktop/Web Layout (unchanged) */}
           <div className="hidden lg:block">

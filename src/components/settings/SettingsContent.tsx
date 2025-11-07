@@ -141,7 +141,7 @@ export default function SettingsContent({
       ) : (
         <>
           {/* Settings content */}
-          <div className="flex-1 px-8" style={{ paddingTop: 'var(--saved-content-padding-top, 24px)' }}>
+          <div className="flex-1 px-4 lg:px-8" style={{ paddingTop: 'var(--saved-content-padding-top, 24px)' }}>
             {/* Profile Card + Edit Profile - Combined */}
             <div className="mb-6">
               <ProfileCard
@@ -187,7 +187,7 @@ export default function SettingsContent({
           <div className="flex-1" />
           
           {/* Log out button - positioned higher on mobile */}
-          <div className="px-8 pb-32 lg:pb-6">
+          <div className="px-4 lg:px-8 pb-32 lg:pb-6">
             <button
               onClick={onSignOut}
               className="w-full flex items-center gap-3 px-4 py-4 text-gray-900 bg-white rounded-2xl transition-all duration-200 border border-gray-200 shadow-sm hover:-translate-y-[1px]"

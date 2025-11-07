@@ -173,134 +173,154 @@ export default function ProfileSwitcherSheet({ isOpen, onClose }: ProfileSwitche
             <div className="w-10 h-1.5 rounded-full bg-gray-300"></div>
           </div>
           <div 
-            className="px-4 pt-6 pb-[max(env(safe-area-inset-bottom),20px)] space-y-6 overflow-y-auto no-scrollbar"
+            className="px-4 pt-6 pb-[max(env(safe-area-inset-bottom),20px)] space-y-8 overflow-y-auto no-scrollbar"
             style={{ 
               maxHeight: 'calc(75vh - 56px)',
               WebkitOverflowScrolling: 'touch',
               overflowY: isProfileMenuOpen ? 'visible' : 'auto'
             }}
           >
-            {/* Current Account Section */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 px-2">Current Account</h3>
-              <div className="relative">
-                {user ? (
-                  <div
-                    className="w-full flex items-center px-4 py-4 bg-white rounded-2xl"
-                    style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)' }}
-                  >
-                    <Avatar src={account?.profile_pic || personalProfile?.avatarUrl} name={account?.name || personalProfile?.name || user?.email} size={40} />
-                    <div className="flex-1 text-center">
-                      <div className="text-lg font-semibold text-gray-900">{account?.name || personalProfile?.name || 'Your Profile'}</div>
-                      <div className="text-xs text-gray-500">Personal Account</div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsProfileMenuOpen(!isProfileMenuOpen);
-                      }}
-                      ref={profileMenuButtonRef}
-                      className="flex items-center justify-center w-10 h-10 shrink-0"
-                      aria-label="Open profile menu"
-                      aria-expanded={isProfileMenuOpen}
+            {/* Current Account Section - Signed In */}
+            {user ? (
+              <>
+                {/* Current Account */}
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 px-2">Current Account</h3>
+                  <div className="relative">
+                    <div
+                      className="w-full flex items-center px-4 py-4 bg-white rounded-2xl"
+                      style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)' }}
                     >
-                      <MoreVertical className="h-5 w-5 text-gray-900" />
-                    </button>
+                      <Avatar src={account?.profile_pic || personalProfile?.avatarUrl} name={account?.name || personalProfile?.name || user?.email} size={40} />
+                      <div className="flex-1 text-center">
+                        <div className="text-lg font-semibold text-gray-900">{account?.name || personalProfile?.name || 'Your Profile'}</div>
+                        <div className="text-xs text-gray-500">Personal Account</div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsProfileMenuOpen(!isProfileMenuOpen);
+                        }}
+                        ref={profileMenuButtonRef}
+                        className="flex items-center justify-center w-10 h-10 shrink-0"
+                        aria-label="Open profile menu"
+                        aria-expanded={isProfileMenuOpen}
+                      >
+                        <MoreVertical className="h-5 w-5 text-gray-900" />
+                      </button>
+                    </div>
+
+                  {/* ProfileDropdown - positioned overlapping card - only show when logged in */}
+                  {isProfileMenuOpen && (
+                    <div ref={profileMenuRef} className="absolute top-[calc(100%-12px)] right-0 z-[200]">
+                      <ProfileDropdown
+                        onClose={() => setIsProfileMenuOpen(false)}
+                        onViewProfile={() => {
+                          setIsProfileMenuOpen(false);
+                          closeSheet();
+                          router.push('/menu?view=profile');
+                        }}
+                        onEditProfile={() => {
+                          setIsProfileMenuOpen(false);
+                          closeSheet();
+                          router.push('/menu?view=edit-profile&from=menu');
+                        }}
+                        onShareProfile={() => {
+                          setIsProfileMenuOpen(false);
+                          closeSheet();
+                          router.push('/menu?view=share-profile&from=menu');
+                        }}
+                      />
+                    </div>
+                  )}
                   </div>
-                ) : (
+                </div>
+
+                {/* Add Business Section */}
+                <div>
+                <div
+                  onClick={() => { closeSheet(); router.push('/create-business'); }}
+                  className="w-full flex items-center px-4 py-4 bg-white rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{ 
+                    borderWidth: '0.4px', 
+                    borderColor: '#E5E7EB', 
+                    borderStyle: 'solid', 
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
                   <div
-                    onClick={() => {
-                      closeSheet();
-                      setTimeout(() => showLogin(), 100);
-                    }}
-                    className="w-full flex items-center justify-center px-4 py-4 bg-white rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
-                    style={{ 
-                      borderWidth: '0.4px', 
-                      borderColor: '#E5E7EB', 
-                      borderStyle: 'solid', 
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    className="flex items-center justify-center shrink-0 transition-all duration-200"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '100px',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                     }}
                   >
-                    <div className="text-lg font-semibold text-gray-900">Sign In</div>
+                    <Plus size={20} className="text-gray-900" />
                   </div>
-                )}
-
-                {/* ProfileDropdown - positioned overlapping card - only show when logged in */}
-                {isProfileMenuOpen && user && (
-                  <div ref={profileMenuRef} className="absolute top-[calc(100%-12px)] right-0 z-[200]">
-                    <ProfileDropdown
-                      onClose={() => setIsProfileMenuOpen(false)}
-                      onViewProfile={() => {
-                        setIsProfileMenuOpen(false);
-                        closeSheet();
-                        router.push('/menu?view=profile');
-                      }}
-                      onEditProfile={() => {
-                        setIsProfileMenuOpen(false);
-                        closeSheet();
-                        router.push('/menu?view=edit-profile&from=menu');
-                      }}
-                      onShareProfile={() => {
-                        setIsProfileMenuOpen(false);
-                        closeSheet();
-                        router.push('/menu?view=share-profile&from=menu');
-                      }}
-                    />
+                  <div className="flex-1 text-center">
+                    <div className="text-lg font-semibold text-gray-900">Add Business</div>
                   </div>
-                )}
+                  <div className="w-10 shrink-0"></div>
+                </div>
               </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-gray-200"></div>
-
-            {/* Add Business Section */}
-            <div>
-              <div
-                onClick={() => { closeSheet(); router.push('/create-business'); }}
-                className="w-full flex items-center px-4 py-4 bg-white rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
-                style={{ 
-                  borderWidth: '0.4px', 
-                  borderColor: '#E5E7EB', 
-                  borderStyle: 'solid', 
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
+              </>
+            ) : (
+              /* Not Signed In - Show About Connect and Login Cards */
+              <div className="space-y-8 pt-16">
+                {/* About Connect Card */}
                 <div
-                  className="flex items-center justify-center shrink-0 transition-all duration-200"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '100px',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
+                  className="w-full flex items-center justify-center px-4 py-5 bg-white rounded-2xl"
+                  style={{ 
+                    borderWidth: '0.4px', 
+                    borderColor: '#E5E7EB', 
+                    borderStyle: 'solid', 
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                   }}
                 >
-                  <Plus size={20} className="text-gray-900" />
+                  <div className="text-lg font-medium text-gray-900">About Connect</div>
                 </div>
-                <div className="flex-1 text-center">
-                  <div className="text-lg font-semibold text-gray-900">Add Business</div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-300"></div>
+
+                {/* Log in or sign up Card */}
+                <div
+                  onClick={() => {
+                    closeSheet();
+                    setTimeout(() => showLogin(), 100);
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-5 bg-white rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{ 
+                    borderWidth: '0.4px', 
+                    borderColor: '#E5E7EB', 
+                    borderStyle: 'solid', 
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  <div className="text-lg font-medium text-gray-900">Log in or sign up</div>
                 </div>
-                <div className="w-10 shrink-0"></div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

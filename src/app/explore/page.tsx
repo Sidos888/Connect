@@ -118,7 +118,7 @@ export default function ExplorePage() {
             ]}
           />
 
-          <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+          <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
             paddingTop: 'var(--saved-content-padding-top, 140px)',
             paddingBottom: '32px',
             scrollbarWidth: 'none',

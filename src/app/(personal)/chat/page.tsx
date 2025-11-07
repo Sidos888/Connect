@@ -299,13 +299,13 @@ export default function MessagesPage() {
                   }}
                   aria-label="Switch account"
                 >
-                  <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
-                    <Avatar 
-                      src={account?.profile_pic} 
-                      name={account?.name || user?.email} 
-                      size={36} 
-                    />
-                  </div>
+                <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
+                  <Avatar 
+                    src={account?.profile_pic} 
+                    name={account?.name || ""} 
+                    size={36} 
+                  />
+                </div>
                 </button>
               }
               actions={[
@@ -318,7 +318,7 @@ export default function MessagesPage() {
             />
 
             <div
-              className="flex-1 px-8 pb-[max(env(safe-area-inset-bottom),24px)] overflow-y-auto scrollbar-hide"
+              className="flex-1 px-4 lg:px-8 pb-[max(env(safe-area-inset-bottom),24px)] overflow-y-auto scrollbar-hide"
               style={{
                 paddingTop: 'var(--saved-content-padding-top, 140px)',
                 scrollbarWidth: 'none',

@@ -89,6 +89,13 @@ export default function MobileTopNavigation() {
     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
   };
 
+  // Don't render MobileTopNavigation on pages with their own PageHeader
+  const shouldHideHeader = pathname.startsWith('/menu') || pathname.startsWith('/my-life') || pathname.startsWith('/chat');
+  
+  if (shouldHideHeader) {
+    return null;
+  }
+
   return (
     <>
     <header 
@@ -115,21 +122,23 @@ export default function MobileTopNavigation() {
           </div>
         )}
 
-        {/* Middle Card - Page Title - Always Centered */}
-        <div className="w-full flex justify-center">
-          <div className="px-6 py-3 w-24 flex items-center justify-center" style={{
-            borderRadius: '18px',
-            background: 'rgba(255, 255, 255, 0.9)',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-          }}>
-            <span className="text-lg font-semibold text-black whitespace-nowrap text-center">
-              {getPageTitle()}
-            </span>
+        {/* Middle Card - Page Title - Only show when authenticated */}
+        {user && (
+          <div className="w-full flex justify-center">
+            <div className="px-6 py-3 w-24 flex items-center justify-center" style={{
+              borderRadius: '18px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+            }}>
+              <span className="text-lg font-semibold text-black whitespace-nowrap text-center">
+                {getPageTitle()}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right Card - Action Buttons - Only show when authenticated */}
         {user && (

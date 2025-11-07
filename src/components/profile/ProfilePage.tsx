@@ -100,7 +100,7 @@ export default function ProfilePage({
       />
 
       {/* Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto lg:overflow-hidden px-8 pb-8 scrollbar-hide" style={{ 
+      <div ref={contentRef} className="flex-1 overflow-y-auto lg:overflow-hidden px-4 lg:px-8 pb-8 scrollbar-hide" style={{ 
         paddingTop: 'var(--saved-content-padding-top, 104px)',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'

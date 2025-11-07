@@ -120,7 +120,7 @@ export default function PageHeader({
       )}
     
       {/* Header Content */}
-      <div className="px-8" style={{ 
+      <div className="px-4 lg:px-8" style={{ 
         paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
         paddingBottom: '16px' 
       }}>

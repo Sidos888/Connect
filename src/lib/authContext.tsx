@@ -1147,6 +1147,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.clear();
       }
       
+      // Clear store personalProfile
+      const { setPersonalProfile } = useAppStore.getState();
+      setPersonalProfile(null);
+      console.log('🧹 Cleared personalProfile from store');
+      
       // Sign out from Supabase and WAIT for it to complete
       console.log('🔐 Signing out from Supabase...');
       const { error: signOutError } = await supabase.auth.signOut();
@@ -1164,6 +1169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setAccount(null);
       setLoading(false);
+      
+      // Clear store personalProfile even on error
+      const { setPersonalProfile } = useAppStore.getState();
+      setPersonalProfile(null);
       
       // Clear all storage even on error
       if (typeof window !== 'undefined') {

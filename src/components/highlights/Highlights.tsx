@@ -8,7 +8,7 @@ export default function Highlights() {
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
 
   return (
-    <div className="flex-1 px-8 pb-8 overflow-y-auto scrollbar-hide" style={{ 
+    <div className="flex-1 px-4 pb-8 overflow-y-auto scrollbar-hide" style={{ 
       paddingTop: 'var(--saved-content-padding-top, 104px)',
       scrollbarWidth: 'none',
       msOverflowStyle: 'none'

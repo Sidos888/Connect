@@ -39,6 +39,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   const isChatPage = pathname.startsWith('/chat');
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
+  const isMyLifePage = pathname.startsWith('/my-life');
   const isSettingsPage = (
     pathname.startsWith('/settings') ||
     pathname.startsWith('/notifications') ||
@@ -115,8 +116,8 @@ export default function AppShell({ children }: AppShellProps) {
           <TopNavigation />
         </div>
         
-        {/* Mobile: Top Navigation Bar */}
-        {!isSettingsPage && (
+        {/* Mobile: Top Navigation Bar - Not needed for Chat page (has own PageHeader) */}
+        {!isSettingsPage && !isChatPage && (
           <div className="sm:hidden">
             <MobileTopNavigation />
           </div>
@@ -146,8 +147,8 @@ export default function AppShell({ children }: AppShellProps) {
         <TopNavigation />
       </div>
       
-      {/* Mobile: Top Navigation Bar */}
-      {!isSettingsPage && (
+      {/* Mobile: Top Navigation Bar - Not needed for pages with own PageHeader */}
+      {!isSettingsPage && !isMyLifePage && !isMenuPage && (
         <div className="lg:hidden">
           <MobileTopNavigation />
         </div>

@@ -334,28 +334,53 @@ export default function ProtectedRoute({ children, fallback, title, description,
     }
 
     return (
-      <div className="flex flex-col items-center justify-center h-screen px-4 text-center">
-        <button
-          onClick={() => {
-            console.log('ProtectedRoute: Sign in button clicked, calling showLogin');
-            try {
-              if (!showLogin || typeof showLogin !== 'function') {
-                console.error('ProtectedRoute: showLogin is not available or not a function:', typeof showLogin);
+      <div className="flex flex-col h-screen">
+        {/* Title - matches PageHeader positioning */}
+        <div className="absolute left-0 right-0 z-20" style={{ 
+          paddingTop: 'max(env(safe-area-inset-top), 70px)',
+          paddingBottom: '16px',
+          pointerEvents: 'none'
+        }}>
+          <div className="px-8">
+            <h1 
+              className="font-semibold text-gray-900 text-center"
+              style={{ 
+                textAlign: 'center', 
+                width: '100%', 
+                display: 'block',
+                fontSize: '22px',
+                lineHeight: '28px'
+              }}
+            >
+              {displayTitle}
+            </h1>
+          </div>
+        </div>
+
+        {/* Sign in button - centered */}
+        <div className="flex-1 flex items-center justify-center px-4">
+          <button
+            onClick={() => {
+              console.log('ProtectedRoute: Sign in button clicked, calling showLogin');
+              try {
+                if (!showLogin || typeof showLogin !== 'function') {
+                  console.error('ProtectedRoute: showLogin is not available or not a function:', typeof showLogin);
+                  window.location.replace('/');
+                  return;
+                }
+                showLogin();
+                console.log('ProtectedRoute: showLogin called successfully');
+              } catch (error) {
+                console.error('ProtectedRoute: Error calling showLogin:', error);
                 window.location.replace('/');
-                return;
               }
-              showLogin();
-              console.log('ProtectedRoute: showLogin called successfully');
-            } catch (error) {
-              console.error('ProtectedRoute: Error calling showLogin:', error);
-              window.location.replace('/');
-            }
-          }}
-          className="bg-orange-500 text-white px-8 py-4 font-semibold shadow-md hover:bg-orange-600 transition-colors"
-          style={{ borderRadius: '10px' }}
-        >
-          Sign in
-        </button>
+            }}
+            className="bg-orange-500 text-white px-8 py-4 font-semibold shadow-md hover:bg-orange-600 transition-colors"
+            style={{ borderRadius: '10px' }}
+          >
+            Sign in
+          </button>
+        </div>
       </div>
     );
   }
