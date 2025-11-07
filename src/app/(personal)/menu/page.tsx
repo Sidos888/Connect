@@ -4,25 +4,36 @@ import Avatar from "@/components/Avatar";
 import Button from "@/components/Button";
 import Link from "next/link";
 import ProfileStrip from "@/components/my-life/ProfileStrip";
+import ProfileCard from "@/components/profile/ProfileCard";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
-import { LogOut, Trash2, ChevronRightIcon, Eye, Pencil, Settings, MoreVertical, Plus } from "lucide-react";
+import { LogOut, Trash2, ChevronRightIcon, Eye, Pencil, Settings, MoreVertical, Plus, Share } from "lucide-react";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
 import { supabase as supabaseClient } from "@/lib/supabaseClient";
-import AccountSwitcherSwipeModal from "@/components/AccountSwitcherSwipeModal";
+import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
+import ProfilePage from "@/components/profile/ProfilePage";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
+import Highlights from "@/components/highlights/Highlights";
+import Timeline from "@/components/timeline/Timeline";
+import Achievements from "@/components/achievements/Achievements";
+import Connections from "@/components/connections/Connections";
+import SettingsContent from "@/components/settings/SettingsContent";
+import Notifications from "@/components/notifications/Notifications";
+import Memories from "@/components/memories/Memories";
+import Saved from "@/components/saved/Saved";
+import ShareProfile from "@/components/profile/ShareProfile";
+import AccountSettings from "@/components/settings/AccountSettings";
 
 // Module-level cache for connections (persists across component mounts)
 let connectionsCache: {
@@ -37,48 +48,50 @@ export default function Page() {
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile'>('menu');
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings'>('menu');
   const [showAccountSwitcher, setShowAccountSwitcher] = React.useState(false);
   const [selectedFriend, setSelectedFriend] = React.useState<ConnectionUser | null>(null);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
   const [showCenteredProfile, setShowCenteredProfile] = React.useState(false);
-  const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
-  const profileMenuButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
-  // Close profile dropdown on outside tap/click, but ignore clicks on the kebab button
+  // Drive currentView from URL query (?view=...)
+  const searchParams = useSearchParams();
   React.useEffect(() => {
-    if (!isProfileMenuOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      const clickedInsideMenu = !!(profileMenuRef.current && target && profileMenuRef.current.contains(target));
-      const clickedButton = !!(profileMenuButtonRef.current && target && profileMenuButtonRef.current.contains(target));
-      if (!clickedInsideMenu && !clickedButton) {
-        setIsProfileMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [isProfileMenuOpen]);
-
-  // Open profile view if query param view=profile is present
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const view = params.get('view');
+    const view = searchParams?.get('view');
     if (view === 'profile') setCurrentView('profile');
-    if (view === 'connections') setCurrentView('connections');
-    if (view === 'add-person' || view === 'add-friends') setCurrentView('add-person');
-  }, []);
+    else if (view === 'highlights') setCurrentView('highlights');
+    else if (view === 'timeline') setCurrentView('timeline');
+    else if (view === 'achievements') setCurrentView('achievements');
+    else if (view === 'connections') setCurrentView('connections');
+    else if (view === 'settings') setCurrentView('settings');
+    else if (view === 'notifications') setCurrentView('notifications');
+    else if (view === 'memories') setCurrentView('memories');
+    else if (view === 'saved') setCurrentView('saved');
+    else if (view === 'edit-profile') setCurrentView('edit-profile');
+    else if (view === 'share-profile') setCurrentView('share-profile');
+    else if (view === 'account-settings') setCurrentView('account-settings');
+    else if (view === 'add-person' || view === 'add-friends') setCurrentView('add-person');
+    else if (!view) setCurrentView('menu');
+  }, [searchParams]);
+
+  // Helper to update URL to a view on /menu (keeps transitions smooth)
+  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile', from?: string) => {
+    if (view === 'menu') {
+      router.push('/menu');
+    } else {
+      const url = from ? `/menu?view=${view}&from=${from}` : `/menu?view=${view}`;
+      router.push(url);
+    }
+  };
 
   const handleFriendClick = (friend: ConnectionUser) => {
     setSelectedFriend(friend);
-    setCurrentView('friend-profile');
+    goToView('friend-profile');
   };
 
   // Reset menu state when resetMenuState is called
   React.useEffect(() => {
     const handleReset = () => {
-      setCurrentView('menu');
+      goToView('menu');
       setShowAccountSwitcher(false);
     };
     
@@ -114,7 +127,7 @@ export default function Page() {
       document.body.style.paddingBottom = '';
     };
     
-    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile') {
+    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile' || currentView === 'highlights' || currentView === 'timeline' || currentView === 'achievements' || currentView === 'connections' || currentView === 'settings' || currentView === 'notifications' || currentView === 'memories' || currentView === 'saved' || currentView === 'share-profile' || currentView === 'account-settings') {
       hideBottomNav();
     } else {
       showBottomNav();
@@ -189,17 +202,373 @@ export default function Page() {
 
   // Edit Profile Component - Using new design system
   const EditProfileView = () => {
+    const from = searchParams?.get('from') || 'profile';
     return (
       <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex items-center justify-center">
         <EditProfileLanding
           name={currentAccount?.name}
           avatarUrl={currentAccount?.avatarUrl}
-          onBack={() => setCurrentView('profile')}
+          onBack={() => goToView(from as any)}
           onOpenLinks={() => router.push('/settings/edit/links')}
           onOpenPersonalDetails={() => router.push('/settings/edit/details')}
           onOpenTimeline={() => router.push('/timeline')}
           onOpenHighlights={() => router.push('/highlights')}
         />
+      </div>
+    );
+  };
+
+  // Highlights View Component - Using same pattern as EditProfileView
+  const HighlightsView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Highlights"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <Highlights />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="h-32 bg-gradient-to-t from-white via-white/95 to-transparent"></div>
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Timeline View Component
+  const TimelineView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Timeline"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <Timeline />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="h-32 bg-gradient-to-t from-white via-white/95 to-transparent"></div>
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Achievements View Component
+  const AchievementsView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Achievements"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <Achievements />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="h-32 bg-gradient-to-t from-white via-white/95 to-transparent"></div>
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Connections View Component
+  const ConnectionsView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    const handleFriendClick = (friend: ConnectionUser) => {
+      setSelectedFriend(friend);
+      goToView('friend-profile');
+    };
+
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Connections"
+            backButton
+            onBack={() => goToView(from as any)}
+            actions={[
+              {
+                icon: <Plus size={20} className="text-gray-900" />,
+                onClick: () => goToView('add-person', 'connections'),
+                label: "Add person"
+              }
+            ]}
+          />
+          <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+            paddingTop: 'var(--saved-content-padding-top, 140px)',
+            paddingBottom: '32px',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}>
+            <Connections onFriendClick={handleFriendClick} />
+          </div>
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Settings View Component
+  const SettingsView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+    const [showFinalConfirm, setShowFinalConfirm] = React.useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
+
+    const handleSignOut = async () => {
+      await signOut();
+      const { clearAll } = useAppStore.getState();
+      clearAll();
+      router.replace("/");
+    };
+
+    const handleDeleteAccount = () => {
+      setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteAccount = async () => {
+      setIsDeletingAccount(true);
+      await deleteAccount();
+      setIsDeletingAccount(false);
+      const { clearAll } = useAppStore.getState();
+      clearAll();
+      router.replace('/');
+    };
+
+    const cancelDeleteAccount = () => {
+      setShowDeleteConfirm(false);
+      setShowFinalConfirm(false);
+    };
+
+    const backToMenu = () => {
+      setShowDeleteConfirm(false);
+      setShowFinalConfirm(false);
+    };
+
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Settings"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}>
+            <SettingsContent
+              onBack={() => goToView(from as any)}
+              onSignOut={handleSignOut}
+              onDeleteAccount={handleDeleteAccount}
+              showDeleteConfirm={showDeleteConfirm}
+              showFinalConfirm={showFinalConfirm}
+              onConfirmDelete={confirmDeleteAccount}
+              onCancelDelete={cancelDeleteAccount}
+              onProceedToFinalConfirm={() => setShowFinalConfirm(true)}
+              onBackToMenu={backToMenu}
+              isDeletingAccount={isDeletingAccount}
+              personalProfile={personalProfile}
+              showBackButton={false}
+              onViewProfile={() => goToView('profile', 'settings')}
+              onEditProfile={() => goToView('edit-profile', 'settings')}
+              onShareProfile={() => goToView('share-profile', 'settings')}
+              onAccountSettings={() => goToView('account-settings', 'settings')}
+            />
+          </div>
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Notifications View Component
+  const NotificationsView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Notifications"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <Notifications />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Memories View Component
+  const MemoriesView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Memories"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <Memories />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Account Settings View Component
+  const AccountSettingsView = () => {
+    const from = searchParams?.get('from') || 'settings';
+    
+    const handleDeleteAccount = async () => {
+      // TODO: Add delete confirmation flow if needed
+      await deleteAccount();
+      const { clearAll } = useAppStore.getState();
+      clearAll();
+      router.replace('/');
+    };
+
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Account Settings"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <AccountSettings onDeleteAccount={handleDeleteAccount} />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Share Profile View Component
+  const ShareProfileView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Share Profile"
+            backButton
+            onBack={() => goToView(from as any)}
+          />
+          <ShareProfile />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+          </div>
+        </MobilePage>
+      </div>
+    );
+  };
+
+  // Saved View Component
+  const SavedView = () => {
+    const from = searchParams?.get('from') || 'menu';
+    return (
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Saved"
+            backButton
+            onBack={() => goToView(from as any)}
+            actions={[
+              {
+                icon: <Plus size={20} className="text-gray-900" />,
+                onClick: () => console.log('Add clicked'),
+                label: "Add"
+              },
+              {
+                icon: <Share size={20} className="text-gray-900" />,
+                onClick: () => console.log('Share clicked'),
+                label: "Share"
+              }
+            ]}
+          />
+          <Saved />
+          {/* Bottom Blur */}
+          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{
+              height: '80px',
+              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+          </div>
+        </MobilePage>
       </div>
     );
   };
@@ -385,14 +754,14 @@ export default function Page() {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         {/* Dim overlay */}
-        <div className="absolute inset-0 bg-black/50" onClick={() => setCurrentView('profile')} />
+        <div className="absolute inset-0 bg-black/50" onClick={() => goToView('profile')} />
         {/* Centered card */}
         <div className="relative bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
           {/* Header inside card */}
           <div className="px-4 pb-4 pt-6">
             <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
               <button
-                onClick={() => setCurrentView('profile')}
+                onClick={() => goToView('profile')}
                 className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
                 aria-label="Back to profile"
               >
@@ -502,42 +871,43 @@ export default function Page() {
 
   // Profile View Component
   const ProfileView = () => {
+    const from = searchParams?.get('from') || 'menu';
     return (
-      <UnifiedProfileCard
-        profile={{
-          id: currentAccount?.id,
-          name: currentAccount?.name,
-          avatarUrl: currentAccount?.avatarUrl,
-          bio: currentAccount?.bio
-        }}
-        isOwnProfile={true}
-        showBackButton={true}
-        onClose={() => setCurrentView('menu')}
-        onEdit={() => setCurrentView('edit-profile')}
-        onSettings={() => router.push('/settings')}
-        onShare={() => router.push('/share-profile?returnTo=profile')}
-        onOpenTimeline={() => router.push('/timeline')}
-        onOpenHighlights={() => {}}
-        onOpenBadges={() => {}}
-        onOpenConnections={() => setCurrentView('connections')}
-      />
+        <ProfilePage
+          profile={{
+            id: currentAccount?.id,
+            name: currentAccount?.name,
+            avatarUrl: currentAccount?.avatarUrl,
+            bio: currentAccount?.bio
+          }}
+          isOwnProfile={true}
+          showBackButton={true}
+        onClose={() => goToView(from as any)}
+        onEdit={() => goToView('edit-profile', 'profile')}
+          onSettings={() => goToView('settings', 'profile')}
+        onShare={() => goToView('share-profile', 'profile')}
+          onOpenTimeline={() => goToView('timeline', 'profile')}
+        onOpenHighlights={() => goToView('highlights', 'profile')}
+        onOpenBadges={() => goToView('achievements', 'profile')}
+        onOpenConnections={() => goToView('connections', 'profile')}
+        />
     );
   };
 
   // Friend Profile Component
   const FriendProfileView = ({ friend }: { friend: ConnectionUser }) => {
     return (
-      <UnifiedProfileCard
-        profile={{
-          id: friend.id,
-          name: friend.name,
-          avatarUrl: friend.profile_pic,
-          bio: friend.bio
-        }}
-        isOwnProfile={false}
-        showBackButton={true}
-        onClose={() => setCurrentView('connections')}
-      />
+        <ProfilePage
+          profile={{
+            id: friend.id,
+            name: friend.name,
+            avatarUrl: friend.profile_pic,
+            bio: friend.bio
+          }}
+          isOwnProfile={false}
+          showBackButton={true}
+        onClose={() => goToView('connections')}
+        />
     );
   };
 
@@ -776,7 +1146,7 @@ export default function Page() {
         <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
           <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
             <button
-              onClick={() => setCurrentView('connections')}
+                onClick={() => goToView('connections')}
               className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
               aria-label="Back to connections"
             >
@@ -894,7 +1264,7 @@ export default function Page() {
               {/* Friend Requests summary card (below search) */}
               {!searchQuery.trim() && (
                 <button 
-                  onClick={() => setCurrentView('friend-requests')}
+                  onClick={() => goToView('friend-requests')}
                   className="w-full bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] p-5 text-left hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] transition-all"
                   style={{ boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27,27,27,0.25)' }}
                   aria-label="Open friend requests"
@@ -1019,7 +1389,7 @@ export default function Page() {
         <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
           <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
             <button
-              onClick={() => setCurrentView('add-person')}
+              onClick={() => goToView('add-person')}
               className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
               aria-label="Back to add friends"
             >
@@ -1073,7 +1443,7 @@ export default function Page() {
 
   return (
     <ProtectedRoute
-      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : "Menu"}
+      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'achievements' ? "Achievements" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'share-profile' ? "Share Profile" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
       description="Log in / sign up to access your account settings and preferences"
       buttonText="Log in"
     >
@@ -1087,6 +1457,26 @@ export default function Page() {
         <ProfileView />
       ) : currentView === 'edit-profile' ? (
         <EditProfileView />
+      ) : currentView === 'highlights' ? (
+        <HighlightsView />
+      ) : currentView === 'timeline' ? (
+        <TimelineView />
+      ) : currentView === 'achievements' ? (
+        <AchievementsView />
+      ) : currentView === 'connections' ? (
+        <ConnectionsView />
+      ) : currentView === 'settings' ? (
+        <SettingsView />
+      ) : currentView === 'notifications' ? (
+        <NotificationsView />
+      ) : currentView === 'memories' ? (
+        <MemoriesView />
+      ) : currentView === 'saved' ? (
+        <SavedView />
+      ) : currentView === 'share-profile' ? (
+        <ShareProfileView />
+      ) : currentView === 'account-settings' ? (
+        <AccountSettingsView />
       ) : currentView === 'menu' ? (
         <>
           {/* Mobile Layout with Design System */}
@@ -1130,8 +1520,8 @@ export default function Page() {
                 }
                 actions={[
                   {
-                    icon: <BellIcon size={20} className="text-gray-900" />,
-                    onClick: () => router.push('/notifications'),
+                    icon: <BellIcon size={22} className="text-gray-900" strokeWidth={2} />,
+                    onClick: () => goToView('notifications', 'menu'),
                     label: "Notifications"
                   }
                 ]}
@@ -1144,66 +1534,17 @@ export default function Page() {
                 msOverflowStyle: 'none'
               }}>
                 {/* Profile Card */}
-                <div 
-                  className="cursor-pointer mb-6"
-                  onClick={() => setCurrentView('profile')}
-                >
-                  <ProfileStrip
-                    name={currentAccount?.name ?? "Your Name"}
-                    avatarUrl={currentAccount?.avatarUrl}
-                    action={
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsProfileMenuOpen((v) => !v);
-                        }}
-                        ref={profileMenuButtonRef}
-                        className="p-2 -m-2 rounded-full hover:bg-gray-100 transition-colors"
-                        aria-label="Open profile menu"
-                        aria-expanded={isProfileMenuOpen}
-                      >
-                        <MoreVertical className="h-5 w-5 text-gray-700" />
-                      </button>
-                    }
-                  />
-                </div>
-
-                {/* Kebab menu dropdown */}
-                {isProfileMenuOpen && (
-                  <div
-                    ref={profileMenuRef}
-                    role="menu"
-                    aria-label="Profile actions"
-                    className="fixed left-8 right-8 z-50 rounded-2xl border border-neutral-200 bg-white shadow-xl p-1"
-                    style={{ top: '182px', maxWidth: 'calc(100% - 64px)' }}
-                  >
-                    <button
-                      role="menuitem"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsProfileMenuOpen(false);
-                        setCurrentView('profile');
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                    >
-                      <Eye className="h-5 w-5 text-gray-700" />
-                      View Profile
-                    </button>
-                    <div className="mx-2 my-1 h-px bg-neutral-200" />
-                    <button
-                      role="menuitem"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsProfileMenuOpen(false);
-                        router.push('/settings/edit');
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                    >
-                      <Pencil className="h-5 w-5 text-gray-700" />
-                      Edit Profile
-                    </button>
-                  </div>
-                )}
+              <div className="mb-6">
+                <ProfileCard
+                  name={currentAccount?.name ?? "Your Name"}
+                  avatarUrl={currentAccount?.avatarUrl}
+                  onClick={() => goToView('profile')}
+                  onViewProfile={() => goToView('profile')}
+                  onEditProfile={() => goToView('edit-profile', 'menu')}
+                  onShareProfile={() => goToView('share-profile', 'menu')}
+                  avatarSize={36}
+                />
+              </div>
 
                 {/* Menu Grid - 2x3 layout */}
                 <div className="grid grid-cols-2 gap-3">
@@ -1212,17 +1553,17 @@ export default function Page() {
                 [
                   { title: "Bookings", icon: "📅", href: "/business/bookings" },
                   { title: "Financials", icon: "💰", href: "/business/financials" },
-                  { title: "Connections", icon: "👬", href: "/connections" },
-                  { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
+                  { title: "Connections", icon: "👬", view: "connections" },
+                  { title: "Settings", icon: "⚙️", view: "settings" },
                 ] :
                 // Personal account menu items
                 [
-                  { title: "Memories", icon: "🖼️", href: "/memories" },
-                  { title: "Achievements", icon: "🏆", href: "/achievements" },
-                  { title: "Timeline", icon: "🧭", href: "/timeline" },
-                  { title: "Connections", icon: "👬", href: "/connections" },
-                  { title: "Saved", icon: "❤️", href: "/saved" },
-                  { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
+                  { title: "Memories", icon: "🖼️", view: "memories" },
+                  { title: "Achievements", icon: "🏆", view: "achievements" },
+                  { title: "Timeline", icon: "🧭", view: "timeline" },
+                  { title: "Connections", icon: "👬", view: "connections" },
+                  { title: "Saved", icon: "❤️", view: "saved" },
+                  { title: "Settings", icon: "⚙️", view: "settings" },
                 ]
               ).map((item) => (
                     <button
@@ -1237,10 +1578,9 @@ export default function Page() {
                       onClick={() => {
                         if (item.onClick) {
                           item.onClick();
+                        } else if (item.view) {
+                          goToView(item.view as any, 'menu');
                         } else if (item.href) {
-                          if (item.isSettings) {
-                            sessionStorage.setItem('settings_previous_page', '/menu');
-                          }
                           router.push(item.href);
                         }
                       }}
@@ -1280,90 +1620,19 @@ export default function Page() {
 
           {/* Desktop/Web Layout (unchanged) */}
           <div className="hidden lg:block">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-6 lg:pt-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pt-6 lg:pt-6">
               {/* Profile Card only (no bio dropdown) */}
               <div className="mb-6 lg:mb-8">
-                <div className="max-w-lg mx-auto lg:max-w-xl relative">
-                  {/* Profile Card */}
-                  <div className="relative z-10">
-                    <div
-                      className="w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 grid grid-cols-[40px_1fr_40px] items-center cursor-pointer"
-                      style={{
-                        borderWidth: '0.4px',
-                        borderColor: '#E5E7EB',
-                        borderStyle: 'solid',
-                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                      }}
-                      onClick={() => {
-                        setCurrentView('profile');
-                      }}
-                    >
-                      <div className="flex items-center">
-                        <Avatar 
-                          src={currentAccount?.avatarUrl ?? undefined} 
-                          name={currentAccount?.name ?? "Your Name"} 
-                          size={36} 
-                        />
-                      </div>
-                      <div className="text-base font-semibold text-gray-900 text-center">
-                        {currentAccount?.name ?? "Your Name"}
-                      </div>
-                      <div
-                        className="flex justify-end relative"
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                      >
-                        {/* Kebab menu (web only) */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsProfileMenuOpen((v) => !v);
-                          }}
-                          ref={profileMenuButtonRef}
-                          className="p-3 -m-3 rounded-full hover:bg-gray-100 transition-colors relative z-30"
-                          aria-label="Open profile menu"
-                          aria-expanded={isProfileMenuOpen}
-                        >
-                          <MoreVertical className="h-5 w-5 text-gray-700" />
-                        </button>
-                        {isProfileMenuOpen && (
-                          <div
-                            ref={profileMenuRef}
-                            role="menu"
-                            aria-label="Profile actions"
-                            className="absolute -right-5 top-12 z-20 w-56 rounded-2xl border border-neutral-200 bg-white shadow-xl p-1"
-                          >
-                            <button
-                              role="menuitem"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIsProfileMenuOpen(false);
-                                setCurrentView('profile');
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                            >
-                              <Eye className="h-5 w-5 text-gray-700" />
-                              View Profile
-                            </button>
-                            <div className="mx-2 my-1 h-px bg-neutral-200" />
-                            <button
-                              role="menuitem"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIsProfileMenuOpen(false);
-                                router.push('/settings/edit');
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                            >
-                              <Pencil className="h-5 w-5 text-gray-700" />
-                              Edit Profile
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                <div className="max-w-lg mx-auto lg:max-w-xl">
+                  <ProfileCard
+                    name={currentAccount?.name ?? "Your Name"}
+                    avatarUrl={currentAccount?.avatarUrl}
+                    onClick={() => setCurrentView('profile')}
+                    onViewProfile={() => goToView('profile')}
+                    onEditProfile={() => goToView('edit-profile', 'menu')}
+                    onShareProfile={() => goToView('share-profile', 'menu')}
+                    avatarSize={36}
+                  />
                 </div>
               </div>
 
@@ -1373,67 +1642,66 @@ export default function Page() {
 
               <div className="space-y-6">
                 {/* Menu Grid - Desktop layout */}
-                <div className="mb-6">
+          <div className="mb-6">
                   <div className="grid grid-cols-6 gap-6">
-                    {(context.type === "business" ? 
-                      // Business account menu items
-                      [
-                        { title: "Bookings", icon: "📅", href: "/business/bookings" },
-                        { title: "Financials", icon: "💰", href: "/business/financials" },
-                        { title: "Connections", icon: "👬", href: "/connections" },
-                        { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
-                      ] :
-                      // Personal account menu items
-                      [
+              {(context.type === "business" ? 
+                // Business account menu items
+                [
+                  { title: "Bookings", icon: "📅", href: "/business/bookings" },
+                  { title: "Financials", icon: "💰", href: "/business/financials" },
+                        { title: "Connections", icon: "👬", view: "connections" },
+                  { title: "Settings", icon: "⚙️", view: "settings" },
+                ] :
+                // Personal account menu items
+                [
                         { title: "Memories", icon: "🖼️", href: "/memories" },
-                        { title: "Achievements", icon: "🏆", href: "/achievements" },
-                        { title: "Timeline", icon: "🧭", href: "/timeline" },
-                        { title: "Connections", icon: "👬", href: "/connections" },
-                        { title: "Saved", icon: "❤️", href: "/saved" },
-                        { title: "Settings", icon: "⚙️", href: "/settings", isSettings: true },
-                      ]
-                    ).map((item) => (
-                      <button
-                        key={item.title}
+                  { title: "Achievements", icon: "🏆", view: "achievements" },
+                  { title: "Timeline", icon: "🧭", view: "timeline" },
+                        { title: "Connections", icon: "👬", view: "connections" },
+                  { title: "Saved", icon: "❤️", href: "/saved" },
+                  { title: "Settings", icon: "⚙️", view: "settings" },
+                ]
+              ).map((item) => (
+                <button
+                  key={item.title}
                         className="rounded-2xl bg-white hover:bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 aspect-square hover:-translate-y-[1px]"
-                        style={{
-                          borderWidth: '0.4px',
-                          borderColor: '#E5E7EB',
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
                           boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                           willChange: 'transform, box-shadow'
-                        }}
-                        onClick={() => {
-                          if (item.onClick) {
-                            item.onClick();
-                          } else if (item.href) {
-                            if (item.isSettings) {
-                              sessionStorage.setItem('settings_previous_page', '/menu');
-                            }
-                            router.push(item.href);
-                          }
-                        }}
+                  }}
+                  onClick={() => {
+                    if (item.onClick) {
+                      item.onClick();
+                    } else if (item.view) {
+                      goToView(item.view as any, 'menu');
+                    } else if (item.href) {
+                      router.push(item.href);
+                    }
+                  }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                        }}
-                      >
-                        <div className="flex flex-col items-center justify-center h-full p-4 gap-6">
+                  }}
+                >
+                  <div className="flex flex-col items-center justify-center h-full p-4 gap-6">
                           <div className="text-5xl">
-                            {item.icon}
-                          </div>
+                      {item.icon}
+                    </div>
                           <span className="text-sm font-medium text-neutral-900 text-center leading-tight">
-                            {item.title}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
+                      {item.title}
+                    </span>
                   </div>
-                </div>
-              </div>
+                </button>
+              ))}
             </div>
           </div>
+        </div>
+          </div>
+        </div>
         </>
       ) : (
         // Fallback - should not happen, but show menu as default
@@ -1446,8 +1714,8 @@ export default function Page() {
         </div>
       )}
 
-      {/* Account Switcher Modal - Half-page drawer with profile + Add Business */}
-      <AccountSwitcherSwipeModal 
+      {/* Profile Switcher Sheet */}
+      <ProfileSwitcherSheet 
         isOpen={showAccountSwitcher}
         onClose={() => setShowAccountSwitcher(false)}
       />

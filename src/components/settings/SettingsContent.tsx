@@ -1,8 +1,9 @@
 "use client";
 
-import { LogOut, Trash2, MoreVertical, Eye, Pencil, User } from "lucide-react";
+import { LogOut, Trash2, MoreVertical, User } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { useState, useRef, useEffect } from "react";
+import ProfileCard from "@/components/profile/ProfileCard";
 
 export default function SettingsContent({
   onBack,
@@ -19,6 +20,7 @@ export default function SettingsContent({
   showBackButton = true,
   onViewProfile,
   onEditProfile,
+  onShareProfile,
   onAccountSettings,
 }: {
   onBack: () => void;
@@ -35,26 +37,9 @@ export default function SettingsContent({
   showBackButton?: boolean;
   onViewProfile?: () => void;
   onEditProfile?: () => void;
+  onShareProfile?: () => void;
   onAccountSettings?: () => void;
 }) {
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement | null>(null);
-  const profileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!isProfileMenuOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      const clickedInsideMenu = !!(profileMenuRef.current && target && profileMenuRef.current.contains(target));
-      const clickedButton = !!(profileMenuButtonRef.current && target && profileMenuButtonRef.current.contains(target));
-      if (!clickedInsideMenu && !clickedButton) {
-        setIsProfileMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [isProfileMenuOpen]);
 
   return (
     <div className="flex flex-col h-full">
@@ -156,98 +141,18 @@ export default function SettingsContent({
       ) : (
         <>
           {/* Settings content */}
-          <div className="flex-1 px-8 relative" style={{ paddingTop: 'var(--saved-content-padding-top, 24px)' }}>
+          <div className="flex-1 px-8" style={{ paddingTop: 'var(--saved-content-padding-top, 24px)' }}>
             {/* Profile Card + Edit Profile - Combined */}
-            <div 
-              className="bg-white rounded-2xl mb-6 border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-[1px] relative" 
-              style={{ 
-                borderWidth: '0.4px', 
-                borderColor: '#E5E7EB', 
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                willChange: 'transform, box-shadow'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-            >
-              {/* Profile Section */}
-              <div 
+            <div className="mb-6">
+              <ProfileCard
+                name={personalProfile?.name ?? "Your Name"}
+                avatarUrl={personalProfile?.avatarUrl}
                 onClick={onViewProfile}
-                className="p-4 grid grid-cols-[40px_1fr_40px] items-center cursor-pointer transition-all"
-              >
-                <div className="flex items-center">
-                  <Avatar
-                    src={personalProfile?.avatarUrl ?? undefined}
-                    name={personalProfile?.name ?? "User"}
-                    size={40}
-                  />
-                </div>
-                <div className="text-base font-semibold text-gray-900 text-center">
-                  {personalProfile?.name ?? "Your Name"}
-                </div>
-                <div 
-                  className="flex justify-end relative"
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsProfileMenuOpen((v) => !v);
-                    }}
-                    ref={profileMenuButtonRef}
-                    className="flex items-center justify-center w-10 h-10"
-                    aria-label="Open profile menu"
-                    aria-expanded={isProfileMenuOpen}
-                  >
-                    <MoreVertical className="h-5 w-5 text-gray-900" />
-                  </button>
-                </div>
-              </div>
+                onViewProfile={onViewProfile}
+                onEditProfile={onEditProfile}
+                onShareProfile={onShareProfile}
+              />
             </div>
-
-            {/* Profile dropdown menu - rendered outside card */}
-            {isProfileMenuOpen && onViewProfile && onEditProfile && (
-              <div
-                ref={profileMenuRef}
-                role="menu"
-                aria-label="Profile actions"
-                className="absolute right-6 z-[100] w-56 rounded-2xl border border-neutral-200 bg-white shadow-xl p-1"
-                style={{
-                  top: '140px'
-                }}
-              >
-                <button
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsProfileMenuOpen(false);
-                    onViewProfile();
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                >
-                  <Eye className="h-5 w-5 text-gray-700" />
-                  View Profile
-                </button>
-                <div className="mx-2 my-1 h-px bg-neutral-200" />
-                <button
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsProfileMenuOpen(false);
-                    onEditProfile();
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                >
-                  <Pencil className="h-5 w-5 text-gray-700" />
-                  Edit Profile
-                </button>
-              </div>
-            )}
 
             {/* Account Settings Card */}
             {onAccountSettings && (

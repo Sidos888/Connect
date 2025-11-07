@@ -3,13 +3,19 @@
 import { PageHeader } from "@/components/layout/PageSystem";
 import Timeline from "./Timeline";
 
-export default function CenteredTimeline({ onClose }: { onClose: () => void }) {
+export default function CenteredTimeline({ 
+  onClose,
+  fromProfile = false,
+}: { 
+  onClose: () => void;
+  fromProfile?: boolean;
+}) {
   return (
     <>
       <PageHeader
         title="Timeline"
         backButton
-        backIcon="close"
+        backIcon={fromProfile ? "arrow" : "close"}
         onBack={onClose}
       />
       
@@ -29,4 +35,6 @@ export default function CenteredTimeline({ onClose }: { onClose: () => void }) {
     </>
   );
 }
+
+
 

@@ -13,7 +13,7 @@ export default function TimelinePage() {
         <PageHeader
           title="Timeline"
           backButton
-          onBack={() => router.back()}
+          onBack={() => router.replace('/menu?view=profile')}
         />
         
         <Timeline />

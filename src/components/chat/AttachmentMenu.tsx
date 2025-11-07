@@ -25,13 +25,13 @@ export default function AttachmentMenu({
   const menuItems = [
     {
       id: "photos",
-      icon: <Camera size={20} className="text-gray-600" />,
+      icon: <Camera size={20} className="text-gray-900" />,
       label: "Photos & Videos",
       onClick: onSelectPhotos,
     },
     {
       id: "file",
-      icon: <FileText size={20} className="text-gray-600" />,
+      icon: <FileText size={20} className="text-gray-900" />,
       label: "Files",
       onClick: onSelectFile,
     },
@@ -63,14 +63,10 @@ export default function AttachmentMenu({
               onClick={item.onClick}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
-              className={`w-full flex items-center gap-3 p-2 rounded-lg transition-all duration-200 ${
-                hoveredItem === item.id 
-                  ? 'bg-gray-50' 
-                  : 'bg-transparent hover:bg-gray-50'
-              }`}
+              className="w-full flex items-center gap-3 p-2 rounded-lg transition-all duration-200 hover:-translate-y-[1px] hover:scale-[1.02]"
             >
               {item.icon}
-              <span className="text-gray-900 font-medium text-sm">{item.label}</span>
+              <span className="text-gray-900 font-medium text-base">{item.label}</span>
             </button>
           ))}
         </div>

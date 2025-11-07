@@ -13,7 +13,7 @@ export default function MemoriesPage() {
         <PageHeader
           title="Memories"
           backButton
-          onBack={() => router.back()}
+          onBack={() => router.replace('/menu')}
         />
         <Memories />
         

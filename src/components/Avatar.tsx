@@ -12,11 +12,26 @@ type Props = {
 export default function Avatar({ src, name = "?", size = 32, className }: Props) {
   
   const [imageError, setImageError] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  const borderWidth = isMobile ? '2.5px' : '2px';
   
   return (
     <div
-      className={`rounded-full overflow-hidden ${src && !imageError ? 'bg-neutral-200 text-neutral-700' : 'border-2 border-dashed border-gray-400 bg-transparent text-gray-400'} flex items-center justify-center ${className ?? ""}`}
-      style={{ width: size, height: size }}
+      className={`rounded-full overflow-hidden ${src && !imageError ? 'bg-neutral-200 text-neutral-700' : 'border-dashed border-gray-400 bg-transparent text-gray-400'} flex items-center justify-center ${className ?? ""}`}
+      style={{ 
+        width: size, 
+        height: size,
+        borderWidth: src && !imageError ? '0' : borderWidth,
+        borderStyle: src && !imageError ? 'none' : 'dashed'
+      }}
       aria-label={name}
     >
       {src && !imageError ? (
@@ -34,7 +49,7 @@ export default function Avatar({ src, name = "?", size = 32, className }: Props)
           }}
         />
       ) : (
-        <span className="text-xs font-medium">{name.charAt(0).toUpperCase()}</span>
+        <span className="text-xs font-medium">{name && name.trim() ? name.charAt(0).toUpperCase() : ''}</span>
       )}
     </div>
   );

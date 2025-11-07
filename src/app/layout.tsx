@@ -42,18 +42,18 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <StoreHydration />
-          <QueryClientWrapper>
-            <AuthProvider>
-              <ChatProvider>
-                <ModalProvider>
-                  <AppShellWrapper>
-                    {children}
-                  </AppShellWrapper>
-                  <AccountSwitchingOverlay />
-                </ModalProvider>
-              </ChatProvider>
-            </AuthProvider>
-          </QueryClientWrapper>
+        <QueryClientWrapper>
+          <AuthProvider>
+            <ChatProvider>
+              <ModalProvider>
+                <AppShellWrapper>
+                  {children}
+                </AppShellWrapper>
+                <AccountSwitchingOverlay />
+              </ModalProvider>
+            </ChatProvider>
+          </AuthProvider>
+        </QueryClientWrapper>
         </ErrorBoundary>
       </body>
     </html>

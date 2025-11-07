@@ -17,6 +17,7 @@ export interface PageHeaderProps {
   customBackButton?: ReactNode;  // Custom back button (e.g., profile avatar)
   leftSection?: ReactNode;  // Custom left section (e.g., profile card)
   actions?: ActionButton[];
+  customActions?: ReactNode;  // Custom action buttons (full control over styling)
   className?: string;
 }
 
@@ -28,6 +29,7 @@ export default function PageHeader({
   customBackButton,
   leftSection,
   actions = [],
+  customActions,
   className = ""
 }: PageHeaderProps) {
   // Detect platform (mobile vs web)
@@ -176,7 +178,7 @@ export default function PageHeader({
             
             {/* Center: Title */}
             <h1 
-              className="font-semibold text-gray-900 text-center" 
+              className={`font-semibold text-gray-900 text-center ${className}`}
               style={{ 
                 textAlign: 'center', 
                 width: '100%', 
@@ -188,8 +190,12 @@ export default function PageHeader({
               {title}
             </h1>
             
-            {/* Right: Action Buttons (max 2) */}
-            {actions.length > 0 && (
+            {/* Right: Action Buttons (max 2) or Custom Actions */}
+            {customActions ? (
+              <div className="absolute right-0 flex items-center gap-3">
+                {customActions}
+              </div>
+            ) : actions.length > 0 ? (
               <div className="absolute right-0 flex items-center gap-3">
                 {actions.slice(0, 2).map((action, index) => (
                   <button
@@ -224,7 +230,7 @@ export default function PageHeader({
                   </button>
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

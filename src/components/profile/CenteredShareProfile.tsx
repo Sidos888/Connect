@@ -5,8 +5,10 @@ import ShareProfile from "@/components/profile/ShareProfile";
 
 export default function CenteredShareProfile({
   onBack,
+  backIcon = 'arrow'
 }: {
   onBack: () => void;
+  backIcon?: 'arrow' | 'close';
 }) {
   return (
     <div 
@@ -16,7 +18,7 @@ export default function CenteredShareProfile({
       <PageHeader
         title="Share Profile"
         backButton
-        backIcon="arrow"
+        backIcon={backIcon}
         onBack={onBack}
       />
       
@@ -36,4 +38,6 @@ export default function CenteredShareProfile({
     </div>
   );
 }
+
+
 

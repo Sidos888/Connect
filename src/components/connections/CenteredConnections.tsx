@@ -21,12 +21,14 @@ export default function CenteredConnections({
   return (
     <div 
       className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
-      style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
+      style={{ 
+        '--saved-content-padding-top': '104px'
+      } as React.CSSProperties}
     >
       <PageHeader
         title="Connections"
         backButton
-        backIcon="close"
+        backIcon={fromProfile ? "arrow" : "close"}
         onBack={onBack}
         actions={showAddPersonButton && onAddPerson ? [
           {

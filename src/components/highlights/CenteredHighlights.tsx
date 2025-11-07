@@ -1,9 +1,9 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/PageSystem";
-import Achievements from "@/components/achievements/Achievements";
+import Highlights from "./Highlights";
 
-export default function CenteredAchievements({
+export default function CenteredHighlights({
   onBack,
   fromProfile = false,
 }: {
@@ -18,13 +18,13 @@ export default function CenteredAchievements({
       } as React.CSSProperties}
     >
       <PageHeader
-        title="Achievements"
+        title="Highlights"
         backButton
         backIcon={fromProfile ? "arrow" : "close"}
         onBack={onBack}
       />
       
-      <Achievements />
+      <Highlights />
       
       {/* Bottom Blur */}
       <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>

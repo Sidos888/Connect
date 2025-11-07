@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/authContext";
 import { SearchIcon } from "@/components/icons";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import Avatar from "@/components/Avatar";
-import AccountSwitcherSwipeModal from "@/components/AccountSwitcherSwipeModal";
+import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
 import { Search } from "lucide-react";
 
 export default function ExplorePage() {
@@ -103,7 +103,7 @@ export default function ExplorePage() {
                 <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
                   <Avatar 
                     src={currentAccount?.avatarUrl ?? undefined} 
-                    name={currentAccount?.name ?? "Your Name"} 
+                    name={currentAccount?.name ?? ""} 
                     size={36} 
                   />
                 </div>
@@ -208,8 +208,8 @@ export default function ExplorePage() {
       </div>
 
       {/* Desktop Layout (unchanged) */}
-      <div className="hidden lg:block h-screen bg-white" style={{ height: '100dvh' }}>
-        <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 lg:pt-6 flex flex-col" style={{ height: '100%', minHeight: '0' }}>
+      <div className="hidden lg:block min-h-screen bg-white">
+        <div className="h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 lg:pt-6 flex flex-col overflow-hidden" style={{ maxHeight: '100vh' }}>
           <div className="mb-4 lg:mb-6">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold text-gray-900">Explore</h1>
@@ -262,7 +262,7 @@ export default function ExplorePage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 overflow-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="grid grid-cols-6 gap-6 mt-4 lg:mt-6 pb-6">
               {categories.map((category) => {
                 return (
@@ -306,8 +306,8 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Account Switcher Modal */}
-      <AccountSwitcherSwipeModal 
+      {/* Profile Switcher Sheet */}
+      <ProfileSwitcherSheet 
         isOpen={showAccountSwitcher}
         onClose={() => setShowAccountSwitcher(false)}
       />

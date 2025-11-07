@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/authContext";
 import { useState, useEffect, useRef } from "react";
 import { useModal } from "@/lib/modalContext";
 import Avatar from "@/components/Avatar";
+import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
 
 export default function MobileTopNavigation() {
   const pathname = usePathname();
@@ -32,6 +33,7 @@ export default function MobileTopNavigation() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
 
   // Get page title based on current route
   const getPageTitle = () => {
@@ -89,7 +91,9 @@ export default function MobileTopNavigation() {
 
   return (
     <>
-    <header className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-sm px-4">
+    <header 
+      className="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4"
+    >
       <div className="relative flex items-center">
         {/* Left Card - Profile - Only show when authenticated */}
         {user && (
@@ -135,43 +139,11 @@ export default function MobileTopNavigation() {
         )}
       </div>
     </header>
-    {/* Bottom Sheet mounted at root to avoid transform stacking issues */}
-    {profileSheetOpen && (
-      <div className="fixed inset-0 z-[70]">
-        <div className="absolute inset-0 bg-black/30" onClick={() => setProfileSheetOpen(false)}></div>
-        <div className="fixed left-0 right-0 bottom-0">
-          <div className="mx-auto w-full max-w-md bg-white" style={{ borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 12px rgba(0,0,0,0.12)', minHeight: '33vh' }} role="dialog" aria-modal="true">
-            <div className="flex justify-center py-2">
-              <div className="w-10 h-1.5 rounded-full bg-gray-300"></div>
-            </div>
-            <div className="px-4 pb-[max(env(safe-area-inset-bottom),20px)]">
-              <button
-                onClick={() => { setProfileSheetOpen(false); router.push('/menu?view=profile'); }}
-                className="w-full flex items-center px-4 py-4 bg-white rounded-2xl"
-                style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)' }}
-              >
-                <Avatar src={account?.profile_pic || personalProfile?.avatarUrl} name={account?.name || personalProfile?.name || user?.email} size={40} />
-                <div className="flex-1 text-center">
-                  <div className="text-lg font-semibold text-gray-900">{account?.name || personalProfile?.name || 'Your Profile'}</div>
-                </div>
-                <span className="shrink-0" aria-hidden>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
-                </span>
-              </button>
-              <div className="h-3"></div>
-              <button
-                onClick={() => { setProfileSheetOpen(false); router.push('/create-business'); }}
-                className="w-full flex items-center justify-center gap-3 px-4 py-4 bg-white rounded-2xl text-gray-900 font-medium"
-                style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)' }}
-              >
-                <span className="text-xl">＋</span>
-                <span>Add Business</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
+    {/* Profile Switcher Sheet */}
+    <ProfileSwitcherSheet 
+      isOpen={profileSheetOpen}
+      onClose={() => setProfileSheetOpen(false)}
+    />
     </>
   );
 }

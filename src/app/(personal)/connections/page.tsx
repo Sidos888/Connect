@@ -56,7 +56,7 @@ export default function ConnectionsPage() {
           title="Connections"
           backButton
           backIcon="arrow"
-          onBack={() => router.back()}
+          onBack={() => router.replace('/menu?view=profile')}
           actions={[
             {
               icon: <Plus size={20} className="text-gray-900" />,

@@ -13,7 +13,7 @@ export default function AchievementsPage() {
         <PageHeader
           title="Achievements"
           backButton
-          onBack={() => router.back()}
+          onBack={() => router.replace('/menu?view=profile')}
         />
         <Achievements />
         

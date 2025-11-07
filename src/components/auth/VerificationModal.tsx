@@ -314,8 +314,15 @@ export default function VerificationModal({
         <div className="flex items-center justify-between p-6">
           <button
             onClick={onBack}
-            className="action-btn-circle transition-all duration-200 hover:-translate-y-[1px]"
+            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
             style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '100px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
               willChange: 'transform, box-shadow'
             }}

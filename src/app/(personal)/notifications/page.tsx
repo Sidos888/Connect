@@ -13,7 +13,7 @@ export default function NotificationsPage() {
         <PageHeader
           title="Notifications"
           backButton
-          onBack={() => router.back()}
+          onBack={() => router.replace('/menu')}
         />
         <Notifications />
         

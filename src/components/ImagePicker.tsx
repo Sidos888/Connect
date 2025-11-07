@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-// import heic2any from "heic2any";
+import { compressImage, fileToDataURL } from "@/lib/imageUtils";
 
 type Props = {
   label?: string;
@@ -10,6 +10,7 @@ type Props = {
   shape?: "circle" | "rounded"; // circle for avatars, rounded for logos/cards
   size?: number; // square size in px
   helperText?: string;
+  compress?: boolean; // Enable image compression (default: true)
 };
 
 export default function ImagePicker({
@@ -19,6 +20,7 @@ export default function ImagePicker({
   shape = "circle",
   size = 64,
   helperText,
+  compress = true,
 }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = React.useState<string | null>(initialPreviewUrl);
@@ -28,7 +30,7 @@ export default function ImagePicker({
     setPreview(initialPreviewUrl ?? null);
   }, [initialPreviewUrl]);
 
-  function handleSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleSelect(e: React.ChangeEvent<HTMLInputElement>) {
     console.log('ImagePicker: File selection started');
     const file = e.target.files?.[0] ?? null;
     if (!file) {
@@ -41,21 +43,25 @@ export default function ImagePicker({
     console.log('ImagePicker: File selected:', { name: file.name, size: file.size, type: file.type });
 
     try {
-      const reader = new FileReader();
-      reader.onload = () => {
-        console.log('ImagePicker: File read successfully');
-        const url = typeof reader.result === "string" ? reader.result : null;
-        setPreview(url);
-        onChange(file, url);
-      };
-      reader.onerror = () => {
-        console.error('ImagePicker: Error reading file');
-        setPreview(null);
-        onChange(null, null);
-      };
-      reader.readAsDataURL(file);
+      let processedFile = file;
+      
+      // Compress image if it's an image file and compression is enabled
+      if (compress && file.type.startsWith('image/')) {
+        console.log('📸 ImagePicker: Compressing image...');
+        processedFile = await compressImage(file, {
+          maxWidth: 1200,
+          maxHeight: 1200,
+          quality: 0.85,
+        });
+      }
+      
+      // Generate preview URL
+      const dataUrl = await fileToDataURL(processedFile);
+      console.log('ImagePicker: File processed successfully');
+      setPreview(dataUrl);
+      onChange(processedFile, dataUrl);
     } catch (error) {
-      console.error('ImagePicker: Exception reading file:', error);
+      console.error('ImagePicker: Error processing file:', error);
       setPreview(null);
       onChange(null, null);
     }

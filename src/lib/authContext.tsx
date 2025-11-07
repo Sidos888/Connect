@@ -931,29 +931,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Upload avatar
   const uploadAvatar = async (file: File) => {
-    if (!supabase || !account) return { url: null, error: new Error('Not authenticated or no account') };
+    if (!supabase || !account) {
+      console.error('❌ Upload failed: No supabase client or account');
+      return { url: null, error: new Error('Not authenticated or no account') };
+    }
 
     try {
       console.log('📸 NewAuthContext: Uploading avatar...');
+      console.log('📸 File size:', Math.round(file.size / 1024), 'KB');
+      console.log('📸 Account ID:', account.id);
+      
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('❌ No active session');
+        throw new Error('No active session');
+      }
+      console.log('✅ Session valid');
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${account.id}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
       
-      const { error: uploadError } = await supabase.storage
+      console.log('📸 Uploading to bucket: avatars');
+      console.log('📸 File name:', fileName);
+      console.log('📸 Starting upload...');
+      
+      // Add timeout to detect hanging uploads
+      const uploadPromise = supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(fileName, file, { upsert: true });
       
-      if (uploadError) throw uploadError;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+      );
+      
+      const { data: uploadData, error: uploadError } = await Promise.race([
+        uploadPromise,
+        timeoutPromise
+      ]) as any;
+      
+      if (uploadError) {
+        console.error('❌ Upload error:', uploadError);
+        console.error('❌ Error message:', uploadError.message);
+        console.error('❌ Error status:', uploadError.statusCode);
+        throw uploadError;
+      }
+      
+      console.log('✅ Upload response:', uploadData);
       
       const { data } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
       
       console.log('✅ NewAuthContext: Avatar uploaded successfully');
+      console.log('✅ Public URL:', data.publicUrl);
       return { url: data.publicUrl, error: null };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ NewAuthContext: Error uploading avatar:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error message:', error?.message || 'Unknown error');
       return { url: null, error: error as Error };
     }
   };
@@ -1111,12 +1147,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.clear();
       }
       
-      // Try Supabase signout but don't wait for it
-      supabase.auth.signOut().catch(err => {
-        console.log('Supabase signout error (ignoring):', err);
-      });
+      // Sign out from Supabase and WAIT for it to complete
+      console.log('🔐 Signing out from Supabase...');
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        console.error('⚠️ Supabase signout error:', signOutError);
+      } else {
+        console.log('✅ Supabase session cleared successfully');
+      }
       
       console.log('✅ NewAuthContext: Sign out completed successfully');
+      console.log('✅ User can now log in fresh without refresh');
     } catch (error) {
       console.error('❌ NewAuthContext: Sign out error:', error);
       // Even if there's an error, clear everything

@@ -26,11 +26,36 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [emailFocused, setEmailFocused] = useState(false);
+  const [emailHovered, setEmailHovered] = useState(false);
   const [countryFocused, setCountryFocused] = useState(false);
   const [countryCode, setCountryCode] = useState('+61');
   const [verificationValue, setVerificationValue] = useState('');
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  // Detect autofill on email field
+  useEffect(() => {
+    const checkAutofill = () => {
+      if (emailInputRef.current && emailInputRef.current.value && !email) {
+        setEmail(emailInputRef.current.value);
+      }
+    };
+    
+    // Check for autofill with a slight delay
+    const timer = setTimeout(checkAutofill, 100);
+    
+    // Also listen for animationstart (Chrome autofill triggers this)
+    const input = emailInputRef.current;
+    if (input) {
+      input.addEventListener('animationstart', checkAutofill);
+      return () => {
+        clearTimeout(timer);
+        input.removeEventListener('animationstart', checkAutofill);
+      };
+    }
+    
+    return () => clearTimeout(timer);
+  }, [step, email]);
 
 
   // Simplified phone input system - handles both 0466310826 and 466310826 formats
@@ -358,15 +383,22 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            <div className="flex items-center justify-between pt-6 pb-4 px-8 border-b border-gray-100">
               <div className="w-10" /> {/* Spacer */}
               <h2 className="text-xl font-semibold text-gray-900">
                 Log in or sign up
               </h2>
               <button
                 onClick={handleClose}
-                className="action-btn-circle transition-all duration-200 hover:-translate-y-[1px]"
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '100px',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   willChange: 'transform, box-shadow'
                 }}
@@ -422,14 +454,14 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
                   onFocus={handlePhoneFocus}
                   onBlur={handlePhoneBlur}
                   placeholder=""
-                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(phoneFocused || phoneNumber) ? 'pt-5 pb-3' : 'py-5'}`}
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(phoneFocused || phoneNumber) ? 'pt-6 pb-2' : 'py-5'}`}
                   style={{ 
                     fontSize: '16px',
                     lineHeight: '1.2',
                     fontFamily: 'inherit',
                     color: 'black',
                     border: '0.4px solid #E5E7EB',
-                    borderRadius: '12px',
+                    borderRadius: '16px',
                     transform: phoneFocused ? 'translateY(-1px)' : 'translateY(0)',
                     boxShadow: phoneFocused
                       ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
@@ -511,27 +543,43 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
                   onFocus={() => setEmailFocused(true)}
                   onBlur={() => setEmailFocused(false)}
-                  placeholder={emailFocused ? "" : "Email"}
-                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-lg transition-all duration-200 ${(emailFocused || email) ? 'pt-5 pb-3' : 'py-5'}`}
+                  onMouseEnter={() => {
+                    if (!emailFocused) {
+                      setEmailHovered(true);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    setEmailHovered(false);
+                  }}
+                  placeholder=""
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(emailFocused || email) ? 'pt-6 pb-2' : 'py-5'}`}
                   style={{ 
                     fontSize: '16px',
                     lineHeight: '1.2',
                     fontFamily: 'inherit',
                     color: 'black',
                     border: '0.4px solid #E5E7EB',
-                    borderRadius: '12px',
-                    transform: emailFocused ? 'translateY(-1px)' : 'translateY(0)',
-                    boxShadow: emailFocused
+                    borderRadius: '16px',
+                    transform: (emailFocused || emailHovered) ? 'translateY(-1px)' : 'translateY(0)',
+                    boxShadow: (emailFocused || emailHovered)
                       ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                       : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     willChange: 'transform, box-shadow'
                   }}
                   required
                 />
+                {/* Floating label when focused or filled */}
                 {(emailFocused || email) && (
                   <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Email
+                  </label>
+                )}
+                {/* Default centered label when empty and unfocused */}
+                {!emailFocused && !email && (
+                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                     Email
                   </label>
                 )}

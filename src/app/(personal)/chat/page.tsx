@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
-import MobileTitle from "@/components/MobileTitle";
 import { useAppStore } from "@/lib/store";
 import type { Conversation } from "@/lib/types";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,7 +15,9 @@ import { useModal } from "@/lib/modalContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NewMessageModal from "@/components/chat/NewMessageModal";
 import GroupSetupModal from "@/components/chat/GroupSetupModal";
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus } from "lucide-react";
+import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
 
 export default function MessagesPage() {
   const { isHydrated } = useAppStore();
@@ -41,6 +42,7 @@ export default function MessagesPage() {
   const { showLogin } = useModal();
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showGroupSetupModal, setShowGroupSetupModal] = useState(false);
+  const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
 
   // Load specific chat if requested but not in conversations list
   useEffect(() => {
@@ -268,155 +270,205 @@ export default function MessagesPage() {
           <ChatLayout />
         </div>
 
-        {/* Mobile Layout - Locked viewport to prevent keyboard scroll */}
-        <div 
-          className="sm:hidden bg-white chat-mobile-container"
-          style={{ 
-            position: 'fixed' as const,
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: '100dvh',
-            overflow: 'hidden',
-            WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'none',
-            transform: 'translateZ(0)',
-            willChange: 'transform'
-          }}
-        >
-          {/* Content Area - Scrollable within fixed container */}
-          <div 
-            className="absolute left-0 right-0 overflow-y-auto"
-            style={{
-              top: '0px',
-              bottom: '0px',
-              padding: '24px 16px'
-            }}
-          >
-            {/* Search Bar - Full width */}
-            <div className="mb-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search"
-                  className="w-full pl-10 pr-4 py-3 bg-white rounded-xl focus:outline-none focus:ring-0 placeholder:text-neutral-400 transition-all duration-200"
+        {/* Mobile Layout - Connect design system */}
+        <div className="sm:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+          <MobilePage>
+            <PageHeader
+              title="Chats"
+              customBackButton={
+                <button
+                  onClick={() => setShowProfileSwitcher(true)}
+                  className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
-                    fontSize: '16px', // Prevents zoom on iOS
-                    WebkitAppearance: 'none',
-                    WebkitTapHighlightColor: 'transparent',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '100px',
+                    background: 'rgba(255, 255, 255, 0.9)',
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow',
+                    padding: '2px'
                   }}
-                  onFocus={(e) => e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'}
-                  onBlur={(e) => e.target.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'}
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label="Switch account"
+                >
+                  <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
+                    <Avatar 
+                      src={account?.profile_pic} 
+                      name={account?.name || user?.email} 
+                      size={36} 
+                    />
+                  </div>
+                </button>
+              }
+              actions={[
+                {
+                  icon: <Plus size={20} className="text-gray-900" />,
+                  onClick: () => setShowNewMessageModal(true),
+                  label: "New message"
+                }
+              ]}
+            />
 
-            {/* Category Pills - Full width with gap matching cards */}
-            <div className="mb-2">
-              <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
-                
-                {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setMobileActiveCategory(category.id)}
-                    className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: mobileActiveCategory === category.id ? '#D1D5DB' : '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: mobileActiveCategory === category.id 
-                        ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
-                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      color: mobileActiveCategory === category.id ? '#111827' : '#374151'
-                    }}
-                  >
-                    <span className="text-sm font-medium leading-none">{category.label}</span>
-                    {category.count !== null && (
-                      <span className={`ml-2 text-xs leading-none ${
-                        mobileActiveCategory === category.id 
-                          ? 'text-neutral-700' 
-                          : 'text-neutral-500'
-                      }`}>
-                        {category.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Chat List - Full width */}
-            <div className="space-y-2">
-              {filteredMobileConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                  <p className="text-gray-500 text-lg">
-                    {account?.id ? "No chats yet" : "Please log in to see your chats"}
-                  </p>
-                  <BearEmoji size="6xl" />
-                </div>
-              ) : (
-                filteredMobileConversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      router.push(`/chat?chat=${conversation.id}`);
-                    }}
-                    className="p-4 rounded-xl cursor-pointer transition-all duration-200 bg-white"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: selectedChatId === conversation.id ? '#D1D5DB' : '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: selectedChatId === conversation.id 
-                        ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
-                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      touchAction: 'manipulation',
-                      WebkitTapHighlightColor: 'transparent'
-                    }}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Avatar
-                        src={conversation.avatarUrl}
-                        name={conversation.title}
-                        size={48}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate">
-                            {conversation.title}
-                          </h3>
-                          <span className="text-xs text-gray-500">
-                            {getLastMessageTime(conversation)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500 truncate mt-1">
-                          {getLastMessage(conversation) || 'No messages yet'}
-                        </p>
-                      </div>
-                      {conversation.unreadCount > 0 && (
-                        <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                          {conversation.unreadCount}
-                        </div>
-                      )}
+            <div
+              className="flex-1 px-8 pb-[max(env(safe-area-inset-bottom),24px)] overflow-y-auto scrollbar-hide"
+              style={{
+                paddingTop: 'var(--saved-content-padding-top, 140px)',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}
+            >
+              <div className="space-y-6 pb-6">
+                {/* Search Card */}
+                <div
+                  className="rounded-2xl bg-white px-4 py-4 transition-all duration-200"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search"
+                      className="w-full pl-10 pr-2 bg-transparent text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+                      style={{
+                        fontSize: '16px',
+                        WebkitAppearance: 'none',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
                     </div>
                   </div>
-                ))
-              )}
+                </div>
+
+                {/* Category Pills */}
+                <div>
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
+                    {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => setMobileActiveCategory(category.id)}
+                        className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: mobileActiveCategory === category.id ? '#D1D5DB' : '#E5E7EB',
+                          borderStyle: 'solid',
+                          boxShadow: mobileActiveCategory === category.id
+                            ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          color: mobileActiveCategory === category.id ? '#111827' : '#374151',
+                          willChange: 'transform, box-shadow'
+                        }}
+                      >
+                        <span className="text-sm font-medium leading-none">{category.label}</span>
+                        {category.count !== null && (
+                          <span
+                            className={`ml-2 text-xs leading-none ${
+                              mobileActiveCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'
+                            }`}
+                          >
+                            {category.count}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Chat List */}
+                <div className="space-y-2">
+                  {filteredMobileConversations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                      <p className="text-gray-500 text-lg">
+                        {account?.id ? "No chats yet" : "Please log in to see your chats"}
+                      </p>
+                      <BearEmoji size="6xl" />
+                    </div>
+                  ) : (
+                    filteredMobileConversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/chat?chat=${conversation.id}`);
+                        }}
+                        className="p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: selectedChatId === conversation.id ? '#D1D5DB' : '#E5E7EB',
+                          borderStyle: 'solid',
+                          boxShadow: selectedChatId === conversation.id
+                            ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent',
+                          willChange: 'transform, box-shadow'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = selectedChatId === conversation.id
+                            ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Avatar
+                            src={conversation.avatarUrl}
+                            name={conversation.title}
+                            size={48}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-sm font-semibold text-gray-900 truncate">
+                                {conversation.title}
+                              </h3>
+                              <span className="text-xs text-gray-500">
+                                {getLastMessageTime(conversation)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500 truncate mt-1">
+                              {getLastMessage(conversation) || 'No messages yet'}
+                            </p>
+                          </div>
+                          {conversation.unreadCount > 0 && (
+                            <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                              {conversation.unreadCount}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          </MobilePage>
         </div>
 
         {/* Modals */}
@@ -431,9 +483,11 @@ export default function MessagesPage() {
           onClose={handleNewMessageClose}
           onComplete={handleNewMessageComplete}
         />
+        <ProfileSwitcherSheet 
+          isOpen={showProfileSwitcher}
+          onClose={() => setShowProfileSwitcher(false)}
+        />
       </div>
     </ProtectedRoute>
   );
 }
-
-

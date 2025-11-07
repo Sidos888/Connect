@@ -12,7 +12,7 @@ type Profile = {
   bio?: string;
 };
 
-export default function UnifiedProfileCard({
+export default function ProfilePage({
   profile,
   isOwnProfile = true,
   onClose,
@@ -229,3 +229,5 @@ export default function UnifiedProfileCard({
     </div>
   );
 }
+
+

@@ -11,7 +11,8 @@ export default function EditProfileLanding({
   onOpenLinks,
   onOpenPersonalDetails,
   onOpenTimeline,
-  onOpenHighlights
+  onOpenHighlights,
+  backIcon = 'arrow'
 }: {
   name?: string;
   avatarUrl?: string;
@@ -20,6 +21,7 @@ export default function EditProfileLanding({
   onOpenPersonalDetails: () => void;
   onOpenTimeline: () => void;
   onOpenHighlights: () => void;
+  backIcon?: 'arrow' | 'close';
 }) {
   // Detect platform
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -28,11 +30,11 @@ export default function EditProfileLanding({
     <div 
       className="bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-full lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
       style={{ '--saved-content-padding-top': isMobile ? '140px' : '104px' } as React.CSSProperties}
-    >
+          >
       <PageHeader
         title="Edit Profile"
         backButton
-        backIcon="arrow"
+        backIcon={backIcon}
         onBack={onBack}
       />
 
@@ -171,6 +173,8 @@ export default function EditProfileLanding({
     </div>
   );
 }
+
+
 
 
 

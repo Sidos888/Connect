@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { useAppStore } from "@/lib/store";
-import { ChevronLeftIcon } from "@/components/icons";
 import { formatNameForDisplay } from "@/lib/utils";
 import ImagePicker from "@/components/ImagePicker";
+import MobilePage from "@/components/layout/MobilePage";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default function EditPersonalDetailsPage() {
   const router = useRouter();
@@ -124,24 +125,23 @@ export default function EditPersonalDetailsPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col lg:max-w-2xl lg:mx-auto">
-      {/* Header */}
-      <div className="bg-white px-4 pt-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
-        <div className="relative w-full h-14 flex items-center justify-center" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '56px' }}>
-          <button
-            onClick={() => router.back()}
-            className="absolute left-0 action-btn-circle"
-            aria-label="Back"
-          >
-            <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
-          </button>
-          <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block', color: '#111827' }}>Personal Details</h1>
-        </div>
-      </div>
+    <MobilePage>
+      <PageHeader 
+        title="Personal Details"
+        backButton
+        backIcon="arrow"
+        onBack={() => router.back()}
+      />
 
-      {/* Content – Connect card style with sliding labels */}
-      <div className="flex-1 flex flex-col px-4 py-4 lg:px-8 overflow-y-auto">
-        <div className="space-y-6">
+      <div 
+        className="flex-1 overflow-y-auto px-8 pb-8 scrollbar-hide"
+        style={{
+          paddingTop: 'var(--saved-content-padding-top, 140px)',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+      >
+        <div className="space-y-6 max-w-screen-sm mx-auto">
           {/* Profile Picture */}
           <div className="flex flex-col items-center justify-center py-1">
             <ImagePicker onChange={handleImageChange} initialPreviewUrl={avatarUrl || null} shape="circle" size={120} />
@@ -158,36 +158,50 @@ export default function EditPersonalDetailsPage() {
                 onFocus={() => setFirstNameFocused(true)}
                 onBlur={() => setFirstNameFocused(false)}
                 placeholder=""
-                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white text-black ${(firstNameFocused || firstName) ? 'pt-6 pb-2' : 'py-5'}`}
+                className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none transition-all bg-white text-black rounded-2xl ${(firstNameFocused || firstName) ? 'pt-6 pb-2' : 'py-5'}`}
                 style={{ 
                   fontSize: '16px', 
                   lineHeight: '1.2', 
                   fontFamily: 'inherit',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  transform: firstNameFocused ? 'translateY(-1px)' : 'translateY(0)',
+                  boxShadow: firstNameFocused
+                    ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+                  if (!firstNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = '';
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  if (!firstNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
                 }}
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="words"
                 required
               />
-              {!firstNameFocused && !firstName && (
-                <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">First Name</label>
-              )}
-              {(firstNameFocused || firstName) && (
-                <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>First Name</label>
-              )}
-              {firstNameFocused && !firstName && (
-                <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>Your first name</div>
-              )}
-            </div>
+            {/* Floating label when focused or filled */}
+            {(firstNameFocused || firstName) && (
+              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                First Name
+              </label>
+            )}
+            {/* Default centered label when empty and unfocused */}
+            {!firstNameFocused && !firstName && (
+              <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                First Name
+              </label>
+            )}
+          </div>
 
             <div className="relative">
               <input
@@ -198,147 +212,171 @@ export default function EditPersonalDetailsPage() {
                 onFocus={() => setLastNameFocused(true)}
                 onBlur={() => setLastNameFocused(false)}
                 placeholder=""
-                className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white text-black ${(lastNameFocused || lastName) ? 'pt-6 pb-2' : 'py-5'}`}
+                className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none transition-all bg-white text-black rounded-2xl ${(lastNameFocused || lastName) ? 'pt-6 pb-2' : 'py-5'}`}
                 style={{ 
                   fontSize: '16px', 
                   lineHeight: '1.2', 
                   fontFamily: 'inherit',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  transform: lastNameFocused ? 'translateY(-1px)' : 'translateY(0)',
+                  boxShadow: lastNameFocused
+                    ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+                  if (!lastNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = '';
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  if (!lastNameFocused) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
                 }}
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="words"
-                required
               />
-              {!lastNameFocused && !lastName && (
-                <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">Last Name</label>
-              )}
+              {/* Floating label when focused or filled */}
               {(lastNameFocused || lastName) && (
-                <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>Last Name</label>
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  Last Name
+                </label>
               )}
-              {lastNameFocused && !lastName && (
-                <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>Your last name</div>
+              {/* Default centered label when empty and unfocused */}
+              {!lastNameFocused && !lastName && (
+                <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                  Last Name
+                </label>
               )}
             </div>
           </div>
 
-          {/* Bio with floating label */}
+          {/* Bio */}
           <div className="relative">
             <textarea
               ref={bioRef}
               value={bio}
-              onChange={(e) => { const v = e.target.value; if (v.length <= 150) setBio(v); }}
+              onChange={(e) => setBio(e.target.value)}
               onFocus={() => setBioFocused(true)}
               onBlur={() => setBioFocused(false)}
               placeholder=""
-              rows={3}
               maxLength={150}
-              className={`w-full pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white resize-none text-black ${(bioFocused || bio) ? 'pt-6 pb-8' : 'py-3'}`}
+              rows={4}
+              className={`w-full pl-4 pr-16 focus:ring-0 focus:outline-none transition-all bg-white text-black resize-none rounded-2xl ${(bioFocused || bio) ? 'pt-6 pb-2' : 'py-5'}`}
               style={{ 
                 fontSize: '16px', 
-                lineHeight: '1.4', 
+                lineHeight: '1.5', 
                 fontFamily: 'inherit',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                transform: bioFocused ? 'translateY(-1px)' : 'translateY(0)',
+                boxShadow: bioFocused
+                  ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+                if (!bioFocused) {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = '';
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                if (!bioFocused) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
               }}
+              spellCheck={false}
             />
-            {!bioFocused && !bio && (
-              <label className="absolute left-4 top-4 text-base text-gray-500 pointer-events-none">Bio</label>
-            )}
+            {/* Floating label when focused or filled */}
             {(bioFocused || bio) && (
-              <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>Bio</label>
+              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                Bio
+              </label>
             )}
-            {bioFocused && !bio && (
-              <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.4', fontFamily: 'inherit', top: '24px' }}>Tell us about yourself...</div>
+            {/* Default centered label when empty and unfocused */}
+            {!bioFocused && !bio && (
+              <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                Bio
+              </label>
             )}
-            <div className="absolute bottom-2 right-3">
-              <span className={`text-xs font-medium ${bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>{bio.length}/150</span>
+            <div className="absolute bottom-2 right-2 pointer-events-none">
+              <span className={`text-xs font-medium ${bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
+                {bio.length}/150
+              </span>
             </div>
           </div>
 
-          {/* DOB with floating label */}
+          {/* Date of Birth */}
           <div className="relative">
             <input
               ref={dobRef}
-              type="text"
-              value={dob ? new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : ''}
-              onChange={(e) => {
-                let value = e.target.value.replace(/[^0-9/]/g, '');
-                const current = dob ? new Date(dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/') : '';
-                const isDeleting = value.length < current.length;
-                if (!isDeleting) {
-                  if (value.length === 2 && !value.includes('/')) value = value + '/';
-                  else if (value.length === 5 && value.split('/').length === 2) value = value + '/';
-                }
-                if (value.length > 10) value = value.substring(0, 10);
-                if (value.length === 10) {
-                  const parts = value.split('/');
-                  if (parts.length === 3) {
-                    const [day, month, year] = parts;
-                    const iso = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                    setDob(iso);
-                  }
-                } else {
-                  setDob('');
-                }
-              }}
+              type="date"
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
               onFocus={() => setDobFocused(true)}
               onBlur={() => setDobFocused(false)}
               placeholder=""
-              className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-2xl focus:ring-0 focus:border-gray-500 focus:outline-none transition-all bg-white text-black ${(dobFocused || dob) ? 'pt-6 pb-2' : 'py-5'}`}
+              className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none transition-all bg-white text-black rounded-2xl ${(dobFocused || dob) ? 'pt-6 pb-2' : 'py-5'}`}
               style={{ 
                 fontSize: '16px', 
                 lineHeight: '1.2', 
                 fontFamily: 'inherit',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                transform: dobFocused ? 'translateY(-1px)' : 'translateY(0)',
+                boxShadow: dobFocused
+                  ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 2px 6px rgba(0, 0, 0, 0.08)';
+                if (!dobFocused) {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = '';
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                if (!dobFocused) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
               }}
-              required
             />
-            {!dobFocused && !dob && (
-              <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">Date of birth</label>
-            )}
+            {/* Floating label when focused or filled */}
             {(dobFocused || dob) && (
-              <label className="absolute left-4 text-xs text-gray-500 pointer-events-none transition-all" style={{ top: '6px' }}>Date of birth</label>
+              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                Date of Birth
+              </label>
             )}
-            {dobFocused && !dob && (
-              <div className="absolute left-4 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit', top: '26px' }}>DD/MM/YYYY</div>
+            {/* Default centered label when empty and unfocused */}
+            {!dobFocused && !dob && (
+              <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                Date of Birth
+              </label>
             )}
           </div>
-        </div>
-
-        {/* Save button */}
-        <div className="mt-auto pt-6 pb-4">
-          <div className="flex justify-center">
-            <button onClick={handleSave} disabled={loading || !firstName.trim() || !lastName.trim()} className="w-[42%] lg:w-[90%] px-6 py-3 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50">
-              {loading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+          {/* Save Button */}
+          <button
+            onClick={handleSave}
+            disabled={loading || !firstName.trim()}
+            className="w-full h-12 bg-brand text-white rounded-2xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: '#FF6600' }}
+          >
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </div>
-    </div>
+    </MobilePage>
   );
 }
 

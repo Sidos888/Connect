@@ -2,8 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
+import { useModal } from "@/lib/modalContext";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X, MessageCircle, Share, MoreVertical, ChevronRight, ArrowLeft, Pencil, User, Eye } from "lucide-react";
+import ProfileCard from "@/components/profile/ProfileCard";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import EditProfileLanding from '@/components/settings/EditProfileLanding';
 import InlineProfileView from '@/components/InlineProfileView';
@@ -12,7 +14,7 @@ import SettingsModal from '@/components/chat/SettingsModal';
 import AboutMeView from '@/components/AboutMeView';
 import EditProfileModal from '@/components/chat/EditProfileModal';
 import Avatar from "@/components/Avatar";
-import UnifiedProfileCard from "@/components/profile/UnifiedProfileCard";
+import ProfilePage from "@/components/profile/ProfilePage";
 import CenteredConnections from "@/components/connections/CenteredConnections";
 import CenteredAddPerson from "@/components/connections/CenteredAddPerson";
 import CenteredNotifications from "@/components/notifications/CenteredNotifications";
@@ -21,7 +23,6 @@ import CenteredAchievements from "@/components/achievements/CenteredAchievements
 import CenteredShareProfile from "@/components/profile/CenteredShareProfile";
 import CenteredTimeline from "@/components/timeline/CenteredTimeline";
 import { PageHeader } from "@/components/layout/PageSystem";
-import ShareProfileModal from "@/components/ShareProfileModal";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
@@ -577,110 +578,20 @@ function MenuView({
   onEditProfile: () => void;
   currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null; 
 }) {
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement | null>(null);
-  const profileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!isProfileMenuOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      const clickedInsideMenu = !!(profileMenuRef.current && target && profileMenuRef.current.contains(target));
-      const clickedButton = !!(profileMenuButtonRef.current && target && profileMenuButtonRef.current.contains(target));
-      if (!clickedInsideMenu && !clickedButton) {
-        setIsProfileMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [isProfileMenuOpen]);
 
   return (
     <SimpleCard>
       <div className="space-y-4">
-        {/* Profile Card - Clickable */}
-        <div
+        {/* Profile Card */}
+        <ProfileCard
+          name={currentAccount?.name ?? "Your Name"}
+          avatarUrl={currentAccount?.avatarUrl}
           onClick={onViewProfile}
-          className="w-full rounded-lg bg-white relative cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
-          style={{
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            willChange: 'transform, box-shadow'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-        >
-          <div className="flex items-center px-4 py-4 gap-3">
-          <Avatar
-            src={currentAccount?.avatarUrl ?? undefined}
-            name={currentAccount?.name ?? "User"}
-            size={48}
-          />
-            <div className="flex-1 text-center">
-              <h3 className="text-base font-semibold text-gray-900">{currentAccount?.name ?? "Your Name"}</h3>
-          </div>
-            <div 
-              className="relative"
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsProfileMenuOpen((v) => !v);
-                }}
-                ref={profileMenuButtonRef}
-                className="flex items-center justify-center w-10 h-10"
-                aria-label="Open profile menu"
-                aria-expanded={isProfileMenuOpen}
-              >
-                <MoreVertical size={20} className="text-gray-900" />
-        </button>
-              {isProfileMenuOpen && (
-                <div
-                  ref={profileMenuRef}
-                  role="menu"
-                  aria-label="Profile actions"
-                  className="absolute -right-5 top-12 z-20 w-56 rounded-2xl border border-neutral-200 bg-white shadow-xl p-1"
-                >
-                  <button
-                    role="menuitem"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsProfileMenuOpen(false);
-                      onViewProfile();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                  >
-                    <Eye className="h-5 w-5 text-gray-700" />
-                    View Profile
-                  </button>
-                  <div className="mx-2 my-1 h-px bg-neutral-200" />
-                  <button
-                    role="menuitem"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsProfileMenuOpen(false);
-                      onEditProfile();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                  >
-                    <Pencil className="h-5 w-5 text-gray-700" />
-                    Edit Profile
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          onViewProfile={onViewProfile}
+          onEditProfile={onEditProfile}
+          onShareProfile={onShare}
+          avatarSize={48}
+        />
 
         {/* Menu items */}
         <div className="space-y-3">
@@ -751,43 +662,17 @@ function MenuView({
 export default function ProfileMenu() {
   const { personalProfile, clearAll, setPersonalProfile } = useAppStore();
   const { signOut, deleteAccount, updateProfile, uploadAvatar, supabase, user } = useAuth();
+  const modal = useModal(); // Use unified modal system
   const [open, setOpen] = useState(false);
   const [showDim, setShowDim] = useState(false);
   const [showConnections, setShowConnections] = useState(false);
-  
-  // Removed debugging log for performance
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<ConnectionUser | null>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showCenteredShareProfile, setShowCenteredShareProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [showCenteredProfile, setShowCenteredProfile] = useState(false);
-  const [showCenteredConnections, setShowCenteredConnections] = useState(false);
-  const [connectionsFromProfile, setConnectionsFromProfile] = useState(false);
-  const [showCenteredAddPerson, setShowCenteredAddPerson] = useState(false);
-  const [showCenteredNotifications, setShowCenteredNotifications] = useState(false);
-  const [showCenteredMemories, setShowCenteredMemories] = useState(false);
-  const [showCenteredHighlights, setShowCenteredHighlights] = useState(false);
-  const [showCenteredAchievements, setShowCenteredAchievements] = useState(false);
-  const [showCenteredSaved, setShowCenteredSaved] = useState(false);
-  const [showCenteredSettings, setShowCenteredSettings] = useState(false);
-  const [showCenteredTimeline, setShowCenteredTimeline] = useState(false);
-  const [settingsFromProfile, setSettingsFromProfile] = useState(false);
-  const [profileFromSettings, setProfileFromSettings] = useState(false);
-  const [showCenteredAccountSettings, setShowCenteredAccountSettings] = useState(false);
-  const [shareFromProfile, setShareFromProfile] = useState(false);
-  const [timelineFromProfile, setTimelineFromProfile] = useState(false);
-  const [timelineFromEditProfile, setTimelineFromEditProfile] = useState(false);
-  const [showCenteredAboutMe, setShowCenteredAboutMe] = useState(false);
-  const [aboutMeFromProfile, setAboutMeFromProfile] = useState(false);
-  const [showCenteredEditProfile, setShowCenteredEditProfile] = useState(false);
-  const [showCenteredEditLanding, setShowCenteredEditLanding] = useState(false);
-  const [editProfileFromProfile, setEditProfileFromProfile] = useState(false);
-  const [showCenteredFriendProfile, setShowCenteredFriendProfile] = useState(false);
   const [friendProfileUserId, setFriendProfileUserId] = useState<string | null>(null);
   const [showCenteredConnectionsModal, setShowCenteredConnectionsModal] = useState(false);
   const [connectionsModalUserId, setConnectionsModalUserId] = useState<string | null>(null);
@@ -818,17 +703,10 @@ export default function ProfileMenu() {
     setShowAddPerson(false);
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
-    setShowCenteredProfile(false);
-    setShowCenteredConnections(false);
-    setShowCenteredAddPerson(false);
-    setShowCenteredNotifications(false);
-    setShowCenteredAchievements(false);
-    setShowCenteredSaved(false);
-    setShowCenteredSettings(false);
-    setShowCenteredFriendProfile(false);
     setShowCenteredConnectionsModal(false);
     setConnectionsModalUserId(null);
-  }, [pathname]);
+    // Don't call modal.hideModals() here - let the ModalProvider manage its own state
+  }, [pathname, modal]);
 
   // Prevent scroll when menu is open
   useEffect(() => {
@@ -844,62 +722,27 @@ export default function ProfileMenu() {
     };
   }, [open]);
 
-  // Prevent background scroll when any centered modal is open
+  // Prevent background scroll when any modal is open (local modals only, central modals handled by provider)
   useEffect(() => {
-    const isAnyCenteredOpen =
-      showCenteredProfile ||
-      showCenteredConnections ||
-      showCenteredAddPerson ||
-      showCenteredNotifications ||
-      showCenteredMemories || showCenteredHighlights ||
-      showCenteredAchievements ||
-      showCenteredSaved ||
-      showCenteredSettings ||
-      showCenteredAccountSettings ||
-      showCenteredFriendProfile ||
-      showCenteredConnectionsModal ||
-      showCenteredEditLanding ||
-      showCenteredEditProfile ||
-      showCenteredShareProfile ||
-      showShareModal;
+    const isAnyLocalModalOpen =
+      showCenteredConnectionsModal;
 
-    if (isAnyCenteredOpen) {
+    if (isAnyLocalModalOpen) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = prev;
       };
     }
-  }, [
-    showCenteredProfile,
-    showCenteredConnections,
-    showCenteredAddPerson,
-    showCenteredNotifications,
-    showCenteredAchievements,
-    showCenteredSaved,
-    showCenteredAccountSettings,
-    showCenteredSettings,
-    showCenteredFriendProfile,
-    showCenteredConnectionsModal,
-    showCenteredEditLanding,
-    showCenteredEditProfile,
-    showCenteredShareProfile,
-    showShareModal
-  ]);
+  }, [showCenteredConnectionsModal]);
 
   // Cleanup on unmount - ensure all modals are closed
   useEffect(() => {
     return () => {
       console.log('ProfileMenu: Component unmounting - cleaning up modal states');
-      setShowCenteredConnections(false);
-      setShowCenteredProfile(false);
-      setShowCenteredAddPerson(false);
-      setShowCenteredNotifications(false);
-      setShowCenteredAchievements(false);
-      setShowCenteredSettings(false);
-      setShowCenteredFriendProfile(false);
       setShowCenteredConnectionsModal(false);
       setConnectionsModalUserId(null);
+      // Don't call modal.hideModals() on unmount - modals should persist across navigation
     };
   }, []);
 
@@ -949,14 +792,6 @@ export default function ProfileMenu() {
     setSelectedFriend(null);
     setShowDeleteConfirm(false);
     setShowFinalConfirm(false);
-    setShowCenteredProfile(false);
-    setShowCenteredConnections(false);
-    setShowCenteredAddPerson(false);
-    setShowCenteredNotifications(false);
-    setShowCenteredAchievements(false);
-    setShowCenteredSaved(false);
-    setShowCenteredSettings(false);
-    setShowCenteredFriendProfile(false);
     setShowCenteredConnectionsModal(false);
     setConnectionsModalUserId(null);
   };
@@ -1052,12 +887,13 @@ export default function ProfileMenu() {
     setSelectedFriend(friend);
     setFriendProfileUserId(friend.id);
     setShowCenteredConnections(false);
-    setShowCenteredFriendProfile(true);
+    // TODO: Friend profile view needs to be implemented with unified modal system
+    // setShowCenteredFriendProfile(true);
   };
 
   const handleOpenConnections = (userId: string) => {
     setConnectionsModalUserId(userId);
-    setShowCenteredFriendProfile(false);
+    // setShowCenteredFriendProfile(false);
     setShowCenteredConnectionsModal(true);
   };
 
@@ -1156,20 +992,17 @@ export default function ProfileMenu() {
 
   const handleViewProfile = () => {
     hideMenuNow();
-    setShowCenteredProfile(true);
+    setTimeout(() => modal.showProfile(), 0);
   };
 
   const handleEditProfile = () => {
     hideMenuNow();
-    setShowCenteredProfile(false);
-    setEditProfileFromProfile(true);
-    setShowCenteredEditLanding(true);
+    setTimeout(() => modal.showEditProfile('menu'), 0);
   };
 
   const handleEditProfileFromSettings = () => {
-    setShowCenteredSettings(false);
-    setEditProfileFromProfile(false);
-    setShowCenteredEditLanding(true);
+    modal.closeProfileModal('settings');
+    modal.showEditProfile();
   };
 
 
@@ -1247,36 +1080,36 @@ export default function ProfileMenu() {
               <MenuView
                 onSettings={() => {
                   hideMenuNow();
-                  setShowCenteredSettings(true);
+                  setTimeout(() => modal.showSettings(), 0);
                 }}
                 onShare={() => {
                   hideMenuNow();
-                  setShowShareModal(true);
+                  setTimeout(() => modal.showShareProfile('menu'), 0);
                 }}
                 onViewProfile={handleViewProfile}
                 onConnections={() => {
                   hideMenuNow();
-                  setShowCenteredConnections(true);
+                  setTimeout(() => modal.showConnections(), 0);
                 }}
                 onNotifications={() => {
                   hideMenuNow();
-                  setShowCenteredNotifications(true);
+                  setTimeout(() => modal.showNotifications(), 0);
                 }}
                 onGallery={() => {
                   hideMenuNow();
-                  setShowCenteredMemories(true);
+                  setTimeout(() => modal.showMemories(), 0);
                 }}
                 onAchievements={() => {
                   hideMenuNow();
-                  setShowCenteredAchievements(true);
+                  setTimeout(() => modal.showAchievements(), 0);
                 }}
                 onSaved={() => {
                   hideMenuNow();
-                  setShowCenteredSaved(true);
+                  setTimeout(() => modal.showSaved(), 0);
                 }}
                 onEditProfile={() => {
                   hideMenuNow();
-                  setShowCenteredEditLanding(true);
+                  setTimeout(() => modal.showEditProfile('menu'), 0);
                 }}
                 currentAccount={currentAccount}
               />
@@ -1284,364 +1117,7 @@ export default function ProfileMenu() {
             </div>
         )}
         
-        {/* Centered Profile Modal - Using mobile design with grid */}
-        {showCenteredProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div 
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => setShowCenteredProfile(false)}
-            />
-            
-            {/* Modal content using shared card */}
-            <UnifiedProfileCard
-              profile={{ id: personalProfile?.id, name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio }}
-              isOwnProfile={true}
-              showBackButton={profileFromSettings}
-              onClose={() => {
-                setShowCenteredProfile(false);
-                if (profileFromSettings) {
-                  setShowCenteredSettings(true);
-                  setProfileFromSettings(false);
-                }
-              }}
-              onEdit={handleEditProfile}
-              onSettings={() => { setShowCenteredProfile(false); setSettingsFromProfile(true); setShowCenteredSettings(true); }}
-              onShare={() => { setShowCenteredProfile(false); setShareFromProfile(true); setShowCenteredShareProfile(true); }}
-              onOpenTimeline={() => { setShowCenteredProfile(false); setTimelineFromProfile(true); setShowCenteredTimeline(true); }}
-              onOpenHighlights={() => { setShowCenteredProfile(false); setShowCenteredHighlights(true); }}
-              onOpenBadges={() => { setShowCenteredProfile(false); setShowCenteredAchievements(true); }}
-              onOpenConnections={() => { setShowCenteredProfile(false); setConnectionsFromProfile(true); setShowCenteredConnections(true); }}
-            />
-          </div>
-        )}
-
-        {/* Centered Edit Profile Landing Modal */}
-        {showCenteredEditLanding && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-              onClick={() => setShowCenteredEditLanding(false)}
-            />
-            <EditProfileLanding
-              name={personalProfile?.name ?? 'Your Name'}
-              avatarUrl={personalProfile?.avatarUrl ?? undefined}
-              onBack={() => {
-                setShowCenteredEditLanding(false);
-                if (editProfileFromProfile) {
-                  setShowCenteredProfile(true);
-                  setEditProfileFromProfile(false);
-                } else {
-                  setShowCenteredSettings(true);
-                }
-              }}
-              onOpenLinks={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/links'); }}
-              onOpenPersonalDetails={() => { setShowCenteredEditLanding(false); setEditProfileFromProfile(true); setShowCenteredEditProfile(true); }}
-              onOpenTimeline={() => { setShowCenteredEditLanding(false); setTimelineFromEditProfile(true); setShowCenteredTimeline(true); }}
-              onOpenHighlights={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/highlights'); }}
-            />
-          </div>
-        )}
-
-        {/* Centered Connections Modal */}
-        {showCenteredConnections && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-              onClick={() => setShowCenteredConnections(false)}
-            />
-            <CenteredConnections
-              onBack={() => {
-                setShowCenteredConnections(false);
-                if (connectionsFromProfile) setShowCenteredProfile(true);
-                setConnectionsFromProfile(false);
-              }}
-              onAddPerson={() => { setShowCenteredConnections(false); setShowCenteredAddPerson(true); }}
-              onFriendClick={handleFriendClick}
-              fromProfile={connectionsFromProfile}
-              showAddPersonButton={true}
-            />
-          </div>
-        )}
-
-        {/* Centered Add Person Modal */}
-        {showCenteredAddPerson && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => setShowCenteredAddPerson(false)}
-            />
-
-            <CenteredAddPerson
-                  onBack={() => {
-                    setShowCenteredAddPerson(false);
-                    setShowCenteredConnections(true);
-                  }}
-              onOpenRequests={() => {
-                // TODO: wire Friend Requests centered modal if needed
-              }}
-                />
-          </div>
-        )}
-
-        {/* Centered Notifications Modal */}
-        {showCenteredNotifications && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => setShowCenteredNotifications(false)}
-            />
-
-            <CenteredNotifications onBack={() => setShowCenteredNotifications(false)} />
-          </div>
-        )}
-
-        {/* Centered Memories Modal */}
-        {showCenteredMemories && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-              onClick={() => setShowCenteredMemories(false)}
-            />
-            <CenteredMemories onBack={() => setShowCenteredMemories(false)} />
-          </div>
-        )}
-
-        {/* Centered Highlights Modal */}
-        {showCenteredHighlights && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-              onClick={() => setShowCenteredHighlights(false)}
-            />
-            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-              <div className="flex items-center justify-between p-6">
-                <button onClick={() => setShowCenteredHighlights(false)} className="p-2 hover:bg-gray-100 transition-colors rounded-full">
-                  <X className="w-5 h-5 text-gray-600" />
-                </button>
-                <h2 className="text-xl font-semibold text-gray-900">Highlights</h2>
-                <div className="w-9"></div>
-              </div>
-              <div className="flex-1" />
-            </div>
-          </div>
-        )}
-
-        {/* Centered Achievements Modal */}
-        {showCenteredAchievements && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-              onClick={() => setShowCenteredAchievements(false)}
-            />
-            <CenteredAchievements onBack={() => setShowCenteredAchievements(false)} />
-          </div>
-        )}
-
-        {/* Centered Saved Modal */}
-        {showCenteredSaved && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => setShowCenteredSaved(false)}
-            />
-
-            {/* Modal content */}
-            <div 
-              className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
-              style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
-            >
-              <PageHeader
-                title="Saved"
-                backButton
-                backIcon="close"
-                onBack={() => setShowCenteredSaved(false)}
-                actions={[
-                  {
-                    icon: <Plus size={20} className="text-gray-900" />,
-                    onClick: () => console.log('Add clicked'),
-                    label: "Add"
-                  },
-                  {
-                    icon: <Share size={20} className="text-gray-900" />,
-                    onClick: () => console.log('Share clicked'),
-                    label: "Share"
-                  }
-                ]}
-              />
-
-              <Saved />
-              
-              {/* Bottom Blur */}
-              <div className="absolute bottom-0 left-0 right-0 z-20" style={{ 
-                pointerEvents: 'none'
-              }}>
-                <div className="absolute bottom-0 left-0 right-0" style={{
-                  height: '80px',
-                  background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
-                }} />
-                <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
-                <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
-                <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
-                <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Centered Settings Modal */}
-        {showCenteredSettings && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => {
-                setShowCenteredSettings(false);
-                setShowDeleteConfirm(false);
-                setShowFinalConfirm(false);
-              }}
-            />
-
-            {/* Modal content */}
-            <div 
-              className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
-              style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
-            >
-              <PageHeader
-                title="Settings"
-                backButton
-                backIcon={settingsFromProfile ? "arrow" : "close"}
-                onBack={() => {
-                  setShowCenteredSettings(false);
-                  setShowDeleteConfirm(false);
-                  setShowFinalConfirm(false);
-                  if (settingsFromProfile) {
-                    setShowCenteredProfile(true);
-                  }
-                  setSettingsFromProfile(false);
-                }}
-              />
-              
-              <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-              }}>
-                <SettingsContent
-                  onBack={() => {
-                    setShowCenteredSettings(false);
-                    setShowDeleteConfirm(false);
-                    setShowFinalConfirm(false);
-                    if (settingsFromProfile) {
-                      setShowCenteredProfile(true);
-                    }
-                    setSettingsFromProfile(false);
-                  }}
-                  onSignOut={handleSignOut}
-                  onDeleteAccount={handleDeleteAccount}
-                  showDeleteConfirm={showDeleteConfirm}
-                  showFinalConfirm={showFinalConfirm}
-                  onConfirmDelete={confirmDeleteAccount}
-                  onCancelDelete={cancelDeleteAccount}
-                  onProceedToFinalConfirm={proceedToFinalConfirm}
-                  onBackToMenu={backToMenu}
-                  isDeletingAccount={isDeletingAccount}
-                  personalProfile={personalProfile}
-                  showBackButton={false}
-                  onViewProfile={() => {
-                    setShowCenteredSettings(false);
-                    setProfileFromSettings(true);
-                    setShowCenteredProfile(true);
-                  }}
-                  onEditProfile={handleEditProfileFromSettings}
-                  onAccountSettings={() => {
-                    setShowCenteredSettings(false);
-                    setShowCenteredAccountSettings(true);
-                  }}
-                />
-              </div>
-              
-              {/* Bottom Blur */}
-              <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
-                <div className="absolute bottom-0 left-0 right-0" style={{
-                  height: '80px',
-                  background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
-                }} />
-                <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
-                <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
-                <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
-                <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Centered Friend Profile Modal */}
-        {showCenteredFriendProfile && selectedFriend && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => {
-                setShowCenteredFriendProfile(false);
-                setSelectedFriend(null);
-              }}
-            />
-
-            <UnifiedProfileCard
-              profile={{ id: selectedFriend.id, name: selectedFriend.name, avatarUrl: selectedFriend.profile_pic, bio: selectedFriend.bio }}
-              isOwnProfile={false}
-              showBackButton={true}
-              onClose={() => {
-                    setShowCenteredFriendProfile(false);
-                    setSelectedFriend(null);
-                    setShowCenteredConnections(true);
-                  }}
-              onThreeDotsMenu={() => {
-                // Inactive for now
-              }}
-              onOpenConnections={() => {
-                    setShowCenteredFriendProfile(false);
-                setConnectionsModalUserId(selectedFriend.id);
-                setShowCenteredConnectionsModal(true);
-                  }}
-                />
-          </div>
-        )}
-
-        {/* Centered Connections Modal */}
+        {/* Centered Connections Modal (for friend profiles only - not part of unified system) */}
         {showCenteredConnectionsModal && connectionsModalUserId && (
           <ConnectionsModal
             isOpen={true}
@@ -1652,7 +1128,8 @@ export default function ProfileMenu() {
             onBack={() => {
               setShowCenteredConnectionsModal(false);
               setConnectionsModalUserId(null);
-              setShowCenteredFriendProfile(true);
+              // TODO: Friend profile view needs to be implemented with unified modal system
+              // setShowCenteredFriendProfile(true);
             }}
             userId={connectionsModalUserId}
             onRemoveFriend={(removedUserId) => {
@@ -1661,78 +1138,7 @@ export default function ProfileMenu() {
           />
         )}
 
-        {/* Centered About Me modal removed in favor of Timeline route */}
-
-        {/* Centered Share Profile Modal */}
-        {showCenteredShareProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-              onClick={() => {
-                setShowCenteredShareProfile(false);
-                if (shareFromProfile) {
-                  setShowCenteredProfile(true);
-                  setShareFromProfile(false);
-                }
-              }}
-            />
-            <CenteredShareProfile 
-              onBack={() => {
-                setShowCenteredShareProfile(false);
-                if (shareFromProfile) {
-                  setShowCenteredProfile(true);
-                  setShareFromProfile(false);
-                }
-              }} 
-            />
-          </div>
-        )}
-
-        {/* Centered Timeline Modal */}
-        {showCenteredTimeline && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', opacity: 1 }}
-              onClick={() => {
-                setShowCenteredTimeline(false);
-                if (timelineFromProfile) {
-                  setShowCenteredProfile(true);
-                  setTimelineFromProfile(false);
-                } else if (timelineFromEditProfile) {
-                  setShowCenteredEditLanding(true);
-                  setTimelineFromEditProfile(false);
-                }
-              }}
-            />
-            <div 
-              className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
-              style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}
-            >
-              <CenteredTimeline onClose={() => {
-                setShowCenteredTimeline(false);
-                if (timelineFromProfile) {
-                  setShowCenteredProfile(true);
-                  setTimelineFromProfile(false);
-                } else if (timelineFromEditProfile) {
-                  setShowCenteredEditLanding(true);
-                  setTimelineFromEditProfile(false);
-                }
-              }} />
-            </div>
-          </div>
-        )}
-
-        {/* Share Profile Modal */}
-        <ShareProfileModal
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-        />
-
-        {/* Settings Modal */}
+        {/* Settings Modal (local to ProfileMenu) */}
         {selectedFriend && (
           <SettingsModal
             isOpen={showSettingsModal}
@@ -1746,57 +1152,7 @@ export default function ProfileMenu() {
           />
         )}
 
-        {/* Centered Edit Profile Modal */}
-        {showCenteredEditProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dimming overlay with smooth transition */}
-            <div
-              className="fixed inset-0 transition-opacity duration-300 ease-in-out"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 1
-              }}
-              onClick={() => {
-                setShowCenteredEditProfile(false);
-                setEditProfileFromProfile(false);
-              }}
-            />
-
-            {/* Modal content */}
-            <div className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative">
-              <div className="flex flex-col h-full">
-                <EditProfileModal
-                  onBack={() => {
-                    setShowCenteredEditProfile(false);
-                    if (editProfileFromProfile) {
-                      setShowCenteredProfile(true);
-                    } else {
-                      setShowCenteredSettings(true);
-                    }
-                    setEditProfileFromProfile(false);
-                  }}
-                  onSave={() => {
-                    // Profile has been updated, no additional action needed
-                    console.log('Profile updated successfully');
-                  }}
-                />
               </div>
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* Centered Account Settings Modal */}
-      {showCenteredAccountSettings && (
-        <CenteredAccountSettings
-          onClose={() => {
-            setShowCenteredAccountSettings(false);
-            setShowCenteredSettings(true);
-          }}
-          onDeleteAccount={handleDeleteAccount}
-        />
-      )}
     </>
   );
 }
