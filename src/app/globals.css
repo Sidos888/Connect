@@ -5,22 +5,18 @@
   --foreground: #111827; /* Neutral-900 */
 }
 
-/* Active state styling - Connect orange for both icon and text */
-.nav-item-active span:first-child {
-  font-weight: 700;
-}
-
+/* Active state styling - Connect orange for text only */
 .nav-item-active span:last-child {
   color: #f97316 !important; /* orange-500 */
+  font-weight: 700;
 }
 
 .nav-item-inactive {
   transition: color 0.2s ease;
-  font-weight: 500;
 }
 
-.nav-item-inactive:hover {
-  transform: scale(1.02);
+.nav-item-inactive span:last-child {
+  font-weight: 500;
 }
 
 /* Typing indicator animation */

@@ -75,32 +75,57 @@ export default function TopNavigation() {
             </button>
           </div>
 
-          {/* Desktop Navigation - Absolutely Centered - LinkedIn Style */}
-          <nav className="hidden lg:flex items-center absolute left-1/2 transform -translate-x-1/2 h-full">
-            <div className="flex items-center space-x-8 h-full">
+          {/* Desktop Navigation - Absolutely Centered - Connect Card Style */}
+          <nav className="hidden lg:flex items-center absolute left-1/2 transform -translate-x-1/2">
+            <div className="flex items-center gap-3">
               {navigationItems.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex flex-col items-center justify-center gap-1 h-full relative transition-colors"
-                  >
-                    {/* Icon */}
-                    <Icon 
-                      size={20} 
-                      className={active ? "text-gray-900" : "text-gray-500"}
-                    />
-                    {/* Text */}
-                    <span className={`text-xs font-medium ${active ? "text-gray-900" : "text-gray-500"}`}>
-                      {item.label}
-                    </span>
-                    {/* Active underline - touches bottom edge */}
+                  <div key={item.href} className="relative">
+                    <Link
+                      href={item.href}
+                      className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-white transition-all duration-200 hover:-translate-y-[1px]"
+                      style={{
+                        width: '90px',
+                        padding: '8px 12px',
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        willChange: 'transform, box-shadow'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                    >
+                      {/* Icon */}
+                      <Icon 
+                        size={22} 
+                        strokeWidth={2.5}
+                        className="text-gray-900"
+                      />
+                      {/* Text */}
+                      <span className="text-xs text-gray-900 font-semibold whitespace-nowrap">
+                        {item.label}
+                      </span>
+                    </Link>
+                    {/* Active underline - below card */}
                     {active && (
-                      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900"></div>
+                      <div 
+                        className="absolute left-1/2 -translate-x-1/2 mt-1"
+                        style={{
+                          width: '60%',
+                          height: '3px',
+                          backgroundColor: '#111827',
+                          borderRadius: '2px'
+                        }}
+                      ></div>
                     )}
-                  </Link>
+                  </div>
                 );
               })}
             </div>

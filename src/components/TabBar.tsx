@@ -38,7 +38,7 @@ export default function TabBar({ items }: Props) {
     <>
       {/* Floating Bottom Navigation with Liquid Glass Effect */}
       <nav 
-        className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-8 py-1.5 tabbar-nav"
+        className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-1 tabbar-nav"
         style={{
           borderRadius: '100px',
           background: 'rgba(255, 255, 255, 0.9)',
@@ -49,7 +49,7 @@ export default function TabBar({ items }: Props) {
         }}
         data-testid="mobile-bottom-nav"
       >
-        <ul className="flex items-center justify-center gap-6">
+        <ul className="flex items-center justify-center gap-4">
           {items.map((item) => {
             const active = isActive(item.href);
             return (
@@ -63,11 +63,11 @@ export default function TabBar({ items }: Props) {
                   }`}
                   onClick={item.href === "/menu" ? () => handleMenuClick(item.href) : undefined}
                 >
-                  <div className="flex flex-col items-center gap-1 py-2">
-                    <span className="h-8 w-8 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-1 py-1.5">
+                    <span className="h-7 w-7 flex items-center justify-center flex-shrink-0">
                       {item.icon}
                     </span>
-                    <span className={`text-xs whitespace-nowrap font-bold`}>
+                    <span className="text-xs whitespace-nowrap font-semibold">
                       {item.label}
                     </span>
                   </div>
