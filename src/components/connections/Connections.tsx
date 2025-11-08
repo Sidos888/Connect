@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/authContext";
 import { useAppStore } from "@/lib/store";
 import { connectionsService, User as ConnectionUser } from "@/lib/connectionsService";
@@ -13,33 +14,33 @@ export default function Connections({
   onFriendClick?: (friend: ConnectionUser) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
-  const [peopleConnections, setPeopleConnections] = useState<any[]>([]);
-  const [businessConnections, setBusinessConnections] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { account } = useAuth();
+  const { account, loading: authLoading } = useAuth();
   const { personalProfile } = useAppStore();
 
-  useEffect(() => {
-    const loadConnections = async () => {
-      if (!account?.id) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const { connections: userConnections, error } = await connectionsService.getConnections(account.id);
-        if (!error) {
-          setPeopleConnections(userConnections || []);
-          setBusinessConnections([]);
-        } else {
-          setPeopleConnections([]);
-          setBusinessConnections([]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadConnections();
-  }, [account?.id]);
+  // Use React Query for caching and deduplication
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['connections', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return [];
+
+      // Small delay to let Supabase client stabilize after auth refresh
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const { connections, error } = await connectionsService.getConnections(account.id);
+      
+      if (error) throw error;
+      return connections || [];
+    },
+    enabled: !authLoading && !!account?.id,
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    retry: 2, // Retry failed requests twice
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+  });
+
+  const peopleConnections = data || [];
+  const businessConnections: any[] = [];
+  const loading = isLoading;
 
   return (
     <>

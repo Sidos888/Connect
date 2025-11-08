@@ -385,17 +385,35 @@ export class ConnectionsService {
   }
 
   // Get connections (friends) using a two-step fetch to avoid RLS join issues
-  async getConnections(userId: string): Promise<{ connections: Connection[]; error: Error | null }> {
+  async getConnections(userId: string, retryCount = 0): Promise<{ connections: Connection[]; error: Error | null }> {
     try {
-      // 1) Fetch raw connections rows first (no joins)
-      const { data: connectionRows, error: connError } = await this.supabase
+      const startTime = performance.now();
+      
+      // Add timeout to prevent infinite hangs (don't check session - it can hang during refresh)
+      const connectionPromise = this.supabase
         .from('connections')
         .select('id, user1_id, user2_id, created_at')
         .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
         .order('created_at', { ascending: false });
 
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 5s')), 5000)
+      );
+
+      const { data: connectionRows, error: connError } = await Promise.race([
+        connectionPromise,
+        timeoutPromise
+      ]).catch(err => {
+        return { data: null, error: err };
+      }) as { data: any; error: any };
+
       if (connError) {
-        console.error('Error getting connections (base rows):', connError);
+        // Retry on timeout (likely due to auth refresh blocking the client)
+        if (connError.message?.includes('timeout') && retryCount < 2) {
+          const retryDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          return this.getConnections(userId, retryCount + 1);
+        }
         return { connections: [], error: connError };
       }
 
@@ -412,7 +430,6 @@ export class ConnectionsService {
 
       if (accError) {
         console.error('Error loading connection account profiles:', accError);
-        // Return connections without embedded user objects
         return { connections: rows as Connection[], error: null };
       }
 

@@ -333,6 +333,11 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   };
 
   const showConnections = (from?: string) => {
+    console.log('🟦 ModalContext: showConnections called', { 
+      from, 
+      currentState: showCenteredConnections,
+      timestamp: new Date().toISOString() 
+    });
     if (from === 'profile') setConnectionsFromProfile(true);
     setShowCenteredConnections(true);
   };
@@ -350,6 +355,10 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   };
 
   const closeProfileModal = (modal: string) => {
+    console.log('🟥 ModalContext: closeProfileModal called', { 
+      modal, 
+      timestamp: new Date().toISOString() 
+    });
     switch (modal) {
       case 'profile':
         setShowCenteredProfile(false);
@@ -714,7 +723,13 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Connections Modal */}
-      {showCenteredConnections && (
+      {showCenteredConnections && (() => {
+        console.log('🟩 ModalContext: Rendering Connections modal', { 
+          showCenteredConnections,
+          connectionsFromProfile,
+          timestamp: new Date().toISOString() 
+        });
+        return (
         <div className="flex fixed inset-0 z-50 items-center justify-center p-4">
           <div
             className="fixed inset-0 transition-opacity duration-300 ease-in-out"
@@ -736,7 +751,8 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
             }}
           />
         </div>
-      )}
+        );
+      })()}
 
       {/* Add Person Modal */}
       {showCenteredAddPerson && (
