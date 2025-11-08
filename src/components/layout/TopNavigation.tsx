@@ -75,26 +75,30 @@ export default function TopNavigation() {
             </button>
           </div>
 
-          {/* Desktop Navigation - Absolutely Centered */}
-          <nav className="hidden lg:flex items-center absolute left-1/2 transform -translate-x-1/2">
-            <div className="flex items-center space-x-8">
+          {/* Desktop Navigation - Absolutely Centered - LinkedIn Style */}
+          <nav className="hidden lg:flex items-center absolute left-1/2 transform -translate-x-1/2 h-full">
+            <div className="flex items-center space-x-8 h-full">
               {navigationItems.map((item) => {
                 const active = isActive(item.href);
+                const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`
-                      text-base font-semibold transition-colors relative
-                      ${active 
-                        ? "text-gray-900" 
-                        : "text-gray-500 hover:text-gray-700"
-                      }
-                    `}
+                    className="flex flex-col items-center justify-center gap-1 h-full relative transition-colors"
                   >
-                    <span>{item.label}</span>
+                    {/* Icon */}
+                    <Icon 
+                      size={20} 
+                      className={active ? "text-gray-900" : "text-gray-500"}
+                    />
+                    {/* Text */}
+                    <span className={`text-xs font-medium ${active ? "text-gray-900" : "text-gray-500"}`}>
+                      {item.label}
+                    </span>
+                    {/* Active underline - touches bottom edge */}
                     {active && (
-                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gray-900 rounded-full"></div>
+                      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900"></div>
                     )}
                   </Link>
                 );
