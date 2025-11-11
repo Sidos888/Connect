@@ -339,7 +339,7 @@ export default function SideQuestListingsPage() {
               overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
               overscrollBehavior: 'contain', // Prevent scroll chaining and lock at boundaries
-              paddingTop: sheetState === 'list' ? '225px' : '0', // In list mode: 110px (title) + 12px gap + 43px (filter) + 12px gap + 36px (categories) + 12px gap = 225px
+              paddingTop: sheetState === 'list' ? '213px' : '0', // Adjusted: 122px (filter start) + 43px (filter) + 12px (gap) + 36px (categories) = 213px
               // Smooth transitions with cubic-bezier easing
               transition: 'height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1), border-radius 400ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding-top 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}
@@ -356,13 +356,16 @@ export default function SideQuestListingsPage() {
           >
             {/* Drag Handle - Slides down from above in peek mode */}
             <div 
-              className="flex justify-center pt-3 flex-shrink-0"
+              className="flex justify-center flex-shrink-0"
               style={{
+                paddingTop: sheetState === 'peek' ? '12px' : '0',
+                height: sheetState === 'peek' ? 'auto' : '0',
                 opacity: sheetState === 'peek' ? 1 : 0,
-                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-60px)',
-                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-                willChange: 'transform, opacity',
-                pointerEvents: sheetState === 'peek' ? 'auto' : 'none'
+                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-30px)',
+                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1), height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+                willChange: 'transform, opacity, height',
+                pointerEvents: sheetState === 'peek' ? 'auto' : 'none',
+                overflow: 'hidden'
               }}
             >
               <div className="w-12 h-1 bg-gray-300 rounded-full" />
@@ -370,13 +373,17 @@ export default function SideQuestListingsPage() {
             
             {/* Listing Count - Slides down from above in peek mode */}
             <div 
-              className="flex justify-center py-6 flex-shrink-0"
+              className="flex justify-center flex-shrink-0"
               style={{
+                paddingTop: sheetState === 'peek' ? '24px' : '0',
+                paddingBottom: sheetState === 'peek' ? '24px' : '0',
+                height: sheetState === 'peek' ? 'auto' : '0',
                 opacity: sheetState === 'peek' ? 1 : 0,
-                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-80px)',
-                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-                willChange: 'transform, opacity',
-                pointerEvents: sheetState === 'peek' ? 'auto' : 'none'
+                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-30px)',
+                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1), height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+                willChange: 'transform, opacity, height',
+                pointerEvents: sheetState === 'peek' ? 'auto' : 'none',
+                overflow: 'hidden'
               }}
             >
               <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
