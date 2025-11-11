@@ -353,7 +353,7 @@ export default function SideQuestListingsPage() {
               overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
               overscrollBehavior: 'contain', // Prevent scroll chaining and lock at boundaries
-              paddingTop: sheetState === 'list' ? '225px' : '0', // 122px (filter start) + 43px (filter) + 12px (gap) + 36px (categories) + 12px (final gap) = 225px
+              paddingTop: sheetState === 'list' ? '233px' : '0', // 122px (filter start) + 43px (filter) + 12px (gap) + 36px (categories) + 20px (final gap) = 233px
               // Smooth transitions - but paddingTop is instant to prevent glitch
               transition: 'height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1), border-radius 400ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}
