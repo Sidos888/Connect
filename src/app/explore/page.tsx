@@ -193,6 +193,7 @@ export default function ExplorePage() {
               </button>
 
               <button
+                onClick={() => router.push('/side-quest-listings')}
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
                 style={{
                   minHeight: '100px',
