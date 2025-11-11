@@ -79,8 +79,8 @@ export default function ForYouListingsPage() {
     const vh = window.innerHeight;
     
     switch (sheetState) {
-      case 'list': // State 1: Initial - card with gap above showing map hint
-        return `${vh - 295}px`; // Screen minus top section (295px = header + filter + categories)
+      case 'list': // State 1: Initial - listings directly below categories, NO map visible
+        return `${vh - 215}px`; // Screen minus top section (215px = below filter + categories)
       case 'full': // State 2: Expanded - fills entire screen, top section is overlay
         return `${vh}px`; // Full screen, content goes under overlay
       case 'half': // State 3: Half screen with map visible
@@ -88,7 +88,7 @@ export default function ForYouListingsPage() {
       case 'peek': // State 4: Minimized, mostly map
         return '140px'; // Just count + 1 row peek
       default:
-        return `${vh - 295}px`;
+        return `${vh - 215}px`;
     }
   };
 
@@ -143,13 +143,13 @@ export default function ForYouListingsPage() {
             ]}
           />
 
-          {/* Map Background - Visible in list/half/peek states (gap above sheet) */}
+          {/* Map Background - Visible only in half/peek states */}
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
               top: '215px', // Below fixed header (110px action buttons + ~105px filter/categories)
               zIndex: 5,
-              opacity: (sheetState === 'list' || sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
+              opacity: (sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
               transition: 'opacity 300ms ease-out'
             }}
           >
