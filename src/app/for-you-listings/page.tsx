@@ -222,7 +222,7 @@ export default function ForYouListingsPage() {
               </div>
           </div>
 
-          {/* Bottom Sheet - Scrollable card that goes under overlay */}
+          {/* Bottom Sheet - Scrollable card with Connect styling */}
           <div 
             className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col scrollbar-hide"
             style={{
@@ -231,8 +231,11 @@ export default function ForYouListingsPage() {
               zIndex: 15, // Below top overlay (z-20) but above map (z-5)
               borderTopLeftRadius: '16px',
               borderTopRightRadius: '16px',
-              boxShadow: '0 -4px 12px rgba(0,0,0,0.12), 0 -2px 6px rgba(0,0,0,0.08)',
-              borderTop: '0.4px solid #E5E7EB',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              borderBottom: 'none',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
               overflowY: (sheetState === 'half' || sheetState === 'peek') ? 'hidden' : 'auto'
             }}
             onTouchStart={handleTouchStart}
