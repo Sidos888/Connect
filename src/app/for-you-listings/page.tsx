@@ -12,6 +12,7 @@ export default function ForYouListingsPage() {
   const [sheetState, setSheetState] = useState<'full' | 'list' | 'half' | 'peek'>('list');
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [scrollTop, setScrollTop] = useState(0);
 
   const subcategories = [
     { title: "Trending Near You", icon: "🔥" },
@@ -108,14 +109,21 @@ export default function ForYouListingsPage() {
       if (diff > 0) { // Swipe up
         if (sheetState === 'peek') setSheetState('half');
         else if (sheetState === 'half') setSheetState('list');
-        // list/full are same - no transition needed
       } else { // Swipe down
-        if (sheetState === 'list' || sheetState === 'full') setSheetState('half');
-        else if (sheetState === 'half') setSheetState('peek');
+        // Only allow transition to map view when scrolled to top
+        if ((sheetState === 'list' || sheetState === 'full') && scrollTop === 0) {
+          setSheetState('half');
+        } else if (sheetState === 'half') {
+          setSheetState('peek');
+        }
       }
       setIsDragging(false);
       setTouchStart(null);
     }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
   };
 
   const handleTouchEnd = () => {
@@ -254,7 +262,7 @@ export default function ForYouListingsPage() {
 
           {/* Bottom Sheet - Scrollable card that goes under overlay */}
           <div 
-            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col overflow-y-auto scrollbar-hide"
+            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col scrollbar-hide"
             style={{
               bottom: 0,
               height: getSheetHeight(),
@@ -262,11 +270,13 @@ export default function ForYouListingsPage() {
               borderTopLeftRadius: '16px',
               borderTopRightRadius: '16px',
               boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
-              borderTop: '0.4px solid #E5E7EB'
+              borderTop: '0.4px solid #E5E7EB',
+              overflowY: (sheetState === 'half' || sheetState === 'peek') ? 'hidden' : 'auto'
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onScroll={handleScroll}
           >
             {/* Top Spacing - Equal to bottom spacing */}
             <div style={{ height: '32px', flexShrink: 0 }} />
