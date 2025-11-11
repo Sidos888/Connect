@@ -115,9 +115,17 @@ export default function SideQuestListingsPage() {
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = e.currentTarget.scrollTop;
+    
+    // Lock at 0 - prevent scrolling below default position
+    if (newScrollTop <= 0) {
+      e.currentTarget.scrollTop = 0;
+      setScrollTop(0);
+      return;
+    }
+    
     setScrollTop(newScrollTop);
     
-    // If at top and map is showing, restore to list view
+    // If scrolling up and map is showing, restore to list view
     if (newScrollTop > 10 && sheetState === 'peek') {
       setSheetState('list');
     }
@@ -153,8 +161,10 @@ export default function SideQuestListingsPage() {
       return;
     }
     
-    // At scroll top: pull down to show map
-    if (container.scrollTop === 0 && diff > 50) {
+    // At scroll top (locked at 0): pull down to show map
+    // Very low threshold (20px) for easy activation when locked
+    if (container.scrollTop === 0 && scrollTop === 0 && diff > 20) {
+      e.preventDefault(); // Prevent any native behavior
       setSheetState('peek');
       setListingsTouchStart(null);
     }
@@ -319,7 +329,9 @@ export default function SideQuestListingsPage() {
               borderStyle: 'solid',
               borderBottom: 'none',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              overflowY: sheetState === 'peek' ? 'hidden' : 'auto'
+              overflowY: sheetState === 'peek' ? 'hidden' : 'auto',
+              WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
+              overscrollBehavior: 'contain' // Prevent scroll chaining and lock at boundaries
             }}
             onTouchStart={(e) => {
               handleTouchStart(e);
