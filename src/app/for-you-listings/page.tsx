@@ -183,9 +183,10 @@ export default function ForYouListingsPage() {
           {/* Fixed Filter & Category Header - Clean white background */}
           <div className="absolute left-0 right-0 z-20" style={{ 
             top: '122px', // 110px (action buttons) + 12px gap (matches spacing below)
+            height: '103px', // Filter (~43px) + 12px + Categories (36px) + 12px
             pointerEvents: 'auto',
             background: 'white',
-            paddingBottom: '16px'
+            overflow: 'visible' // Allow cards to show properly
           }}>
               {/* Filter Card - Same height as Explore */}
               <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
