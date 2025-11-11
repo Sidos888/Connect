@@ -155,16 +155,13 @@ export default function SideQuestListingsPage() {
     <>
       {/* Mobile Layout with Bottom Sheet */}
       <div className="lg:hidden side-quest-listings-page" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-        {/* Override all o/b effects from PageHeader and other components */}
+        {/* Override all o/b effects from PageHeader - allow transparent top component */}
         <style jsx global>{`
           .side-quest-listings-page [style*="backdrop-filter"],
           .side-quest-listings-page [style*="backdropFilter"],
           .side-quest-listings-page [style*="WebkitBackdropFilter"] {
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
-          }
-          .side-quest-listings-page div[style*="linear-gradient"] {
-            background: white !important;
           }
         `}</style>
         
@@ -200,12 +197,12 @@ export default function SideQuestListingsPage() {
           </div>
 
 
-          {/* Fixed Filter & Category Header - Clean white background */}
+          {/* Fixed Filter & Category Header - Transparent background */}
           <div className="absolute left-0 right-0 z-20" style={{ 
             top: '122px', // 110px (action buttons) + 12px gap (matches spacing below)
             height: '91px', // Filter (43px) + 12px gap + Categories (36px) - stops before margin
             pointerEvents: 'auto',
-            background: 'white',
+            background: 'transparent',
             overflow: 'visible' // Allow shadows to show
           }}>
               {/* Filter Card - Same height as Explore */}
