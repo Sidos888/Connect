@@ -9,7 +9,7 @@ export default function ForYouListingsPage() {
   const router = useRouter();
   const [selectedSubcategory, setSelectedSubcategory] = useState('Trending Near You');
   const [showMap, setShowMap] = useState(false);
-  const [sheetState, setSheetState] = useState<'full' | 'list' | 'half' | 'peek'>('list');
+  const [sheetState, setSheetState] = useState<'list' | 'peek'>('list');
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
@@ -74,18 +74,15 @@ export default function ForYouListingsPage() {
     };
   }, []);
 
-  // Sheet height calculations - Simpler approach
+  // Sheet height calculations - Two states only
   const getSheetHeight = () => {
     if (typeof window === 'undefined') return '70vh';
     const vh = window.innerHeight;
     
     switch (sheetState) {
-      case 'list': // State 1: Initial view with scrollable listings
-      case 'full': // State 2: Same as list, just allows scrolling under overlay
-        return `${vh - 237}px`; // 122 (filter start) + 43 (filter) + 12 (gap) + 36 (categories) + 12 (gap) + 12 (extra spacing)
-      case 'half': // State 3: Half screen with map visible
-        return `${vh * 0.45}px`; // 45% of screen
-      case 'peek': // State 4: Minimized, mostly map
+      case 'list': // Scrollable listings view
+        return `${vh - 237}px`; // Starts below filter/categories section
+      case 'peek': // Minimized with 80% map visible
         return '140px'; // Just count + 1 row peek
       default:
         return `${vh - 237}px`;
@@ -107,13 +104,10 @@ export default function ForYouListingsPage() {
     // Detect swipe direction and change state
     if (Math.abs(diff) > 50) { // 50px threshold
       if (diff > 0) { // Swipe up
-        if (sheetState === 'peek') setSheetState('half');
-        else if (sheetState === 'half') setSheetState('list');
+        if (sheetState === 'peek') setSheetState('list');
       } else { // Swipe down
         // Only allow transition to map view when scrolled to top
-        if ((sheetState === 'list' || sheetState === 'full') && scrollTop === 0) {
-          setSheetState('half');
-        } else if (sheetState === 'half') {
+        if (sheetState === 'list' && scrollTop === 0) {
           setSheetState('peek');
         }
       }
@@ -162,13 +156,13 @@ export default function ForYouListingsPage() {
             ]}
           />
 
-          {/* Map Background - Visible only in half/peek states */}
+          {/* Map Background - Visible only in peek state */}
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
               top: '237px', // Below filter/categories section with equal spacing
               zIndex: 5,
-              opacity: (sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
+              opacity: sheetState === 'peek' ? 1 : 0,
               transition: 'opacity 300ms ease-out'
             }}
           >
@@ -250,7 +244,7 @@ export default function ForYouListingsPage() {
               borderStyle: 'solid',
               borderBottom: 'none',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              overflowY: (sheetState === 'half' || sheetState === 'peek') ? 'hidden' : 'auto'
+              overflowY: sheetState === 'peek' ? 'hidden' : 'auto'
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
