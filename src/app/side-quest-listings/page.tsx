@@ -241,11 +241,11 @@ export default function SideQuestListingsPage() {
             </div>
           </div>
 
-          {/* Map Background - Visible behind transparent top component in peek state */}
+          {/* Map Background - Visible behind entire transparent top component in peek state */}
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
-              top: '110px', // Start right below action buttons (visible behind transparent section)
+              top: '0', // Start at top of page (visible behind all transparent elements)
               zIndex: 5,
               opacity: sheetState === 'peek' ? 1 : 0,
               transition: 'opacity 300ms ease-out'
@@ -315,20 +315,24 @@ export default function SideQuestListingsPage() {
               </div>
           </div>
 
-          {/* Bottom Sheet Card - Fixed at bottom, content scrolls inside */}
+          {/* Bottom Sheet - Card styling only in peek mode */}
           <div 
-            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col scrollbar-hide"
+            className="fixed left-0 right-0 transition-all duration-300 ease-out flex flex-col scrollbar-hide"
             style={{
               bottom: 0,
               height: sheetState === 'peek' ? '140px' : 'calc(100vh - 225px)', // Peek: minimize, List: fill
               zIndex: 10, // Above map (z-5), below top components (z-20)
-              borderTopLeftRadius: '16px',
-              borderTopRightRadius: '16px',
-              borderWidth: '0.4px',
+              // Background and card styling only in peek mode
+              background: sheetState === 'peek' ? 'white' : 'transparent',
+              borderTopLeftRadius: sheetState === 'peek' ? '16px' : '0',
+              borderTopRightRadius: sheetState === 'peek' ? '16px' : '0',
+              borderWidth: sheetState === 'peek' ? '0.4px' : '0',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               borderBottom: 'none',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              boxShadow: sheetState === 'peek' 
+                ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                : 'none',
               overflowY: sheetState === 'peek' ? 'hidden' : 'auto',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
               overscrollBehavior: 'contain' // Prevent scroll chaining and lock at boundaries
@@ -344,18 +348,30 @@ export default function SideQuestListingsPage() {
             onTouchEnd={handleTouchEnd}
             onScroll={handleScroll}
           >
-            {/* Drag Handle - At top of card */}
-            <div className="flex justify-center pt-3 flex-shrink-0">
-              <div className="w-12 h-1 bg-gray-300 rounded-full" />
-            </div>
+            {/* Drag Handle - Only visible in peek mode */}
+            {sheetState === 'peek' && (
+              <div className="flex justify-center pt-3 flex-shrink-0">
+                <div className="w-12 h-1 bg-gray-300 rounded-full" />
+              </div>
+            )}
             
-            {/* Listing Count - Centered between top and first card */}
-            <div className="flex justify-center py-6 flex-shrink-0">
-              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
-            </div>
+            {/* Separator Line - Only visible in peek mode */}
+            {sheetState === 'peek' && (
+              <div className="w-full h-px bg-gray-200 flex-shrink-0" />
+            )}
+            
+            {/* Listing Count - Only visible in peek mode */}
+            {sheetState === 'peek' && (
+              <div className="flex justify-center py-6 flex-shrink-0">
+                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+              </div>
+            )}
             
             {/* Listings Grid - px-4 padding on sides */}
-            <div className="px-4 pb-8 flex-shrink-0">
+            <div className="px-4 pb-8 flex-shrink-0" style={{
+              paddingTop: sheetState === 'peek' ? '0' : '12px', // Small top padding in list mode
+              background: sheetState === 'list' ? 'white' : 'transparent' // White bg in list mode
+            }}>
                 <div className="grid grid-cols-2 gap-3">
                   {fakeListings.map((listing, i) => (
                     <div key={i} className="flex flex-col gap-1.5">
