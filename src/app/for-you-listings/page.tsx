@@ -286,13 +286,16 @@ export default function ForYouListingsPage() {
               <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
             </div>
             
-            {/* Listings Grid - Scrollable */}
+            {/* Listings Grid - Scrollable only in list/full states */}
             <div 
-              className="flex-1 overflow-y-auto scrollbar-hide"
+              className="flex-1 scrollbar-hide"
               style={{
                 paddingLeft: '16px',
                 paddingRight: '16px',
-                paddingBottom: '32px'
+                paddingBottom: '32px',
+                overflowY: (sheetState === 'list' || sheetState === 'full') ? 'auto' : 'hidden',
+                overflowX: 'hidden',
+                touchAction: (sheetState === 'half' || sheetState === 'peek') ? 'none' : 'auto'
               }}
             >
               <div className="grid grid-cols-2 gap-3">
