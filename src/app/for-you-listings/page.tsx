@@ -9,6 +9,9 @@ export default function ForYouListingsPage() {
   const router = useRouter();
   const [selectedSubcategory, setSelectedSubcategory] = useState('Trending Near You');
   const [showMap, setShowMap] = useState(false);
+  const [sheetState, setSheetState] = useState<'full' | 'list' | 'half' | 'peek'>('list');
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const subcategories = [
     { title: "Trending Near You", icon: "🔥" },
@@ -58,7 +61,6 @@ export default function ForYouListingsPage() {
     };
     
     hideNav();
-    // Check again after a short delay in case nav loads late
     const timer = setTimeout(hideNav, 100);
     
     return () => {
@@ -71,9 +73,63 @@ export default function ForYouListingsPage() {
     };
   }, []);
 
+  // Sheet height calculations
+  const getSheetHeight = () => {
+    if (typeof window === 'undefined') return '75%';
+    const vh = window.innerHeight;
+    const headerHeight = 140; // var(--saved-content-padding-top)
+    const fixedHeaderHeight = 135; // filter + categories
+    
+    switch (sheetState) {
+      case 'full': // State 2: Full listings, no map
+        return `${vh - headerHeight - fixedHeaderHeight}px`;
+      case 'list': // State 1: Initial with card container
+        return `${vh - headerHeight - fixedHeaderHeight - 100}px`;
+      case 'half': // State 3: Half screen with map
+        return '45%';
+      case 'peek': // State 4: Minimized, mostly map
+        return '120px';
+      default:
+        return '75%';
+    }
+  };
+
+  // Touch handlers for drag
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientY);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart || !isDragging) return;
+    
+    const currentTouch = e.touches[0].clientY;
+    const diff = touchStart - currentTouch;
+    
+    // Detect swipe direction and change state
+    if (Math.abs(diff) > 50) { // 50px threshold
+      if (diff > 0) { // Swipe up
+        if (sheetState === 'list') setSheetState('full');
+        else if (sheetState === 'peek') setSheetState('half');
+        else if (sheetState === 'half') setSheetState('list');
+      } else { // Swipe down
+        if (sheetState === 'full') setSheetState('list');
+        else if (sheetState === 'list') setSheetState('half');
+        else if (sheetState === 'half') setSheetState('peek');
+      }
+      setIsDragging(false);
+      setTouchStart(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setTouchStart(null);
+  };
+
   return (
     <>
-      {/* Mobile Layout */}
+      {/* Mobile Layout with Bottom Sheet */}
       <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
           <PageHeader
@@ -88,6 +144,26 @@ export default function ForYouListingsPage() {
               }
             ]}
           />
+
+          {/* Map Background - Visible in half and peek states */}
+          {(sheetState === 'half' || sheetState === 'peek') && (
+            <div 
+              className="absolute left-0 right-0 bg-gray-50"
+              style={{
+                top: 'var(--saved-content-padding-top, 140px)',
+                bottom: sheetState === 'half' ? '45%' : '120px',
+                zIndex: 10
+              }}
+            >
+              <div className="w-full h-full">
+                <iframe
+                  src="https://www.openstreetmap.org/export/embed.html?bbox=138.5686%2C-34.9485%2C138.6286%2C-34.9085&layer=mapnik"
+                  className="w-full h-full border-0"
+                  title="Adelaide Map"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Blur layers - Below PageHeader, affects only scrolling content */}
           <div className="absolute left-0 right-0 z-20" style={{ top: 'calc(var(--saved-content-padding-top, 140px) - 20px)', height: '155px', pointerEvents: 'none' }}>
@@ -193,48 +269,79 @@ export default function ForYouListingsPage() {
               </div>
           </div>
 
-          {/* Scrollable Content - Only Listings */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
-            paddingTop: 'calc(var(--saved-content-padding-top, 140px) + 135px)',
-            paddingBottom: '100px',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}>
-          
-          {/* Listings Grid - 2 columns */}
-          <div style={{ paddingLeft: '16px', paddingRight: '16px' }}>
-            <div className="grid grid-cols-2 gap-3">
-              {fakeListings.map((listing, i) => (
-                <div key={i} className="flex flex-col gap-1.5">
-                  {/* Card Image */}
-                  <div
-                    className="rounded-xl bg-white transition-all duration-200 hover:-translate-y-[1px] cursor-pointer overflow-hidden relative aspect-square"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    }}
-                  >
-                    <img 
-                      src={listing.image}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                    />
+          {/* Bottom Sheet - Draggable Listings Container */}
+          <div 
+            className="absolute left-0 right-0 bg-white transition-all duration-300 ease-out"
+            style={{
+              top: sheetState === 'full' ? 'calc(var(--saved-content-padding-top, 140px) + 135px)' : 'auto',
+              bottom: sheetState === 'full' ? '0' : 'auto',
+              height: sheetState !== 'full' ? getSheetHeight() : 'auto',
+              zIndex: 25,
+              borderTopLeftRadius: (sheetState === 'list' || sheetState === 'half' || sheetState === 'peek') ? '16px' : '0',
+              borderTopRightRadius: (sheetState === 'list' || sheetState === 'half' || sheetState === 'peek') ? '16px' : '0',
+              boxShadow: (sheetState !== 'full') ? '0 -2px 10px rgba(0,0,0,0.1)' : 'none',
+              borderTop: (sheetState !== 'full') ? '0.4px solid #E5E7EB' : 'none'
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Drag Handle & Count - Visible in list, half, peek states */}
+            {sheetState !== 'full' && (
+              <div className="flex flex-col items-center py-3 px-4">
+                <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
+                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+              </div>
+            )}
+            
+            {/* Listings Grid */}
+            <div 
+              className="overflow-y-auto scrollbar-hide"
+              style={{
+                height: sheetState === 'full' 
+                  ? '100%' 
+                  : sheetState === 'list'
+                    ? 'calc(100% - 60px)'
+                    : sheetState === 'half'
+                      ? 'calc(100% - 60px)'
+                      : '0px', // peek state hides listings
+                paddingLeft: '16px',
+                paddingRight: '16px',
+                paddingBottom: '32px'
+              }}
+            >
+              <div className="grid grid-cols-2 gap-3">
+                {fakeListings.map((listing, i) => (
+                  <div key={i} className="flex flex-col gap-1.5">
+                    {/* Card Image */}
+                    <div
+                      className="rounded-xl bg-white transition-all duration-200 cursor-pointer overflow-hidden relative aspect-square"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      }}
+                    >
+                      <img 
+                        src={listing.image}
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    
+                    {/* Title and Date */}
+                    <div className="flex flex-col gap-0.5">
+                      <h3 className="text-sm font-semibold text-gray-900 leading-tight">
+                        {listing.title}
+                      </h3>
+                      <p className="text-xs text-gray-600 leading-tight">
+                        {listing.date}
+                      </p>
+                    </div>
                   </div>
-                  
-                  {/* Title and Date */}
-                  <div className="flex flex-col gap-0.5">
-                    <h3 className="text-sm font-semibold text-gray-900 leading-tight">
-                      {listing.title}
-                    </h3>
-                    <p className="text-xs text-gray-600 leading-tight">
-                      {listing.date}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
           </div>
         </MobilePage>
       </div>
