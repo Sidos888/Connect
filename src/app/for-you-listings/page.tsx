@@ -177,10 +177,10 @@ export default function ForYouListingsPage() {
           {/* Fixed Filter & Category Header - Clean white background */}
           <div className="absolute left-0 right-0 z-20" style={{ 
             top: '122px', // 110px (action buttons) + 12px gap (matches spacing below)
-            height: '103px', // Filter (~43px) + 12px + Categories (36px) + 12px
+            height: '91px', // Filter (43px) + 12px gap + Categories (36px) - stops before margin
             pointerEvents: 'auto',
             background: 'white',
-            overflow: 'visible' // Allow cards to show properly
+            overflow: 'visible' // Allow shadows to show
           }}>
               {/* Filter Card - Same height as Explore */}
               <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
@@ -253,7 +253,7 @@ export default function ForYouListingsPage() {
           >
             {/* Drag Handle - At top of card */}
             <div className="flex justify-center pt-3 flex-shrink-0">
-              <div className="w-12 h-1 bg-gray-400 rounded-full" />
+              <div className="w-12 h-1 bg-gray-300 rounded-full" />
             </div>
             
             {/* Listing Count - Centered between top and first card */}
