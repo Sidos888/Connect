@@ -69,6 +69,23 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   const { title: displayTitle, description: displayDescription, buttonText: displayButtonText } = getCustomMessages();
 
+  // Lock body scroll on desktop when showing sign-in fallback
+  useEffect(() => {
+    if (!user && !personalProfile) {
+      if (window.innerWidth >= 1024) { // lg breakpoint
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+      }
+    }
+    
+    return () => {
+      if (!user && !personalProfile) {
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+      }
+    };
+  }, [user, personalProfile]);
+
   // Add timeout to prevent infinite loading - more reasonable timing
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -334,9 +351,9 @@ export default function ProtectedRoute({ children, fallback, title, description,
     }
 
     return (
-      <div className="flex flex-col h-screen">
-        {/* Title - matches PageHeader positioning */}
-        <div className="absolute left-0 right-0 z-20" style={{ 
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* Title - matches PageHeader positioning - only on mobile */}
+        <div className="lg:hidden absolute left-0 right-0 z-20" style={{ 
           paddingTop: 'max(env(safe-area-inset-top), 70px)',
           paddingBottom: '16px',
           pointerEvents: 'none'
@@ -358,7 +375,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
         </div>
 
         {/* Sign in button - centered */}
-        <div className="flex-1 flex items-center justify-center px-4">
+        <div className="flex-1 flex items-center justify-center px-4 overflow-hidden">
           <button
             onClick={() => {
               console.log('ProtectedRoute: Sign in button clicked, calling showLogin');
@@ -375,8 +392,21 @@ export default function ProtectedRoute({ children, fallback, title, description,
                 window.location.replace('/');
               }
             }}
-            className="bg-orange-500 text-white px-8 py-4 font-semibold shadow-md hover:bg-orange-600 transition-colors"
-            style={{ borderRadius: '10px' }}
+            className="bg-orange-500 text-white px-8 py-4 font-semibold transition-all duration-200 hover:-translate-y-[1px]"
+            style={{ 
+              borderRadius: '10px',
+              borderWidth: '0.4px',
+              borderColor: 'rgba(251, 146, 60, 0.3)',
+              borderStyle: 'solid',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
           >
             Sign in
           </button>

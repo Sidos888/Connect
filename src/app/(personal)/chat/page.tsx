@@ -37,6 +37,19 @@ export default function MessagesPage() {
   // Mobile-specific state
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Lock body scroll on desktop
+  useEffect(() => {
+    if (window.innerWidth >= 1024) { // lg breakpoint
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, []);
   
   // Modal state
   const { showLogin } = useModal();
@@ -266,7 +279,7 @@ export default function MessagesPage() {
     <ProtectedRoute title="Chats" description="Log in / sign up to view your chats and messages" buttonText="Log in">
       <div className="h-full bg-white">
         {/* Desktop Layout */}
-        <div className="hidden sm:block h-full">
+        <div className="hidden sm:block h-screen overflow-hidden" style={{ maxHeight: '100vh' }}>
           <ChatLayout />
         </div>
 

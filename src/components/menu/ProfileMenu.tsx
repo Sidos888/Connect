@@ -1026,24 +1026,24 @@ export default function ProfileMenu() {
               menuRef.current.style.display = newOpen ? 'block' : 'none';
             }
           }}
-          className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 transition-all duration-200 hover:-translate-y-[1px] hover:bg-white active:bg-white focus:outline-none relative z-50"
+          className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none relative z-50"
           style={{
             borderWidth: '0.4px',
             borderColor: open ? '#D1D5DB' : '#E5E7EB',
             borderStyle: 'solid',
             boxShadow: open 
-              ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+              ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
               : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
             willChange: 'transform, box-shadow'
           }}
           onMouseEnter={(e) => {
-            if (!open) {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
           }}
           onMouseLeave={(e) => {
             if (!open) {
               e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            } else {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
             }
           }}
         >

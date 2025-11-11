@@ -52,7 +52,7 @@ export default function TopNavigation() {
   }, []);
 
   return (
-    <header className="bg-white border-b border-gray-200">
+    <header className="bg-white border-b border-gray-200 relative">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 lg:h-20 relative">
           {/* Logo */}
@@ -76,19 +76,20 @@ export default function TopNavigation() {
           </div>
 
           {/* Desktop Navigation - Absolutely Centered - Connect Card Style */}
-          <nav className="hidden lg:flex items-center absolute left-1/2 transform -translate-x-1/2">
-            <div className="flex items-center gap-3">
-              {navigationItems.map((item) => {
+          <nav className="hidden lg:flex items-center absolute left-1/2 transform -translate-x-1/2 h-full">
+            <div className="flex items-center gap-3 h-full relative">
+              {navigationItems.map((item, index) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
                 return (
-                  <div key={item.href} className="relative">
+                  <div key={item.href} className="relative h-full flex items-center">
                     <Link
                       href={item.href}
-                      className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-white transition-all duration-200 hover:-translate-y-[1px]"
+                      className="flex items-center justify-center rounded-2xl bg-white transition-all duration-200 hover:-translate-y-[1px]"
+                      title={item.label}
                       style={{
-                        width: '90px',
-                        padding: '8px 12px',
+                        width: '48px',
+                        height: '48px',
                         borderWidth: '0.4px',
                         borderColor: '#E5E7EB',
                         borderStyle: 'solid',
@@ -108,22 +109,18 @@ export default function TopNavigation() {
                         strokeWidth={2.5}
                         className="text-gray-900"
                       />
-                      {/* Text */}
-                      <span className="text-xs text-gray-900 font-semibold whitespace-nowrap">
-                        {item.label}
-                      </span>
                     </Link>
-                    {/* Active underline - below card */}
+                    
+                    {/* Facebook-style underline - touches bottom of header */}
                     {active && (
                       <div 
-                        className="absolute left-1/2 -translate-x-1/2 mt-1"
+                        className="absolute left-0 right-0 h-[3px] bg-gray-900 transition-all duration-300"
                         style={{
-                          width: '60%',
-                          height: '3px',
-                          backgroundColor: '#111827',
-                          borderRadius: '2px'
+                          bottom: '0', // Positioned at bottom of header container
+                          borderTopLeftRadius: '2px',
+                          borderTopRightRadius: '2px',
                         }}
-                      ></div>
+                      />
                     )}
                   </div>
                 );
@@ -171,14 +168,23 @@ export default function TopNavigation() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setAuthOpen(!authOpen)}
-                    className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 transition-all duration-200 hover:bg-white active:bg-white focus:outline-none"
+                    className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
                     style={{
                       borderWidth: '0.4px',
                       borderColor: authOpen ? '#D1D5DB' : '#E5E7EB',
                       borderStyle: 'solid',
                       boxShadow: authOpen 
-                        ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
-                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!authOpen) {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }
                     }}
                   >
                     <Menu size={16} className="text-gray-700" />
@@ -224,7 +230,6 @@ export default function TopNavigation() {
           </div>
         </div>
       </div>
-
     </header>
   );
 }

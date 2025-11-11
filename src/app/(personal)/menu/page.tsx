@@ -1547,7 +1547,7 @@ export default function Page() {
                       </div>
 
                 {/* Menu Grid - 2x3 layout */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {(context.type === "business" ? 
                 // Business account menu items
                 [
@@ -1568,8 +1568,9 @@ export default function Page() {
               ).map((item) => (
                         <button
                       key={item.title}
-                      className="rounded-2xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 w-full h-28 hover:-translate-y-[1px]"
+                      className="rounded-2xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 w-full hover:-translate-y-[1px]"
                       style={{
+                        minHeight: '100px',
                         borderWidth: '0.4px',
                         borderColor: '#E5E7EB',
                         boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
@@ -1591,11 +1592,11 @@ export default function Page() {
                         e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                       }}
                     >
-                      <div className="flex flex-col items-center justify-center h-full p-4 gap-6">
-                        <div className="text-4xl">
+                      <div className="flex flex-col items-start h-full p-4 gap-2">
+                        <div className="text-4xl leading-none">
                           {item.icon}
                         </div>
-                        <span className="text-sm font-medium text-neutral-900 text-center leading-tight">
+                        <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
                           {item.title}
                         </span>
                       </div>
@@ -1723,5 +1724,7 @@ export default function Page() {
     </ProtectedRoute>
   );
 }
+
+
 
 

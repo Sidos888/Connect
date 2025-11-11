@@ -10,14 +10,14 @@ export default function MobileBottomNavigation() {
   const { user } = useAuth();
   
   const navigationItems = [
-    { href: "/explore", label: "Explore", icon: <Search size={22} strokeWidth={2.5} /> },
+    { href: "/explore", label: "Explore", icon: <Search size={22} strokeWidth={2} /> },
     { 
       href: user ? "/my-life" : "/my-life", 
       label: context.type === "business" ? "My Business" : "My Life", 
-      icon: context.type === "business" ? <Building size={22} strokeWidth={2.5} /> : <Calendar size={22} strokeWidth={2.5} />
+      icon: context.type === "business" ? <Building size={22} strokeWidth={2} /> : <Calendar size={22} strokeWidth={2} />
     },
-    { href: user ? "/chat" : "/chat", label: "Chat", icon: <MessageCircle size={22} strokeWidth={2.5} /> },
-    { href: user ? "/menu" : "/menu", label: "Menu", icon: <Menu size={22} strokeWidth={2.5} /> },
+    { href: user ? "/chat" : "/chat", label: "Chat", icon: <MessageCircle size={22} strokeWidth={2} /> },
+    { href: user ? "/menu" : "/menu", label: "Menu", icon: <Menu size={22} strokeWidth={2} /> },
   ];
 
   return <TabBar items={navigationItems} />;

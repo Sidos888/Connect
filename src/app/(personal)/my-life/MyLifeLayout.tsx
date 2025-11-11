@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import React from "react";
+import React, { useEffect } from "react";
 import Avatar from "@/components/Avatar";
 import { useAppStore } from "@/lib/store";
 import { useModal } from "@/lib/modalContext";
@@ -53,7 +53,18 @@ export default function MyLifeLayout(): JSX.Element {
   const [showProfileSwitcher, setShowProfileSwitcher] = React.useState(false);
   const { account, signOut, deleteAccount, user } = useAuth();
 
-  // Background scroll locking is now handled by the unified modal provider
+  // Lock body scroll on desktop
+  useEffect(() => {
+    if (window.innerWidth >= 1024) { // lg breakpoint
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, []);
 
   const setTab = (id: string) => {
     const sp = new URLSearchParams(searchParams as any);
@@ -68,7 +79,7 @@ export default function MyLifeLayout(): JSX.Element {
         {/* Sidebar - width matches chat */}
         <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col">
           <div className="p-6 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900">My Life</h1>
+            <h1 className="text-3xl font-bold text-gray-900">My Life</h1>
           </div>
 
           {/* Profile card at top (mirrors Menu profile card) */}
@@ -101,7 +112,7 @@ export default function MyLifeLayout(): JSX.Element {
         </div>
 
         {/* Content */}
-        <div className="flex-1 bg-white flex items-center justify-center">
+        <div className="flex-1 bg-white flex items-center justify-center overflow-hidden">
           <div className="text-center">
             <h2 className="text-2xl font-semibold text-gray-900 capitalize">{active}</h2>
             <p className="text-gray-500 mt-2">This section is coming soon.</p>
@@ -209,8 +220,3 @@ export default function MyLifeLayout(): JSX.Element {
     </>
   );
 }
-
-
-
-
-
