@@ -265,13 +265,12 @@ export default function SideQuestListingsPage() {
           {/* Fixed Filter & Category Header - Transparent background */}
           <div className="absolute left-0 right-0 z-20" style={{ 
             top: '122px', // 110px (action buttons) + 12px gap (matches spacing below)
-            height: '91px', // Filter (43px) + 12px gap + Categories (36px) - stops before margin
             pointerEvents: 'none', // Let clicks pass through transparent area
             background: 'transparent',
             overflow: 'visible' // Allow shadows to show
           }}>
               {/* Filter Card - Same height as Explore */}
-              <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px', pointerEvents: 'auto' }}>
+              <div style={{ paddingLeft: '56px', paddingRight: '56px', marginBottom: '12px', pointerEvents: 'auto' }}>
                 <div 
                   className="rounded-2xl px-4 py-2.5 transition-all duration-200 w-full"
                   style={{
@@ -292,7 +291,7 @@ export default function SideQuestListingsPage() {
             </div>
 
               {/* Category Filter Cards with black border selection */}
-              <div className="mb-3 px-4" style={{ pointerEvents: 'auto' }}>
+              <div style={{ paddingLeft: '16px', paddingRight: '16px', marginBottom: '12px', pointerEvents: 'auto' }}>
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide">
                   {categories.map((cat) => {
                     const isSelected = selectedSubcategory === cat.title;
@@ -340,7 +339,7 @@ export default function SideQuestListingsPage() {
               overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
               overscrollBehavior: 'contain', // Prevent scroll chaining and lock at boundaries
-              paddingTop: sheetState === 'list' ? '225px' : '0', // In list mode, pad from top
+              paddingTop: sheetState === 'list' ? '225px' : '0', // In list mode: 110px (title) + 12px gap + 43px (filter) + 12px gap + 36px (categories) + 12px gap = 225px
               // Smooth transitions with cubic-bezier easing
               transition: 'height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1), border-radius 400ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding-top 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}
