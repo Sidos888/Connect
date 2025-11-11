@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Map, X, Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MobilePage } from "@/components/layout/PageSystem";
 
 export default function SideQuestListingsPage() {
@@ -14,6 +14,7 @@ export default function SideQuestListingsPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [listingsTouchStart, setListingsTouchStart] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const subcategories = [
     { title: "Trending Near You", icon: "🔥" },
@@ -74,6 +75,15 @@ export default function SideQuestListingsPage() {
       }
     };
   }, []);
+
+  // Reset scroll position when transitioning from peek to list
+  useEffect(() => {
+    if (sheetState === 'list' && containerRef.current) {
+      // Smoothly reset to 0 to prevent overshoot
+      containerRef.current.scrollTop = 0;
+      setScrollTop(0);
+    }
+  }, [sheetState]);
 
   // Sheet height calculations - Two states only
   const getSheetHeight = () => {
@@ -319,6 +329,7 @@ export default function SideQuestListingsPage() {
 
           {/* Bottom Sheet - Card styling only in peek mode */}
           <div 
+            ref={containerRef}
             className="fixed left-0 right-0 flex flex-col scrollbar-hide"
             style={{
               bottom: 0,
@@ -339,7 +350,8 @@ export default function SideQuestListingsPage() {
               overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
               overscrollBehavior: 'contain', // Prevent scroll chaining and lock at boundaries
-              paddingTop: sheetState === 'list' ? '213px' : '0', // Adjusted: 122px (filter start) + 43px (filter) + 12px (gap) + 36px (categories) = 213px
+              scrollBehavior: 'smooth', // Smooth scroll reset
+              paddingTop: sheetState === 'list' ? '225px' : '0', // 122px (filter start) + 43px (filter) + 12px (gap) + 36px (categories) + 12px (final gap) = 225px
               // Smooth transitions with cubic-bezier easing
               transition: 'height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1), border-radius 400ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding-top 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}
