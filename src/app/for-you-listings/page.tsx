@@ -79,16 +79,16 @@ export default function ForYouListingsPage() {
     const vh = window.innerHeight;
     
     switch (sheetState) {
-      case 'list': // State 1: Initial - most cards visible, no map
-        return `${vh * 0.70}px`; // 70% of screen
-      case 'full': // State 2: Scrolled up - filling available space, no map
-        return `${vh * 0.80}px`; // 80% of screen
+      case 'list': // State 1: Initial - card with gap above showing map hint
+        return `${vh - 295}px`; // Screen minus top section (295px = header + filter + categories)
+      case 'full': // State 2: Expanded - fills entire screen, top section is overlay
+        return `${vh}px`; // Full screen, content goes under overlay
       case 'half': // State 3: Half screen with map visible
         return `${vh * 0.45}px`; // 45% of screen
       case 'peek': // State 4: Minimized, mostly map
         return '140px'; // Just count + 1 row peek
       default:
-        return `${vh * 0.70}px`;
+        return `${vh - 295}px`;
     }
   };
 
@@ -143,13 +143,13 @@ export default function ForYouListingsPage() {
             ]}
           />
 
-          {/* Map Background - Always present but only visible behind sheet in half/peek */}
+          {/* Map Background - Visible in list/half/peek states (gap above sheet) */}
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
               top: '215px', // Below fixed header (110px action buttons + ~105px filter/categories)
               zIndex: 5,
-              opacity: (sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
+              opacity: (sheetState === 'list' || sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
               transition: 'opacity 300ms ease-out'
             }}
           >
@@ -217,7 +217,8 @@ export default function ForYouListingsPage() {
           </div>
 
           {/* Blur layers below filter/category section - fades scrolling listings */}
-          <div className="absolute left-0 right-0 z-15 pointer-events-none" style={{ 
+          <div className="absolute left-0 right-0 pointer-events-none" style={{
+            zIndex: 19, 
             top: '215px', // Below filter + categories
             height: '80px'
           }}>
@@ -259,21 +260,24 @@ export default function ForYouListingsPage() {
             style={{
               bottom: 0,
               height: getSheetHeight(),
-              zIndex: 20,
-              borderTopLeftRadius: '16px',
-              borderTopRightRadius: '16px',
-              boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
-              borderTop: '0.4px solid #E5E7EB'
+              zIndex: sheetState === 'full' ? 10 : 20, // Below overlay in full state
+              borderTopLeftRadius: sheetState === 'full' ? '0' : '16px',
+              borderTopRightRadius: sheetState === 'full' ? '0' : '16px',
+              boxShadow: sheetState === 'full' ? 'none' : '0 -2px 10px rgba(0,0,0,0.1)',
+              borderTop: sheetState === 'full' ? 'none' : '0.4px solid #E5E7EB',
+              paddingTop: sheetState === 'full' ? '295px' : '0' // Top padding in full state for overlay
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {/* Drag Handle & Count */}
-            <div className="flex flex-col items-center py-3 px-4 flex-shrink-0">
-              <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
-              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
-            </div>
+            {/* Drag Handle & Count - Hidden in full state */}
+            {sheetState !== 'full' && (
+              <div className="flex flex-col items-center py-3 px-4 flex-shrink-0">
+                <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
+                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+              </div>
+            )}
             
             {/* Listings Grid - Scrollable only in list/full states */}
             <div 
