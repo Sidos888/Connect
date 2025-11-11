@@ -13,6 +13,7 @@ export default function ForYouListingsPage() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
+  const [listingsTouchStart, setListingsTouchStart] = useState<number | null>(null);
 
   const subcategories = [
     { title: "Trending Near You", icon: "🔥" },
@@ -105,24 +106,49 @@ export default function ForYouListingsPage() {
     if (Math.abs(diff) > 50) { // 50px threshold
       if (diff > 0) { // Swipe up
         if (sheetState === 'peek') setSheetState('list');
-      } else { // Swipe down
-        // Only allow transition to map view when scrolled to top
-        if (sheetState === 'list' && scrollTop === 0) {
-          setSheetState('peek');
-        }
       }
+      // Swipe down handled by handleSheetTouchMove for better control
       setIsDragging(false);
       setTouchStart(null);
     }
   };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+    const newScrollTop = e.currentTarget.scrollTop;
+    
+    // Prevent scrolling down past 0 (lock at default position)
+    if (newScrollTop < 0) {
+      e.currentTarget.scrollTop = 0;
+      return;
+    }
+    
+    setScrollTop(newScrollTop);
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
     setTouchStart(null);
+    setListingsTouchStart(null);
+  };
+
+  // Detect downward swipe on sheet when at scrollTop=0 → activate map
+  const handleSheetTouchStart = (e: React.TouchEvent) => {
+    if (scrollTop === 0) {
+      setListingsTouchStart(e.touches[0].clientY);
+    }
+  };
+
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    if (!listingsTouchStart || scrollTop !== 0) return;
+    
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - listingsTouchStart; // Positive = down
+    
+    // Swipe down at default position → go to map
+    if (diff > 30) {
+      setSheetState('peek');
+      setListingsTouchStart(null);
+    }
   };
 
   return (
@@ -246,8 +272,14 @@ export default function ForYouListingsPage() {
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
               overflowY: sheetState === 'peek' ? 'hidden' : 'auto'
             }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
+            onTouchStart={(e) => {
+              handleTouchStart(e);
+              handleSheetTouchStart(e);
+            }}
+            onTouchMove={(e) => {
+              handleTouchMove(e);
+              handleSheetTouchMove(e);
+            }}
             onTouchEnd={handleTouchEnd}
             onScroll={handleScroll}
           >
