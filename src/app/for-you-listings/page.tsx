@@ -210,7 +210,7 @@ export default function ForYouListingsPage() {
 
               {/* Category Filter Cards with black border selection */}
               <div className="mb-3 px-4">
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
                   {categories.map((cat) => {
                     const isSelected = selectedSubcategory === cat.title;
                     return (
