@@ -147,7 +147,7 @@ export default function ForYouListingsPage() {
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
-              top: 'calc(var(--saved-content-padding-top, 140px) + 135px)', // Below fixed header
+              top: '150px', // Below fixed header (48px + filter/category height ~102px)
               zIndex: 5,
               opacity: (sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
               transition: 'opacity 300ms ease-out'
@@ -161,7 +161,7 @@ export default function ForYouListingsPage() {
           </div>
 
           {/* Blur layers - Below PageHeader, affects only scrolling content */}
-          <div className="absolute left-0 right-0 z-20" style={{ top: 'calc(var(--saved-content-padding-top, 140px) - 20px)', height: '155px', pointerEvents: 'none' }}>
+          <div className="absolute left-0 right-0 z-20" style={{ top: '28px', height: '155px', pointerEvents: 'none' }}>
             {/* Opacity gradient - gentle at bottom, full at top, with seamless top blend */}
             <div className="absolute inset-0" style={{ 
               background: 'linear-gradient(to top, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.4) 80%, rgba(255,255,255,0.5) 95%, rgba(255,255,255,0) 100%)',
@@ -210,24 +210,25 @@ export default function ForYouListingsPage() {
           </div>
 
           {/* Fixed Filter & Category Header - Above blur layers */}
-          <div className="absolute left-0 right-0 z-30" style={{ top: 'var(--saved-content-padding-top, 140px)', pointerEvents: 'auto' }}>
-              {/* Filter Card - Same width as Explore */}
+          <div className="absolute left-0 right-0 z-30" style={{ top: '48px', pointerEvents: 'auto' }}>
+              {/* Filter Card - Same height as Explore */}
               <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
                 <div 
-                  className="rounded-xl px-3 py-2 transition-all duration-200 w-full"
+                  className="rounded-2xl px-4 py-2.5 transition-all duration-200 w-full"
                   style={{
                     background: 'rgba(255, 255, 255, 0.9)',
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    backdropFilter: 'blur(10px)'
                   }}
                 >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">📍</span>
-                    <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">📍</span>
+                    <span className="text-base font-semibold text-neutral-900">Adelaide</span>
                   </div>
-                  <span className="text-xs text-neutral-500">Anytime</span>
+                  <span className="text-sm text-neutral-500">Anytime</span>
                 </div>
               </div>
             </div>
