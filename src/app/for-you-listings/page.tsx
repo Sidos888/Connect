@@ -256,17 +256,15 @@ export default function ForYouListingsPage() {
             onTouchEnd={handleTouchEnd}
             onScroll={handleScroll}
           >
-            {/* Top Spacing - Equal to bottom spacing */}
-            <div style={{ height: '32px', flexShrink: 0 }} />
-            
-            {/* Drag Handle & Count */}
-            <div className="flex flex-col items-center px-4 flex-shrink-0">
-              <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
-              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+            {/* Drag Handle - At top of card */}
+            <div className="flex justify-center pt-3 flex-shrink-0">
+              <div className="w-12 h-1 bg-gray-400 rounded-full" />
             </div>
             
-            {/* Spacing between count and listings - Equal to top spacing */}
-            <div style={{ height: '32px', flexShrink: 0 }} />
+            {/* Listing Count - Centered between top and first card */}
+            <div className="flex justify-center py-6 flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+            </div>
             
             {/* Listings Grid - px-4 padding on sides */}
             <div className="px-4 pb-8 flex-shrink-0">
