@@ -161,7 +161,7 @@ export default function ForYouListingsPage() {
           </div>
 
           {/* Blur layers - Below PageHeader, affects only scrolling content */}
-          <div className="absolute left-0 right-0 z-20" style={{ top: '28px', height: '155px', pointerEvents: 'none' }}>
+          <div className="absolute left-0 right-0 z-20" style={{ top: '26px', height: '155px', pointerEvents: 'none' }}>
             {/* Opacity gradient - gentle at bottom, full at top, with seamless top blend */}
             <div className="absolute inset-0" style={{ 
               background: 'linear-gradient(to top, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.4) 80%, rgba(255,255,255,0.5) 95%, rgba(255,255,255,0) 100%)',
@@ -210,7 +210,7 @@ export default function ForYouListingsPage() {
           </div>
 
           {/* Fixed Filter & Category Header - Above blur layers */}
-          <div className="absolute left-0 right-0 z-30" style={{ top: '48px', pointerEvents: 'auto' }}>
+          <div className="absolute left-0 right-0 z-30" style={{ top: '46px', pointerEvents: 'auto' }}>
               {/* Filter Card - Same height as Explore */}
               <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
                 <div 
