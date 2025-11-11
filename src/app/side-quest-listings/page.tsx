@@ -355,11 +355,6 @@ export default function SideQuestListingsPage() {
               </div>
             )}
             
-            {/* Separator Line - Only visible in peek mode */}
-            {sheetState === 'peek' && (
-              <div className="w-full h-px bg-gray-200 flex-shrink-0" />
-            )}
-            
             {/* Listing Count - Only visible in peek mode */}
             {sheetState === 'peek' && (
               <div className="flex justify-center py-6 flex-shrink-0">
