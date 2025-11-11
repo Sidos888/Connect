@@ -251,7 +251,7 @@ export default function SideQuestListingsPage() {
               top: '0', // Start at top of page (visible behind all transparent elements)
               zIndex: 5,
               opacity: sheetState === 'peek' ? 1 : 0,
-              transition: 'opacity 300ms ease-out'
+              transition: 'opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}
           >
             <iframe
@@ -320,7 +320,7 @@ export default function SideQuestListingsPage() {
 
           {/* Bottom Sheet - Card styling only in peek mode */}
           <div 
-            className="fixed left-0 right-0 transition-all duration-300 ease-out flex flex-col scrollbar-hide"
+            className="fixed left-0 right-0 flex flex-col scrollbar-hide"
             style={{
               bottom: 0,
               top: sheetState === 'peek' ? 'auto' : '0', // In list mode, start from top
@@ -340,7 +340,9 @@ export default function SideQuestListingsPage() {
               overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
               overscrollBehavior: 'contain', // Prevent scroll chaining and lock at boundaries
-              paddingTop: sheetState === 'list' ? '225px' : '0' // In list mode, pad from top
+              paddingTop: sheetState === 'list' ? '225px' : '0', // In list mode, pad from top
+              // Smooth transitions with cubic-bezier easing
+              transition: 'height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1), border-radius 400ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding-top 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}
             onTouchStart={(e) => {
               handleTouchStart(e);
@@ -354,25 +356,38 @@ export default function SideQuestListingsPage() {
             onScroll={handleScroll}
           >
             {/* Drag Handle - Only visible in peek mode */}
-            {sheetState === 'peek' && (
-              <div className="flex justify-center pt-3 flex-shrink-0">
-                <div className="w-12 h-1 bg-gray-300 rounded-full" />
-              </div>
-            )}
+            <div 
+              className="flex justify-center pt-3 flex-shrink-0 transition-all duration-400"
+              style={{
+                opacity: sheetState === 'peek' ? 1 : 0,
+                transform: sheetState === 'peek' ? 'scale(1)' : 'scale(0.8)',
+                height: sheetState === 'peek' ? 'auto' : '0',
+                overflow: 'hidden'
+              }}
+            >
+              <div className="w-12 h-1 bg-gray-300 rounded-full" />
+            </div>
             
             {/* Listing Count - Only visible in peek mode */}
-            {sheetState === 'peek' && (
-              <div className="flex justify-center py-6 flex-shrink-0">
-                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
-              </div>
-            )}
+            <div 
+              className="flex justify-center py-6 flex-shrink-0 transition-all duration-400"
+              style={{
+                opacity: sheetState === 'peek' ? 1 : 0,
+                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-10px)',
+                height: sheetState === 'peek' ? 'auto' : '0',
+                overflow: 'hidden'
+              }}
+            >
+              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+            </div>
             
             {/* Listings Grid - px-4 padding on sides */}
             <div className="px-4 pb-8 flex-shrink-0" style={{
               paddingTop: sheetState === 'peek' ? '0' : '12px', // Small top padding in list mode
               background: sheetState === 'list' 
                 ? 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 20px, white 60px)' 
-                : 'transparent' // Gradient fade in list mode, transparent in peek
+                : 'transparent', // Gradient fade in list mode, transparent in peek
+              transition: 'background 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding-top 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}>
                 <div className="grid grid-cols-2 gap-3">
                   {fakeListings.map((listing, i) => (
