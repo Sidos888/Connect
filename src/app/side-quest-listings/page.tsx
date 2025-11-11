@@ -253,75 +253,71 @@ export default function SideQuestListingsPage() {
               </div>
           </div>
 
-          {/* Bottom Sheet - Scrollable card with Connect styling */}
+          {/* Scrollable Container - Entire card scrolls up */}
           <div 
-            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col scrollbar-hide"
+            className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hide"
             style={{
-              bottom: 0,
-              height: getSheetHeight(),
-              zIndex: 15, // Below top overlay (z-20) but above map (z-5)
-              borderTopLeftRadius: '16px',
-              borderTopRightRadius: '16px',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              borderBottom: 'none',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              overflowY: sheetState === 'peek' ? 'hidden' : 'auto'
+              top: '225px', // Start below filter/categories (122px + 91px + 12px gap)
+              zIndex: 10
             }}
-            onTouchStart={(e) => {
-              handleTouchStart(e);
-              handleSheetTouchStart(e);
-            }}
-            onTouchMove={(e) => {
-              handleTouchMove(e);
-              handleSheetTouchMove(e);
-            }}
-            onTouchEnd={handleTouchEnd}
-            onScroll={handleScroll}
           >
-            {/* Drag Handle - At top of card */}
-            <div className="flex justify-center pt-3 flex-shrink-0">
-              <div className="w-12 h-1 bg-gray-300 rounded-full" />
-            </div>
-            
-            {/* Listing Count - Centered between top and first card */}
-            <div className="flex justify-center py-6 flex-shrink-0">
-              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
-            </div>
-            
-            {/* Listings Grid - px-4 padding on sides */}
-            <div className="px-4 pb-8 flex-shrink-0">
-              <div className="grid grid-cols-2 gap-3">
-                {fakeListings.map((listing, i) => (
-                  <div key={i} className="flex flex-col gap-1.5">
-                    {/* Card Image */}
-                    <div
-                      className="rounded-xl bg-white transition-all duration-200 cursor-pointer overflow-hidden relative aspect-square"
-                      style={{
-                        borderWidth: '0.4px',
-                        borderColor: '#E5E7EB',
-                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      }}
-                    >
-                      <img 
-                        src={listing.image}
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
-                      />
+            {/* Bottom Sheet Card - Entire card moves with scroll */}
+            <div 
+              className="bg-white"
+              style={{
+                minHeight: '100%',
+                borderTopLeftRadius: '16px',
+                borderTopRightRadius: '16px',
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                borderBottom: 'none',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+            >
+              {/* Drag Handle - At top of card */}
+              <div className="flex justify-center pt-3">
+                <div className="w-12 h-1 bg-gray-300 rounded-full" />
+              </div>
+              
+              {/* Listing Count - Centered between top and first card */}
+              <div className="flex justify-center py-6">
+                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+              </div>
+              
+              {/* Listings Grid - px-4 padding on sides */}
+              <div className="px-4 pb-8">
+                <div className="grid grid-cols-2 gap-3">
+                  {fakeListings.map((listing, i) => (
+                    <div key={i} className="flex flex-col gap-1.5">
+                      {/* Card Image */}
+                      <div
+                        className="rounded-xl bg-white transition-all duration-200 cursor-pointer overflow-hidden relative aspect-square"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        }}
+                      >
+                        <img 
+                          src={listing.image}
+                          alt={listing.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      
+                      {/* Title and Date */}
+                      <div className="flex flex-col gap-0.5">
+                        <h3 className="text-sm font-semibold text-gray-900 leading-tight">
+                          {listing.title}
+                        </h3>
+                        <p className="text-xs text-gray-600 leading-tight">
+                          {listing.date}
+                        </p>
+                      </div>
                     </div>
-                    
-                    {/* Title and Date */}
-                    <div className="flex flex-col gap-0.5">
-                      <h3 className="text-sm font-semibold text-gray-900 leading-tight">
-                        {listing.title}
-                      </h3>
-                      <p className="text-xs text-gray-600 leading-tight">
-                        {listing.date}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
