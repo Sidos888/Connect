@@ -241,11 +241,11 @@ export default function SideQuestListingsPage() {
             </div>
           </div>
 
-          {/* Map Background - Visible only in peek state */}
+          {/* Map Background - Visible behind transparent top component in peek state */}
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
-              top: '237px', // Below filter/categories section with equal spacing
+              top: '110px', // Start right below action buttons (visible behind transparent section)
               zIndex: 5,
               opacity: sheetState === 'peek' ? 1 : 0,
               transition: 'opacity 300ms ease-out'
