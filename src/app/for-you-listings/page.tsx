@@ -216,12 +216,13 @@ export default function ForYouListingsPage() {
               </div>
           </div>
 
-          {/* Blur layers below filter/category section - fades scrolling listings */}
-          <div className="absolute left-0 right-0 pointer-events-none" style={{
-            zIndex: 19, 
-            top: '215px', // Below filter + categories
-            height: '80px'
-          }}>
+          {/* Blur layers below filter/category section - only in full state */}
+          {sheetState === 'full' && (
+            <div className="absolute left-0 right-0 pointer-events-none" style={{
+              zIndex: 19, 
+              top: '215px', // Below filter + categories
+              height: '80px'
+            }}>
             {/* Opacity gradient */}
             <div className="absolute inset-0" style={{ 
               background: 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.4) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
@@ -252,7 +253,8 @@ export default function ForYouListingsPage() {
               backdropFilter: 'blur(0.25px)',
               WebkitBackdropFilter: 'blur(0.25px)'
             }} />
-          </div>
+            </div>
+          )}
 
           {/* Bottom Sheet - Draggable Listings Container - Always from bottom */}
           <div 
@@ -264,8 +266,7 @@ export default function ForYouListingsPage() {
               borderTopLeftRadius: sheetState === 'full' ? '0' : '16px',
               borderTopRightRadius: sheetState === 'full' ? '0' : '16px',
               boxShadow: sheetState === 'full' ? 'none' : '0 -2px 10px rgba(0,0,0,0.1)',
-              borderTop: sheetState === 'full' ? 'none' : '0.4px solid #E5E7EB',
-              paddingTop: sheetState === 'full' ? '295px' : '0' // Top padding in full state for overlay
+              borderTop: sheetState === 'full' ? 'none' : '0.4px solid #E5E7EB'
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -285,6 +286,7 @@ export default function ForYouListingsPage() {
               style={{
                 paddingLeft: '16px',
                 paddingRight: '16px',
+                paddingTop: sheetState === 'full' ? '295px' : '0', // Start below overlay in full state
                 paddingBottom: '32px',
                 overflowY: (sheetState === 'list' || sheetState === 'full') ? 'auto' : 'hidden',
                 overflowX: 'hidden',
