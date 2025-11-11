@@ -182,13 +182,16 @@ export default function SideQuestListingsPage() {
         `}</style>
         
         <MobilePage>
-          {/* Custom Header - No blur/opacity effects, just action buttons and title */}
+          {/* Custom Header - Transparent, just action buttons and title */}
           <div className="absolute top-0 left-0 right-0 z-20 px-4" style={{ 
             paddingTop: 'max(env(safe-area-inset-top), 70px)',
-            paddingBottom: '16px'
+            paddingBottom: '16px',
+            background: 'transparent',
+            pointerEvents: 'none'
           }}>
             <div className="relative w-full flex items-center justify-center" style={{ 
-              height: '40px'
+              height: '40px',
+              pointerEvents: 'auto'
             }}>
               {/* Back Button - Left */}
               <button
@@ -320,7 +323,8 @@ export default function SideQuestListingsPage() {
             className="fixed left-0 right-0 transition-all duration-300 ease-out flex flex-col scrollbar-hide"
             style={{
               bottom: 0,
-              height: sheetState === 'peek' ? '140px' : 'calc(100vh - 225px)', // Peek: minimize, List: fill
+              top: sheetState === 'peek' ? 'auto' : '0', // In list mode, start from top
+              height: sheetState === 'peek' ? '140px' : 'auto', // Peek: fixed height, List: auto
               zIndex: 10, // Above map (z-5), below top components (z-20)
               // Background and card styling only in peek mode
               background: sheetState === 'peek' ? 'white' : 'transparent',
@@ -333,9 +337,10 @@ export default function SideQuestListingsPage() {
               boxShadow: sheetState === 'peek' 
                 ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                 : 'none',
-              overflowY: sheetState === 'peek' ? 'hidden' : 'auto',
+              overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
-              overscrollBehavior: 'contain' // Prevent scroll chaining and lock at boundaries
+              overscrollBehavior: 'contain', // Prevent scroll chaining and lock at boundaries
+              paddingTop: sheetState === 'list' ? '225px' : '0' // In list mode, pad from top
             }}
             onTouchStart={(e) => {
               handleTouchStart(e);
@@ -365,7 +370,9 @@ export default function SideQuestListingsPage() {
             {/* Listings Grid - px-4 padding on sides */}
             <div className="px-4 pb-8 flex-shrink-0" style={{
               paddingTop: sheetState === 'peek' ? '0' : '12px', // Small top padding in list mode
-              background: sheetState === 'list' ? 'white' : 'transparent' // White bg in list mode
+              background: sheetState === 'list' 
+                ? 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 20px, white 60px)' 
+                : 'transparent' // Gradient fade in list mode, transparent in peek
             }}>
                 <div className="grid grid-cols-2 gap-3">
                   {fakeListings.map((listing, i) => (
