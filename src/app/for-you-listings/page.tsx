@@ -161,14 +161,12 @@ export default function ForYouListingsPage() {
           </div>
 
 
-          {/* Fixed Filter & Category Header - Aligned with bottom of action buttons */}
-          <div className="absolute left-0 right-0 z-30" style={{ 
+          {/* Fixed Filter & Category Header - Part of top frosted section */}
+          <div className="absolute left-0 right-0 z-20" style={{ 
             top: '110px',
             pointerEvents: 'auto',
-            background: 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            paddingBottom: '12px'
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.90) 50%, rgba(255,255,255,0.85) 80%, rgba(255,255,255,0.7) 95%, rgba(255,255,255,0.5) 100%)',
+            paddingBottom: '16px'
           }}>
               {/* Filter Card - Same height as Explore */}
               <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
@@ -216,6 +214,43 @@ export default function ForYouListingsPage() {
                   })}
                 </div>
               </div>
+          </div>
+
+          {/* Blur layers below filter/category section - fades scrolling listings */}
+          <div className="absolute left-0 right-0 z-15 pointer-events-none" style={{ 
+            top: '215px', // Below filter + categories
+            height: '80px'
+          }}>
+            {/* Opacity gradient */}
+            <div className="absolute inset-0" style={{ 
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.4) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+            }} />
+            
+            {/* 4-layer blur - decreasing from top to bottom */}
+            <div className="absolute left-0 right-0" style={{ 
+              top: '0px',
+              height: '20px',
+              backdropFilter: 'blur(1.5px)',
+              WebkitBackdropFilter: 'blur(1.5px)'
+            }} />
+            <div className="absolute left-0 right-0" style={{ 
+              top: '20px',
+              height: '20px',
+              backdropFilter: 'blur(1px)',
+              WebkitBackdropFilter: 'blur(1px)'
+            }} />
+            <div className="absolute left-0 right-0" style={{ 
+              top: '40px',
+              height: '20px',
+              backdropFilter: 'blur(0.5px)',
+              WebkitBackdropFilter: 'blur(0.5px)'
+            }} />
+            <div className="absolute left-0 right-0" style={{ 
+              top: '60px',
+              height: '20px',
+              backdropFilter: 'blur(0.25px)',
+              WebkitBackdropFilter: 'blur(0.25px)'
+            }} />
           </div>
 
           {/* Bottom Sheet - Draggable Listings Container - Always from bottom */}
