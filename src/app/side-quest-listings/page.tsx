@@ -355,27 +355,29 @@ export default function SideQuestListingsPage() {
             onTouchEnd={handleTouchEnd}
             onScroll={handleScroll}
           >
-            {/* Drag Handle - Only visible in peek mode */}
+            {/* Drag Handle - Slides down from above in peek mode */}
             <div 
-              className="flex justify-center pt-3 flex-shrink-0 transition-all duration-400"
+              className="flex justify-center pt-3 flex-shrink-0"
               style={{
                 opacity: sheetState === 'peek' ? 1 : 0,
-                transform: sheetState === 'peek' ? 'scale(1)' : 'scale(0.8)',
-                height: sheetState === 'peek' ? 'auto' : '0',
-                overflow: 'hidden'
+                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-60px)',
+                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+                willChange: 'transform, opacity',
+                pointerEvents: sheetState === 'peek' ? 'auto' : 'none'
               }}
             >
               <div className="w-12 h-1 bg-gray-300 rounded-full" />
             </div>
             
-            {/* Listing Count - Only visible in peek mode */}
+            {/* Listing Count - Slides down from above in peek mode */}
             <div 
-              className="flex justify-center py-6 flex-shrink-0 transition-all duration-400"
+              className="flex justify-center py-6 flex-shrink-0"
               style={{
                 opacity: sheetState === 'peek' ? 1 : 0,
-                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-10px)',
-                height: sheetState === 'peek' ? 'auto' : '0',
-                overflow: 'hidden'
+                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-80px)',
+                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+                willChange: 'transform, opacity',
+                pointerEvents: sheetState === 'peek' ? 'auto' : 'none'
               }}
             >
               <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
