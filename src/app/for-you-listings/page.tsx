@@ -79,8 +79,8 @@ export default function ForYouListingsPage() {
     const vh = window.innerHeight;
     
     switch (sheetState) {
-      case 'list': // State 1: Initial - listings directly below categories, NO map visible
-        return `${vh - 215}px`; // Screen minus top section (215px = below filter + categories)
+      case 'list': // State 1: Initial - listings with small gap below categories
+        return `${vh - 231}px`; // Screen minus top section + 16px gap (231px = 215 + 16)
       case 'full': // State 2: Expanded - fills entire screen, top section is overlay
         return `${vh}px`; // Full screen, content goes under overlay
       case 'half': // State 3: Half screen with map visible
@@ -88,7 +88,7 @@ export default function ForYouListingsPage() {
       case 'peek': // State 4: Minimized, mostly map
         return '140px'; // Just count + 1 row peek
       default:
-        return `${vh - 215}px`;
+        return `${vh - 231}px`;
     }
   };
 
