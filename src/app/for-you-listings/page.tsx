@@ -134,7 +134,20 @@ export default function ForYouListingsPage() {
   return (
     <>
       {/* Mobile Layout with Bottom Sheet */}
-      <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+      <div className="lg:hidden for-you-listings-page" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        {/* Override all o/b effects from PageHeader and other components */}
+        <style jsx global>{`
+          .for-you-listings-page [style*="backdrop-filter"],
+          .for-you-listings-page [style*="backdropFilter"],
+          .for-you-listings-page [style*="WebkitBackdropFilter"] {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+          .for-you-listings-page div[style*="linear-gradient"] {
+            background: white !important;
+          }
+        `}</style>
+        
         <MobilePage>
           <PageHeader
             title="For You"
@@ -167,11 +180,11 @@ export default function ForYouListingsPage() {
           </div>
 
 
-          {/* Fixed Filter & Category Header - Part of top frosted section */}
+          {/* Fixed Filter & Category Header - Clean white background */}
           <div className="absolute left-0 right-0 z-20" style={{ 
             top: '110px',
             pointerEvents: 'auto',
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.90) 50%, rgba(255,255,255,0.85) 80%, rgba(255,255,255,0.7) 95%, rgba(255,255,255,0.5) 100%)',
+            background: 'white',
             paddingBottom: '16px'
           }}>
               {/* Filter Card - Same height as Explore */}
