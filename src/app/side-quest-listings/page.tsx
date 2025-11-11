@@ -115,14 +115,12 @@ export default function SideQuestListingsPage() {
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = e.currentTarget.scrollTop;
-    
-    // Prevent scrolling down past 0 (lock at default position)
-    if (newScrollTop < 0) {
-      e.currentTarget.scrollTop = 0;
-      return;
-    }
-    
     setScrollTop(newScrollTop);
+    
+    // If at top and map is showing, restore to list view
+    if (newScrollTop > 10 && sheetState === 'peek') {
+      setSheetState('list');
+    }
   };
 
   const handleTouchEnd = () => {
@@ -131,21 +129,32 @@ export default function SideQuestListingsPage() {
     setListingsTouchStart(null);
   };
 
-  // Detect downward swipe on sheet when at scrollTop=0 → activate map
-  const handleSheetTouchStart = (e: React.TouchEvent) => {
-    if (scrollTop === 0) {
+  // Detect downward pull when at scrollTop=0 → activate map
+  const handleContainerTouchStart = (e: React.TouchEvent) => {
+    const container = e.currentTarget;
+    // Track touch in peek mode or when at scroll top
+    if (sheetState === 'peek' || container.scrollTop === 0) {
       setListingsTouchStart(e.touches[0].clientY);
     }
   };
 
-  const handleSheetTouchMove = (e: React.TouchEvent) => {
-    if (!listingsTouchStart || scrollTop !== 0) return;
+  const handleContainerTouchMove = (e: React.TouchEvent) => {
+    const container = e.currentTarget as HTMLDivElement;
+    
+    if (!listingsTouchStart) return;
     
     const currentY = e.touches[0].clientY;
-    const diff = currentY - listingsTouchStart; // Positive = down
+    const diff = currentY - listingsTouchStart; // Positive = down, negative = up
     
-    // Swipe down at default position → go to map
-    if (diff > 30) {
+    // In peek mode: swipe up to expand
+    if (sheetState === 'peek' && diff < -30) {
+      setSheetState('list');
+      setListingsTouchStart(null);
+      return;
+    }
+    
+    // At scroll top: pull down to show map
+    if (container.scrollTop === 0 && diff > 50) {
       setSheetState('peek');
       setListingsTouchStart(null);
     }
@@ -298,13 +307,19 @@ export default function SideQuestListingsPage() {
 
           {/* Scrollable Container - Entire card scrolls up behind top section */}
           <div 
-            className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hide"
+            className="absolute left-0 right-0 bottom-0 scrollbar-hide transition-all duration-300 ease-out"
             style={{
-              top: '0', // Start from top so it scrolls behind entire transparent section
+              top: sheetState === 'peek' ? 'calc(100vh - 200px)' : '0', // Peek: minimize to show map
               zIndex: 10, // Above map (z-5), below top components (z-20)
-              paddingTop: '225px', // Push content down below filter/categories
-              pointerEvents: 'auto' // Make scrollable and clickable
+              paddingTop: sheetState === 'peek' ? '0' : '225px', // No padding in peek mode
+              pointerEvents: 'auto', // Make scrollable and clickable
+              overflowY: sheetState === 'peek' ? 'hidden' : 'auto', // Lock scroll in peek mode
+              touchAction: 'pan-y' // Allow vertical gestures for both scroll and sheet control
             }}
+            onScroll={handleScroll}
+            onTouchStart={handleContainerTouchStart}
+            onTouchMove={handleContainerTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             {/* Bottom Sheet Card - Entire card moves with scroll */}
             <div 
