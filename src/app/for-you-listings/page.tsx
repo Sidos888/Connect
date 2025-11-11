@@ -73,16 +73,15 @@ export default function ForYouListingsPage() {
     };
   }, []);
 
-  // Sheet height calculations - Always from bottom
+  // Sheet height calculations - Simpler approach
   const getSheetHeight = () => {
     if (typeof window === 'undefined') return '70vh';
     const vh = window.innerHeight;
     
     switch (sheetState) {
-      case 'list': // State 1: Initial - listings with small gap below categories
-        return `${vh - 231}px`; // Screen minus top section + 16px gap (231px = 215 + 16)
-      case 'full': // State 2: Expanded - fills entire screen, top section is overlay
-        return `${vh}px`; // Full screen, content goes under overlay
+      case 'list': // State 1: Initial view with scrollable listings
+      case 'full': // State 2: Same as list, just allows scrolling under overlay
+        return `${vh - 231}px`; // Starts below categories with 16px gap
       case 'half': // State 3: Half screen with map visible
         return `${vh * 0.45}px`; // 45% of screen
       case 'peek': // State 4: Minimized, mostly map
@@ -107,12 +106,11 @@ export default function ForYouListingsPage() {
     // Detect swipe direction and change state
     if (Math.abs(diff) > 50) { // 50px threshold
       if (diff > 0) { // Swipe up
-        if (sheetState === 'list') setSheetState('full');
-        else if (sheetState === 'peek') setSheetState('half');
+        if (sheetState === 'peek') setSheetState('half');
         else if (sheetState === 'half') setSheetState('list');
+        // list/full are same - no transition needed
       } else { // Swipe down
-        if (sheetState === 'full') setSheetState('list');
-        else if (sheetState === 'list') setSheetState('half');
+        if (sheetState === 'list' || sheetState === 'full') setSheetState('half');
         else if (sheetState === 'half') setSheetState('peek');
       }
       setIsDragging(false);
@@ -216,13 +214,12 @@ export default function ForYouListingsPage() {
               </div>
           </div>
 
-          {/* Blur layers below filter/category section - only in full state */}
-          {sheetState === 'full' && (
-            <div className="absolute left-0 right-0 pointer-events-none" style={{
-              zIndex: 19, 
-              top: '215px', // Below filter + categories
-              height: '80px'
-            }}>
+          {/* Blur layers below filter/category section - fades scrolling content */}
+          <div className="absolute left-0 right-0 pointer-events-none" style={{
+            zIndex: 19, 
+            top: '215px', // Below filter + categories
+            height: '80px'
+          }}>
             {/* Opacity gradient */}
             <div className="absolute inset-0" style={{ 
               background: 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.4) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
@@ -253,46 +250,38 @@ export default function ForYouListingsPage() {
               backdropFilter: 'blur(0.25px)',
               WebkitBackdropFilter: 'blur(0.25px)'
             }} />
-            </div>
-          )}
+          </div>
 
-          {/* Bottom Sheet - Draggable Listings Container - Always from bottom */}
+          {/* Bottom Sheet - Scrollable card that goes under overlay */}
           <div 
-            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col"
+            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col overflow-y-auto scrollbar-hide"
             style={{
               bottom: 0,
               height: getSheetHeight(),
-              zIndex: sheetState === 'full' ? 10 : 20, // Below overlay in full state
-              borderTopLeftRadius: sheetState === 'full' ? '0' : '16px',
-              borderTopRightRadius: sheetState === 'full' ? '0' : '16px',
-              boxShadow: sheetState === 'full' ? 'none' : '0 -2px 10px rgba(0,0,0,0.1)',
-              borderTop: sheetState === 'full' ? 'none' : '0.4px solid #E5E7EB'
+              zIndex: 15, // Below top overlay (z-20) but above map (z-5)
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+              borderTop: '0.4px solid #E5E7EB'
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {/* Drag Handle & Count - Hidden in full state */}
-            {sheetState !== 'full' && (
-              <div className="flex flex-col items-center py-3 px-4 flex-shrink-0">
-                <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
-                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
-              </div>
-            )}
+            {/* Top Spacing - Equal to bottom spacing */}
+            <div style={{ height: '32px', flexShrink: 0 }} />
             
-            {/* Listings Grid - Scrollable only in list/full states */}
-            <div 
-              className="flex-1 scrollbar-hide"
-              style={{
-                paddingLeft: '16px',
-                paddingRight: '16px',
-                paddingTop: sheetState === 'full' ? '295px' : '0', // Start below overlay in full state
-                paddingBottom: '32px',
-                overflowY: (sheetState === 'list' || sheetState === 'full') ? 'auto' : 'hidden',
-                overflowX: 'hidden',
-                touchAction: (sheetState === 'half' || sheetState === 'peek') ? 'none' : 'auto'
-              }}
-            >
+            {/* Drag Handle & Count */}
+            <div className="flex flex-col items-center px-4 flex-shrink-0">
+              <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
+              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+            </div>
+            
+            {/* Spacing between count and listings - Equal to top spacing */}
+            <div style={{ height: '32px', flexShrink: 0 }} />
+            
+            {/* Listings Grid - px-4 padding on sides */}
+            <div className="px-4 pb-8 flex-shrink-0">
               <div className="grid grid-cols-2 gap-3">
                 {fakeListings.map((listing, i) => (
                   <div key={i} className="flex flex-col gap-1.5">
