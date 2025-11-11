@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Map, X, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import { MobilePage } from "@/components/layout/PageSystem";
 
 export default function SideQuestListingsPage() {
   const router = useRouter();
@@ -155,31 +155,72 @@ export default function SideQuestListingsPage() {
     <>
       {/* Mobile Layout with Bottom Sheet */}
       <div className="lg:hidden side-quest-listings-page" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-        {/* Completely remove PageHeader blur/opacity effects */}
+        {/* Remove MobilePage white background only */}
         <style jsx global>{`
-          /* Remove MobilePage white background */
           .side-quest-listings-page > div {
             background-color: transparent !important;
-          }
-          /* Hide ALL PageHeader blur and opacity layers */
-          .side-quest-listings-page > div > div > div > div:not(:last-child) {
-            display: none !important;
           }
         `}</style>
         
         <MobilePage>
-          <PageHeader
-            title="Side Quest"
-            backButton={true}
-            onBack={() => router.push('/explore')}
-            actions={[
-              {
-                icon: <Search size={20} className="text-gray-900" />,
-                onClick: () => {/* Search functionality */},
-                label: "Search"
-              }
-            ]}
-          />
+          {/* Custom Header - No blur/opacity effects, just action buttons and title */}
+          <div className="absolute top-0 left-0 right-0 z-20 px-4" style={{ 
+            paddingTop: 'max(env(safe-area-inset-top), 70px)',
+            paddingBottom: '16px'
+          }}>
+            <div className="relative w-full flex items-center justify-center" style={{ 
+              height: '40px'
+            }}>
+              {/* Back Button - Left */}
+              <button
+                onClick={() => router.push('/explore')}
+                className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+              >
+                <ArrowLeft size={18} className="text-gray-900" />
+              </button>
+
+              {/* Title - Center */}
+              <h1 className="text-xl font-semibold text-gray-900">Side Quest</h1>
+
+              {/* Search Button - Right */}
+              <button
+                onClick={() => {/* Search functionality */}}
+                className="absolute right-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+              >
+                <Search size={20} className="text-gray-900" />
+              </button>
+            </div>
+          </div>
 
           {/* Map Background - Visible only in peek state */}
           <div 
