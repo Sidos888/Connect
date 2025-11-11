@@ -155,13 +155,21 @@ export default function SideQuestListingsPage() {
     <>
       {/* Mobile Layout with Bottom Sheet */}
       <div className="lg:hidden side-quest-listings-page" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-        {/* Override all o/b effects from PageHeader - allow transparent top component */}
+        {/* Override backgrounds and o/b effects to make content visible behind top component */}
         <style jsx global>{`
           .side-quest-listings-page [style*="backdrop-filter"],
           .side-quest-listings-page [style*="backdropFilter"],
           .side-quest-listings-page [style*="WebkitBackdropFilter"] {
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
+          }
+          /* Remove all white backgrounds to show scrolling content */
+          .side-quest-listings-page > div {
+            background-color: transparent !important;
+          }
+          /* Remove PageHeader white opacity gradient */
+          .side-quest-listings-page [style*="linear-gradient"] {
+            background: transparent !important;
           }
         `}</style>
         
