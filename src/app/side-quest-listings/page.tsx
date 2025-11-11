@@ -384,11 +384,11 @@ export default function SideQuestListingsPage() {
             
             {/* Listings Grid - px-4 padding on sides */}
             <div className="px-4 pb-8 flex-shrink-0" style={{
-              paddingTop: sheetState === 'peek' ? '0' : '12px', // Small top padding in list mode
+              paddingTop: '0', // No extra padding - 12px gap already in container's 225px
               background: sheetState === 'list' 
                 ? 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 20px, white 60px)' 
                 : 'transparent', // Gradient fade in list mode, transparent in peek
-              transition: 'background 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding-top 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
+              transition: 'background 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}>
                 <div className="grid grid-cols-2 gap-3">
                   {fakeListings.map((listing, i) => (
