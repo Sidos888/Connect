@@ -225,7 +225,7 @@ export default function ForYouListingsPage() {
           {/* Blur layers below filter/category section - fades scrolling content */}
           <div className="absolute left-0 right-0 pointer-events-none" style={{
             zIndex: 19, 
-            top: '215px', // Below filter + categories
+            top: '231px', // Start at card position (215 + 16px gap)
             height: '80px'
           }}>
             {/* Opacity gradient */}
@@ -233,30 +233,30 @@ export default function ForYouListingsPage() {
               background: 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.4) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
             }} />
             
-            {/* 4-layer blur - decreasing from top to bottom */}
+            {/* 4-layer blur - decreasing from top to bottom - lighter blur */}
             <div className="absolute left-0 right-0" style={{ 
               top: '0px',
               height: '20px',
-              backdropFilter: 'blur(1.5px)',
-              WebkitBackdropFilter: 'blur(1.5px)'
+              backdropFilter: 'blur(0.75px)',
+              WebkitBackdropFilter: 'blur(0.75px)'
             }} />
             <div className="absolute left-0 right-0" style={{ 
               top: '20px',
-              height: '20px',
-              backdropFilter: 'blur(1px)',
-              WebkitBackdropFilter: 'blur(1px)'
-            }} />
-            <div className="absolute left-0 right-0" style={{ 
-              top: '40px',
               height: '20px',
               backdropFilter: 'blur(0.5px)',
               WebkitBackdropFilter: 'blur(0.5px)'
             }} />
             <div className="absolute left-0 right-0" style={{ 
+              top: '40px',
+              height: '20px',
+              backdropFilter: 'blur(0.3px)',
+              WebkitBackdropFilter: 'blur(0.3px)'
+            }} />
+            <div className="absolute left-0 right-0" style={{ 
               top: '60px',
               height: '20px',
-              backdropFilter: 'blur(0.25px)',
-              WebkitBackdropFilter: 'blur(0.25px)'
+              backdropFilter: 'blur(0.15px)',
+              WebkitBackdropFilter: 'blur(0.15px)'
             }} />
           </div>
 
@@ -269,7 +269,7 @@ export default function ForYouListingsPage() {
               zIndex: 15, // Below top overlay (z-20) but above map (z-5)
               borderTopLeftRadius: '16px',
               borderTopRightRadius: '16px',
-              boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+              boxShadow: '0 -4px 12px rgba(0,0,0,0.12), 0 -2px 6px rgba(0,0,0,0.08)',
               borderTop: '0.4px solid #E5E7EB',
               overflowY: (sheetState === 'half' || sheetState === 'peek') ? 'hidden' : 'auto'
             }}
