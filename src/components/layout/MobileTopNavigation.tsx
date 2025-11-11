@@ -90,7 +90,11 @@ export default function MobileTopNavigation() {
   };
 
   // Don't render MobileTopNavigation on pages with their own PageHeader
-  const shouldHideHeader = pathname.startsWith('/menu') || pathname.startsWith('/my-life') || pathname.startsWith('/chat');
+  const shouldHideHeader = pathname.startsWith('/menu') || 
+                          pathname.startsWith('/my-life') || 
+                          pathname.startsWith('/chat') ||
+                          pathname.startsWith('/side-quest-listings') ||
+                          pathname.startsWith('/for-you-listings');
   
   if (shouldHideHeader) {
     return null;
