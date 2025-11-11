@@ -73,24 +73,22 @@ export default function ForYouListingsPage() {
     };
   }, []);
 
-  // Sheet height calculations
+  // Sheet height calculations - Always from bottom
   const getSheetHeight = () => {
-    if (typeof window === 'undefined') return '75%';
+    if (typeof window === 'undefined') return '70vh';
     const vh = window.innerHeight;
-    const headerHeight = 140; // var(--saved-content-padding-top)
-    const fixedHeaderHeight = 135; // filter + categories
     
     switch (sheetState) {
-      case 'full': // State 2: Full listings, no map
-        return `${vh - headerHeight - fixedHeaderHeight}px`;
-      case 'list': // State 1: Initial with card container
-        return `${vh - headerHeight - fixedHeaderHeight - 100}px`;
-      case 'half': // State 3: Half screen with map
-        return '45%';
+      case 'list': // State 1: Initial - most cards visible, no map
+        return `${vh * 0.70}px`; // 70% of screen
+      case 'full': // State 2: Scrolled up - filling available space, no map
+        return `${vh * 0.80}px`; // 80% of screen
+      case 'half': // State 3: Half screen with map visible
+        return `${vh * 0.45}px`; // 45% of screen
       case 'peek': // State 4: Minimized, mostly map
-        return '120px';
+        return '140px'; // Just count + 1 row peek
       default:
-        return '75%';
+        return `${vh * 0.70}px`;
     }
   };
 
@@ -145,25 +143,22 @@ export default function ForYouListingsPage() {
             ]}
           />
 
-          {/* Map Background - Visible in half and peek states */}
-          {(sheetState === 'half' || sheetState === 'peek') && (
-            <div 
-              className="absolute left-0 right-0 bg-gray-50"
-              style={{
-                top: 'var(--saved-content-padding-top, 140px)',
-                bottom: sheetState === 'half' ? '45%' : '120px',
-                zIndex: 10
-              }}
-            >
-              <div className="w-full h-full">
-                <iframe
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=138.5686%2C-34.9485%2C138.6286%2C-34.9085&layer=mapnik"
-                  className="w-full h-full border-0"
-                  title="Adelaide Map"
-                />
-              </div>
-            </div>
-          )}
+          {/* Map Background - Always present but only visible behind sheet in half/peek */}
+          <div 
+            className="absolute left-0 right-0 bottom-0 bg-gray-100"
+            style={{
+              top: 'calc(var(--saved-content-padding-top, 140px) + 135px)', // Below fixed header
+              zIndex: 5,
+              opacity: (sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
+              transition: 'opacity 300ms ease-out'
+            }}
+          >
+            <iframe
+              src="https://www.openstreetmap.org/export/embed.html?bbox=138.5686%2C-34.9485%2C138.6286%2C-34.9085&layer=mapnik"
+              className="w-full h-full border-0"
+              title="Adelaide Map"
+            />
+          </div>
 
           {/* Blur layers - Below PageHeader, affects only scrolling content */}
           <div className="absolute left-0 right-0 z-20" style={{ top: 'calc(var(--saved-content-padding-top, 140px) - 20px)', height: '155px', pointerEvents: 'none' }}>
@@ -269,42 +264,32 @@ export default function ForYouListingsPage() {
               </div>
           </div>
 
-          {/* Bottom Sheet - Draggable Listings Container */}
+          {/* Bottom Sheet - Draggable Listings Container - Always from bottom */}
           <div 
-            className="absolute left-0 right-0 bg-white transition-all duration-300 ease-out"
+            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col"
             style={{
-              top: sheetState === 'full' ? 'calc(var(--saved-content-padding-top, 140px) + 135px)' : 'auto',
-              bottom: sheetState === 'full' ? '0' : 'auto',
-              height: sheetState !== 'full' ? getSheetHeight() : 'auto',
-              zIndex: 25,
-              borderTopLeftRadius: (sheetState === 'list' || sheetState === 'half' || sheetState === 'peek') ? '16px' : '0',
-              borderTopRightRadius: (sheetState === 'list' || sheetState === 'half' || sheetState === 'peek') ? '16px' : '0',
-              boxShadow: (sheetState !== 'full') ? '0 -2px 10px rgba(0,0,0,0.1)' : 'none',
-              borderTop: (sheetState !== 'full') ? '0.4px solid #E5E7EB' : 'none'
+              bottom: 0,
+              height: getSheetHeight(),
+              zIndex: 20,
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+              borderTop: '0.4px solid #E5E7EB'
             }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {/* Drag Handle & Count - Visible in list, half, peek states */}
-            {sheetState !== 'full' && (
-              <div className="flex flex-col items-center py-3 px-4">
-                <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
-                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
-              </div>
-            )}
+            {/* Drag Handle & Count */}
+            <div className="flex flex-col items-center py-3 px-4 flex-shrink-0">
+              <div className="w-12 h-1 bg-gray-400 rounded-full mb-2" />
+              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+            </div>
             
-            {/* Listings Grid */}
+            {/* Listings Grid - Scrollable */}
             <div 
-              className="overflow-y-auto scrollbar-hide"
+              className="flex-1 overflow-y-auto scrollbar-hide"
               style={{
-                height: sheetState === 'full' 
-                  ? '100%' 
-                  : sheetState === 'list'
-                    ? 'calc(100% - 60px)'
-                    : sheetState === 'half'
-                      ? 'calc(100% - 60px)'
-                      : '0px', // peek state hides listings
                 paddingLeft: '16px',
                 paddingRight: '16px',
                 paddingBottom: '32px'
