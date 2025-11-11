@@ -82,13 +82,13 @@ export default function ForYouListingsPage() {
     switch (sheetState) {
       case 'list': // State 1: Initial view with scrollable listings
       case 'full': // State 2: Same as list, just allows scrolling under overlay
-        return `${vh - 231}px`; // Starts below categories with 16px gap
+        return `${vh - 237}px`; // 122 (filter start) + 43 (filter) + 12 (gap) + 36 (categories) + 12 (gap) + 12 (extra spacing)
       case 'half': // State 3: Half screen with map visible
         return `${vh * 0.45}px`; // 45% of screen
       case 'peek': // State 4: Minimized, mostly map
         return '140px'; // Just count + 1 row peek
       default:
-        return `${vh - 231}px`;
+        return `${vh - 237}px`;
     }
   };
 
@@ -166,7 +166,7 @@ export default function ForYouListingsPage() {
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
-              top: '215px', // Below fixed header (110px action buttons + ~105px filter/categories)
+              top: '237px', // Below filter/categories section with equal spacing
               zIndex: 5,
               opacity: (sheetState === 'half' || sheetState === 'peek') ? 1 : 0,
               transition: 'opacity 300ms ease-out'
@@ -182,7 +182,7 @@ export default function ForYouListingsPage() {
 
           {/* Fixed Filter & Category Header - Clean white background */}
           <div className="absolute left-0 right-0 z-20" style={{ 
-            top: '110px',
+            top: '122px', // 110px (action buttons) + 12px gap (matches spacing below)
             pointerEvents: 'auto',
             background: 'white',
             paddingBottom: '16px'
