@@ -222,44 +222,6 @@ export default function ForYouListingsPage() {
               </div>
           </div>
 
-          {/* Blur layers below filter/category section - fades scrolling content */}
-          <div className="absolute left-0 right-0 pointer-events-none" style={{
-            zIndex: 19, 
-            top: '231px', // Start at card position (215 + 16px gap)
-            height: '80px'
-          }}>
-            {/* Opacity gradient */}
-            <div className="absolute inset-0" style={{ 
-              background: 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.4) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
-            }} />
-            
-            {/* 4-layer blur - decreasing from top to bottom - lighter blur */}
-            <div className="absolute left-0 right-0" style={{ 
-              top: '0px',
-              height: '20px',
-              backdropFilter: 'blur(0.75px)',
-              WebkitBackdropFilter: 'blur(0.75px)'
-            }} />
-            <div className="absolute left-0 right-0" style={{ 
-              top: '20px',
-              height: '20px',
-              backdropFilter: 'blur(0.5px)',
-              WebkitBackdropFilter: 'blur(0.5px)'
-            }} />
-            <div className="absolute left-0 right-0" style={{ 
-              top: '40px',
-              height: '20px',
-              backdropFilter: 'blur(0.3px)',
-              WebkitBackdropFilter: 'blur(0.3px)'
-            }} />
-            <div className="absolute left-0 right-0" style={{ 
-              top: '60px',
-              height: '20px',
-              backdropFilter: 'blur(0.15px)',
-              WebkitBackdropFilter: 'blur(0.15px)'
-            }} />
-          </div>
-
           {/* Bottom Sheet - Scrollable card that goes under overlay */}
           <div 
             className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col scrollbar-hide"
