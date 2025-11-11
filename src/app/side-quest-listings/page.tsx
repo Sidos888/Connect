@@ -305,48 +305,45 @@ export default function SideQuestListingsPage() {
               </div>
           </div>
 
-          {/* Scrollable Container - Entire card scrolls up behind top section */}
+          {/* Bottom Sheet Card - Fixed at bottom, content scrolls inside */}
           <div 
-            className="absolute left-0 right-0 bottom-0 scrollbar-hide transition-all duration-300 ease-out"
+            className="fixed left-0 right-0 bg-white transition-all duration-300 ease-out flex flex-col scrollbar-hide"
             style={{
-              top: sheetState === 'peek' ? 'calc(100vh - 200px)' : '0', // Peek: minimize to show map
+              bottom: 0,
+              height: sheetState === 'peek' ? '140px' : 'calc(100vh - 225px)', // Peek: minimize, List: fill
               zIndex: 10, // Above map (z-5), below top components (z-20)
-              paddingTop: sheetState === 'peek' ? '0' : '225px', // No padding in peek mode
-              pointerEvents: 'auto', // Make scrollable and clickable
-              overflowY: sheetState === 'peek' ? 'hidden' : 'auto', // Lock scroll in peek mode
-              touchAction: 'pan-y' // Allow vertical gestures for both scroll and sheet control
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              borderBottom: 'none',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              overflowY: sheetState === 'peek' ? 'hidden' : 'auto'
             }}
-            onScroll={handleScroll}
-            onTouchStart={handleContainerTouchStart}
-            onTouchMove={handleContainerTouchMove}
+            onTouchStart={(e) => {
+              handleTouchStart(e);
+              handleContainerTouchStart(e);
+            }}
+            onTouchMove={(e) => {
+              handleTouchMove(e);
+              handleContainerTouchMove(e);
+            }}
             onTouchEnd={handleTouchEnd}
+            onScroll={handleScroll}
           >
-            {/* Bottom Sheet Card - Entire card moves with scroll */}
-            <div 
-              className="bg-white"
-              style={{
-                minHeight: 'calc(100vh - 225px)', // Fill remaining space
-                borderTopLeftRadius: '16px',
-                borderTopRightRadius: '16px',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                borderStyle: 'solid',
-                borderBottom: 'none',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              }}
-            >
-              {/* Drag Handle - At top of card */}
-              <div className="flex justify-center pt-3">
-                <div className="w-12 h-1 bg-gray-300 rounded-full" />
-              </div>
-              
-              {/* Listing Count - Centered between top and first card */}
-              <div className="flex justify-center py-6">
-                <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
-              </div>
-              
-              {/* Listings Grid - px-4 padding on sides */}
-              <div className="px-4 pb-8">
+            {/* Drag Handle - At top of card */}
+            <div className="flex justify-center pt-3 flex-shrink-0">
+              <div className="w-12 h-1 bg-gray-300 rounded-full" />
+            </div>
+            
+            {/* Listing Count - Centered between top and first card */}
+            <div className="flex justify-center py-6 flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+            </div>
+            
+            {/* Listings Grid - px-4 padding on sides */}
+            <div className="px-4 pb-8 flex-shrink-0">
                 <div className="grid grid-cols-2 gap-3">
                   {fakeListings.map((listing, i) => (
                     <div key={i} className="flex flex-col gap-1.5">
@@ -378,7 +375,6 @@ export default function SideQuestListingsPage() {
                     </div>
                   ))}
                 </div>
-              </div>
             </div>
           </div>
         </MobilePage>
