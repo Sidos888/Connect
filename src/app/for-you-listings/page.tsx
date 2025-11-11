@@ -257,11 +257,6 @@ export default function ForYouListingsPage() {
                   })}
                 </div>
               </div>
-              
-              {/* Separator line */}
-              <div className="px-4">
-                <div style={{ height: '1px', background: '#E5E7EB' }} />
-              </div>
           </div>
 
           {/* Bottom Sheet - Draggable Listings Container - Always from bottom */}
