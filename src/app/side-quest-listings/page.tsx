@@ -209,12 +209,12 @@ export default function SideQuestListingsPage() {
           <div className="absolute left-0 right-0 z-20" style={{ 
             top: '122px', // 110px (action buttons) + 12px gap (matches spacing below)
             height: '91px', // Filter (43px) + 12px gap + Categories (36px) - stops before margin
-            pointerEvents: 'auto',
+            pointerEvents: 'none', // Let clicks pass through transparent area
             background: 'transparent',
             overflow: 'visible' // Allow shadows to show
           }}>
               {/* Filter Card - Same height as Explore */}
-              <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
+              <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px', pointerEvents: 'auto' }}>
                 <div 
                   className="rounded-2xl px-4 py-2.5 transition-all duration-200 w-full"
                   style={{
@@ -235,7 +235,7 @@ export default function SideQuestListingsPage() {
             </div>
 
               {/* Category Filter Cards with black border selection */}
-              <div className="mb-3 px-4">
+              <div className="mb-3 px-4" style={{ pointerEvents: 'auto' }}>
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide">
                   {categories.map((cat) => {
                     const isSelected = selectedSubcategory === cat.title;
@@ -266,8 +266,9 @@ export default function SideQuestListingsPage() {
             className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hide"
             style={{
               top: '0', // Start from top so it scrolls behind entire transparent section
-              zIndex: 1, // Behind everything
-              paddingTop: '225px' // Push content down below filter/categories
+              zIndex: 10, // Above map (z-5), below top components (z-20)
+              paddingTop: '225px', // Push content down below filter/categories
+              pointerEvents: 'auto' // Make scrollable and clickable
             }}
           >
             {/* Bottom Sheet Card - Entire card moves with scroll */}
