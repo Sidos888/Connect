@@ -261,19 +261,20 @@ export default function SideQuestListingsPage() {
               </div>
           </div>
 
-          {/* Scrollable Container - Entire card scrolls up */}
+          {/* Scrollable Container - Entire card scrolls up behind top section */}
           <div 
             className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hide"
             style={{
-              top: '225px', // Start below filter/categories (122px + 91px + 12px gap)
-              zIndex: 10
+              top: '0', // Start from top so it scrolls behind entire transparent section
+              zIndex: 1, // Behind everything
+              paddingTop: '225px' // Push content down below filter/categories
             }}
           >
             {/* Bottom Sheet Card - Entire card moves with scroll */}
             <div 
               className="bg-white"
               style={{
-                minHeight: '100%',
+                minHeight: 'calc(100vh - 225px)', // Fill remaining space
                 borderTopLeftRadius: '16px',
                 borderTopRightRadius: '16px',
                 borderWidth: '0.4px',
