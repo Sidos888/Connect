@@ -160,67 +160,25 @@ export default function ForYouListingsPage() {
             />
           </div>
 
-          {/* Blur layers - Below PageHeader, affects only scrolling content */}
-          <div className="absolute left-0 right-0 z-20" style={{ top: '90px', height: '155px', pointerEvents: 'none' }}>
-            {/* Opacity gradient - gentle at bottom, full at top, with seamless top blend */}
-            <div className="absolute inset-0" style={{ 
-              background: 'linear-gradient(to top, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.4) 80%, rgba(255,255,255,0.5) 95%, rgba(255,255,255,0) 100%)',
-            }} />
-            
-            {/* 5-layer blur system - gradual increase from bottom to top */}
-            {/* Layer 1: Very gentle blur at bottom (0.1px) */}
-            <div className="absolute left-0 right-0" style={{ 
-              bottom: '0px',
-              height: '31px',
-              backdropFilter: 'blur(0.1px)',
-              WebkitBackdropFilter: 'blur(0.1px)'
-            }} />
-            
-            {/* Layer 2: Light blur (0.25px) */}
-            <div className="absolute left-0 right-0" style={{ 
-              bottom: '31px',
-              height: '31px',
-              backdropFilter: 'blur(0.25px)',
-              WebkitBackdropFilter: 'blur(0.25px)'
-            }} />
-            
-            {/* Layer 3: Medium blur (0.5px) */}
-            <div className="absolute left-0 right-0" style={{ 
-              bottom: '62px',
-              height: '31px',
-              backdropFilter: 'blur(0.5px)',
-              WebkitBackdropFilter: 'blur(0.5px)'
-            }} />
-            
-            {/* Layer 4: Strong blur (0.75px) */}
-            <div className="absolute left-0 right-0" style={{ 
-              bottom: '93px',
-              height: '31px',
-              backdropFilter: 'blur(0.75px)',
-              WebkitBackdropFilter: 'blur(0.75px)'
-            }} />
-            
-            {/* Layer 5: Full frosting at top (1px) with gentle blend edge */}
-            <div className="absolute left-0 right-0" style={{ 
-              top: '0px',
-              height: '31px',
-              backdropFilter: 'blur(0.75px)',
-              WebkitBackdropFilter: 'blur(0.75px)'
-            }} />
-          </div>
 
           {/* Fixed Filter & Category Header - Aligned with bottom of action buttons */}
-          <div className="absolute left-0 right-0 z-30" style={{ top: '110px', pointerEvents: 'auto' }}>
+          <div className="absolute left-0 right-0 z-30" style={{ 
+            top: '110px',
+            pointerEvents: 'auto',
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            paddingBottom: '12px'
+          }}>
               {/* Filter Card - Same height as Explore */}
               <div className="mb-3" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
                 <div 
                   className="rounded-2xl px-4 py-2.5 transition-all duration-200 w-full"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.9)',
+                    background: 'white',
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    backdropFilter: 'blur(10px)'
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                   }}
                 >
                 <div className="flex items-center justify-between">
@@ -245,7 +203,7 @@ export default function ForYouListingsPage() {
                         className="flex-shrink-0 rounded-xl px-3 py-2 transition-all duration-200 flex items-center gap-2"
                         style={{
                           minHeight: '36px',
-                          background: 'rgba(255, 255, 255, 0.9)',
+                          background: 'white',
                           borderWidth: isSelected ? '2px' : '0.4px',
                           borderColor: isSelected ? '#000000' : '#E5E7EB',
                           boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
