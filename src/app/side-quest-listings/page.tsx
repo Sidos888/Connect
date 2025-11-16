@@ -7,7 +7,7 @@ import { MobilePage } from "@/components/layout/PageSystem";
 
 export default function SideQuestListingsPage() {
   const router = useRouter();
-  const [selectedSubcategory, setSelectedSubcategory] = useState('Trending Near You');
+  const [selectedSubcategory, setSelectedSubcategory] = useState('New');
   const [showMap, setShowMap] = useState(false);
   const [sheetState, setSheetState] = useState<'list' | 'peek'>('list');
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -15,34 +15,111 @@ export default function SideQuestListingsPage() {
   const [scrollTop, setScrollTop] = useState(0);
   const [listingsTouchStart, setListingsTouchStart] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
+  const [listStartOffset, setListStartOffset] = useState<number>(253); // fallback to current static value
+
+  // Disable mobile access temporarily by redirecting away
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      router.push('/explore');
+    }
+  }, [router]);
 
   const subcategories = [
-    { title: "Trending Near You", icon: "🔥" },
-    { title: "This Weekend", icon: "📅" },
-    { title: "Because You Liked", icon: "🎯" },
-    { title: "Hidden Gems", icon: "💎" },
-    { title: "New This Week", icon: "✨" },
-    { title: "Side Quests", icon: "🎲" },
+    { title: "New", icon: "🔥" },
+    { title: "Recommended", icon: "✨" },
+    { title: "Following", icon: "👀" },
+    { title: "Friends Pick", icon: "👫" },
+    { title: "This Week", icon: "📅" },
+    { title: "Nearby", icon: "🎯" },
   ];
 
-  const fakeListings = [
-    { title: "Sunday Markets at the Bay", date: "Nov 10, 10:00 AM", image: "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=400&h=400&fit=crop" },
-    { title: "Sunrise Hike & Coffee", date: "Nov 11, 6:30 AM", image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=400&fit=crop" },
-    { title: "Live Jazz Night", date: "Nov 12, 8:00 PM", image: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop" },
-    { title: "Wine Tasting Tour", date: "Nov 13, 2:00 PM", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=400&fit=crop" },
-    { title: "Beach Volleyball Pickup", date: "Nov 14, 4:00 PM", image: "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400&h=400&fit=crop" },
-    { title: "Food Truck Friday", date: "Nov 15, 6:00 PM", image: "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=400&h=400&fit=crop" },
-    { title: "Yoga in the Park", date: "Nov 16, 7:00 AM", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop" },
-    { title: "Art Gallery Opening", date: "Nov 17, 6:00 PM", image: "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=400&h=400&fit=crop" },
-    { title: "Cooking Class: Italian", date: "Nov 18, 5:00 PM", image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=400&h=400&fit=crop" },
-    { title: "Comedy Show Night", date: "Nov 19, 9:00 PM", image: "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400&h=400&fit=crop" },
-    { title: "Morning Cycling Group", date: "Nov 20, 7:00 AM", image: "https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=400&h=400&fit=crop" },
-    { title: "Vintage Market Pop-Up", date: "Nov 21, 11:00 AM", image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop" },
-    { title: "Sunset Boat Cruise", date: "Nov 22, 5:30 PM", image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=400&fit=crop" },
-    { title: "Photography Walk", date: "Nov 23, 3:00 PM", image: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=400&h=400&fit=crop" },
-    { title: "Book Club Meetup", date: "Nov 24, 2:00 PM", image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=400&fit=crop" },
-    { title: "Pottery Workshop", date: "Nov 25, 10:00 AM", image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400&h=400&fit=crop" },
-  ];
+  // Simple per-subcategory datasets so each tab shows different items
+  const listingsBySubcategory: Record<string, { title: string; date: string; image: string }[]> = {
+    "Trending Near You": [
+      { title: "Sunday Markets at the Bay", date: "Nov 10, 10:00 AM", image: "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=400&h=400&fit=crop" },
+      { title: "Sunrise Hike & Coffee", date: "Nov 11, 6:30 AM", image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=400&fit=crop" },
+      { title: "Live Jazz Night", date: "Nov 12, 8:00 PM", image: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop" },
+      { title: "Wine Tasting Tour", date: "Nov 13, 2:00 PM", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=400&fit=crop" },
+      { title: "Food Truck Friday", date: "Nov 15, 6:00 PM", image: "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=400&h=400&fit=crop" },
+      { title: "Yoga in the Park", date: "Nov 16, 7:00 AM", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop" },
+      { title: "Art Gallery Opening", date: "Nov 17, 6:00 PM", image: "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=400&h=400&fit=crop" },
+      { title: "Comedy Show Night", date: "Nov 19, 9:00 PM", image: "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400&h=400&fit=crop" },
+    ],
+    "This Weekend": [
+      { title: "Saturday Surf Meetup", date: "Sat 8:00 AM", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop" },
+      { title: "Rooftop Cinema", date: "Sat 7:30 PM", image: "https://images.unsplash.com/photo-1581905764498-c1b9b839fcee?w=400&h=400&fit=crop" },
+      { title: "Farmers Market Trail", date: "Sun 10:00 AM", image: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400&h=400&fit=crop" },
+      { title: "Trail Run & Brunch", date: "Sun 7:00 AM", image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=400&fit=crop" },
+      { title: "Open-air Salsa", date: "Sat 6:00 PM", image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop" },
+      { title: "Night Market Lights", date: "Sat 9:00 PM", image: "https://images.unsplash.com/photo-1472396961693-142e6e269027?w=400&h=400&fit=crop" },
+      { title: "Sunset Kayak", date: "Sun 5:00 PM", image: "https://images.unsplash.com/photo-1505852679233-d9fd70aff56d?w=400&h=400&fit=crop" },
+      { title: "Local Makers Fair", date: "Sun 1:00 PM", image: "https://images.unsplash.com/photo-1511918984145-48de785d4c4f?w=400&h=400&fit=crop" },
+    ],
+    "Because You Liked": [
+      { title: "Indie Coffee Crawl", date: "Wed 9:00 AM", image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop" },
+      { title: "Vinyl Swap Meet", date: "Fri 6:00 PM", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" },
+      { title: "Street Art Walk", date: "Thu 5:30 PM", image: "https://images.unsplash.com/photo-1508182311256-e3f9f8b02e28?w=400&h=400&fit=crop" },
+      { title: "Night Photography 101", date: "Fri 8:00 PM", image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=400&fit=crop" },
+      { title: "Craft Beer Tasting", date: "Sat 4:00 PM", image: "https://images.unsplash.com/photo-1518882577039-1127f0d26b67?w=400&h=400&fit=crop" },
+      { title: "Retro Arcade Night", date: "Thu 7:00 PM", image: "https://images.unsplash.com/photo-1522241112606-46ac1e4b7c04?w=400&h=400&fit=crop" },
+      { title: "Handmade Pasta Lab", date: "Sun 11:00 AM", image: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=400&h=400&fit=crop" },
+      { title: "City Sunrise Shot", date: "Tue 6:00 AM", image: "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400&h=400&fit=crop" },
+    ],
+    "Hidden Gems": [
+      { title: "Secret Garden Picnic", date: "Sat 1:00 PM", image: "https://images.unsplash.com/photo-1463595373836-6e0b0a8ee322?w=400&h=400&fit=crop" },
+      { title: "Underground Jazz Cellar", date: "Fri 9:00 PM", image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop" },
+      { title: "Riverside Flea Finds", date: "Sun 9:00 AM", image: "https://images.unsplash.com/photo-1490049657812-0a993a97d600?w=400&h=400&fit=crop" },
+      { title: "Courtyard Cinema", date: "Thu 8:00 PM", image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=400&fit=crop" },
+      { title: "Hidden Book Nook", date: "Daily 10–4", image: "https://images.unsplash.com/photo-1513185041617-8ab03f83d6c5?w=400&h=400&fit=crop" },
+      { title: "Laneway Dumplings", date: "Daily 11–9", image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=400&fit=crop" },
+      { title: "Micro-Roastery Tour", date: "Sat 10:00 AM", image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop" },
+      { title: "Rooftop Board Games", date: "Fri 7:30 PM", image: "https://images.unsplash.com/photo-1552793494-111afe03d0ca?w=400&h=400&fit=crop" },
+    ],
+    "New This Week": [
+      { title: "Vegan Pop-up Diner", date: "Opens Wed", image: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=400&fit=crop" },
+      { title: "Neon Mini Golf", date: "Opens Fri", image: "https://images.unsplash.com/photo-1533236897111-3e94666b2edf?w=400&h=400&fit=crop" },
+      { title: "Indie Film Premiere", date: "Thu 7:00 PM", image: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=400&h=400&fit=crop" },
+      { title: "Ceramics Pop Class", date: "Sun 2:00 PM", image: "https://images.unsplash.com/photo-1523419409543-711f6c0d4b1d?w=400&h=400&fit=crop" },
+      { title: "VR Arcade Launch", date: "Sat 11:00 AM", image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=400&fit=crop" },
+      { title: "Live Rooftop Poetry", date: "Fri 8:00 PM", image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=400&fit=crop" },
+      { title: "Sunrise Yoga Rooftop", date: "Thu 6:00 AM", image: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&h=400&fit=crop" },
+      { title: "Street Food Alley", date: "Sat 5:00 PM", image: "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?w=400&h=400&fit=crop" },
+    ],
+    "Side Quests": [
+      { title: "Mystery Escape Hunt", date: "Daily 10–8", image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop" },
+      { title: "Geocache Challenge", date: "Anytime", image: "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400&h=400&fit=crop" },
+      { title: "Urban Orienteering", date: "Sat 9:00 AM", image: "https://images.unsplash.com/photo-1519452575417-564c1401ecc0?w=400&h=400&fit=crop" },
+      { title: "Hidden Murals Quest", date: "Sun 3:00 PM", image: "https://images.unsplash.com/photo-1481260870904-4258a3b93bea?w=400&h=400&fit=crop" },
+      { title: "Puzzle Pub Crawl", date: "Fri 7:00 PM", image: "https://images.unsplash.com/photo-1481833761820-0509d3217039?w=400&h=400&fit=crop" },
+      { title: "City Story Bingo", date: "Anytime", image: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&h=400&fit=crop" },
+      { title: "Sunset Stair Sprint", date: "Thu 6:30 PM", image: "https://images.unsplash.com/photo-1520975922284-9d66f51fc2c7?w=400&h=400&fit=crop" },
+      { title: "Bridge Climb Mini", date: "By booking", image: "https://images.unsplash.com/photo-1491884662610-dfcd28f30cf5?w=400&h=400&fit=crop" },
+    ],
+  };
+  // Compact dataset used for Side Quest chips (8 items dispersed over 6 tabs)
+  const listingsBySubcategoryNew: Record<string, { title: string; date: string; image: string }[]> = {
+    "New": [
+      { title: "Sunday Markets at the Bay", date: "Nov 10, 10:00 AM", image: "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=400&h=400&fit=crop" },
+      { title: "Sunrise Hike & Coffee", date: "Nov 11, 6:30 AM", image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=400&fit=crop" },
+    ],
+    "Recommended": [
+      { title: "Live Jazz Night", date: "Nov 12, 8:00 PM", image: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop" },
+    ],
+    "Following": [
+      { title: "Wine Tasting Tour", date: "Nov 13, 2:00 PM", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=400&fit=crop" },
+    ],
+    "Friends Pick": [
+      { title: "Food Truck Friday", date: "Nov 15, 6:00 PM", image: "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=400&h=400&fit=crop" },
+      { title: "Yoga in the Park", date: "Nov 16, 7:00 AM", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop" },
+    ],
+    "This Week": [
+      { title: "Art Gallery Opening", date: "Nov 17, 6:00 PM", image: "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=400&h=400&fit=crop" },
+    ],
+    "Nearby": [
+      { title: "Comedy Show Night", date: "Nov 19, 9:00 PM", image: "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400&h=400&fit=crop" },
+    ],
+  };
 
   const categories = [
     { title: "New", icon: "🔥" },
@@ -99,6 +176,28 @@ export default function SideQuestListingsPage() {
         return `${vh - 237}px`;
     }
   };
+
+  // Dynamically measure the bottom of the subcategory section and set list start offset
+  useEffect(() => {
+    const measure = () => {
+      if (typeof window === 'undefined') return;
+      const gapBelowCategories = 40; // keep current visual gap
+      const rect = categoriesRef.current?.getBoundingClientRect();
+      if (rect && Number.isFinite(rect.bottom)) {
+        // rect.bottom is relative to viewport top (0). Use it directly.
+        const next = Math.round(rect.bottom + gapBelowCategories);
+        if (next !== listStartOffset) setListStartOffset(next);
+      }
+    };
+    // Measure after mount and on resize/orientation
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('orientationchange', measure as EventListener);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('orientationchange', measure as EventListener);
+    };
+  }, [listStartOffset]);
 
   // Touch handlers for drag
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -257,6 +356,20 @@ export default function SideQuestListingsPage() {
             </div>
           </div>
 
+          {/* O/B Overlay behind top component (listings remain visible but quieter) */}
+          <div className="absolute top-0 left-0 right-0 z-15 pointer-events-none" style={{ height: '214px' as any }}>
+            {/* Opacity gradient */}
+            <div className="absolute top-0 left-0 right-0" style={{
+              height: '214px',
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.5) 60px, rgba(255,255,255,0.35) 120px, rgba(255,255,255,0.15) 180px, rgba(255,255,255,0) 214px)'
+            }} />
+            {/* Blur layers */}
+            <div className="absolute top-0 left-0 right-0" style={{ height: '60px', backdropFilter: 'blur(1px)', WebkitBackdropFilter: 'blur(1px)' }} />
+            <div className="absolute left-0 right-0" style={{ top: '60px', height: '40px', backdropFilter: 'blur(0.75px)', WebkitBackdropFilter: 'blur(0.75px)' }} />
+            <div className="absolute left-0 right-0" style={{ top: '100px', height: '40px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+            <div className="absolute left-0 right-0" style={{ top: '140px', height: '40px', backdropFilter: 'blur(0.35px)', WebkitBackdropFilter: 'blur(0.35px)' }} />
+          </div>
+
           {/* Map Background - Visible behind entire transparent top component in peek state */}
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
@@ -303,9 +416,11 @@ export default function SideQuestListingsPage() {
               </div>
             </div>
 
-              {/* Category Filter Cards with black border selection */}
-              <div style={{ paddingLeft: '16px', paddingRight: '16px', marginBottom: '12px', pointerEvents: 'auto' }}>
+              {/* Category Filter Cards with black border selection - edge-to-edge (no horizontal padding) */}
+              <div ref={categoriesRef} style={{ paddingLeft: '0', paddingRight: '0', marginBottom: '12px', pointerEvents: 'auto' }}>
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                  {/* Left spacer so resting position aligns with normal page padding (gap-3 = 12px, spacer = 4px → 16px total) */}
+                  <div style={{ width: '4px', flexShrink: 0 }} />
                   {categories.map((cat) => {
                     const isSelected = selectedSubcategory === cat.title;
                     return (
@@ -326,6 +441,8 @@ export default function SideQuestListingsPage() {
                       </button>
                     );
                   })}
+                  {/* Right spacer to match left (gap-3 = 12px, spacer = 4px → 16px total) */}
+                  <div style={{ width: '4px', flexShrink: 0 }} />
                 </div>
               </div>
           </div>
@@ -353,7 +470,7 @@ export default function SideQuestListingsPage() {
               overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
               WebkitOverflowScrolling: 'touch', // Smooth iOS scrolling
               overscrollBehavior: 'contain', // Prevent scroll chaining and lock at boundaries
-              paddingTop: sheetState === 'list' ? '233px' : '0', // 122px (filter start) + 43px (filter) + 12px (gap) + 36px (categories) + 20px (final gap) = 233px
+              paddingTop: sheetState === 'list' ? `${listStartOffset}px` : '0',
               // Smooth transitions - but paddingTop is instant to prevent glitch
               transition: 'height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1), border-radius 400ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}
@@ -400,19 +517,18 @@ export default function SideQuestListingsPage() {
                 overflow: 'hidden'
               }}
             >
-              <p className="text-sm font-semibold text-gray-900">{fakeListings.length} Listings</p>
+              <p className="text-sm font-semibold text-gray-900">{(listingsBySubcategoryNew[selectedSubcategory] ?? []).length} Listings</p>
             </div>
             
             {/* Listings Grid - px-4 padding on sides */}
             <div className="px-4 pb-8 flex-shrink-0" style={{
               paddingTop: '0', // No extra padding - 12px gap already in container's 225px
-              background: sheetState === 'list' 
-                ? 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 20px, white 60px)' 
-                : 'transparent', // Gradient fade in list mode, transparent in peek
+              // Disable fade to ensure nothing clips subcategory card borders
+              background: 'transparent',
               transition: 'background 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}>
                 <div className="grid grid-cols-2 gap-3">
-                  {fakeListings.map((listing, i) => (
+                  {(listingsBySubcategoryNew[selectedSubcategory] ?? []).map((listing, i) => (
                     <div key={i} className="flex flex-col gap-1.5">
                       {/* Card Image */}
                       <div
@@ -630,7 +746,7 @@ export default function SideQuestListingsPage() {
                 paddingRight: '0'
               }}
             >
-            {fakeListings.map((listing, i) => (
+            {(listingsBySubcategoryNew[selectedSubcategory] ?? []).map((listing, i) => (
               <div key={i} className="flex flex-col gap-1.5">
                 {/* Card Image */}
                 <div
@@ -695,4 +811,3 @@ export default function SideQuestListingsPage() {
     </>
   );
 }
-

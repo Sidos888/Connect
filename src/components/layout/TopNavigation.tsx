@@ -28,6 +28,7 @@ export default function TopNavigation() {
       icon: context.type === "business" ? Building : Calendar 
     },
     { href: "/chat", label: "Chat", icon: MessageCircle },
+    { href: "/menu-blank", label: "Menu", icon: Menu },
   ];
 
   const isActive = (href: string) => {

@@ -94,20 +94,58 @@ export default function MyLifeLayout(): JSX.Element {
             />
           </div>
 
-          {/* Clean list items with icons (match Menu card rows) */}
-          <nav className="flex-1 overflow-hidden p-4 space-y-2">
-            {TABS.filter(t => t.id !== "profile").map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                className={`w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02] ${
-                  active === id ? "bg-neutral-50" : "bg-transparent"
-                }`}
-              >
-                {Icon ? <Icon size={20} className="text-gray-900 transition-all duration-200" /> : null}
-                <span className="font-medium text-base transition-all duration-200">{label}</span>
-              </button>
-            ))}
+          {/* Sidebar options styled like For You sidebar cards */}
+          <nav className="flex-1 overflow-hidden p-4 space-y-3">
+            {TABS.filter(t => t.id !== "profile").map(({ id, label, Icon }) => {
+              const isActive = active === id;
+              return (
+                <div key={id} className="relative">
+                  <button
+                    onClick={() => setTab(id)}
+                    className="w-full rounded-xl bg-white flex items-center gap-3 px-4 py-4 transition-all duration-200 focus:outline-none group text-left"
+                    style={{
+                      minHeight: '72px',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: isActive
+                        ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = isActive
+                        ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    {Icon ? <Icon size={20} className="text-gray-900 leading-none" /> : null}
+                    <span className="text-gray-900 font-semibold" style={{ fontSize: '16px' }}>
+                      {label}
+                    </span>
+                  </button>
+                  {isActive && (
+                    <div 
+                      className="absolute bg-gray-900"
+                      style={{ 
+                        right: '-16px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: '3px',
+                        height: '60%',
+                        borderTopLeftRadius: '2px',
+                        borderBottomLeftRadius: '2px'
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </nav>
         </div>
 

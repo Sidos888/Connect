@@ -193,14 +193,15 @@ export default function ExplorePage() {
               </button>
 
               <button
-                onClick={() => router.push('/side-quest-listings')}
+              aria-disabled={true}
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
                 style={{
                   minHeight: '100px',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow',
+                pointerEvents: 'none', // temporarily non-clickable on mobile
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -607,6 +608,7 @@ export default function ExplorePage() {
               </button>
 
               <button
+                aria-disabled={true}
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative aspect-square"
                 style={{
                   borderWidth: '0.4px',
@@ -626,6 +628,7 @@ export default function ExplorePage() {
                   <span className="text-lg font-semibold text-neutral-900">Side Quest</span>
                 </div>
               </button>
+
         </div>
 
             {/* Category Navigation Tabs */}
