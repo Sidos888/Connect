@@ -19,7 +19,13 @@ export interface MobilePageProps {
  */
 export default function MobilePage({ children }: MobilePageProps) {
   return (
-    <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col">
+    <div 
+      className="fixed inset-0 z-[60] h-screen bg-white flex flex-col"
+      style={{
+        overflowX: 'hidden',
+        overflowY: 'hidden',
+      }}
+    >
       {children}
     </div>
   );

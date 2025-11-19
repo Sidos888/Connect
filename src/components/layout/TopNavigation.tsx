@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Calendar, MessageCircle, Building, Menu } from "lucide-react";
+import { Search, Calendar, MessageCircle, Building, Menu, Bell } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useState, useEffect, useRef } from "react";
 import { useModal } from "@/lib/modalContext";
+import Avatar from "@/components/Avatar";
 
 import ProfileMenu from "@/components/menu/ProfileMenu";
 
@@ -18,7 +19,9 @@ export default function TopNavigation() {
   const { user } = useAuth();
   const { showLogin } = useModal();
   const [authOpen, setAuthOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   const navigationItems = [
     { href: "/explore", label: "Explore", icon: Search },
@@ -38,11 +41,14 @@ export default function TopNavigation() {
     return pathname === href || (href !== "/" && pathname.startsWith(href));
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setAuthOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationOpen(false);
       }
     };
 
@@ -160,6 +166,54 @@ export default function TopNavigation() {
           <div className="flex items-center gap-2 absolute right-0">
             {user ? (
               <>
+                {/* Notification Bell Button */}
+                <div className="relative" ref={notificationRef}>
+                  <button
+                    onClick={() => setNotificationOpen(!notificationOpen)}
+                    className="flex items-center justify-center rounded-full bg-white transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderWidth: '0.4px',
+                      borderColor: notificationOpen ? '#D1D5DB' : '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: notificationOpen 
+                        ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                        : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!notificationOpen) {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!notificationOpen) {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }
+                    }}
+                  >
+                    <Bell size={20} className="text-gray-900" />
+                  </button>
+
+                  {/* Notification Dropdown */}
+                  {notificationOpen && (
+                    <div className="absolute right-0 z-50 mt-2 w-[280px] h-[512px] rounded-xl bg-white p-5"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      }}>
+                      <div className="space-y-4">
+                        {/* Title */}
+                        <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+                        {/* Rest of card is blank */}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Profile Menu */}
                 <ProfileMenu />
               </>

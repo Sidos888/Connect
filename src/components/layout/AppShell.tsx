@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { useModal } from "@/lib/modalContext";
 import { useAppStore } from "@/lib/store";
@@ -15,8 +16,9 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-export default function AppShell({ children }: AppShellProps) {
+function AppShellContent({ children }: AppShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   const { isAnyModalOpen } = useModal();
   const { isHydrated } = useAppStore();
@@ -32,11 +34,7 @@ export default function AppShell({ children }: AppShellProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Show loading screen on mobile during initial load
-  if (isMobile && (loading || !isHydrated)) {
-    return <LoadingScreen />;
-  }
-
+  // Calculate all route flags BEFORE any conditional returns
   const isChatPage = pathname.startsWith('/chat');
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
   const isMyLifePage = pathname.startsWith('/my-life');
@@ -52,6 +50,34 @@ export default function AppShell({ children }: AppShellProps) {
   const isMenuPage = pathname === '/menu';
   const isOnboardingPage = pathname === '/onboarding';
   const isTimelinePage = pathname.startsWith('/timeline');
+  const isCreateListingPage = pathname === '/my-life/create' || pathname === '/my-life/create/' || pathname.startsWith('/my-life/create/');
+  // Handle listing detail page - check pathname (with/without trailing slash) and search params
+  // Route is /my-life/listing?id=xxx (query param route)
+  const normalizedListingPath = pathname.replace(/\/$/, ''); // Remove trailing slash for comparison
+  const hasListingId = searchParams?.get('id') !== null;
+  const isListingDetailPage = 
+    normalizedListingPath === '/my-life/listing' && hasListingId;
+  const isListingsPage = pathname.startsWith('/casual-listings') || pathname.startsWith('/for-you-listings') || pathname.startsWith('/side-quest-listings');
+  
+  // Debug: Log pathname for listing pages to verify detection
+  // IMPORTANT: This useEffect must run on every render, even if we return early
+  React.useEffect(() => {
+    if (normalizedListingPath === '/my-life/listing') {
+      console.log('AppShell: Listing page check', { 
+        pathname, 
+        normalizedListingPath,
+        hasListingId,
+        listingId: searchParams?.get('id'),
+        isListingDetailPage 
+      });
+    }
+  }, [pathname, normalizedListingPath, hasListingId, isListingDetailPage, searchParams]);
+
+  // Show loading screen on mobile during initial load
+  // This conditional return is AFTER all hooks to ensure hooks are always called in the same order
+  if (isMobile && (loading || !isHydrated)) {
+    return <LoadingScreen />;
+  }
   
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test'];
@@ -97,7 +123,7 @@ export default function AppShell({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -148,7 +174,7 @@ export default function AppShell({ children }: AppShellProps) {
       </div>
       
       {/* Mobile: Top Navigation Bar - Not needed for pages with own PageHeader */}
-      {!isSettingsPage && !isMyLifePage && !isMenuPage && (
+      {!isSettingsPage && !isMyLifePage && !isMenuPage && !isListingsPage && (
         <div className="lg:hidden">
           <MobileTopNavigation />
         </div>
@@ -162,11 +188,23 @@ export default function AppShell({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>
       )}
     </div>
+  );
+}
+
+export default function AppShell({ children }: AppShellProps) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <AppShellContent>{children}</AppShellContent>
+    </Suspense>
   );
 }

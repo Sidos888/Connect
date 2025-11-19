@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Map, X, Search } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import { listingsService, Listing } from "@/lib/listingsService";
+import { useQuery } from "@tanstack/react-query";
+import ListingCard from "@/components/listings/ListingCard";
 
 export default function ForYouListingsPage() {
   const router = useRouter();
@@ -32,28 +35,26 @@ export default function ForYouListingsPage() {
     { title: "Nearby", icon: "🎯" },
   ];
 
-  // Listings datasets dispersed across subcategories (compact set)
-  const listingsBySubcategory: Record<string, { title: string; date: string; image: string }[]> = {
-    "New": [
-      { title: "Sunday Markets at the Bay", date: "Nov 10, 10:00 AM", image: "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=400&h=400&fit=crop" },
-      { title: "Sunrise Hike & Coffee", date: "Nov 11, 6:30 AM", image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=400&fit=crop" },
-    ],
-    "Recommended": [
-      { title: "Live Jazz Night", date: "Nov 12, 8:00 PM", image: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop" },
-    ],
-    "Following": [
-      { title: "Wine Tasting Tour", date: "Nov 13, 2:00 PM", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=400&fit=crop" },
-    ],
-    "Friends Pick": [
-      { title: "Food Truck Friday", date: "Nov 15, 6:00 PM", image: "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=400&h=400&fit=crop" },
-      { title: "Yoga in the Park", date: "Nov 16, 7:00 AM", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop" },
-    ],
-    "This Week": [
-      { title: "Art Gallery Opening", date: "Nov 17, 6:00 PM", image: "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=400&h=400&fit=crop" },
-    ],
-    "Nearby": [
-      { title: "Comedy Show Night", date: "Nov 19, 9:00 PM", image: "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400&h=400&fit=crop" },
-    ],
+  // Fetch real listings from database
+  const { data: listingsData, isLoading: listingsLoading } = useQuery({
+    queryKey: ['public-listings'],
+    queryFn: async () => {
+      return await listingsService.getPublicListings(50);
+    },
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  const allListings = listingsData?.listings || [];
+
+  // For now, show all listings under "New" category
+  // TODO: Implement filtering by subcategory (Recommended, Following, etc.)
+  const listingsBySubcategory: Record<string, Listing[]> = {
+    "New": allListings,
+    "Recommended": [],
+    "Following": [],
+    "Friends Pick": [],
+    "This Week": [],
+    "Nearby": [],
   };
 
   const categories = [
@@ -201,21 +202,6 @@ export default function ForYouListingsPage() {
                 <ArrowLeft size={18} className="text-gray-900" />
               </button>
               <h1 className="text-xl font-semibold text-gray-900">For You</h1>
-              <button
-                onClick={() => {/* Search */}}
-                className="absolute right-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                }}
-              >
-                <Search size={20} className="text-gray-900" />
-              </button>
             </div>
           </div>
 
@@ -256,25 +242,31 @@ export default function ForYouListingsPage() {
             overflow: 'visible'
           }}>
               {/* Filter Card */}
-              <div style={{ paddingLeft: '56px', paddingRight: '56px', marginBottom: '12px', pointerEvents: 'auto' }}>
+              <div style={{ paddingLeft: '56px', paddingRight: '56px', marginBottom: '24px', pointerEvents: 'auto' }}>
                 <div 
-                  className="rounded-2xl px-4 py-2.5 transition-all duration-200 w-full"
+                  className="rounded-2xl bg-white px-4 py-2.5 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer w-full"
                   style={{
-                    background: 'white',
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
                 >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">📍</span>
-                    <span className="text-base font-semibold text-neutral-900">Adelaide</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📍</span>
+                      <span className="text-base font-semibold text-neutral-900">Adelaide</span>
+                    </div>
+                    <span className="text-sm text-neutral-500">Anytime</span>
                   </div>
-                  <span className="text-sm text-neutral-500">Anytime</span>
                 </div>
               </div>
-            </div>
 
               {/* Category Filter Cards - edge-to-edge */}
               <div ref={categoriesRef} style={{ paddingLeft: '0', paddingRight: '0', marginBottom: '12px', pointerEvents: 'auto' }}>
@@ -380,34 +372,26 @@ export default function ForYouListingsPage() {
               background: 'transparent',
               transition: 'background 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
             }}>
-                <div className="grid grid-cols-2 gap-3">
-                  {(listingsBySubcategory[selectedSubcategory] ?? []).map((listing, i) => (
-                    <div key={i} className="flex flex-col gap-1.5">
-                      <div
-                        className="rounded-xl bg-white transition-all duration-200 cursor-pointer overflow-hidden relative aspect-square"
-                        style={{
-                          borderWidth: '0.4px',
-                          borderColor: '#E5E7EB',
-                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                        }}
-                      >
-                        <img 
-                          src={listing.image}
-                          alt={listing.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <h3 className="text-sm font-semibold text-gray-900 leading-tight">
-                          {listing.title}
-                        </h3>
-                        <p className="text-xs text-gray-600 leading-tight">
-                          {listing.date}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {listingsLoading ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p className="text-sm">Loading listings...</p>
+                  </div>
+                ) : (listingsBySubcategory[selectedSubcategory] ?? []).length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {(listingsBySubcategory[selectedSubcategory] ?? []).map((listing) => (
+                      <ListingCard 
+                        key={listing.id}
+                        listing={listing}
+                        size="medium"
+                        showDate={true}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <p className="text-sm">No listings available</p>
+                  </div>
+                )}
             </div>
           </div>
         </MobilePage>
@@ -415,248 +399,186 @@ export default function ForYouListingsPage() {
 
       {/* Desktop Layout */}
     <div className="hidden lg:flex bg-white overflow-hidden" style={{ height: 'calc(100vh - 80px)' }}>
-      {/* Section 1: Left Sidebar - Matches My Life/Chat */}
-      <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col relative">
-        {/* Title Section with Back Button */}
-        <div className="p-6 relative" style={{ paddingTop: '28px' }}>
-          {/* Back Button - Top Left */}
-          <button
-            onClick={() => router.push('/explore')}
-            className="absolute left-6 top-6 w-10 h-10 rounded-full bg-white flex items-center justify-center hover:-translate-y-[1px] transition-all duration-200 focus:outline-none"
-            style={{
-              top: '28px',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-          >
-            <ArrowLeft size={18} className="text-gray-900" />
-          </button>
+      {/* Main Content - Slides left when map is open */}
+      <div 
+        className="overflow-y-auto transition-all duration-300 ease-in-out"
+        style={{
+          flex: showMap ? '0 0 calc(100% - 420px)' : '1 1 100%',
+          minWidth: 0,
+        }}
+      >
+        <div className="px-8" style={{ paddingTop: '32px', paddingBottom: '32px' }}>
+          {/* Title and Back Button Section */}
+          <div className="relative mb-20">
+            {/* Back Button - Top Left */}
+            <button
+              onClick={() => router.push('/explore')}
+              className="absolute left-0 top-0 w-10 h-10 rounded-full bg-white flex items-center justify-center hover:-translate-y-[1px] transition-all duration-200 focus:outline-none"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <ArrowLeft size={18} className="text-gray-900" />
+            </button>
 
-          {/* Centered Title */}
-          <h1 className="text-gray-900 text-center font-semibold" style={{ fontSize: '26px' }}>For You</h1>
-        </div>
-
-        {/* Subcategory List - Vertically Centered */}
-        <div className="flex-1 flex items-start justify-center px-4" style={{ marginTop: '64px' }}>
-          <div className="flex flex-col space-y-3 w-full">
-            {subcategories.map((subcat) => {
-            const isSelected = selectedSubcategory === subcat.title;
-            return (
-              <div key={subcat.title} className="relative">
-                <button
-                  onClick={() => setSelectedSubcategory(subcat.title)}
-                  className="w-full rounded-xl bg-white flex items-center gap-3 px-4 py-4 transition-all duration-200 focus:outline-none group"
-                  style={{
-                    minHeight: '72px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <div className="leading-none" style={{ fontSize: '20px' }}>
-                    {subcat.icon}
-                  </div>
-                  
-                  <span className="text-gray-900 font-semibold" style={{ fontSize: '16px' }}>
-                    {subcat.title}
-                  </span>
-                </button>
-                
-                {/* Selected indicator bar - vertical black line (touches sidebar edge) */}
-                {isSelected && (
-                  <div 
-                    className="absolute bg-gray-900"
-                    style={{ 
-                      right: '-16px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: '3px',
-                      height: '60%',
-                      borderTopLeftRadius: '2px',
-                      borderBottomLeftRadius: '2px'
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
+            {/* Title */}
+            <h1 className="text-3xl font-bold text-gray-900 text-center">For You</h1>
           </div>
-        </div>
-      </div>
 
-      {/* Section 2: Main Content (Scrollable) */}
-      <div className="flex-1 relative h-full" style={{ overflow: 'hidden' }}>
-        {/* Fixed Filter Bar with O/B Effect - Full frost at top, gradual from mid-filter down */}
-        <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
-          {/* Opacity gradient - Full at top, fades from 60px to 220px */}
-          <div className="absolute top-0 left-0 right-0" style={{
-            height: '220px',
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.5) 60px, rgba(255,255,255,0.35) 100px, rgba(255,255,255,0.2) 140px, rgba(255,255,255,0.1) 180px, rgba(255,255,255,0) 220px)'
-          }} />
-          {/* Full blur at top (0-60px) - maintains frosting */}
-          <div className="absolute top-0 left-0 right-0" style={{ height: '60px', backdropFilter: 'blur(1px)', WebkitBackdropFilter: 'blur(1px)' }} />
-          {/* Gradual blur layers from 60px to 220px */}
-          <div className="absolute left-0 right-0" style={{ top: '60px', height: '40px', backdropFilter: 'blur(0.75px)', WebkitBackdropFilter: 'blur(0.75px)' }} />
-          <div className="absolute left-0 right-0" style={{ top: '100px', height: '40px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
-          <div className="absolute left-0 right-0" style={{ top: '140px', height: '40px', backdropFilter: 'blur(0.25px)', WebkitBackdropFilter: 'blur(0.25px)' }} />
-          <div className="absolute left-0 right-0" style={{ top: '180px', height: '40px', backdropFilter: 'blur(0.1px)', WebkitBackdropFilter: 'blur(0.1px)' }} />
-        </div>
+          {/* Filter Card with Search and Map Buttons */}
+          <div className="mb-6 flex justify-center items-center gap-3">
+            {/* Search Button - Left */}
+            <button
+              onClick={() => {/* Search functionality coming soon */}}
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:-translate-y-[1px] transition-all duration-200 focus:outline-none flex-shrink-0"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <Search size={18} className="text-gray-900" />
+            </button>
 
-        {/* Filter Bar - Fixed Position */}
-        <div className="absolute top-0 left-0 right-0 z-30 px-8" style={{ paddingTop: '28px', paddingBottom: '12px', pointerEvents: 'none' }}>
-          <div className="flex items-center justify-center gap-3" style={{ maxWidth: showMap ? '580px' : '1020px', margin: '0 auto', pointerEvents: 'auto' }}>
-              {/* Search Button - Left */}
-              <button
-                onClick={() => {/* Search functionality coming soon */}}
-                className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:-translate-y-[1px] transition-all duration-200 focus:outline-none flex-shrink-0"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                <Search size={18} className="text-gray-900" />
-              </button>
-
-              {/* Filter Card - Center */}
-              <div 
-                className="rounded-2xl bg-white px-8 py-4 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer"
-                style={{
-                  minWidth: '400px',
-                  maxWidth: 'fit-content',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <span className="text-xl">📍</span>
-                    <span className="text-base font-semibold text-neutral-900">Adelaide</span>
-                  </div>
-                  <span className="text-base text-neutral-500">Anytime</span>
+            {/* Filter Card - Center */}
+            <div 
+              className="rounded-2xl bg-white px-8 py-4 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer"
+              style={{
+                minWidth: '400px',
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-xl">📍</span>
+                  <span className="text-base font-semibold text-neutral-900">Adelaide</span>
                 </div>
+                <span className="text-base text-neutral-500">Anytime</span>
               </div>
+            </div>
 
-              {/* Map Button - Right */}
-              <button
-                onClick={() => setShowMap(!showMap)}
-                className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:-translate-y-[1px] transition-all duration-200 focus:outline-none flex-shrink-0"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                {showMap ? <X size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
-              </button>
+            {/* Map Button - Right */}
+            <button
+              onClick={() => setShowMap(!showMap)}
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:-translate-y-[1px] transition-all duration-200 focus:outline-none flex-shrink-0"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              {showMap ? <X size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
+            </button>
+          </div>
+
+          {/* Subcategory Chips - Horizontal scrollable like mobile, centered */}
+          <div className="mb-20 flex justify-center">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide" style={{ maxWidth: 'fit-content' }}>
+              {subcategories.map((cat) => {
+                const isSelected = selectedSubcategory === cat.title;
+                return (
+                  <button
+                    key={cat.title}
+                    onClick={() => setSelectedSubcategory(cat.title)}
+                    className="flex-shrink-0 rounded-xl px-4 py-2.5 transition-all duration-200 flex items-center gap-2.5"
+                    style={{
+                      minHeight: '42px',
+                      background: 'white',
+                      borderWidth: isSelected ? '2px' : '0.4px',
+                      borderColor: isSelected ? '#000000' : '#E5E7EB',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    }}
+                  >
+                    <span className="text-base leading-none">{cat.icon}</span>
+                    <span className="text-sm font-semibold whitespace-nowrap">{cat.title}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-        {/* Scrollable Content */}
-        <div className="h-full overflow-y-auto scrollbar-hide px-8" style={{ paddingTop: '140px', paddingBottom: '32px' }}>
-            {/* Listing Cards Grid - center when fewer than 4 items */}
-            {(() => {
-              const items = listingsBySubcategory[selectedSubcategory] ?? [];
-              const desiredCols = showMap ? 2 : 4;
-              const cols = Math.min(desiredCols, Math.max(1, items.length));
-              const CARD = 213; // px
-              const GAP = 16;   // Tailwind gap-4
-              const computedMaxWidth = cols * CARD + (cols - 1) * GAP;
-              return (
-                <div
-                  className="grid gap-4"
-                  style={{
-                    gridTemplateColumns: `repeat(${cols}, ${CARD}px)`,
-                    maxWidth: `${computedMaxWidth}px`,
-                    margin: '0 auto',
-                    paddingLeft: '0',
-                    paddingRight: '0'
-                  }}
-                >
-                  {items.map((listing, i) => (
-              <div key={i} className="flex flex-col gap-1.5">
-                {/* Card Image */}
-                <div
-                  className="rounded-xl bg-white transition-all duration-200 hover:-translate-y-[1px] cursor-pointer overflow-hidden relative"
-                  style={{
-                    width: '213px',
-                    height: '213px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                >
-                  <img 
-                    src={listing.image}
-                    alt={listing.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                {/* Title and Date */}
-                <div className="flex flex-col gap-0.5">
-                  <h3 className="text-sm font-semibold text-gray-900 leading-tight">
-                    {listing.title}
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-tight">
-                    {listing.date}
-                  </p>
-                </div>
+          {/* Listing Cards Grid */}
+          {(() => {
+            const items = listingsBySubcategory[selectedSubcategory] ?? [];
+            const cols = Math.min(4, Math.max(1, items.length));
+            const CARD = 213; // px
+            const GAP = 16;   // Tailwind gap-4
+            const computedMaxWidth = cols * CARD + (cols - 1) * GAP;
+            return (
+              <div
+                className="grid gap-4"
+                style={{
+                  gridTemplateColumns: `repeat(${cols}, ${CARD}px)`,
+                  maxWidth: `${computedMaxWidth}px`,
+                  margin: '0 auto',
+                }}
+              >
+                {listingsLoading ? (
+                  <div className="col-span-full text-center py-12 text-gray-500">
+                    <p className="text-sm">Loading listings...</p>
+                  </div>
+                ) : items.length > 0 ? (
+                  items.map((listing) => (
+                    <ListingCard 
+                      key={listing.id}
+                      listing={listing}
+                      size="medium"
+                      showDate={true}
+                      className="w-[213px]"
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-12 text-gray-500">
+                    <p className="text-sm">No listings available</p>
+                  </div>
+                )}
               </div>
-                  ))}
-                </div>
-              );
-            })()}
+            );
+          })()}
         </div>
       </div>
 
-      {/* Section 3: Map Panel - No title, map fills with equal padding */}
-      {showMap && (
-        <div className="w-[380px] xl:w-[420px] bg-white border-l border-gray-200 flex flex-col relative p-6">
-          {/* Map Content - Fills entire space with equal padding */}
+      {/* Map Panel - Slides in from right */}
+      <div
+        className="bg-white border-l border-gray-200 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0"
+        style={{
+          width: showMap ? '420px' : '0',
+          opacity: showMap ? 1 : 0,
+          pointerEvents: showMap ? 'auto' : 'none',
+          maxWidth: showMap ? '420px' : '0',
+        }}
+      >
+        <div className="h-full p-6">
+          {/* Map Content */}
           <div 
             className="w-full h-full rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden relative"
             style={{
@@ -672,7 +594,7 @@ export default function ForYouListingsPage() {
             />
           </div>
         </div>
-      )}
+      </div>
     </div>
     </>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, LucideIcon } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import ProfileDropdown from "@/components/profile/ProfileDropdown";
 
@@ -14,6 +14,8 @@ interface ProfileCardProps {
   onShareProfile?: () => void;
   avatarSize?: number;
   className?: string;
+  customActionIcon?: LucideIcon;
+  onCustomAction?: () => void;
 }
 
 export default function ProfileCard({
@@ -24,7 +26,9 @@ export default function ProfileCard({
   onEditProfile,
   onShareProfile,
   avatarSize = 40,
-  className = ""
+  className = "",
+  customActionIcon,
+  onCustomAction
 }: ProfileCardProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -84,18 +88,34 @@ export default function ProfileCard({
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsProfileMenuOpen((v) => !v);
-            }}
-            ref={profileMenuButtonRef}
-            className="flex items-center justify-center w-10 h-10"
-            aria-label="Open profile menu"
-            aria-expanded={isProfileMenuOpen}
-          >
-            <MoreVertical className="h-5 w-5 text-gray-900" />
-          </button>
+          {customActionIcon && onCustomAction ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCustomAction();
+              }}
+              className="flex items-center justify-center w-10 h-10"
+              aria-label="Share profile"
+            >
+              {(() => {
+                const Icon = customActionIcon;
+                return <Icon className="h-5 w-5 text-gray-900" />;
+              })()}
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsProfileMenuOpen((v) => !v);
+              }}
+              ref={profileMenuButtonRef}
+              className="flex items-center justify-center w-10 h-10"
+              aria-label="Open profile menu"
+              aria-expanded={isProfileMenuOpen}
+            >
+              <MoreVertical className="h-5 w-5 text-gray-900" />
+            </button>
+          )}
         </div>
       </div>
 

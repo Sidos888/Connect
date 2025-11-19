@@ -13,7 +13,9 @@ const config: CapacitorConfig = {
     }
   },
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    // Allow all routes to be handled by the app (prevents index.txt errors)
+    allowNavigation: ['*']
   }
 };
 

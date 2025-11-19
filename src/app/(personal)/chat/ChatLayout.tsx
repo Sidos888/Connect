@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
@@ -17,7 +17,7 @@ import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus } from "lucide-react";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
-const ChatLayout = () => {
+const ChatLayoutContent = () => {
   const { account, user } = useAuth();
   const chatService = useChatService();
   const { data: chats = [], isLoading, error, refetch } = useChats(chatService, user?.id || null);
@@ -491,6 +491,18 @@ const ChatLayout = () => {
       </div>
 
     </div>
+  );
+};
+
+const ChatLayout = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex h-full bg-white items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <ChatLayoutContent />
+    </Suspense>
   );
 };
 

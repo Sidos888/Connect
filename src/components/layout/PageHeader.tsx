@@ -11,6 +11,7 @@ export interface ActionButton {
 
 export interface PageHeaderProps {
   title: string;
+  subtitle?: ReactNode;  // Subtitle or additional content below title (centered)
   backButton?: boolean;
   backIcon?: 'arrow' | 'close';  // 'arrow' for mobile, 'close' (X) for web modals
   onBack?: () => void;
@@ -23,6 +24,7 @@ export interface PageHeaderProps {
 
 export default function PageHeader({
   title,
+  subtitle,
   backButton = false,
   backIcon = 'arrow',
   onBack,
@@ -130,22 +132,22 @@ export default function PageHeader({
             {leftSection}
           </div>
         ) : (
-          <div className="relative w-full flex items-center justify-center" style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
+          <div className="relative w-full" style={{ 
             width: '100%', 
-            height: '40px',
+            minHeight: subtitle ? '56px' : '40px',
             pointerEvents: 'auto'
           }}>
             {/* Left: Back Button or Custom Button */}
             {customBackButton ? (
-              customBackButton
-            ) : backButton ? (
+              <div style={{ position: 'absolute', left: 0, top: 0, height: '40px', display: 'flex', alignItems: 'center' }}>
+                {customBackButton}
+              </div>
+            ) : backButton && onBack ? (
               <button
                 onClick={onBack}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
+                  top: '0',
                   width: '40px',
                   height: '40px',
                   borderRadius: '100px',
@@ -176,27 +178,36 @@ export default function PageHeader({
               </button>
             ) : null}
             
-            {/* Center: Title */}
-            <h1 
-              className={`font-semibold text-gray-900 text-center ${className}`}
-              style={{ 
-                textAlign: 'center', 
-                width: '100%', 
-                display: 'block',
-                fontSize: isMobile ? '22px' : '20px',
-                lineHeight: isMobile ? '28px' : '24px'
-              }}
-            >
-              {title}
-            </h1>
+            {/* Center: Title and Subtitle */}
+            <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: subtitle ? '0' : '0', height: subtitle ? 'auto' : '40px', justifyContent: subtitle ? 'flex-start' : 'center' }}>
+              <h1 
+                className={`font-semibold text-gray-900 text-center ${className}`}
+                style={{ 
+                  textAlign: 'center', 
+                  fontSize: isMobile ? '22px' : '20px',
+                  lineHeight: isMobile ? '28px' : '24px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {title}
+              </h1>
+              {subtitle && (
+                <div style={{ marginTop: '4px' }}>
+                  {subtitle}
+                </div>
+              )}
+            </div>
             
             {/* Right: Action Buttons (max 2) or Custom Actions */}
             {customActions ? (
-              <div className="absolute right-0 flex items-center gap-3">
+              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
                 {customActions}
               </div>
             ) : actions.length > 0 ? (
-              <div className="absolute right-0 flex items-center gap-3">
+              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
                 {actions.slice(0, 2).map((action, index) => (
                   <button
                     key={index}

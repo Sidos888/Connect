@@ -1,6 +1,7 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import React, { useEffect } from "react";
 import Avatar from "@/components/Avatar";
 import { useAppStore } from "@/lib/store";
@@ -11,7 +12,7 @@ import Section from "@/components/my-life/Section";
 import Carousel from "@/components/my-life/Carousel";
 import MiniEventCard from "@/components/my-life/MiniEventCard";
 import StatTile from "@/components/my-life/StatTile";
-import { User, Plus, Hourglass, Target, RefreshCw, FileText, History as HistoryIcon, MoreVertical } from "lucide-react";
+import { User, Plus, Hourglass, Target, RefreshCw, FileText, History as HistoryIcon, MoreVertical, Calendar } from "lucide-react";
 import ProfileCard from "@/components/profile/ProfileCard";
 import EditProfileModal from "@/components/chat/EditProfileModal";
 import { ChevronLeftIcon } from "@/components/icons";
@@ -28,23 +29,26 @@ import { useAuth } from "@/lib/authContext";
 import ProfilePage from "@/components/profile/ProfilePage";
 import CenteredTimeline from "@/components/timeline/CenteredTimeline";
 import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
+import { listingsService, Listing } from "@/lib/listingsService";
+import { useQuery } from "@tanstack/react-query";
+import ListingCard from "@/components/listings/ListingCard";
 
 type TabDef = { id: string; label: string; Icon?: React.ComponentType<{ size?: number; className?: string }> };
 
 const TABS: Array<TabDef> = [
-  { id: "profile", label: "Profile", Icon: User },
-  { id: "create", label: "Create", Icon: Plus },
-  { id: "upcoming", label: "Upcoming", Icon: Hourglass },
-  { id: "hosting", label: "Hosting", Icon: Target },
-  { id: "ongoing", label: "Ongoing", Icon: RefreshCw },
-  { id: "drafts", label: "Drafts", Icon: FileText },
-  { id: "history", label: "History", Icon: HistoryIcon }
+  { id: "activities", label: "My Activities", Icon: Calendar }
 ];
 
-export default function MyLifeLayout(): JSX.Element {
+export default function MyLifeLayout(): React.JSX.Element {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const active = searchParams.get("tab") || "profile";
+  const active = searchParams.get("tab") || "activities";
+  
+  // Simple navigation helper that works in Capacitor
+  const navigate = (path: string) => {
+    if (typeof window !== 'undefined') {
+      window.location.href = path;
+    }
+  };
   const { personalProfile } = useAppStore();
   const modal = useModal(); // Use unified modal system
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
@@ -52,6 +56,76 @@ export default function MyLifeLayout(): JSX.Element {
   const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
   const [showProfileSwitcher, setShowProfileSwitcher] = React.useState(false);
   const { account, signOut, deleteAccount, user } = useAuth();
+
+  // Fetch listings data
+  const { data: upcomingData } = useQuery({
+    queryKey: ['listings', 'upcoming', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return { listings: [], error: null };
+      return await listingsService.getUpcomingListings(account.id);
+    },
+    enabled: !!account?.id,
+    staleTime: 30 * 1000,
+  });
+
+  const { data: hostingData } = useQuery({
+    queryKey: ['listings', 'hosting', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return { listings: [], error: null };
+      return await listingsService.getHostingListings(account.id);
+    },
+    enabled: !!account?.id,
+    staleTime: 30 * 1000,
+  });
+
+  const { data: historyData } = useQuery({
+    queryKey: ['listings', 'history', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return { listings: [], error: null };
+      return await listingsService.getHistoryListings(account.id);
+    },
+    enabled: !!account?.id,
+    staleTime: 30 * 1000,
+  });
+
+  const upcomingListings = upcomingData?.listings || [];
+  const hostingListings = hostingData?.listings || [];
+  const historyListings = historyData?.listings || [];
+
+  // Determine which pills to show based on content
+  const availablePills: Array<{ id: string; label: string }> = [];
+  if (upcomingListings.length > 0) availablePills.push({ id: 'upcoming', label: 'Upcoming' });
+  if (hostingListings.length > 0) availablePills.push({ id: 'hosting', label: 'Hosting' });
+  if (historyListings.length > 0) availablePills.push({ id: 'history', label: 'History' });
+
+  // Set default tab to first available pill, or 'upcoming' if none
+  const [mobileTab, setMobileTab] = React.useState<'upcoming' | 'hosting' | 'history'>('upcoming');
+
+  // Update tab when pills become available
+  useEffect(() => {
+    if (availablePills.length > 0) {
+      const currentTabExists = availablePills.find(p => p.id === mobileTab);
+      if (!currentTabExists) {
+        setMobileTab(availablePills[0].id as 'upcoming' | 'hosting' | 'history');
+      }
+    }
+  }, [availablePills.length, mobileTab]);
+
+  // Get current listings based on active tab
+  const getCurrentListings = (): Listing[] => {
+    switch (mobileTab) {
+      case 'upcoming':
+        return upcomingListings;
+      case 'hosting':
+        return hostingListings;
+      case 'history':
+        return historyListings;
+      default:
+        return [];
+    }
+  };
+
+  const currentListings = getCurrentListings();
 
   // Lock body scroll on desktop
   useEffect(() => {
@@ -69,7 +143,7 @@ export default function MyLifeLayout(): JSX.Element {
   const setTab = (id: string) => {
     const sp = new URLSearchParams(searchParams as any);
     sp.set("tab", id);
-    router.push(`/my-life?${sp.toString()}`);
+    navigate(`/my-life?${sp.toString()}`);
   };
 
   return (
@@ -78,30 +152,19 @@ export default function MyLifeLayout(): JSX.Element {
       <div className="hidden lg:flex h-screen bg-gray-50" style={{ maxHeight: '100vh', overflow: 'hidden' }}>
         {/* Sidebar - width matches chat */}
         <div className="w-[380px] xl:w-[420px] bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6">
             <h1 className="text-3xl font-bold text-gray-900">My Life</h1>
           </div>
 
-          {/* Profile card at top (mirrors Menu profile card) */}
-          <div className="px-4 pt-4">
-            <ProfileCard
-                  name={personalProfile?.name ?? "Your Name"}
-              avatarUrl={personalProfile?.avatarUrl}
-              onClick={() => setTimeout(() => modal.showProfile(), 0)}
-              onViewProfile={() => setTimeout(() => modal.showProfile(), 0)}
-              onEditProfile={() => setTimeout(() => modal.showEditProfile('my-life'), 0)}
-              onShareProfile={() => setTimeout(() => modal.showShareProfile('my-life'), 0)}
-            />
-          </div>
-
-          {/* Sidebar options styled like For You sidebar cards */}
-          <nav className="flex-1 overflow-hidden p-4 space-y-3">
-            {TABS.filter(t => t.id !== "profile").map(({ id, label, Icon }) => {
+          {/* Sidebar options styled like Menu page cards */}
+          <nav className="flex-1 overflow-hidden p-4 space-y-3" style={{ marginTop: '64px' }}>
+            {TABS.map(({ id, label, Icon }) => {
               const isActive = active === id;
               return (
                 <div key={id} className="relative">
                   <button
                     onClick={() => setTab(id)}
+                    aria-label={label}
                     className="w-full rounded-xl bg-white flex items-center gap-3 px-4 py-4 transition-all duration-200 focus:outline-none group text-left"
                     style={{
                       minHeight: '72px',
@@ -124,15 +187,15 @@ export default function MyLifeLayout(): JSX.Element {
                       e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
-                    {Icon ? <Icon size={20} className="text-gray-900 leading-none" /> : null}
-                    <span className="text-gray-900 font-semibold" style={{ fontSize: '16px' }}>
-                      {label}
-                    </span>
+                    <div className="flex items-center" style={{ paddingLeft: '16px', paddingRight: '16px' }}>
+                      {Icon ? <Icon size={20} className="text-gray-900 leading-none" /> : null}
+                    </div>
+                    <span className="text-gray-900 font-semibold" style={{ fontSize: '16px' }}>{label}</span>
                   </button>
                   {isActive && (
-                    <div 
+                    <div
                       className="absolute bg-gray-900"
-                      style={{ 
+                      style={{
                         right: '-16px',
                         top: '50%',
                         transform: 'translateY(-50%)',
@@ -150,10 +213,46 @@ export default function MyLifeLayout(): JSX.Element {
         </div>
 
         {/* Content */}
-        <div className="flex-1 bg-white flex items-center justify-center overflow-hidden">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 capitalize">{active}</h2>
-            <p className="text-gray-500 mt-2">This section is coming soon.</p>
+        <div className="flex-1 bg-white overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="w-full min-h-full">
+            <div style={{ height: '32px' }} />
+            <div className="px-8 relative">
+              {/* Add button - positioned at same height as edit button on menu profile page */}
+              <div className="absolute" style={{ top: '0', right: '32px', zIndex: 10 }}>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Add action here
+                  }}
+                  aria-label="Add activity"
+                  className="w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-200 cursor-pointer"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow',
+                    position: 'relative',
+                    zIndex: 100,
+                    pointerEvents: 'auto'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <Plus size={18} className="text-gray-900" />
+                </button>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">My Activities</h1>
+              <div className="mt-8 w-full border-t" style={{ borderColor: '#E5E7EB' }} />
+              <div className="py-24 text-gray-500">Coming soon.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -192,10 +291,19 @@ export default function MyLifeLayout(): JSX.Element {
                     src={account?.profile_pic || personalProfile?.avatarUrl} 
                     name={account?.name || personalProfile?.name || ""} 
                     size={36} 
-              />
-            </div>
+                  />
+                </div>
               </button>
             }
+            actions={[
+              {
+                icon: <Plus size={20} className="text-gray-900" />,
+                onClick: () => {
+                  navigate('/my-life/create');
+                },
+                label: "Add"
+              }
+            ]}
           />
 
           <div
@@ -203,49 +311,60 @@ export default function MyLifeLayout(): JSX.Element {
             style={{
               paddingTop: 'var(--saved-content-padding-top, 140px)',
               scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch'
             }}
           >
-            <div className="space-y-8 pb-6">
-              <ProfileCard
-                name={personalProfile?.name ?? "Your Name"}
-                avatarUrl={personalProfile?.avatarUrl}
-                onClick={() => setTimeout(() => modal.showProfile(), 0)}
-                onViewProfile={() => setTimeout(() => modal.showProfile(), 0)}
-                onEditProfile={() => setTimeout(() => modal.showEditProfile('my-life'), 0)}
-                onShareProfile={() => setTimeout(() => modal.showShareProfile('my-life'), 0)}
-              />
+            {/* Pills - only show when there's relevant content */}
+            {availablePills.length > 0 && (
+              <div className="mt-6 mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
+                    {availablePills.map((p) => {
+                      const isActive = mobileTab === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => setMobileTab(p.id as 'upcoming' | 'hosting' | 'history')}
+                          className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: isActive ? '#D1D5DB' : '#E5E7EB',
+                            borderStyle: 'solid',
+                            boxShadow: isActive
+                              ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
+                              : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            color: isActive ? '#111827' : '#374151',
+                            willChange: 'transform, box-shadow'
+                          }}
+                        >
+                          <span className="text-sm font-medium leading-none">{p.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
-          {/* Sections */}
-              <div className="space-y-6">
-            <Section title="Upcoming">
-              <Carousel>
-                <MiniEventCard title="Minion Sailing Comp" dateTime="Jan 15 • 10:15am" thumbnail="⛵" />
-                <MiniEventCard title="Minion Sailing Comp" dateTime="Jan 15 • 10:15am" thumbnail="⛵" />
-                <MiniEventCard title="Minion Sailing Comp" dateTime="Jan 15 • 10:15am" thumbnail="⛵" />
-              </Carousel>
-            </Section>
+            {/* Listings Grid */}
+            {currentListings.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4">
+                {currentListings.map((listing) => (
+                  <ListingCard 
+                    key={listing.id}
+                    listing={listing}
+                    size="medium"
+                    showDate={true}
+                  />
+                ))}
+              </div>
+            ) : availablePills.length > 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-sm">No listings in this section</p>
+              </div>
+            ) : null}
 
-            <Section title="Hosting">
-              <Carousel>
-                <MiniEventCard title="Minion Mafia Training" dateTime="Jan 15 • 10:15am" thumbnail="🎯" chip="Host" />
-              </Carousel>
-            </Section>
-
-            <Section title="Ongoing">
-              <Carousel>
-                <MiniEventCard title="Minion Sailing Comp" dateTime="Jan 15 • 10:15am" thumbnail="⛵" />
-                <MiniEventCard title="Minion Sailing Comp" dateTime="Jan 15 • 10:15am" thumbnail="⛵" />
-              </Carousel>
-            </Section>
-
-            {/* Drafts & History tiles at very bottom */}
-                <div className="grid grid-cols-2 gap-3">
-              <StatTile title="Drafts" value="0" />
-              <StatTile title="History" value="0" />
-            </div>
-          </div>
-        </div>
           </div>
         </MobilePage>
       </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
-// simpleChatService removed - using chatService from useAuth
+import { useChatService } from "@/lib/chatProvider";
 import PersonalChatPanel from "../PersonalChatPanel";
 import MobileTitle from "@/components/MobileTitle";
 import { ArrowLeft } from "lucide-react";
@@ -18,6 +18,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   const { id } = params;
   const router = useRouter();
   const { account } = useAuth();
+  const chatService = useChatService();
   const [conversation, setConversation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -20,7 +20,8 @@ export default function PageContent({
         className={`flex-1 overflow-y-auto scrollbar-hide ${className}`}
         style={{ 
           scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
+          msOverflowStyle: 'none',
+          overflowX: 'hidden',
         }}
       >
         {children}

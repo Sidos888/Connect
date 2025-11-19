@@ -421,15 +421,35 @@ button[class*="bg-white"]:focus {
 
 /* Prevent grey tap highlights on all interactive elements */
 button,
-input,
 select,
-textarea,
 [role="button"],
 [tabindex] {
   -webkit-tap-highlight-color: transparent !important;
   -webkit-touch-callout: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;
+}
+
+/* Allow text selection on inputs and textareas for proper iOS keyboard handling */
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none !important;
+  /* DO NOT set user-select: none on inputs/textareas - it breaks iOS capitalization */
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  /* Prevent iOS from auto-capitalizing */
+  text-transform: none !important;
+  -webkit-text-transform: none !important;
+}
+
+/* Force autocapitalize off for all text inputs on iOS */
+input[type="text"],
+input[type="email"],
+input[type="search"],
+textarea {
+  autocapitalize: none !important;
+  -webkit-autocapitalize: none !important;
 }
 
 /* Remove any potential borders from navigation, except TabBar */

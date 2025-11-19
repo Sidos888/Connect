@@ -565,7 +565,9 @@ function MenuView({
   onAchievements,
   onSaved,
   onEditProfile,
-  currentAccount 
+  currentAccount,
+  onClose,
+  router
 }: { 
   onSettings: () => void; 
   onShare: () => void; 
@@ -576,86 +578,127 @@ function MenuView({
   onAchievements: () => void;
   onSaved: () => void;
   onEditProfile: () => void;
-  currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null; 
+  currentAccount: { name?: string; avatarUrl?: string; bio?: string } | null;
+  onClose: () => void;
+  router: ReturnType<typeof useRouter>;
 }) {
-
   return (
-    <SimpleCard>
-      <div className="space-y-4">
-        {/* Profile Card */}
-        <ProfileCard
-          name={currentAccount?.name ?? "Your Name"}
-          avatarUrl={currentAccount?.avatarUrl}
-          onClick={onViewProfile}
-          onViewProfile={onViewProfile}
-          onEditProfile={onEditProfile}
-          onShareProfile={onShare}
-          avatarSize={48}
-        />
+    <div 
+      className="w-[280px] rounded-xl bg-white p-4" 
+      style={{ 
+        backgroundColor: 'white',
+        borderWidth: '0.4px',
+        borderColor: '#E5E7EB',
+        borderStyle: 'solid',
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+      }}
+    >
+      <div className="space-y-3">
+        {/* Profile Section */}
+        <div 
+          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white transition-all duration-200 cursor-pointer"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onClick={() => {
+            onClose();
+            router.push('/menu-blank');
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          <Avatar 
+            src={currentAccount?.avatarUrl ?? undefined} 
+            name={currentAccount?.name ?? "User"} 
+            size={40} 
+          />
+          <span className="text-base font-semibold text-gray-900">{currentAccount?.name ?? "Your Name"}</span>
+        </div>
 
-        {/* Menu items */}
-        <div className="space-y-3">
-          <button 
-            onClick={onNotifications}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
-          >
-            <Bell size={20} className="text-gray-900 transition-all duration-200" />
-            <span className="font-medium transition-all duration-200">Notifications</span>
-          </button>
-
-          <button 
-            onClick={onConnections}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
-          >
-            <Users size={20} className="text-gray-900 transition-all duration-200" />
-            <span className="font-medium transition-all duration-200">Connections</span>
-          </button>
-
-          <button 
-            onClick={onGallery}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
-          >
-            <Camera size={20} className="text-gray-900 transition-all duration-200" />
-            <span className="font-medium transition-all duration-200">Memories</span>
-          </button>
-
-          <button 
-            onClick={onAchievements}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
-          >
-            <Trophy size={20} className="text-gray-900 transition-all duration-200" />
-            <span className="font-medium transition-all duration-200">Achievements</span>
-          </button>
-
-          <button 
-            onClick={onSaved}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
-          >
-            <Bookmark size={20} className="text-gray-900 transition-all duration-200" />
-            <span className="font-medium transition-all duration-200">Saved</span>
-          </button>
-
-          <button
-            onClick={onSettings}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]"
-          >
-            <Settings size={20} className="text-gray-900 transition-all duration-200" />
-            <span className="font-medium transition-all duration-200">Settings</span>
-          </button>
+        {/* Add Business */}
+        <div 
+          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white transition-all duration-200 cursor-pointer"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          <Plus size={20} className="text-gray-900" />
+          <span className="text-base font-semibold text-gray-900">Add Business</span>
         </div>
 
         {/* Divider */}
-        <div className="border-t border-gray-200 my-6"></div>
+        <div className="border-t border-gray-200 my-2"></div>
 
-        {/* Add business section */}
-      <div className="space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-900 rounded-lg transition-all duration-200 hover:scale-[1.02]">
-            <Plus size={20} className="text-gray-900 transition-all duration-200" />
-            <span className="font-medium transition-all duration-200">Add business</span>
-          </button>
+        {/* Settings */}
+        <div 
+          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onClick={onSettings}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          <Settings size={20} className="text-gray-900" />
+          <span className="text-base font-semibold text-gray-900">Settings</span>
+        </div>
+
+        {/* Log out */}
+        <div 
+          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer"
+          style={{
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          <LogOut size={20} className="text-gray-900" />
+          <span className="text-base font-semibold text-gray-900">Log out</span>
         </div>
       </div>
-    </SimpleCard>
+    </div>
   );
 }
 
@@ -1026,8 +1069,10 @@ export default function ProfileMenu() {
               menuRef.current.style.display = newOpen ? 'block' : 'none';
             }
           }}
-          className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none relative z-50"
+          className="flex items-center justify-center rounded-full bg-white transition-all duration-200 hover:-translate-y-[1px] focus:outline-none relative z-50 overflow-hidden"
           style={{
+            width: '40px',
+            height: '40px',
             borderWidth: '0.4px',
             borderColor: open ? '#D1D5DB' : '#E5E7EB',
             borderStyle: 'solid',
@@ -1047,11 +1092,10 @@ export default function ProfileMenu() {
             }
           }}
         >
-          <Menu size={16} className="text-gray-700" />
           <Avatar 
             src={currentAccount?.avatarUrl ?? undefined} 
             name={currentAccount?.name ?? "User"} 
-            size={24} 
+            size={40} 
           />
         </button>
 
@@ -1112,6 +1156,8 @@ export default function ProfileMenu() {
                   setTimeout(() => modal.showEditProfile('menu'), 0);
                 }}
                 currentAccount={currentAccount}
+                onClose={hideMenuNow}
+                router={router}
               />
             )}
             </div>

@@ -38,7 +38,7 @@ export default function TabBar({ items }: Props) {
     <>
       {/* Floating Bottom Navigation with Liquid Glass Effect */}
       <nav 
-        className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-1 tabbar-nav"
+        className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[70] px-6 py-1 tabbar-nav"
         style={{
           borderRadius: '100px',
           background: 'rgba(255, 255, 255, 0.9)',

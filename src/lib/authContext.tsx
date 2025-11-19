@@ -155,7 +155,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('👤 NewAuthContext: ========== SETTING USER FROM INITIAL SESSION ==========');
           console.log('👤 NewAuthContext: User found in session:', { id: session.user.id, email: session.user.email, phone: session.user.phone });
-          console.log('👤 NewAuthContext: Current user state before setUser:', user ? { id: user.id, email: user.email } : null);
           
           setUser(session.user);
           
@@ -196,19 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         hasRefreshToken: !!session?.refresh_token,
         expiresAt: session?.expires_at
       });
-      console.log('🔄 NewAuthContext: Current user state:', user ? { id: user.id, email: user.email } : null);
-      console.log('🔄 NewAuthContext: Current account state:', account ? { id: account.id, name: account.name } : null);
       
-      // Debug session vs account ID mismatch
-      if (session?.user?.id && account?.id) {
-        const idsMatch = session.user.id === account.id;
-        console.log('🔄 NewAuthContext: ID consistency check:', {
-          sessionUserId: session.user.id,
-          accountId: account.id,
-          idsMatch: idsMatch,
-          mismatchWarning: !idsMatch ? '⚠️ MISMATCH DETECTED!' : '✅ IDs match'
-        });
-      }
       // Force-clean channels on every auth transition
       try {
         const channels = supabase.getChannels?.() || [];
@@ -222,7 +209,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('🔐 AuthContext: ========== AUTH STATE CHANGE - USER SESSION AVAILABLE ==========');
           console.log('🔐 AuthContext: User session available:', { id: session.user.id, email: session.user.email, phone: session.user.phone });
-          console.log('🔐 AuthContext: Current user state before setUser:', user ? { id: user.id, email: user.email } : null);
           
           setUser(session.user);
           

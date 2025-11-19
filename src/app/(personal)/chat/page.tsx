@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
 import { useAppStore } from "@/lib/store";
@@ -19,7 +19,7 @@ import { Plus } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
 
-export default function MessagesPage() {
+function MessagesPageContent() {
   const { isHydrated } = useAppStore();
   const router = useRouter();
   const { account, user } = useAuth();
@@ -502,5 +502,17 @@ export default function MessagesPage() {
         />
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <MessagesPageContent />
+    </Suspense>
   );
 }

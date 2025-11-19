@@ -11,6 +11,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { QueryClientWrapper } from '@/components/QueryClientWrapper';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import StoreHydration from '@/components/StoreHydration';
+import GlobalInputFix from '@/components/GlobalInputFix';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <StoreHydration />
+          <GlobalInputFix />
         <QueryClientWrapper>
           <AuthProvider>
             <ChatProvider>

@@ -87,3 +87,4 @@ Once MCP Supabase is authenticated, I will:
 
 
 
+
