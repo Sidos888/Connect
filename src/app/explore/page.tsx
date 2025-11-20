@@ -101,12 +101,15 @@ export default function ExplorePage() {
 
           <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
             paddingTop: 'var(--saved-content-padding-top, 140px)',
-            paddingBottom: '100px',
+            paddingBottom: '56px',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none'
           }}>
+            {/* Top Spacing */}
+            <div style={{ height: '36px' }} />
+            
             {/* Location Filter Card */}
-            <div className="mb-6 flex justify-center" style={{ paddingLeft: '56px', paddingRight: '56px' }}>
+            <div style={{ paddingLeft: '56px', paddingRight: '56px', marginBottom: '24px' }}>
               <div 
                 className="rounded-2xl bg-white px-4 py-2.5 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer w-full"
                 style={{
@@ -132,17 +135,23 @@ export default function ExplorePage() {
               </div>
             </div>
 
-            {/* Feature Cards - For You & Side Quest */}
-            <div className="grid grid-cols-2 gap-4 mb-12 px-4 lg:px-8">
+            {/* Feature Cards - For You & Side Quest (Larger) */}
+            <div className="grid grid-cols-2" style={{ 
+              paddingLeft: '22px', 
+              paddingRight: '22px',
+              gap: '22px',
+              marginBottom: '32px'
+            }}>
               <button
                 onClick={() => router.push('/for-you-listings')}
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
                 style={{
-                  height: '100px',
+                  height: '150px',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
+                  willChange: 'transform, box-shadow',
+                  cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -151,22 +160,21 @@ export default function ExplorePage() {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                <div className="flex flex-col items-start h-full p-4 gap-2">
-                  <div className="text-4xl leading-none">✨</div>
-                  <span className="text-base font-semibold text-neutral-900 text-left leading-tight">For You</span>
+                <div className="flex flex-col items-start h-full p-6 justify-between">
+                  <div className="text-5xl leading-none">✨</div>
+                  <span className="text-lg font-semibold text-neutral-900 text-left leading-tight">For You</span>
                 </div>
               </button>
 
               <button
-              aria-disabled={true}
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
-      style={{ 
-                  height: '100px',
+                style={{ 
+                  height: '150px',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                willChange: 'transform, box-shadow',
-                pointerEvents: 'none', // temporarily non-clickable on mobile
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow',
+                  cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -175,68 +183,86 @@ export default function ExplorePage() {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                <div className="flex flex-col items-start h-full p-4 gap-2">
-                  <div className="text-4xl leading-none">🎲</div>
-                  <span className="text-base font-semibold text-neutral-900 text-left leading-tight">Side Quest</span>
+                <div className="flex flex-col items-start h-full p-6 justify-between">
+                  <div className="text-5xl leading-none">🎲</div>
+                  <span className="text-lg font-semibold text-neutral-900 text-left leading-tight">Side Quest</span>
                 </div>
               </button>
             </div>
 
-            {/* 4 Category Cards */}
-            <div className="grid grid-cols-2 gap-4 px-4 lg:px-8">
+            {/* Section Header */}
+            <div style={{ paddingLeft: '22px', paddingRight: '22px', marginBottom: '16px' }}>
+              <h2 className="text-base font-semibold text-gray-900">Categories</h2>
+            </div>
+
+            {/* 4 Category Cards - Casual is top left */}
+            <div className="grid grid-cols-2" style={{ 
+              paddingLeft: '22px', 
+              paddingRight: '22px',
+              gap: '22px',
+              rowGap: '22px'
+            }}>
               {[
+                { title: "Casual", icon: "☕", href: "/casual-listings" },
                 { title: "Food & Drink", icon: "🍕", href: null },
                 { title: "Events & Experiences", icon: "🎉", href: null },
                 { title: "Workshops & Classes", icon: "🎨", href: null },
-                { title: "Casual", icon: "☕", href: "/casual-listings" },
-              ].map((category) => (
-                <button
-                  key={category.title}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (category.href) {
-                      console.log('Casual category clicked, navigating to:', category.href);
-                      router.push(category.href);
-                    }
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (category.href) {
-                      console.log('Casual category touched, navigating to:', category.href);
-                      router.push(category.href);
-                    }
-                  }}
-                  disabled={!category.href}
-                  className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] active:scale-[0.98] relative"
-                  style={{
-                    minHeight: '100px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow',
-                    touchAction: 'manipulation',
-                    cursor: category.href ? 'pointer' : 'default',
-                    opacity: category.href ? 1 : 0.6
-                  }}
-                  onMouseEnter={(e) => {
-                    if (category.href) {
+              ].map((category) => {
+                const needsEqualSpacing = category.title === "Casual" || category.title === "Food & Drink";
+                return (
+                  <button
+                    key={category.title}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (category.href) {
+                        console.log('Category clicked, navigating to:', category.href);
+                        router.push(category.href);
+                      }
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (category.href) {
+                        console.log('Category touched, navigating to:', category.href);
+                        router.push(category.href);
+                      }
+                    }}
+                    className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] active:scale-[0.98] relative"
+                    style={{
+                      height: '120px',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow',
+                      touchAction: 'manipulation',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                >
-                  <div className="flex flex-col items-start h-full p-4 gap-2">
-                    <div className="text-4xl leading-none">{category.icon}</div>
-                    <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
-                      {category.title}
-                    </span>
-                  </div>
-                </button>
-              ))}
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                  >
+                    {needsEqualSpacing ? (
+                      <div className="flex flex-col items-start h-full justify-between" style={{ padding: '16px' }}>
+                        <div className="text-4xl leading-none">{category.icon}</div>
+                        <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
+                          {category.title}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-start h-full p-4 gap-2">
+                        <div className="text-4xl leading-none">{category.icon}</div>
+                        <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
+                          {category.title}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

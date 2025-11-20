@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { useEffect } from "react";
 import Avatar from "@/components/Avatar";
@@ -40,13 +40,15 @@ const TABS: Array<TabDef> = [
 ];
 
 export default function MyLifeLayout(): React.JSX.Element {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const active = searchParams.get("tab") || "activities";
   
   // Simple navigation helper that works in Capacitor
   const navigate = (path: string) => {
     if (typeof window !== 'undefined') {
-      window.location.href = path;
+      // Use router.push for client-side navigation instead of full page reload
+      router.push(path);
     }
   };
   const { personalProfile } = useAppStore();
@@ -93,20 +95,24 @@ export default function MyLifeLayout(): React.JSX.Element {
   const historyListings = historyData?.listings || [];
 
   // Determine which pills to show based on content
+  // Always show Upcoming first (default), then Hosting, then Past
   const availablePills: Array<{ id: string; label: string }> = [];
-  if (upcomingListings.length > 0) availablePills.push({ id: 'upcoming', label: 'Upcoming' });
+  // Always include 'upcoming' pill (even if empty) - it's the default
+  availablePills.push({ id: 'upcoming', label: 'Upcoming' });
   if (hostingListings.length > 0) availablePills.push({ id: 'hosting', label: 'Hosting' });
-  if (historyListings.length > 0) availablePills.push({ id: 'history', label: 'History' });
+  if (historyListings.length > 0) availablePills.push({ id: 'history', label: 'Past' });
 
-  // Set default tab to first available pill, or 'upcoming' if none
+  // Set default tab to 'upcoming' - always prioritize upcoming events
   const [mobileTab, setMobileTab] = React.useState<'upcoming' | 'hosting' | 'history'>('upcoming');
-
-  // Update tab when pills become available
+  
+  // Ensure 'upcoming' is always selected by default when component mounts or data loads
   useEffect(() => {
-    if (availablePills.length > 0) {
+    // Always default to 'upcoming' if it's available in pills (which it always is now)
+    if (availablePills.find(p => p.id === 'upcoming')) {
+      // Only change if current tab doesn't exist in available pills
       const currentTabExists = availablePills.find(p => p.id === mobileTab);
       if (!currentTabExists) {
-        setMobileTab(availablePills[0].id as 'upcoming' | 'hosting' | 'history');
+        setMobileTab('upcoming');
       }
     }
   }, [availablePills.length, mobileTab]);
@@ -319,27 +325,58 @@ export default function MyLifeLayout(): React.JSX.Element {
             {availablePills.length > 0 && (
               <div className="mt-6 mb-6">
                 <div className="flex items-center gap-2">
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
                     {availablePills.map((p) => {
                       const isActive = mobileTab === p.id;
                       return (
-                        <button
+                        <div
                           key={p.id}
-                          onClick={() => setMobileTab(p.id as 'upcoming' | 'hosting' | 'history')}
-                          className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                          className="flex-shrink-0"
                           style={{
-                            borderWidth: '0.4px',
-                            borderColor: isActive ? '#D1D5DB' : '#E5E7EB',
-                            borderStyle: 'solid',
-                            boxShadow: isActive
-                              ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
-                              : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                            color: isActive ? '#111827' : '#374151',
-                            willChange: 'transform, box-shadow'
+                            paddingLeft: isActive ? '2px' : '0',
+                            paddingRight: isActive ? '2px' : '0',
+                            paddingTop: isActive ? '2px' : '0',
+                            paddingBottom: isActive ? '2px' : '0',
                           }}
                         >
-                          <span className="text-sm font-medium leading-none">{p.label}</span>
-                        </button>
+                          <button
+                            onClick={() => setMobileTab(p.id as 'upcoming' | 'hosting' | 'history')}
+                            className="inline-flex items-center justify-center rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                            style={{
+                              minHeight: isActive ? '44px' : '40px',
+                              paddingLeft: isActive ? '18px' : '16px',
+                              paddingRight: isActive ? '18px' : '16px',
+                              paddingTop: isActive ? '12px' : '10px',
+                              paddingBottom: isActive ? '12px' : '10px',
+                              borderWidth: '0.4px',
+                              borderColor: '#E5E7EB',
+                              borderStyle: 'solid',
+                              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                              color: isActive ? '#111827' : '#6B7280',
+                              willChange: 'transform, box-shadow',
+                              transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isActive) {
+                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isActive) {
+                                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                              }
+                            }}
+                          >
+                            <span 
+                              className="font-medium leading-none"
+                              style={{
+                                fontSize: isActive ? '14px' : '13px',
+                              }}
+                            >
+                              {p.label}
+                            </span>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>

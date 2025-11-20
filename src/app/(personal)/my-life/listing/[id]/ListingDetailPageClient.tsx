@@ -2,13 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { ArrowLeft, Edit, Share2 } from 'lucide-react';
+import { Edit, Share2 } from 'lucide-react';
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { useAuth } from '@/lib/authContext';
 import { Listing } from '@/lib/listingsService';
 import { useQuery } from '@tanstack/react-query';
 import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
 import ListingHeader from '@/components/listings/ListingHeader';
+import ListingActionButtons from '@/components/listings/ListingActionButtons';
 import ListingInfoCards from '@/components/listings/ListingInfoCards';
 
 interface ListingDetailPageClientProps {
@@ -174,32 +175,8 @@ export default function ListingDetailPageClient({ listingId }: ListingDetailPage
       <MobilePage>
         <PageHeader
           title=""
-          customBackButton={
-            <button
-              onClick={() => router.push('/my-life')}
-              className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '100px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                borderStyle: 'solid',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                willChange: 'transform, box-shadow',
-                pointerEvents: 'auto'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }}
-            >
-              <ArrowLeft size={20} className="text-gray-900" />
-            </button>
-          }
+          backButton
+          onBack={() => router.push('/my-life')}
           actions={[
             {
               icon: <Edit size={20} className="text-gray-900" />,
@@ -242,19 +219,27 @@ export default function ListingDetailPageClient({ listingId }: ListingDetailPage
                 summary={listing.summary}
               />
 
-              {/* Information Cards - Increased spacing from bio section */}
-              <div className="mt-12">
-                <ListingInfoCards
-                  capacity={listing.capacity}
-                  capacityUnlimited={!listing.capacity}
-                  location={listing.location}
-                  host={hostAccount ? {
-                    id: hostAccount.id,
-                    name: hostAccount.name,
-                    profile_pic: hostAccount.profile_pic || null
-                  } : null}
-                />
-              </div>
+              {/* Action Buttons - Only for hosts */}
+              <ListingActionButtons
+                userRole={userRole}
+                listingId={listing.id}
+                onManage={() => {
+                  // Use query parameter route for static export compatibility (no RSC navigation needed)
+                  router.push(`/my-life/listing/manage?id=${listing.id}`);
+                }}
+              />
+
+              {/* Information Cards */}
+              <ListingInfoCards
+                capacity={listing.capacity}
+                capacityUnlimited={!listing.capacity}
+                location={listing.location}
+                host={hostAccount ? {
+                  id: hostAccount.id,
+                  name: hostAccount.name,
+                  profile_pic: hostAccount.profile_pic || null
+                } : null}
+              />
             </div>
           </div>
         </PageContent>

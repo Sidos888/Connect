@@ -42,7 +42,9 @@ export default function ConnectionsPage() {
   }, []);
 
   const handleFriendClick = (friend: ConnectionUser) => {
-    router.push(`/profile/${friend.id}`);
+    // Use query parameter route for static export compatibility (same pattern as listing page)
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/connections';
+    router.push(`/profile?id=${friend.id}&from=${currentPath}`);
   };
 
   const handleAddPerson = () => {

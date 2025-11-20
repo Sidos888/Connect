@@ -9,7 +9,7 @@ import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
-import { LogOut, Trash2, ChevronRightIcon, Eye, Pencil, Settings, MoreVertical, Plus, Share } from "lucide-react";
+import { LogOut, Trash2, ChevronRightIcon, Eye, Pencil, Settings, MoreVertical, Plus, Share, QrCode } from "lucide-react";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
@@ -1527,27 +1527,43 @@ export default function Page() {
                 ]}
               />
 
-              <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
+              <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
                 paddingTop: 'var(--saved-content-padding-top, 140px)',
-                paddingBottom: '32px',
+                paddingBottom: '56px',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none'
               }}>
+                {/* Top Spacing */}
+                <div style={{ height: '36px' }} />
+                
                 {/* Profile Card */}
-              <div className="mb-6">
-                <ProfileCard
-                  name={currentAccount?.name ?? "Your Name"}
-                  avatarUrl={currentAccount?.avatarUrl}
-                  onClick={() => goToView('profile')}
-                  onViewProfile={() => goToView('profile')}
-                  onEditProfile={() => goToView('edit-profile', 'menu')}
-                  onShareProfile={() => goToView('share-profile', 'menu')}
-                  avatarSize={36}
-                />
-                      </div>
+                <div style={{ paddingLeft: '22px', paddingRight: '22px', marginBottom: '30px' }}>
+                  <ProfileCard
+                    name={currentAccount?.name ?? "Your Name"}
+                    avatarUrl={currentAccount?.avatarUrl}
+                    onClick={() => goToView('profile')}
+                    onViewProfile={() => goToView('profile')}
+                    onEditProfile={() => goToView('edit-profile', 'menu')}
+                    onShareProfile={() => goToView('share-profile', 'menu')}
+                    avatarSize={36}
+                    slim={true}
+                    customActionIcon={QrCode}
+                    onCustomAction={() => goToView('share-profile', 'menu')}
+                  />
+                </div>
+
+                {/* Section Header */}
+                <div style={{ paddingLeft: '20px', paddingRight: '20px', marginBottom: '16px' }}>
+                  <h2 className="text-base font-semibold text-gray-900">Your Tools</h2>
+                </div>
 
                 {/* Menu Grid - 2x3 layout */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2" style={{ 
+                  paddingLeft: '22px', 
+                  paddingRight: '22px',
+                  gap: '22px',
+                  rowGap: '22px'
+                }}>
                   {(context.type === "business" ? 
                 // Business account menu items
                 [

@@ -20,6 +20,7 @@ export interface PageHeaderProps {
   actions?: ActionButton[];
   customActions?: ReactNode;  // Custom action buttons (full control over styling)
   className?: string;
+  frostedGlass?: boolean;  // Enable iOS-style frosted glass effect (for listing page)
 }
 
 export default function PageHeader({
@@ -32,7 +33,8 @@ export default function PageHeader({
   leftSection,
   actions = [],
   customActions,
-  className = ""
+  className = "",
+  frostedGlass = false  // New iOS-style frosted glass effect
 }: PageHeaderProps) {
   // Detect platform (mobile vs web)
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -40,6 +42,160 @@ export default function PageHeader({
   // Platform-specific blur heights
   const blurHeight = isMobile ? '135px' : '100px';
   
+  // iOS-style frosted glass effect (for listing page)
+  if (frostedGlass) {
+    const headerHeight = isMobile ? '110px' : '100px';
+    
+    return (
+      <div className={`absolute top-0 left-0 right-0 z-20 ${className}`} style={{ 
+        pointerEvents: 'none'
+      }}>
+        {/* Single Blur Background - iOS style (semi-transparent to allow blur visibility) */}
+        <div className="absolute top-0 left-0 right-0" style={{
+          height: headerHeight,
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)'  // Semi-transparent to allow blur effect to show through
+        }} />
+        
+        {/* Gradient Overlay - White gradient from 100% to 8% opacity (on top of blur) */}
+        <div className="absolute top-0 left-0 right-0" style={{
+          height: headerHeight,
+          background: 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0.08) 100%)'
+        }} />
+        
+        {/* Header Content */}
+        <div className="px-4 lg:px-8" style={{ 
+          paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
+          paddingBottom: '16px',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          {/* Left Section (e.g., profile card) OR Standard Layout */}
+          {leftSection ? (
+            <div style={{ pointerEvents: 'auto' }}>
+              {leftSection}
+            </div>
+          ) : (
+            <div className="relative w-full" style={{ 
+              width: '100%', 
+              minHeight: subtitle ? '56px' : '40px',
+              pointerEvents: 'auto'
+            }}>
+              {/* Left: Back Button or Custom Button */}
+              {customBackButton ? (
+                <div style={{ position: 'absolute', left: 0, top: 0, height: '40px', display: 'flex', alignItems: 'center' }}>
+                  {customBackButton}
+                </div>
+              ) : backButton && onBack ? (
+                <button
+                  onClick={onBack}
+                  className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    top: '0',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '22px',
+                    background: 'rgba(255, 255, 255, 0.96)',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0px 2px 4px rgba(0,0,0,0.04)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0px 2px 4px rgba(0,0,0,0.04)';
+                  }}
+                  aria-label={backIcon === 'close' ? 'Close' : 'Back'}
+                >
+                  {backIcon === 'close' ? (
+                    <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  )}
+                </button>
+              ) : null}
+              
+              {/* Center: Title and Subtitle */}
+              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: subtitle ? '0' : '0', height: subtitle ? 'auto' : '40px', justifyContent: subtitle ? 'flex-start' : 'center' }}>
+                <h1 
+                  className={`font-semibold text-gray-900 text-center ${className}`}
+                  style={{ 
+                    textAlign: 'center', 
+                    fontSize: isMobile ? '22px' : '20px',
+                    lineHeight: isMobile ? '28px' : '24px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 1  // Fully opaque title
+                  }}
+                >
+                  {title}
+                </h1>
+                {subtitle && (
+                  <div style={{ marginTop: '4px' }}>
+                    {subtitle}
+                  </div>
+                )}
+              </div>
+              
+              {/* Right: Action Buttons (max 2) or Custom Actions */}
+              {customActions ? (
+                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
+                  {customActions}
+                </div>
+              ) : actions.length > 0 ? (
+                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
+                  {actions.slice(0, 2).map((action, index) => (
+                    <button
+                      key={index}
+                      className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '100px',
+                        background: 'rgba(255, 255, 255, 0.96)',
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0px 2px 4px rgba(0,0,0,0.04)',
+                        willChange: 'transform, box-shadow',
+                        cursor: action.disabled ? 'default' : 'pointer',
+                        opacity: action.disabled ? 0.5 : 1
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!action.disabled) {
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0px 2px 4px rgba(0,0,0,0.04)';
+                      }}
+                      onClick={action.disabled ? undefined : action.onClick}
+                      aria-label={action.label}
+                      disabled={action.disabled}
+                    >
+                      {action.icon}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Original style (default - easy to revert)
   return (
     <div className={`absolute top-0 left-0 right-0 z-20 ${className}`} style={{ 
       pointerEvents: 'none'

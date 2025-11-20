@@ -11,6 +11,10 @@ import MobileTopNavigation from "./MobileTopNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import LoadingScreen from "@/components/LoadingScreen";
+// START REVIEWER OVERRIDE
+import ReviewerLoginPage from "@/components/auth/ReviewerLoginPage";
+import { isReviewBuild } from "@/lib/reviewerAuth";
+// END REVIEWER OVERRIDE
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -51,18 +55,19 @@ function AppShellContent({ children }: AppShellProps) {
   const isOnboardingPage = pathname === '/onboarding';
   const isTimelinePage = pathname.startsWith('/timeline');
   const isCreateListingPage = pathname === '/my-life/create' || pathname === '/my-life/create/' || pathname.startsWith('/my-life/create/');
+  const isProfilePage = pathname.startsWith('/profile');
   // Handle listing detail page - check pathname (with/without trailing slash) and search params
-  // Route is /my-life/listing?id=xxx (query param route)
+  // Routes: /listing?id=xxx (context-agnostic) or /my-life/listing?id=xxx (legacy)
   const normalizedListingPath = pathname.replace(/\/$/, ''); // Remove trailing slash for comparison
   const hasListingId = searchParams?.get('id') !== null;
   const isListingDetailPage = 
-    normalizedListingPath === '/my-life/listing' && hasListingId;
+    (normalizedListingPath === '/listing' || normalizedListingPath === '/my-life/listing') && hasListingId;
   const isListingsPage = pathname.startsWith('/casual-listings') || pathname.startsWith('/for-you-listings') || pathname.startsWith('/side-quest-listings');
   
   // Debug: Log pathname for listing pages to verify detection
   // IMPORTANT: This useEffect must run on every render, even if we return early
   React.useEffect(() => {
-    if (normalizedListingPath === '/my-life/listing') {
+    if (normalizedListingPath === '/listing' || normalizedListingPath === '/my-life/listing') {
       console.log('AppShell: Listing page check', { 
         pathname, 
         normalizedListingPath,
@@ -73,6 +78,15 @@ function AppShellContent({ children }: AppShellProps) {
     }
   }, [pathname, normalizedListingPath, hasListingId, isListingDetailPage, searchParams]);
 
+  // START REVIEWER OVERRIDE
+  // Show reviewer login page FIRST if in review build and not logged in
+  // This must happen BEFORE any other route logic to ensure it shows first
+  const isReview = isReviewBuild();
+  if (isReview && !user && !loading) {
+    return <ReviewerLoginPage />;
+  }
+  // END REVIEWER OVERRIDE
+  
   // Show loading screen on mobile during initial load
   // This conditional return is AFTER all hooks to ensure hooks are always called in the same order
   if (isMobile && (loading || !isHydrated)) {
@@ -123,7 +137,7 @@ function AppShellContent({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -174,7 +188,7 @@ function AppShellContent({ children }: AppShellProps) {
       </div>
       
       {/* Mobile: Top Navigation Bar - Not needed for pages with own PageHeader */}
-      {!isSettingsPage && !isMyLifePage && !isMenuPage && !isListingsPage && (
+      {!isSettingsPage && !isMyLifePage && !isMenuPage && !isListingsPage && !isProfilePage && (
         <div className="lg:hidden">
           <MobileTopNavigation />
         </div>
@@ -188,7 +202,7 @@ function AppShellContent({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>

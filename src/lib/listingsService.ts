@@ -60,13 +60,21 @@ export class ListingsService {
         return { listings: [], error };
       }
 
+      const now = new Date();
       const listings: Listing[] = (data || [])
         .map((item: any) => ({
           ...item.listings,
           role: item.role,
           status: item.status,
         }))
-        .filter((listing: any) => listing.id); // Filter out any null listings
+        .filter((listing: any) => {
+          // Filter out null listings
+          if (!listing.id) return false;
+          // Only show listings that haven't started yet (start_date > now or null)
+          if (!listing.start_date) return true;
+          const listingDate = new Date(listing.start_date);
+          return listingDate > now;
+        });
 
       return { listings, error: null };
     } catch (error) {
@@ -115,13 +123,21 @@ export class ListingsService {
         return { listings: [], error };
       }
 
+      const now = new Date();
       const listings: Listing[] = (data || [])
         .map((item: any) => ({
           ...item.listings,
           role: item.role,
           status: item.status,
         }))
-        .filter((listing: any) => listing.id);
+        .filter((listing: any) => {
+          // Filter out null listings
+          if (!listing.id) return false;
+          // Only show listings that haven't started yet (start_date > now or null)
+          if (!listing.start_date) return true;
+          const listingDate = new Date(listing.start_date);
+          return listingDate > now;
+        });
 
       return { listings, error: null };
     } catch (error) {
@@ -131,7 +147,8 @@ export class ListingsService {
   }
 
   /**
-   * Get completed listings for a user (where they are a participant with status='completed')
+   * Get past/completed listings for a user (where start_date < now)
+   * Includes all listings the user has hosted or attended that have completed
    */
   async getHistoryListings(userId: string): Promise<{ listings: Listing[]; error: Error | null }> {
     if (!this.supabase) {
@@ -161,21 +178,28 @@ export class ListingsService {
           )
         `)
         .eq('user_id', userId)
-        .eq('status', 'completed')
-        .order('completed_at', { ascending: false });
+        .order('created_at', { foreignTable: 'listings', ascending: false });
 
       if (error) {
         console.error('Error fetching history listings:', error);
         return { listings: [], error };
       }
 
+      const now = new Date();
       const listings: Listing[] = (data || [])
         .map((item: any) => ({
           ...item.listings,
           role: item.role,
           status: item.status,
         }))
-        .filter((listing: any) => listing.id);
+        .filter((listing: any) => {
+          // Filter out null listings
+          if (!listing.id) return false;
+          // Only show listings that have completed (start_date < now)
+          if (!listing.start_date) return false;
+          const listingDate = new Date(listing.start_date);
+          return listingDate < now;
+        });
 
       return { listings, error: null };
     } catch (error) {
@@ -195,50 +219,62 @@ export class ListingsService {
 
     try {
       const now = new Date().toISOString();
+      console.log('getPublicListings: Fetching with filters:', { is_public: true, now, limit });
       
-      // Fetch public listings where start_date is null or in the future
-      const { data, error } = await this.supabase
+      // First, try to get all public listings (without date filter) to see what we have
+      const { data: allPublicData, error: allPublicError } = await this.supabase
         .from('listings')
         .select('*')
         .eq('is_public', true)
-        .or(`start_date.is.null,start_date.gte.${now}`)
         .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        console.error('Error fetching public listings:', error);
-        // If the or() syntax fails, try a simpler query
-        const { data: fallbackData, error: fallbackError } = await this.supabase
-          .from('listings')
-          .select('*')
-          .eq('is_public', true)
-          .order('created_at', { ascending: false })
-          .limit(limit);
-        
-        if (fallbackError) {
-          return { listings: [], error: fallbackError };
-        }
-        
-        // Filter in JavaScript for upcoming listings
-        const upcomingListings = (fallbackData || []).filter((listing: any) => {
-          if (!listing.start_date) return true;
-          return new Date(listing.start_date) >= new Date();
-        });
-        
-        const listings: Listing[] = upcomingListings.map((listing: any) => ({
-          ...listing,
-          role: undefined,
-          status: 'upcoming' as const,
-        }));
-        
-        return { listings, error: null };
+        .limit(limit * 2); // Get more to see what's being filtered
+      
+      console.log('getPublicListings: All public listings (no date filter):', {
+        count: allPublicData?.length || 0,
+        error: allPublicError?.message,
+        listings: allPublicData?.map((l: any) => ({ 
+          id: l.id, 
+          title: l.title, 
+          is_public: l.is_public,
+          start_date: l.start_date,
+          created_at: l.created_at
+        }))
+      });
+      
+      if (allPublicError) {
+        console.error('Error fetching all public listings:', allPublicError);
+        return { listings: [], error: allPublicError };
       }
-
-      const listings: Listing[] = (data || []).map((listing: any) => ({
+      
+      // Filter in JavaScript for upcoming listings (start_date is null or strictly in the future)
+      // Only show listings that haven't started yet (start_date > now)
+      const upcomingListings = (allPublicData || []).filter((listing: any) => {
+        if (!listing.start_date) return true;
+        const listingDate = new Date(listing.start_date);
+        const nowDate = new Date();
+        // Only show listings that haven't started yet (strictly future)
+        return listingDate > nowDate;
+      });
+      
+      console.log('getPublicListings: Filtered upcoming listings:', {
+        total: allPublicData?.length || 0,
+        upcoming: upcomingListings.length,
+        filtered: (allPublicData?.length || 0) - upcomingListings.length
+      });
+      
+      // Limit to requested amount
+      const limitedListings = upcomingListings.slice(0, limit);
+      
+      const listings: Listing[] = limitedListings.map((listing: any) => ({
         ...listing,
         role: undefined,
         status: 'upcoming' as const,
       }));
+
+      console.log('getPublicListings: Returning listings:', {
+        count: listings.length,
+        listings: listings.map(l => ({ id: l.id, title: l.title }))
+      });
 
       return { listings, error: null };
     } catch (error) {

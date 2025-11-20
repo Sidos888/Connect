@@ -16,6 +16,7 @@ interface ProfileCardProps {
   className?: string;
   customActionIcon?: LucideIcon;
   onCustomAction?: () => void;
+  slim?: boolean;
 }
 
 export default function ProfileCard({
@@ -28,7 +29,8 @@ export default function ProfileCard({
   avatarSize = 40,
   className = "",
   customActionIcon,
-  onCustomAction
+  onCustomAction,
+  slim = false
 }: ProfileCardProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,7 @@ export default function ProfileCard({
   return (
     <div className={`relative ${className}`}>
       <div
-        className="rounded-2xl bg-white px-5 py-4 grid items-center cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+        className={`rounded-2xl bg-white grid items-center cursor-pointer transition-all duration-200 hover:-translate-y-[1px] ${slim ? 'px-6 py-3' : 'px-5 py-4'}`}
         style={{
           gridTemplateColumns: `${avatarSize}px 1fr 40px`,
           borderWidth: '0.4px',

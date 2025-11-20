@@ -36,10 +36,20 @@ export default function ForYouListingsPage() {
   ];
 
   // Fetch real listings from database
-  const { data: listingsData, isLoading: listingsLoading } = useQuery({
+  const { data: listingsData, isLoading: listingsLoading, error: listingsError } = useQuery({
     queryKey: ['public-listings'],
     queryFn: async () => {
-      return await listingsService.getPublicListings(50);
+      console.log('ForYouListingsPage: Fetching public listings...');
+      const result = await listingsService.getPublicListings(50);
+      console.log('ForYouListingsPage: Fetched listings:', {
+        count: result.listings?.length || 0,
+        error: result.error?.message,
+        listings: result.listings?.map(l => ({ id: l.id, title: l.title, is_public: l.is_public }))
+      });
+      if (result.error) {
+        console.error('ForYouListingsPage: Error fetching listings:', result.error);
+      }
+      return result;
     },
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -56,6 +66,18 @@ export default function ForYouListingsPage() {
     "This Week": [],
     "Nearby": [],
   };
+  
+  // Log when listings change
+  useEffect(() => {
+    console.log('ForYouListingsPage: Listings updated:', {
+      count: allListings.length,
+      isLoading: listingsLoading,
+      error: listingsError,
+      selectedSubcategory,
+      listingsBySubcategory: listingsBySubcategory[selectedSubcategory]?.length || 0,
+      listings: allListings.map(l => ({ id: l.id, title: l.title }))
+    });
+  }, [allListings.length, listingsLoading, listingsError, selectedSubcategory, listingsBySubcategory]);
 
   const categories = [
     { title: "New", icon: "🔥" },
@@ -270,26 +292,67 @@ export default function ForYouListingsPage() {
 
               {/* Category Filter Cards - edge-to-edge */}
               <div ref={categoriesRef} style={{ paddingLeft: '0', paddingRight: '0', marginBottom: '12px', pointerEvents: 'auto' }}>
-                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
                   <div style={{ width: '4px', flexShrink: 0 }} />
                   {subcategories.map((cat) => {
                     const isSelected = selectedSubcategory === cat.title;
                     return (
-                      <button
+                      <div
                         key={cat.title}
-                        onClick={() => setSelectedSubcategory(cat.title)}
-                        className="flex-shrink-0 rounded-xl px-3 py-2 transition-all duration-200 flex items-center gap-2"
+                        className="flex-shrink-0"
                         style={{
-                          minHeight: '36px',
-                          background: 'white',
-                          borderWidth: isSelected ? '2px' : '0.4px',
-                          borderColor: isSelected ? '#000000' : '#E5E7EB',
-                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          paddingLeft: isSelected ? '2px' : '0',
+                          paddingRight: isSelected ? '2px' : '0',
+                          paddingTop: isSelected ? '2px' : '0',
+                          paddingBottom: isSelected ? '2px' : '0',
                         }}
                       >
-                        <span className="text-sm leading-none">{cat.icon}</span>
-                        <span className="text-xs font-semibold whitespace-nowrap">{cat.title}</span>
+                        <button
+                          onClick={() => setSelectedSubcategory(cat.title)}
+                          className="rounded-full transition-all duration-200 flex items-center relative"
+                          style={{
+                            minHeight: isSelected ? '40px' : '36px',
+                            paddingLeft: isSelected ? '14px' : '12px',
+                            paddingRight: isSelected ? '14px' : '12px',
+                            paddingTop: isSelected ? '10px' : '8px',
+                            paddingBottom: isSelected ? '10px' : '8px',
+                            background: 'white',
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            gap: isSelected ? '8px' : '6px',
+                            transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                          }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                          }
+                        }}
+                      >
+                        <span 
+                          className="leading-none"
+                          style={{
+                            fontSize: isSelected ? '16px' : '14px',
+                          }}
+                        >
+                          {cat.icon}
+                        </span>
+                        <span 
+                          className="font-semibold whitespace-nowrap"
+                          style={{
+                            fontSize: isSelected ? '13px' : '12px',
+                            color: isSelected ? '#111827' : '#6B7280',
+                          }}
+                        >
+                          {cat.title}
+                        </span>
                       </button>
+                      </div>
                     );
                   })}
                   <div style={{ width: '4px', flexShrink: 0 }} />
@@ -502,29 +565,70 @@ export default function ForYouListingsPage() {
 
           {/* Subcategory Chips - Horizontal scrollable like mobile, centered */}
           <div className="mb-20 flex justify-center">
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide" style={{ maxWidth: 'fit-content' }}>
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide" style={{ maxWidth: 'fit-content', paddingTop: '2px', paddingBottom: '2px' }}>
               {subcategories.map((cat) => {
                 const isSelected = selectedSubcategory === cat.title;
                 return (
-                  <button
+                  <div
                     key={cat.title}
-                    onClick={() => setSelectedSubcategory(cat.title)}
-                    className="flex-shrink-0 rounded-xl px-4 py-2.5 transition-all duration-200 flex items-center gap-2.5"
+                    className="flex-shrink-0"
                     style={{
-                      minHeight: '42px',
-                      background: 'white',
-                      borderWidth: isSelected ? '2px' : '0.4px',
-                      borderColor: isSelected ? '#000000' : '#E5E7EB',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      paddingLeft: isSelected ? '2px' : '0',
+                      paddingRight: isSelected ? '2px' : '0',
+                      paddingTop: isSelected ? '2px' : '0',
+                      paddingBottom: isSelected ? '2px' : '0',
                     }}
                   >
-                    <span className="text-base leading-none">{cat.icon}</span>
-                    <span className="text-sm font-semibold whitespace-nowrap">{cat.title}</span>
-                  </button>
-                );
-              })}
+                    <button
+                      onClick={() => setSelectedSubcategory(cat.title)}
+                      className="rounded-full transition-all duration-200 flex items-center relative"
+                      style={{
+                        minHeight: isSelected ? '46px' : '42px',
+                        paddingLeft: isSelected ? '18px' : '16px',
+                        paddingRight: isSelected ? '18px' : '16px',
+                        paddingTop: isSelected ? '12px' : '10px',
+                        paddingBottom: isSelected ? '12px' : '10px',
+                        background: 'white',
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        gap: isSelected ? '10px' : '8px',
+                        transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                      }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }
+                    }}
+                  >
+                    <span 
+                      className="leading-none"
+                      style={{
+                        fontSize: isSelected ? '18px' : '16px',
+                      }}
+                    >
+                      {cat.icon}
+                    </span>
+                    <span 
+                      className="font-semibold whitespace-nowrap"
+                      style={{
+                        fontSize: isSelected ? '14px' : '13px',
+                        color: isSelected ? '#111827' : '#6B7280',
+                      }}
+                      >
+                        {cat.title}
+                      </span>
+                    </button>
+                  </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
           {/* Listing Cards Grid */}
           {(() => {

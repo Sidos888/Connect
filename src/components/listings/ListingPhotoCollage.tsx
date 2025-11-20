@@ -47,19 +47,19 @@ export default function ListingPhotoCollage({
   const PhotoCountBadge = ({ count, onClick }: { count: number; onClick?: () => void }) => {
     const badgeContent = (
       <div className="flex items-center justify-center gap-1.5 bg-white z-10"
-        style={{
-          width: '53px',
-          height: '40px',
-          borderRadius: '20px',
-          borderWidth: '0.4px',
-          borderColor: '#E5E7EB',
-          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-        }}
-      >
-        <span className="text-sm font-medium text-gray-900">{count}</span>
-        <ImageIcon size={18} className="text-gray-900" />
-      </div>
-    );
+      style={{
+        width: '53px',
+        height: '40px',
+        borderRadius: '20px',
+        borderWidth: '0.4px',
+        borderColor: '#E5E7EB',
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+      }}
+    >
+      <span className="text-sm font-medium text-gray-900">{count}</span>
+      <ImageIcon size={18} className="text-gray-900" />
+    </div>
+  );
 
     if (onClick) {
       return (

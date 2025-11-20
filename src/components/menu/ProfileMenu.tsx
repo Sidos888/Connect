@@ -738,7 +738,14 @@ export default function ProfileMenu() {
 
 
   // Close menu when navigating - immediate hide
+  // BUT: Don't interfere with standalone profile route (/profile?id=xxx)
   useEffect(() => {
+    // Skip if navigating to standalone profile page (not a modal)
+    if (pathname === '/profile' || pathname === '/profile/') {
+      // Don't reset states for standalone profile route - it's a full page, not a modal
+      return;
+    }
+    
     console.log('ProfileMenu: Pathname changed to', pathname, '- Resetting all modal states');
     setOpen(false);
     setShowMenu(false); // Immediately hide menu on navigation

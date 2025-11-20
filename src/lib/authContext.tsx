@@ -30,6 +30,10 @@ interface AuthContextType {
   verifyEmailCode: (email: string, code: string) => Promise<{ error: Error | null; isExistingAccount?: boolean; tempUser?: any }>;
   verifyPhoneCode: (phone: string, code: string) => Promise<{ error: Error | null; isExistingAccount?: boolean; tempUser?: any }>;
   
+  // START REVIEWER OVERRIDE
+  signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
+  // END REVIEWER OVERRIDE
+  
   // Legacy compatibility methods
   checkUserExists: (phone?: string, email?: string) => Promise<{ exists: boolean; userData?: any; error: Error | null }>;
   loadUserProfile: () => Promise<{ profile: any | null; error: Error | null }>;
@@ -110,6 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [account, user]);
   const realtimeCleanupRef = useRef<(() => void) | null>(null);
+  const initialSessionLoadedRef = useRef(false);
+  const accountLoadingInProgressRef = useRef<string | null>(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -140,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setAccount(null);
             setLoading(false);
+            initialSessionLoadedRef.current = true;
             return;
           }
         }
@@ -158,12 +165,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           setUser(session.user);
           
+          // Mark that we're loading account for this user
+          accountLoadingInProgressRef.current = session.user.id;
+          
           console.log('👤 NewAuthContext: setUser called, loading account...');
           try {
             await loadAccountForUser(session.user.id);
             console.log('👤 NewAuthContext: Initial account loading completed');
           } catch (error) {
             console.error('👤 NewAuthContext: Initial account loading failed:', error);
+          } finally {
+            accountLoadingInProgressRef.current = null;
           }
           // Realtime sync is handled in the user.id effect
         } else {
@@ -173,6 +185,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('❌ NewAuthContext: Error loading initial session:', error);
       } finally {
         setLoading(false);
+        initialSessionLoadedRef.current = true;
+        console.log('✅ NewAuthContext: Initial session loading marked as complete');
       }
     };
 
@@ -209,8 +223,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('🔐 AuthContext: ========== AUTH STATE CHANGE - USER SESSION AVAILABLE ==========');
           console.log('🔐 AuthContext: User session available:', { id: session.user.id, email: session.user.email, phone: session.user.phone });
+          console.log('🔐 AuthContext: Event:', event);
+          console.log('🔐 AuthContext: Initial session loaded:', initialSessionLoadedRef.current);
+          console.log('🔐 AuthContext: Account loading in progress for:', accountLoadingInProgressRef.current);
           
-          setUser(session.user);
+          // Skip TOKEN_REFRESHED events until initial session is loaded to prevent race conditions
+          if (event === 'TOKEN_REFRESHED' && !initialSessionLoadedRef.current) {
+            console.log('⏭️ AuthContext: Skipping TOKEN_REFRESHED event - waiting for initial session to load');
+            return;
+          }
+          
+          // Skip if we're already loading account for this user
+          if (accountLoadingInProgressRef.current === session.user.id) {
+            console.log('⏭️ AuthContext: Skipping - account already loading for this user');
+            return;
+          }
+          
+          // Only update user if it's different or we don't have one yet
+          if (!user || user.id !== session.user.id) {
+            console.log('🔐 AuthContext: Setting user from auth state change');
+            setUser(session.user);
+          } else {
+            console.log('🔐 AuthContext: User already set, skipping setUser');
+          }
+          
+          // Mark that we're loading account for this user
+          accountLoadingInProgressRef.current = session.user.id;
           
           // Call loadAccountForUser and wait for it to complete
           try {
@@ -219,6 +257,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('🔐 AuthContext: Account loading completed successfully');
           } catch (error) {
             console.error('🔐 AuthContext: Account loading failed:', error);
+          } finally {
+            accountLoadingInProgressRef.current = null;
           }
           
           // Realtime sync is handled in the user.id effect
@@ -1108,6 +1148,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // START REVIEWER OVERRIDE
+  // Sign in with password (reviewer only)
+  const signInWithPassword = async (email: string, password: string) => {
+    if (!supabase) return { error: new Error('Supabase client not initialized') };
+
+    try {
+      console.log('🔐 AuthContext: ========== REVIEWER PASSWORD LOGIN ==========');
+      console.log('🔐 AuthContext: Email:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        console.error('❌ AuthContext: Password login error:', error.message);
+        return { error: error as Error };
+      }
+
+      if (!data.user) {
+        return { error: new Error('No user returned from login') };
+      }
+
+      console.log('✅ AuthContext: Reviewer password login successful, user ID:', data.user.id);
+
+      // Load account for the user
+      await loadAccountForUser(data.user.id);
+
+      // Set user state
+      setUser(data.user);
+      setLoading(false);
+
+      return { error: null };
+    } catch (error) {
+      console.error('❌ AuthContext: Error in password login:', error);
+      return { error: error as Error };
+    }
+  };
+  // END REVIEWER OVERRIDE
+
   // Sign out
   const signOut = async () => {
     if (!supabase) return;
@@ -1193,7 +1273,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     uploadAvatar,
     deleteAccount,
     updateProfile,
-    signOut
+    signOut,
+    // START REVIEWER OVERRIDE
+    signInWithPassword
+    // END REVIEWER OVERRIDE
   };
 
   return (

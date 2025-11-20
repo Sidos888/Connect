@@ -6,8 +6,9 @@ import { ArrowLeft, Plus, MapPin, Check, Image as ImageIcon, ChevronUp, ChevronD
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
-export default function CreateListingPage() {
+function CreateListingPageContent() {
   const router = useRouter();
   const { account } = useAuth();
   const [listingTitle, setListingTitle] = useState("");
@@ -753,7 +754,29 @@ export default function CreateListingPage() {
                   ref={titleInputRef}
                   type="text"
                   value={listingTitle}
-                  onChange={(e) => setListingTitle(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Auto-capitalize first letter of each word
+                    // Split by spaces and capitalize first letter of each word
+                    const words = value.split(' ');
+                    const capitalizedWords = words.map((word, index) => {
+                      if (word.length === 0) return word;
+                      // Get cursor position to preserve it
+                      const cursorPos = e.target.selectionStart || 0;
+                      // Capitalize first letter, keep rest as-is (don't force lowercase)
+                      return word.charAt(0).toUpperCase() + word.slice(1);
+                    });
+                    const newValue = capitalizedWords.join(' ');
+                    setListingTitle(newValue);
+                    
+                    // Preserve cursor position after state update
+                    setTimeout(() => {
+                      if (titleInputRef.current) {
+                        const newCursorPos = Math.min(e.target.selectionStart || 0, newValue.length);
+                        titleInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+                      }
+                    }, 0);
+                  }}
                   onFocus={() => setTitleFocused(true)}
                   onBlur={() => setTitleFocused(false)}
                   placeholder=""
@@ -766,21 +789,18 @@ export default function CreateListingPage() {
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
-                    transform: titleFocused ? 'translateY(-1px)' : 'translateY(0)',
                     boxShadow: titleFocused
                       ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                       : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
+                    willChange: 'box-shadow'
                   }}
                   onMouseEnter={(e) => {
                     if (!titleFocused) {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!titleFocused) {
-                      e.currentTarget.style.transform = 'translateY(0)';
                       e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }
                   }}
@@ -821,21 +841,18 @@ export default function CreateListingPage() {
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
-                    transform: summaryFocused ? 'translateY(-1px)' : 'translateY(0)',
                     boxShadow: summaryFocused
                       ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                       : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
+                    willChange: 'box-shadow'
                   }}
                   onMouseEnter={(e) => {
                     if (!summaryFocused) {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!summaryFocused) {
-                      e.currentTarget.style.transform = 'translateY(0)';
                       e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }
                   }}
@@ -1660,6 +1677,14 @@ export default function CreateListingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CreateListingPage() {
+  return (
+    <ProtectedRoute title="Create Listing" description="Log in / sign up to create a new listing" buttonText="Log in">
+      <CreateListingPageContent />
+    </ProtectedRoute>
   );
 }
 

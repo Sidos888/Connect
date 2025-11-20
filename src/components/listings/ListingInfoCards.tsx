@@ -12,6 +12,7 @@ interface ListingInfoCardsProps {
     name: string;
     profile_pic?: string | null;
   } | null;
+  userRole?: 'host' | 'participant' | 'viewer';
   onLocationClick?: () => void;
   onHostClick?: () => void;
   onViewingClick?: () => void;
@@ -22,6 +23,7 @@ export default function ListingInfoCards({
   capacityUnlimited = false,
   location,
   host,
+  userRole = 'viewer',
   onLocationClick,
   onHostClick,
   onViewingClick
@@ -36,7 +38,7 @@ export default function ListingInfoCards({
 
   return (
     <div className="space-y-3">
-      {/* Me: Viewing Card */}
+      {/* Me: Viewing/Host Card */}
       <div 
         className="bg-white rounded-xl p-4 flex items-center gap-3"
         onClick={onViewingClick}
@@ -49,7 +51,7 @@ export default function ListingInfoCards({
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-base font-semibold text-gray-900 mb-1 truncate">
-            Me: Viewing
+            {userRole === 'host' ? 'Me: Hosting' : 'Me: Viewing'}
           </div>
           <div className="text-sm font-normal text-gray-500 truncate">
             {capacityUnlimited ? 'Unlimited' : (capacity ? `${capacity}` : 'Unlimited')} attendees • Tap to view more

@@ -176,6 +176,23 @@ export default function CreateListingDetailsPage() {
       throw new Error('No active session');
     }
 
+    // Verify the bucket exists and is accessible
+    try {
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+      if (bucketError) {
+        console.error('Error listing buckets:', bucketError);
+      } else {
+        const listingPhotosBucket = buckets?.find(b => b.id === 'listing-photos');
+        if (!listingPhotosBucket) {
+          throw new Error('The listing-photos storage bucket does not exist. Please create it in your Supabase dashboard or run the setup script.');
+        }
+        console.log('✅ listing-photos bucket found:', listingPhotosBucket);
+      }
+    } catch (error) {
+      // If bucket check fails, log but continue - the upload will fail with a clearer error
+      console.warn('Could not verify bucket existence:', error);
+    }
+
     const uploadedUrls: string[] = [];
     
     for (let i = 0; i < photos.length; i++) {
@@ -187,11 +204,23 @@ export default function CreateListingDetailsPage() {
         }
 
         // Convert base64 to Blob
-        const blob = dataURLtoBlob(photo);
+        let blob: Blob;
+        try {
+          blob = dataURLtoBlob(photo);
+        } catch (conversionError) {
+          console.error(`Failed to convert photo ${i + 1} to blob:`, conversionError);
+          throw new Error(`Photo ${i + 1} is corrupted or invalid: ${conversionError instanceof Error ? conversionError.message : 'Unknown error'}`);
+        }
         
         // Validate blob
         if (!blob || blob.size === 0) {
           throw new Error(`Photo ${i + 1} is empty (size: ${blob?.size || 0} bytes)`);
+        }
+
+        // Check blob size (10MB limit)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (blob.size > maxSize) {
+          throw new Error(`Photo ${i + 1} is too large (${Math.round(blob.size / 1024)}KB). Maximum size is 10MB.`);
         }
 
         // Determine file extension from blob type
@@ -208,17 +237,85 @@ export default function CreateListingDetailsPage() {
         console.log(`Uploading photo ${i + 1}/${photos.length}: ${fileName} (${Math.round(blob.size / 1024)}KB, type: ${blob.type})`);
         
         // Upload to Supabase Storage using Blob
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('listing-photos')
-          .upload(fileName, blob, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: blob.type
-          });
+        // Add timeout and retry logic for network issues
+        let uploadData;
+        let uploadError;
+        const maxRetries = 3;
+        let retryCount = 0;
+        
+        while (retryCount < maxRetries) {
+          try {
+            const uploadPromise = supabase.storage
+              .from('listing-photos')
+              .upload(fileName, blob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: blob.type
+              });
+            
+            // Add timeout (30 seconds per upload)
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+            );
+            
+            const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
+            uploadData = result.data;
+            uploadError = result.error;
+            
+            if (!uploadError) {
+              break; // Success, exit retry loop
+            }
+            
+            // If error is retryable, try again
+            if (retryCount < maxRetries - 1 && (
+              uploadError.message?.includes('network') || 
+              uploadError.message?.includes('timeout') ||
+              uploadError.message?.includes('Load failed')
+            )) {
+              retryCount++;
+              console.warn(`Upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+              continue;
+            }
+            
+            break; // Non-retryable error or max retries reached
+          } catch (timeoutError) {
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              console.warn(`Upload timeout, retrying... (${retryCount}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              continue;
+            }
+            uploadError = timeoutError as any;
+            break;
+          }
+        }
 
         if (uploadError) {
-          console.error(`Failed to upload photo ${i + 1}:`, uploadError);
-          throw new Error(`Failed to upload photo ${i + 1}: ${uploadError.message}`);
+          console.error(`Failed to upload photo ${i + 1} after ${retryCount + 1} attempts:`, uploadError);
+          console.error(`Upload error details:`, {
+            name: uploadError.name,
+            message: uploadError.message,
+            statusCode: uploadError.statusCode,
+            error: uploadError,
+            blobSize: blob.size,
+            blobType: blob.type,
+            fileName: fileName
+          });
+          
+          // Provide more helpful error message
+          let errorMessage = `Failed to upload photo ${i + 1}`;
+          if (uploadError.message) {
+            errorMessage += `: ${uploadError.message}`;
+          } else if (uploadError.name === 'StorageUnknownError') {
+            errorMessage += ': Storage bucket may not exist or may not have proper permissions. Please check your Supabase storage configuration.';
+          } else if (uploadError.message?.includes('timeout') || uploadError.message?.includes('Load failed')) {
+            errorMessage += ': Network timeout. Please check your internet connection and try again.';
+          } else {
+            errorMessage += ': Unknown error occurred';
+          }
+          
+          throw new Error(errorMessage);
         }
 
         if (!uploadData || !uploadData.path) {

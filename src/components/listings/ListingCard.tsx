@@ -39,15 +39,23 @@ export default function ListingCard({
   };
 
   if (!listing?.id) {
-    console.error('ListingCard: No listing ID available', listing);
+    console.error('ListingCard: No listing ID available', { listing, hasListing: !!listing, hasId: !!listing?.id });
     return null;
   }
 
-  // Use query parameter route to avoid RSC fetch issues in Capacitor
-  // This matches the pattern used by /chat/profile?userId=xxx which works reliably
-  const href = `/my-life/listing?id=${listing.id}`;
+  // Use context-agnostic route with source context tracking
+  // This allows listings to work from any context (my-life, explore, for-you, chat, etc.)
+  const getListingUrl = () => {
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/explore';
+    const params = new URLSearchParams();
+    params.set('id', listing.id);
+    params.set('from', currentPath);
+    return `/listing?${params.toString()}`;
+  };
   
-  // Handle click - use query params instead of dynamic segments
+  const href = getListingUrl();
+  
+  // Handle click - use context-agnostic route
   const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();

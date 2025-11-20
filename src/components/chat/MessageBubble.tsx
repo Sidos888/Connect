@@ -100,8 +100,8 @@ const MessageBubble = React.memo(({
         <div className="flex-shrink-0 flex items-end">
           <button
             onClick={() => {
-              // Navigate to profile page
-              router.push(`/profile/${message.sender_id}`);
+              // Navigate to profile page - use query parameter route for static export compatibility
+              router.push(`/profile?id=${message.sender_id}`);
             }}
             className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded-full hover:opacity-80 transition-opacity"
           >

@@ -691,8 +691,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     boxShadow: '0 2px 4px rgba(255, 102, 0, 0.2)',
                     willChange: 'transform, box-shadow'
                   }}
-                  onMouseEnter={(e) => {
-                    if (!loading && email) {
+                        onMouseEnter={(e) => {
+                          if (!loading && email) {
                       e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 102, 0, 0.3)';
                     }
                   }}
@@ -700,7 +700,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 102, 0, 0.2)';
                   }}
                 >
-                  {loading ? 'Sending...' : 'Continue'}
+                        {loading ? 'Sending...' : 'Continue'}
                 </button>
               </div>
             </form>

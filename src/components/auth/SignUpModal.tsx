@@ -179,6 +179,48 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
     setError('');
     
     try {
+      // START REVIEWER OVERRIDE
+      // Check if this is the reviewer email FIRST (before any OTP attempts)
+      const isReviewer = isReviewerEmail(email);
+      const isReview = isReviewBuild();
+      
+      console.log('🍎 SignUpModal: Reviewer check:', { 
+        email, 
+        isReviewer, 
+        isReview, 
+        isReviewMode,
+        hasPassword: !!password 
+      });
+      
+      if (isReview && isReviewer) {
+        // Require password for reviewer
+        if (!password) {
+          setError('Please enter your password');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('🍎 SignUpModal: ========== REVIEWER PASSWORD LOGIN ==========');
+        console.log('🍎 SignUpModal: Reviewer email detected, using password login');
+        
+        const { error: passwordError } = await signInWithPassword(email, password);
+        
+        if (passwordError) {
+          console.error('🍎 SignUpModal: Reviewer password login failed:', passwordError.message);
+          setError(passwordError.message || 'Invalid email or password');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('🍎 SignUpModal: Reviewer password login successful, redirecting...');
+        
+        // Successfully logged in - redirect to my-life
+        onClose();
+        router.push('/my-life');
+        return;
+      }
+      // END REVIEWER OVERRIDE
+      
       const { error } = await sendEmailVerification(email);
       
       if (error) {
