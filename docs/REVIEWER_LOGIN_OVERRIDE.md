@@ -10,16 +10,18 @@ This is a **temporary** login override system that allows Apple reviewers to log
 The system detects review builds using:
 1. **Environment Variable**: `NEXT_PUBLIC_REVIEW_BUILD=true` (set in build config for review builds)
 2. **User Agent**: Checks for "TestFlight" in the user agent string
-3. **Email Match**: Only activates when email is exactly `reviewer@connectos.app`
+3. **Development Mode**: Automatically enabled in local development
+4. **Email Match**: Only activates when email is exactly `reviewer@connectos.app`
 
 ### Credentials
 - **Email**: `reviewer@connectos.app`
 - **Password**: `SomethingStrong123!`
 
 ### Behavior
-- **Review Builds**: When the reviewer email is entered, a password field appears
-- **Normal Users**: All other users continue using OTP magic links (unchanged)
+- **Review Builds**: When the reviewer email is entered in the normal login flow, a password field automatically appears (completely invisible to regular users)
+- **Normal Users**: All other users continue using OTP magic links (unchanged) - they never see the password field
 - **Production**: This code does NOT affect production builds
+- **Invisible**: No separate login page - seamlessly integrated into the normal login modal
 
 ## Files Modified
 
@@ -39,18 +41,22 @@ Utility functions for detecting review builds and reviewer email.
 - Remove from context value object
 
 ### 3. `src/components/auth/LoginModal.tsx`
-- Added imports for reviewer auth utilities (line 10)
-- Added password state and refs (around line 30)
-- Added review mode detection useEffect (around line 70)
-- Modified `handleEmailSubmit` to check for reviewer email (around line 236)
-- Added password input field (around line 680)
+- Added imports for reviewer auth utilities
+- Added password state and refs
+- Added `reviewer-password` step to the step state
+- Added `useEffect` to automatically detect reviewer email and switch to password mode
+- Modified `handleEmailSubmit` to check for reviewer email before sending OTP
+- Added `handleReviewerPasswordSubmit` function
+- Added password input UI (only shown when reviewer email is entered in review builds)
 
 **To Remove**:
-- Remove import statement
-- Remove password-related state variables
-- Remove review mode detection useEffect
+- Remove import statement for reviewer auth utilities
+- Remove password-related state variables (`password`, `passwordFocused`, `passwordInputRef`)
+- Remove `reviewer-password` from step type union
+- Remove review mode detection `useEffect`
 - Remove reviewer login logic from `handleEmailSubmit`
-- Remove password input field from JSX
+- Remove `handleReviewerPasswordSubmit` function
+- Remove password input field from JSX (entire `step === 'reviewer-password'` block)
 
 ## Setup for Review Builds
 
@@ -66,18 +72,20 @@ The system automatically detects TestFlight builds via user agent.
 ## Testing
 
 ### Test Reviewer Login
-1. Build app for TestFlight/Review
-2. Open login modal
-3. Enter: `reviewer@connectos.app`
-4. Password field should appear
+1. Build app for TestFlight/Review (or run in development mode)
+2. Open login modal (click "Sign In" button)
+3. Enter email: `reviewer@connectos.app`
+4. **Password field should automatically appear** (no separate page)
 5. Enter password: `SomethingStrong123!`
-6. Click "Continue"
+6. Click "Sign In"
 7. Should log in and redirect to `/my-life`
 
 ### Test Normal Users
-1. Enter any other email
-2. Password field should NOT appear
-3. OTP flow should work normally
+1. Open login modal
+2. Enter any other email (e.g., `test@example.com`)
+3. Password field should NOT appear
+4. OTP flow should work normally
+5. Regular users should never see any difference
 
 ## Supabase Setup
 
@@ -95,12 +103,14 @@ The system automatically detects TestFlight builds via user agent.
 ### Quick Removal Checklist
 
 1. ✅ Delete `src/lib/reviewerAuth.ts`
-2. ✅ Remove reviewer code from `src/lib/authContext.tsx` (marked with comments)
-3. ✅ Remove reviewer code from `src/components/auth/LoginModal.tsx` (marked with comments)
-4. ✅ Delete reviewer account from Supabase (optional, but recommended)
-5. ✅ Remove `NEXT_PUBLIC_REVIEW_BUILD` from build config
-6. ✅ Test normal OTP login still works
-7. ✅ Commit removal
+2. ✅ Remove reviewer code from `src/lib/authContext.tsx` (marked with `// START REVIEWER OVERRIDE` / `// END REVIEWER OVERRIDE`)
+3. ✅ Remove reviewer code from `src/components/auth/LoginModal.tsx` (marked with `// START REVIEWER OVERRIDE` / `// END REVIEWER OVERRIDE`)
+4. ✅ Remove `ReviewerLoginPage` import/usage from `src/components/layout/AppShell.tsx` (if still present)
+5. ✅ Delete `src/components/auth/ReviewerLoginPage.tsx` (if file still exists)
+6. ✅ Delete reviewer account from Supabase (optional, but recommended)
+7. ✅ Remove `NEXT_PUBLIC_REVIEW_BUILD` from build config
+8. ✅ Test normal OTP login still works
+9. ✅ Commit removal
 
 ### Search for All Reviewer Code
 ```bash

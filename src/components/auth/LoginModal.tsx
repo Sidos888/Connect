@@ -7,6 +7,9 @@ import { useAuth } from '@/lib/authContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/lib/store';
 import VerificationModal from './VerificationModal';
+// START REVIEWER OVERRIDE
+import { isReviewBuild, isReviewerEmail, REVIEWER_PASSWORD } from '@/lib/reviewerAuth';
+// END REVIEWER OVERRIDE
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -15,12 +18,12 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, user, signOut } = useAuth();
+  const { sendPhoneVerification, sendEmailVerification, verifyPhoneCode, verifyEmailCode, user, signOut, signInWithPassword } = useAuth();
   const router = useRouter();
   
   // Detect device type and set default step
   const [isMobile, setIsMobile] = useState(false);
-  const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-check'>('phone');
+  const [step, setStep] = useState<'phone' | 'email' | 'verify' | 'account-check' | 'reviewer-password'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [email, setEmail] = useState('');
@@ -29,6 +32,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [error, setError] = useState('');
   const [emailFocused, setEmailFocused] = useState(false);
   const [emailHovered, setEmailHovered] = useState(false);
+  // START REVIEWER OVERRIDE
+  const [password, setPassword] = useState('');
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  // END REVIEWER OVERRIDE
 
   const [countryFocused, setCountryFocused] = useState(false);
   const [countryCode, setCountryCode] = useState('+61');
@@ -245,6 +253,23 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       return;
     }
     
+    // START REVIEWER OVERRIDE
+    // Check if this is a review build and the email is the reviewer email
+    // If so, show password field instead of OTP
+    if (isReviewBuild() && isReviewerEmail(email)) {
+      console.log('🍎 LoginModal: Reviewer email detected, switching to password mode');
+      setStep('reviewer-password');
+      setError('');
+      // Auto-focus password field
+      setTimeout(() => {
+        if (passwordInputRef.current) {
+          passwordInputRef.current.focus();
+        }
+      }, 100);
+      return;
+    }
+    // END REVIEWER OVERRIDE
+    
     setLoading(true);
     setError('');
     
@@ -383,9 +408,50 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
   };
 
+  // START REVIEWER OVERRIDE
+  const handleReviewerPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+    
+    if (loading) {
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      console.log('🍎 LoginModal: Attempting reviewer password login');
+      const { error: loginError } = await signInWithPassword(email, password);
+      
+      if (loginError) {
+        console.error('🍎 LoginModal: Reviewer login failed:', loginError.message);
+        setError(loginError.message || 'Invalid email or password');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🍎 LoginModal: Reviewer login successful');
+      // Close modal and redirect - auth context will handle the rest
+      onClose();
+      router.push('/my-life');
+    } catch (err) {
+      console.error('🍎 LoginModal: Error during reviewer login:', err);
+      setError('An unexpected error occurred');
+      setLoading(false);
+    }
+  };
+  // END REVIEWER OVERRIDE
+
   const handleBack = () => {
     if (step === 'verify') {
       setStep(verificationMethod === 'phone' ? 'phone' : 'email');
+    } else if (step === 'reviewer-password') {
+      setStep('email');
+      setPassword('');
     }
   };
 
@@ -412,6 +478,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
     setPhoneNumber('');
     setEmail('');
+    setPassword('');
     setError('');
     onClose();
   };
@@ -458,6 +525,25 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       }
     }
   };
+
+  // START REVIEWER OVERRIDE
+  // Watch for reviewer email being entered - automatically switch to password mode
+  useEffect(() => {
+    if (step === 'email' && email && isReviewBuild() && isReviewerEmail(email)) {
+      console.log('🍎 LoginModal: Reviewer email detected, switching to password mode');
+      setStep('reviewer-password');
+      setTimeout(() => {
+        if (passwordInputRef.current) {
+          passwordInputRef.current.focus();
+        }
+      }, 100);
+    } else if (step === 'reviewer-password' && email && !isReviewerEmail(email)) {
+      // If they change the email away from reviewer email, go back to normal flow
+      setStep('email');
+      setPassword('');
+    }
+  }, [email, step]);
+  // END REVIEWER OVERRIDE
 
   if (!isOpen) return null;
 
@@ -705,6 +791,111 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               </div>
             </form>
           )}
+
+          {/* START REVIEWER OVERRIDE */}
+          {/* Reviewer Password Step - Only shown when reviewer email is entered in review builds */}
+          {step === 'reviewer-password' && (
+            <form onSubmit={handleReviewerPasswordSubmit} className="max-w-md mx-auto w-full">
+              {/* Email Display (read-only) */}
+              <div className="relative mb-4">
+                <input
+                  type="email"
+                  value={email}
+                  readOnly
+                  className="w-full h-14 pl-4 pr-4 pt-6 pb-2 focus:ring-0 focus:outline-none bg-gray-50 rounded-2xl"
+                  style={{
+                    fontSize: '16px',
+                    lineHeight: '1.2',
+                    fontFamily: 'inherit',
+                    color: '#6B7280',
+                    border: '0.4px solid #E5E7EB',
+                    borderRadius: '16px',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    cursor: 'not-allowed'
+                  }}
+                />
+                <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                  Email
+                </label>
+              </div>
+
+              {/* Password Input */}
+              <div className="relative mb-8">
+                <input
+                  ref={passwordInputRef}
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                  placeholder=""
+                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(passwordFocused || password) ? 'pt-6 pb-2' : 'py-5'}`}
+                  style={{
+                    fontSize: '16px',
+                    lineHeight: '1.2',
+                    fontFamily: 'inherit',
+                    color: 'black',
+                    border: '0.4px solid #E5E7EB',
+                    borderRadius: '16px',
+                    transform: passwordFocused ? 'translateY(-1px)' : 'translateY(0)',
+                    boxShadow: passwordFocused
+                      ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                      : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  required
+                />
+                {/* Floating label when focused or filled */}
+                {(passwordFocused || password) && (
+                  <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                    Password
+                  </label>
+                )}
+                {/* Default centered label when empty and unfocused */}
+                {!passwordFocused && !password && (
+                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
+                    Password
+                  </label>
+                )}
+              </div>
+
+              {/* Continue Button */}
+              <div className="flex justify-center mb-8">
+                <button
+                  type="submit"
+                  disabled={!password || loading}
+                  className="px-8 py-3 bg-brand text-white rounded-lg font-medium transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  style={{ 
+                    backgroundColor: '#FF6600',
+                    boxShadow: '0 2px 4px rgba(255, 102, 0, 0.2)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading && password) {
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 102, 0, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 102, 0, 0.2)';
+                  }}
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </div>
+
+              {/* Back Button */}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  ← Back to email
+                </button>
+              </div>
+            </form>
+          )}
+          {/* END REVIEWER OVERRIDE */}
 
           {/* Phone Button - Absolute positioned at bottom - Only show on email step */}
           {step === 'email' && (

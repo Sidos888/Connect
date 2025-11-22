@@ -142,8 +142,8 @@ export default function ListingPage() {
 
   // Render based on view (like menu page)
   const renderContent = () => {
-    if (!listingId) {
-      return (
+  if (!listingId) {
+    return (
         <div className="px-4 py-8 text-center text-gray-500">
           <p>No listing ID provided</p>
         </div>
@@ -154,9 +154,9 @@ export default function ListingPage() {
       return (
         <div className="px-4 py-8 text-center text-gray-500">
           <p>Loading listing...</p>
-        </div>
-      );
-    }
+      </div>
+    );
+  }
 
     if (!listing) {
       return (

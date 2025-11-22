@@ -111,9 +111,12 @@ This guide walks you through submitting your app to App Store Connect for review
    - In **"Notes"**, add:
      ```
      For App Review:
-     - On the initial screen, simply click the "Apple Reviewer Login" button (🍎 icon)
-     - This will automatically sign you in - no password required
-     - This bypasses the OTP verification for review purposes
+     - Click "Sign In" to open the login modal
+     - Enter email: reviewer@connectos.app
+     - A password field will automatically appear
+     - Enter password: SomethingStrong123!
+     - Click "Sign In" to log in
+     - This bypasses OTP verification for review purposes
      ```
 
 7. **Submit for Review:**

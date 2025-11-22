@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import React, { useEffect } from "react";
 import Avatar from "@/components/Avatar";
@@ -28,7 +28,7 @@ import CenteredAddPerson from "@/components/connections/CenteredAddPerson";
 import { useAuth } from "@/lib/authContext";
 import ProfilePage from "@/components/profile/ProfilePage";
 import CenteredTimeline from "@/components/timeline/CenteredTimeline";
-import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
+import ProfileModal from "@/components/profile/ProfileModal";
 import { listingsService, Listing } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingCard from "@/components/listings/ListingCard";
@@ -41,6 +41,7 @@ const TABS: Array<TabDef> = [
 
 export default function MyLifeLayout(): React.JSX.Element {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const active = searchParams.get("tab") || "activities";
   
@@ -56,7 +57,7 @@ export default function MyLifeLayout(): React.JSX.Element {
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = React.useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
-  const [showProfileSwitcher, setShowProfileSwitcher] = React.useState(false);
+  const [showProfileModal, setShowProfileModal] = React.useState(false);
   const { account, signOut, deleteAccount, user } = useAuth();
 
   // Fetch listings data
@@ -104,7 +105,7 @@ export default function MyLifeLayout(): React.JSX.Element {
 
   // Set default tab to 'upcoming' - always prioritize upcoming events
   const [mobileTab, setMobileTab] = React.useState<'upcoming' | 'hosting' | 'history'>('upcoming');
-  
+
   // Ensure 'upcoming' is always selected by default when component mounts or data loads
   useEffect(() => {
     // Always default to 'upcoming' if it's available in pills (which it always is now)
@@ -270,7 +271,7 @@ export default function MyLifeLayout(): React.JSX.Element {
             title="My Life"
             customBackButton={
               <button
-                onClick={() => setShowProfileSwitcher(true)}
+                onClick={() => setShowProfileModal(true)}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   width: '40px',
@@ -350,7 +351,7 @@ export default function MyLifeLayout(): React.JSX.Element {
                               paddingBottom: isActive ? '12px' : '10px',
                               borderWidth: '0.4px',
                               borderColor: '#E5E7EB',
-                              borderStyle: 'solid',
+                            borderStyle: 'solid',
                               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                               color: isActive ? '#111827' : '#6B7280',
                               willChange: 'transform, box-shadow',
@@ -365,8 +366,8 @@ export default function MyLifeLayout(): React.JSX.Element {
                               if (!isActive) {
                                 e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                               }
-                            }}
-                          >
+                          }}
+                        >
                             <span 
                               className="font-medium leading-none"
                               style={{
@@ -375,7 +376,7 @@ export default function MyLifeLayout(): React.JSX.Element {
                             >
                               {p.label}
                             </span>
-                          </button>
+                        </button>
                         </div>
                       );
                     })}
@@ -406,10 +407,15 @@ export default function MyLifeLayout(): React.JSX.Element {
         </MobilePage>
       </div>
 
-      {/* Profile Switcher Sheet */}
-      <ProfileSwitcherSheet 
-        isOpen={showProfileSwitcher}
-        onClose={() => setShowProfileSwitcher(false)}
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        name={account?.name || personalProfile?.name || "User"}
+        avatarUrl={account?.profile_pic || personalProfile?.avatarUrl}
+        onViewProfile={() => router.push(`/profile?id=${account?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
+        onShareProfile={() => router.push(`/menu?view=share-profile&from=${encodeURIComponent(pathname)}`)}
+        onAddBusiness={() => router.push('/create-business')}
       />
     </>
   );

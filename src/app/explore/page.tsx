@@ -1,21 +1,22 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { SearchIcon } from "@/components/icons";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import Avatar from "@/components/Avatar";
-import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
+import ProfileModal from "@/components/profile/ProfileModal";
 import { Search } from "lucide-react";
 
 export default function ExplorePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { context, personalProfile } = useAppStore();
   const { account } = useAuth();
   const currentBusiness = useCurrentBusiness();
   const [hasError, setHasError] = useState(false);
-  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Lock body scroll on desktop
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function ExplorePage() {
             title="Explore"
             customBackButton={
               <button
-                onClick={() => setShowAccountSwitcher(true)}
+                onClick={() => setShowProfileModal(true)}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   width: '40px',
@@ -107,33 +108,6 @@ export default function ExplorePage() {
           }}>
             {/* Top Spacing */}
             <div style={{ height: '36px' }} />
-            
-            {/* Location Filter Card */}
-            <div style={{ paddingLeft: '56px', paddingRight: '56px', marginBottom: '24px' }}>
-              <div 
-                className="rounded-2xl bg-white px-4 py-2.5 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer w-full"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">📍</span>
-                    <span className="text-base font-semibold text-neutral-900">Adelaide</span>
-                  </div>
-                  <span className="text-sm text-neutral-500">Anytime</span>
-                </div>
-              </div>
-            </div>
 
             {/* Feature Cards - For You & Side Quest (Larger) */}
             <div className="grid grid-cols-2" style={{ 
@@ -190,11 +164,6 @@ export default function ExplorePage() {
               </button>
             </div>
 
-            {/* Section Header */}
-            <div style={{ paddingLeft: '22px', paddingRight: '22px', marginBottom: '16px' }}>
-              <h2 className="text-base font-semibold text-gray-900">Categories</h2>
-            </div>
-
             {/* 4 Category Cards - Casual is top left */}
             <div className="grid grid-cols-2" style={{ 
               paddingLeft: '22px', 
@@ -207,9 +176,7 @@ export default function ExplorePage() {
                 { title: "Food & Drink", icon: "🍕", href: null },
                 { title: "Events & Experiences", icon: "🎉", href: null },
                 { title: "Workshops & Classes", icon: "🎨", href: null },
-              ].map((category) => {
-                const needsEqualSpacing = category.title === "Casual" || category.title === "Food & Drink";
-                return (
+              ].map((category) => (
                   <button
                     key={category.title}
                     onClick={(e) => {
@@ -245,24 +212,14 @@ export default function ExplorePage() {
                       e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }}
                   >
-                    {needsEqualSpacing ? (
-                      <div className="flex flex-col items-start h-full justify-between" style={{ padding: '16px' }}>
-                        <div className="text-4xl leading-none">{category.icon}</div>
-                        <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
-                          {category.title}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-start h-full p-4 gap-2">
-                        <div className="text-4xl leading-none">{category.icon}</div>
-                        <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
-                          {category.title}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex flex-col items-start h-full p-4 gap-2">
+                      <div className="text-4xl leading-none">{category.icon}</div>
+                      <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
+                        {category.title}
+                      </span>
+                    </div>
                   </button>
-                );
-              })}
+                ))}
             </div>
           </div>
 
@@ -278,6 +235,41 @@ export default function ExplorePage() {
             <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
           </div>
         </MobilePage>
+      </div>
+      
+      {/* Location Filter Card - Above Bottom Nav (Mobile Only) */}
+      <div 
+        className="lg:hidden fixed z-[69] transition-all duration-300 ease-in-out"
+        style={{
+          left: '22px',
+          right: '22px',
+          bottom: `calc(max(env(safe-area-inset-bottom), 20px) + 46.5px + 12px)`,
+          height: '46.5px',
+          borderRadius: '100px',
+          background: 'rgba(255, 255, 255, 0.9)',
+          borderWidth: '0.4px',
+          borderColor: '#E5E7EB',
+          borderStyle: 'solid',
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+          padding: '0 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          willChange: 'transform, box-shadow'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-base">📍</span>
+          <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
+        </div>
+        <span className="text-xs text-neutral-500">Anytime</span>
       </div>
 
       {/* Desktop Layout - New Design */}
@@ -423,10 +415,15 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Profile Switcher Sheet */}
-      <ProfileSwitcherSheet 
-        isOpen={showAccountSwitcher}
-        onClose={() => setShowAccountSwitcher(false)}
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        name={currentAccount?.name ?? "User"}
+        avatarUrl={currentAccount?.avatarUrl}
+        onViewProfile={() => router.push(`/profile?id=${account?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
+        onShareProfile={() => router.push(`/menu?view=share-profile&from=${encodeURIComponent(pathname)}`)}
+        onAddBusiness={() => router.push('/create-business')}
       />
     </>
     );

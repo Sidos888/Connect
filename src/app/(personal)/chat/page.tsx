@@ -5,7 +5,7 @@ import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
 import { useAppStore } from "@/lib/store";
 import type { Conversation } from "@/lib/types";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import ChatLayout from "./ChatLayout";
 import PersonalChatPanel from "./PersonalChatPanel";
 import { useAuth } from "@/lib/authContext";
@@ -17,11 +17,12 @@ import NewMessageModal from "@/components/chat/NewMessageModal";
 import GroupSetupModal from "@/components/chat/GroupSetupModal";
 import { Plus } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
-import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
+import ProfileModal from "@/components/profile/ProfileModal";
 
 function MessagesPageContent() {
   const { isHydrated } = useAppStore();
   const router = useRouter();
+  const pathname = usePathname();
   const { account, user } = useAuth();
   const chatService = useChatService();
   const { showAddFriend } = useModal();
@@ -55,7 +56,7 @@ function MessagesPageContent() {
   const { showLogin } = useModal();
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showGroupSetupModal, setShowGroupSetupModal] = useState(false);
-  const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Load specific chat if requested but not in conversations list
   useEffect(() => {
@@ -290,7 +291,7 @@ function MessagesPageContent() {
               title="Chats"
               customBackButton={
                 <button
-                  onClick={() => setShowProfileSwitcher(true)}
+                  onClick={() => setShowProfileModal(true)}
                   className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
                     width: '40px',
@@ -496,9 +497,14 @@ function MessagesPageContent() {
           onClose={handleNewMessageClose}
           onComplete={handleNewMessageComplete}
         />
-        <ProfileSwitcherSheet 
-          isOpen={showProfileSwitcher}
-          onClose={() => setShowProfileSwitcher(false)}
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          name={account?.name || "User"}
+          avatarUrl={account?.profile_pic}
+          onViewProfile={() => router.push(`/profile?id=${account?.id}&from=${encodeURIComponent(pathname)}`)}
+          onShareProfile={() => router.push(`/menu?view=share-profile&from=${encodeURIComponent(pathname)}`)}
+          onAddBusiness={() => router.push('/create-business')}
         />
       </div>
     </ProtectedRoute>

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Calendar, MessageCircle, Building, Menu, Bell } from "lucide-react";
+import { Search, Building, Bell } from "lucide-react";
+import { MenuIconCustom } from "@/components/icons/MenuIconCustom";
+import { MyLifeIconCustom } from "@/components/icons/MyLifeIconCustom";
+import { ChatIconCustom } from "@/components/icons/ChatIconCustom";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useAppStore } from "@/lib/store";
@@ -28,10 +31,10 @@ export default function TopNavigation() {
     { 
       href: "/my-life", 
       label: context.type === "business" ? "My Business" : "My Life", 
-      icon: context.type === "business" ? Building : Calendar 
+      icon: context.type === "business" ? Building : MyLifeIconCustom 
     },
-    { href: "/chat", label: "Chat", icon: MessageCircle },
-    { href: "/menu-blank", label: "Menu", icon: Menu },
+    { href: "/chat", label: "Chats", icon: ChatIconCustom },
+    { href: "/menu-blank", label: "Menu", icon: MenuIconCustom },
   ];
 
   const isActive = (href: string) => {
@@ -114,6 +117,7 @@ export default function TopNavigation() {
                       <Icon 
                         size={22} 
                         strokeWidth={2.5}
+                        fill={active ? "currentColor" : "none"}
                         className="text-gray-900"
                       />
                     </Link>
@@ -242,7 +246,7 @@ export default function TopNavigation() {
                       }
                     }}
                   >
-                    <Menu size={16} className="text-gray-700" />
+                    <MenuIconCustom size={16} className="text-gray-700" />
                     {/* Hollow dotted profile picture when not signed in */}
                     <div className="w-6 h-6 border-2 border-dashed border-gray-400 rounded-full bg-transparent">
                     </div>

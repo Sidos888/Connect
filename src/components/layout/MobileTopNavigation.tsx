@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Calendar, MessageCircle, Building, Menu, Plus, Bell } from "lucide-react";
+import { Search, Calendar, MessageCircle, Building, Plus, Bell } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useState, useEffect, useRef } from "react";
@@ -50,7 +50,7 @@ export default function MobileTopNavigation() {
   const getActionButtons = () => {
     if (pathname.startsWith("/chat")) {
       return (
-        <button className="flex items-center justify-center w-10 h-10" style={cardStyle}>
+        <button className="flex items-center justify-center" style={{ ...cardStyle, width: '44px', height: '44px' }}>
           <Plus size={20} className="text-black" />
         </button>
       );
@@ -59,8 +59,8 @@ export default function MobileTopNavigation() {
       return (
         <button 
           onClick={() => router.push("/notifications")}
-          className="flex items-center justify-center w-10 h-10" 
-          style={cardStyle}
+          className="flex items-center justify-center" 
+          style={{ ...cardStyle, width: '44px', height: '44px' }}
         >
           <Bell size={20} className="text-black" />
         </button>
@@ -68,13 +68,13 @@ export default function MobileTopNavigation() {
     }
     if (pathname.startsWith("/my-life")) {
       return (
-        <button className="flex items-center justify-center w-10 h-10" style={cardStyle}>
+        <button className="flex items-center justify-center" style={{ ...cardStyle, width: '44px', height: '44px' }}>
           <Plus size={20} className="text-black" />
         </button>
       );
     }
     return (
-      <button className="flex items-center justify-center w-10 h-10" style={cardStyle}>
+      <button className="flex items-center justify-center" style={{ ...cardStyle, width: '44px', height: '44px' }}>
         <Search size={20} className="text-black" />
       </button>
     );

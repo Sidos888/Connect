@@ -11,10 +11,6 @@ import MobileTopNavigation from "./MobileTopNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import LoadingScreen from "@/components/LoadingScreen";
-// START REVIEWER OVERRIDE
-import ReviewerLoginPage from "@/components/auth/ReviewerLoginPage";
-import { isReviewBuild } from "@/lib/reviewerAuth";
-// END REVIEWER OVERRIDE
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -79,12 +75,8 @@ function AppShellContent({ children }: AppShellProps) {
   }, [pathname, normalizedListingPath, hasListingId, isListingDetailPage, searchParams]);
 
   // START REVIEWER OVERRIDE
-  // Show reviewer login page FIRST if in review build and not logged in
-  // This must happen BEFORE any other route logic to ensure it shows first
-  const isReview = isReviewBuild();
-  if (isReview && !user && !loading) {
-    return <ReviewerLoginPage />;
-  }
+  // Reviewer login is now handled in LoginModal - no separate page needed
+  // This keeps it invisible to regular users
   // END REVIEWER OVERRIDE
   
   // Show loading screen on mobile during initial load

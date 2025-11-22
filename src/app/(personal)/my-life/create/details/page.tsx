@@ -246,12 +246,12 @@ export default function CreateListingDetailsPage() {
         while (retryCount < maxRetries) {
           try {
             const uploadPromise = supabase.storage
-              .from('listing-photos')
-              .upload(fileName, blob, {
-                cacheControl: '3600',
-                upsert: false,
-                contentType: blob.type
-              });
+          .from('listing-photos')
+          .upload(fileName, blob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: blob.type
+          });
             
             // Add timeout (30 seconds per upload)
             const timeoutPromise = new Promise((_, reject) => 

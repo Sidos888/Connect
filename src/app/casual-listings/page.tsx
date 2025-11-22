@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Map, X, Search } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { ArrowLeft, Map, Grid3x3, Search, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { listingsService, Listing } from "@/lib/listingsService";
@@ -10,17 +10,13 @@ import ListingCard from "@/components/listings/ListingCard";
 
 export default function CasualListingsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   // Mobile state/refs (ported from Side Quest)
   const [selectedSubcategory, setSelectedSubcategory] = useState('All');
   const [showMap, setShowMap] = useState(false);
-  const [sheetState, setSheetState] = useState<'list' | 'peek'>('list');
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [listingsTouchStart, setListingsTouchStart] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
-  const [listStartOffset, setListStartOffset] = useState<number>(253);
+  const [listStartOffset, setListStartOffset] = useState<number>(269); // Updated to account for 16px increased spacing
   // Desktop-specific refs (retain)
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [headerBottom, setHeaderBottom] = useState<number | null>(null);
@@ -70,34 +66,7 @@ export default function CasualListingsPage() {
     { title: "All", icon: "☕" },
   ];
 
-  // Hide bottom nav on mobile
-  useEffect(() => {
-    const hideNav = () => {
-      const bottomNav = document.querySelector('nav[class*="bottom-0"]') || 
-                       document.querySelector('[class*="fixed"][class*="bottom"]');
-      if (bottomNav) {
-        (bottomNav as HTMLElement).style.display = 'none';
-      }
-    };
-    hideNav();
-    const timer = setTimeout(hideNav, 100);
-    return () => {
-      clearTimeout(timer);
-      const nav = document.querySelector('nav[class*="bottom-0"]') || 
-                  document.querySelector('[class*="fixed"][class*="bottom"]');
-      if (nav) {
-        (nav as HTMLElement).style.display = '';
-      }
-    };
-  }, []);
-
-  // Reset scroll position when transitioning from peek to list
-  useEffect(() => {
-    if (sheetState === 'list' && containerRef.current) {
-      containerRef.current.scrollTop = 0;
-      setScrollTop(0);
-    }
-  }, [sheetState]);
+  // Bottom nav is now visible on listing pages
 
   // Dynamically measure the bottom of the subcategory section and set list start offset
   useEffect(() => {
@@ -119,54 +88,11 @@ export default function CasualListingsPage() {
     };
   }, [listStartOffset]);
 
-  // Touch handlers for drag
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientY);
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart || !isDragging) return;
-    const currentTouch = e.touches[0].clientY;
-    const diff = touchStart - currentTouch;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        if (sheetState === 'peek') setSheetState('list');
-      }
-      setIsDragging(false);
-      setTouchStart(null);
-    }
-  };
-
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = e.currentTarget.scrollTop;
     if (newScrollTop < 0) {
       e.currentTarget.scrollTop = 0;
       return;
-    }
-    setScrollTop(newScrollTop);
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setTouchStart(null);
-    setListingsTouchStart(null);
-  };
-
-  // Detect downward swipe on sheet when at scrollTop=0 → activate map
-  const handleSheetTouchStart = (e: React.TouchEvent) => {
-    if (scrollTop === 0) {
-      setListingsTouchStart(e.touches[0].clientY);
-    }
-  };
-
-  const handleSheetTouchMove = (e: React.TouchEvent) => {
-    if (!listingsTouchStart || scrollTop !== 0) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - listingsTouchStart;
-    if (diff > 30) {
-      setSheetState('peek');
-      setListingsTouchStart(null);
     }
   };
 
@@ -187,13 +113,13 @@ export default function CasualListingsPage() {
             background: 'transparent',
             pointerEvents: 'none'
           }}>
-            <div className="relative w-full flex items-center justify-center" style={{ height: '40px', pointerEvents: 'auto' }}>
+            <div className="relative w-full flex items-center justify-center" style={{ height: '44px', pointerEvents: 'auto' }}>
               <button
                 onClick={() => router.push('/explore')}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
-                  width: '40px',
-                  height: '40px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
                   background: 'white',
                   borderWidth: '0.4px',
@@ -204,6 +130,21 @@ export default function CasualListingsPage() {
                 <ArrowLeft size={18} className="text-gray-900" />
               </button>
               <h1 className="text-xl font-semibold text-gray-900">Casual</h1>
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className="absolute right-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                }}
+              >
+                {showMap ? <Grid3x3 size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
+              </button>
             </div>
           </div>
 
@@ -219,14 +160,15 @@ export default function CasualListingsPage() {
             <div className="absolute left-0 right-0" style={{ top: '140px', height: '40px', backdropFilter: 'blur(0.35px)', WebkitBackdropFilter: 'blur(0.35px)' }} />
           </div>
 
-          {/* Map Background in peek state */}
+          {/* Map Background - full page when showMap is true */}
           <div 
             className="absolute left-0 right-0 bottom-0 bg-gray-100"
             style={{
-              top: '0',
+              top: '0', // Start from top so map is visible underneath header and category pills
               zIndex: 5,
-              opacity: sheetState === 'peek' ? 1 : 0,
-              transition: 'opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
+              opacity: showMap ? 1 : 0,
+              transition: 'opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+              pointerEvents: showMap ? 'auto' : 'none'
             }}
           >
             <iframe
@@ -236,40 +178,13 @@ export default function CasualListingsPage() {
             />
           </div>
 
-          {/* Transparent Filter & Category Header */}
+          {/* Transparent Category Header */}
           <div className="absolute left-0 right-0 z-20" style={{ 
-            top: '122px',
+            top: '138px', // Increased from 122px to add 16px spacing (matching side padding)
             pointerEvents: 'none',
             background: 'transparent',
             overflow: 'visible'
           }}>
-              {/* Filter Card */}
-              <div style={{ paddingLeft: '56px', paddingRight: '56px', marginBottom: '24px', pointerEvents: 'auto' }}>
-                <div 
-                  className="rounded-2xl bg-white px-4 py-2.5 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer w-full"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">📍</span>
-                      <span className="text-base font-semibold text-neutral-900">Adelaide</span>
-                    </div>
-                    <span className="text-sm text-neutral-500">Anytime</span>
-                  </div>
-                </div>
-              </div>
-
               {/* Category Filter Cards - edge-to-edge */}
               <div ref={categoriesRef} style={{ paddingLeft: '0', paddingRight: '0', marginBottom: '12px', pointerEvents: 'auto' }}>
                 <div className="flex gap-3 overflow-x-auto scrollbar-hide" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
@@ -340,80 +255,28 @@ export default function CasualListingsPage() {
               </div>
           </div>
 
-          {/* Bottom Sheet */}
+          {/* Listings Content - normal scrollable view */}
           <div 
             ref={containerRef}
-            className="fixed left-0 right-0 flex flex-col scrollbar-hide"
+            className="absolute left-0 right-0 flex flex-col overflow-y-auto scrollbar-hide"
             style={{
-              bottom: 0,
-              top: sheetState === 'peek' ? 'auto' : '0',
-              height: sheetState === 'peek' ? '140px' : 'auto',
-              zIndex: 10,
-              background: sheetState === 'peek' ? 'white' : 'transparent',
-              borderTopLeftRadius: sheetState === 'peek' ? '16px' : '0',
-              borderTopRightRadius: sheetState === 'peek' ? '16px' : '0',
-              borderWidth: sheetState === 'peek' ? '0.4px' : '0',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              borderBottom: 'none',
-              boxShadow: sheetState === 'peek' 
-                ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                : 'none',
-              overflowY: sheetState === 'peek' ? 'hidden' : 'scroll',
+              top: `${listStartOffset}px`,
+              bottom: '0',
+              zIndex: showMap ? 4 : 10, // Behind map when map is shown
+              paddingBottom: 'calc(var(--bottom-nav-height, 62px) + 12px + 46.5px + 20px)', // Account for bottom nav and filter
               WebkitOverflowScrolling: 'touch',
-              overscrollBehavior: 'contain',
-              paddingTop: sheetState === 'list' ? `${listStartOffset}px` : '0',
-              transition: 'height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), background-color 400ms cubic-bezier(0.4, 0.0, 0.2, 1), border-radius 400ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
+              backgroundColor: 'white',
+              opacity: showMap ? 0 : 1, // Hide listings when map is shown
+              pointerEvents: showMap ? 'none' : 'auto', // Disable interaction when map is shown
+              transition: 'opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
             }}
-            onTouchStart={(e) => {
-              handleTouchStart(e);
-              handleSheetTouchStart(e);
-            }}
-            onTouchMove={(e) => {
-              handleTouchMove(e);
-              handleSheetTouchMove(e);
-            }}
-            onTouchEnd={handleTouchEnd}
             onScroll={handleScroll}
           >
-            {/* Drag Handle */}
-            <div className="flex justify-center flex-shrink-0"
-              style={{
-                paddingTop: sheetState === 'peek' ? '12px' : '0',
-                height: sheetState === 'peek' ? 'auto' : '0',
-                opacity: sheetState === 'peek' ? 1 : 0,
-                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-30px)',
-                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1), height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-                willChange: 'transform, opacity, height',
-                pointerEvents: sheetState === 'peek' ? 'auto' : 'none',
-                overflow: 'hidden'
-              }}
-            >
-              <div className="w-12 h-1 bg-gray-300 rounded-full" />
-            </div>
-            
-            {/* Listing Count */}
-            <div className="flex justify-center flex-shrink-0"
-              style={{
-                paddingTop: sheetState === 'peek' ? '24px' : '0',
-                paddingBottom: sheetState === 'peek' ? '24px' : '0',
-                height: sheetState === 'peek' ? 'auto' : '0',
-                opacity: sheetState === 'peek' ? 1 : 0,
-                transform: sheetState === 'peek' ? 'translateY(0)' : 'translateY(-30px)',
-                transition: 'transform 400ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 400ms cubic-bezier(0.4, 0.0, 0.2, 1), height 400ms cubic-bezier(0.4, 0.0, 0.2, 1), padding 400ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-                willChange: 'transform, opacity, height',
-                pointerEvents: sheetState === 'peek' ? 'auto' : 'none',
-                overflow: 'hidden'
-              }}
-            >
-              <p className="text-sm font-semibold text-gray-900">{(listingsBySubcategory[selectedSubcategory] ?? []).length} Listings</p>
-            </div>
-            
             {/* Listings Grid */}
             <div className="px-4 pb-8 flex-shrink-0" style={{
-              paddingTop: '0',
-              background: 'transparent',
-              transition: 'background 400ms cubic-bezier(0.4, 0.0, 0.2, 1)'
+              paddingLeft: '22px',
+              paddingRight: '22px',
+              paddingTop: '16px',
             }}>
                 {listingsLoading ? (
                   <div className="text-center py-12 text-gray-500">
@@ -425,8 +288,7 @@ export default function CasualListingsPage() {
                       <ListingCard 
                         key={listing.id}
                         listing={listing}
-                        size="medium"
-                        showDate={true}
+                        onClick={() => router.push(`/listing?id=${listing.id}&from=${pathname}`)}
                       />
                     ))}
                   </div>
@@ -679,6 +541,41 @@ export default function CasualListingsPage() {
           </div>
         </div>
       </div>
+    </div>
+    
+    {/* Location Filter Card - Above Bottom Nav (Mobile Only) */}
+    <div 
+      className="lg:hidden fixed z-[69] transition-all duration-300 ease-in-out"
+      style={{
+        left: '22px',
+        right: '22px',
+        bottom: `calc(max(env(safe-area-inset-bottom, 20px), 20px) + 46.5px + 12px)`,
+        height: '46.5px',
+        borderRadius: '100px',
+        background: 'rgba(255, 255, 255, 0.9)',
+        borderWidth: '0.4px',
+        borderColor: '#E5E7EB',
+        borderStyle: 'solid',
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+        padding: '0 16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        cursor: 'pointer',
+        willChange: 'transform, box-shadow'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-base">📍</span>
+        <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
+      </div>
+      <span className="text-xs text-neutral-500">Anytime</span>
     </div>
     </>
   );

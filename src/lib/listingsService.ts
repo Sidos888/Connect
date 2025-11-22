@@ -244,12 +244,12 @@ export class ListingsService {
       if (allPublicError) {
         console.error('Error fetching all public listings:', allPublicError);
         return { listings: [], error: allPublicError };
-      }
-      
+        }
+        
       // Filter in JavaScript for upcoming listings (start_date is null or strictly in the future)
       // Only show listings that haven't started yet (start_date > now)
       const upcomingListings = (allPublicData || []).filter((listing: any) => {
-        if (!listing.start_date) return true;
+          if (!listing.start_date) return true;
         const listingDate = new Date(listing.start_date);
         const nowDate = new Date();
         // Only show listings that haven't started yet (strictly future)
@@ -264,7 +264,7 @@ export class ListingsService {
       
       // Limit to requested amount
       const limitedListings = upcomingListings.slice(0, limit);
-      
+
       const listings: Listing[] = limitedListings.map((listing: any) => ({
         ...listing,
         role: undefined,

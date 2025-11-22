@@ -20,6 +20,7 @@ export interface PageHeaderProps {
   actions?: ActionButton[];
   customActions?: ReactNode;  // Custom action buttons (full control over styling)
   className?: string;
+  titleClassName?: string;  // Custom className for the title
   frostedGlass?: boolean;  // Enable iOS-style frosted glass effect (for listing page)
 }
 
@@ -34,6 +35,7 @@ export default function PageHeader({
   actions = [],
   customActions,
   className = "",
+  titleClassName = "",
   frostedGlass = false  // New iOS-style frosted glass effect
 }: PageHeaderProps) {
   // Detect platform (mobile vs web)
@@ -93,8 +95,8 @@ export default function PageHeader({
                   className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
                     top: '0',
-                    width: '40px',
-                    height: '40px',
+                    width: isMobile ? '44px' : '40px',
+                    height: isMobile ? '44px' : '40px',
                     borderRadius: '22px',
                     background: 'rgba(255, 255, 255, 0.96)',
                     borderWidth: '0.4px',
@@ -124,14 +126,14 @@ export default function PageHeader({
               ) : null}
               
               {/* Center: Title and Subtitle */}
-              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: subtitle ? '0' : '0', height: subtitle ? 'auto' : '40px', justifyContent: subtitle ? 'flex-start' : 'center' }}>
+              <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: subtitle ? '0' : '0', height: subtitle ? 'auto' : (isMobile ? '44px' : '40px'), justifyContent: subtitle ? 'flex-start' : 'center' }}>
                 <h1 
-                  className={`font-semibold text-gray-900 text-center ${className}`}
+                  className={`font-semibold text-gray-900 text-center ${className} ${titleClassName}`}
                   style={{ 
                     textAlign: 'center', 
                     fontSize: isMobile ? '22px' : '20px',
                     lineHeight: isMobile ? '28px' : '24px',
-                    height: '40px',
+                    height: isMobile ? '44px' : '40px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -149,18 +151,18 @@ export default function PageHeader({
               
               {/* Right: Action Buttons (max 2) or Custom Actions */}
               {customActions ? (
-                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
+                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px' }}>
                   {customActions}
                 </div>
               ) : actions.length > 0 ? (
-                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
+                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px' }}>
                   {actions.slice(0, 2).map((action, index) => (
                     <button
                       key={index}
                       className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                       style={{
-                        width: '40px',
-                        height: '40px',
+                        width: isMobile ? '44px' : '40px',
+                        height: isMobile ? '44px' : '40px',
                         borderRadius: '100px',
                         background: 'rgba(255, 255, 255, 0.96)',
                         borderWidth: '0.4px',
@@ -290,12 +292,12 @@ export default function PageHeader({
         ) : (
           <div className="relative w-full" style={{ 
             width: '100%', 
-            minHeight: subtitle ? '56px' : '40px',
+            minHeight: subtitle ? '56px' : (isMobile ? '44px' : '40px'),
             pointerEvents: 'auto'
           }}>
             {/* Left: Back Button or Custom Button */}
             {customBackButton ? (
-              <div style={{ position: 'absolute', left: 0, top: 0, height: '40px', display: 'flex', alignItems: 'center' }}>
+              <div style={{ position: 'absolute', left: 0, top: 0, height: isMobile ? '44px' : '40px', display: 'flex', alignItems: 'center' }}>
                 {customBackButton}
               </div>
             ) : backButton && onBack ? (
@@ -304,8 +306,8 @@ export default function PageHeader({
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   top: '0',
-                  width: '40px',
-                  height: '40px',
+                  width: isMobile ? '44px' : '40px',
+                  height: isMobile ? '44px' : '40px',
                   borderRadius: '100px',
                   background: 'rgba(255, 255, 255, 0.9)',
                   borderWidth: '0.4px',
@@ -335,14 +337,14 @@ export default function PageHeader({
             ) : null}
             
             {/* Center: Title and Subtitle */}
-            <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: subtitle ? '0' : '0', height: subtitle ? 'auto' : '40px', justifyContent: subtitle ? 'flex-start' : 'center' }}>
+            <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: subtitle ? '0' : '0', height: subtitle ? 'auto' : (isMobile ? '44px' : '40px'), justifyContent: subtitle ? 'flex-start' : 'center' }}>
               <h1 
-                className={`font-semibold text-gray-900 text-center ${className}`}
+                className={`font-semibold text-gray-900 text-center ${className} ${titleClassName}`}
                 style={{ 
                   textAlign: 'center', 
                   fontSize: isMobile ? '22px' : '20px',
                   lineHeight: isMobile ? '28px' : '24px',
-                  height: '40px',
+                  height: isMobile ? '44px' : '40px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -359,18 +361,18 @@ export default function PageHeader({
             
             {/* Right: Action Buttons (max 2) or Custom Actions */}
             {customActions ? (
-              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
+              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px' }}>
                 {customActions}
               </div>
             ) : actions.length > 0 ? (
-              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: '40px' }}>
+              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px' }}>
                 {actions.slice(0, 2).map((action, index) => (
                   <button
                     key={index}
                     className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                     style={{
-                      width: '40px',
-                      height: '40px',
+                      width: isMobile ? '44px' : '40px',
+                      height: isMobile ? '44px' : '40px',
                       borderRadius: '100px',
                       background: 'rgba(255, 255, 255, 0.9)',
                       borderWidth: '0.4px',

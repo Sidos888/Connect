@@ -4,7 +4,7 @@ import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useModal } from "@/lib/modalContext";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Trash2, Settings, Share2, Menu, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X, MessageCircle, Share, MoreVertical, ChevronRight, ArrowLeft, Pencil, User, Eye } from "lucide-react";
+import { LogOut, Trash2, Settings, Share2, Camera, Trophy, Calendar, Users, Bookmark, Plus, ChevronLeft, Bell, Save, X, MessageCircle, Share, MoreVertical, ChevronRight, ArrowLeft, Pencil, User, Eye } from "lucide-react";
 import ProfileCard from "@/components/profile/ProfileCard";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import EditProfileLanding from '@/components/settings/EditProfileLanding';
@@ -902,34 +902,33 @@ export default function ProfileMenu() {
     try {
       console.log('ProfileMenu: Starting sign out...');
       
-      // Clear all local state immediately
-      clearAll();
+      // Use the auth context signOut which handles everything properly
+      await signOut();
       
-      // Clear all storage immediately
-      localStorage.clear();
-      sessionStorage.clear();
+      // Navigate to explore page (unsigned-in state) using replace to clear history
+      console.log('ProfileMenu: Navigating to explore page');
+      router.replace('/explore');
       
-      // Try Supabase signout but don't wait for it (non-blocking)
-      supabase.auth.signOut().catch((err: any) => {
-        console.log('Supabase signout error (ignoring):', err);
-      });
-      
-      // Also try local scope signout
-      if (supabase.auth) {
-        supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-      }
-      
-      // Immediate redirect - don't wait for anything
-      console.log('ProfileMenu: Redirecting to home page immediately');
-      window.location.href = '/';
+      // Force a small delay to ensure state is cleared before navigation
+      setTimeout(() => {
+        // Ensure we're on explore page
+        if (window.location.pathname !== '/explore') {
+          router.replace('/explore');
+        }
+      }, 100);
       
     } catch (error) {
       console.error('ProfileMenu: Sign out error:', error);
-      // Force clear everything and redirect
-      clearAll();
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.href = '/';
+      // Even on error, try to sign out and navigate
+      try {
+        await signOut();
+      } catch (signOutError) {
+        console.error('ProfileMenu: Sign out error (ignoring):', signOutError);
+      }
+      // Force navigate to explore
+      router.replace('/explore');
+    } finally {
+      setIsLoading(false);
     }
   };
 

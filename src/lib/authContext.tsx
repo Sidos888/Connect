@@ -242,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Only update user if it's different or we don't have one yet
           if (!user || user.id !== session.user.id) {
             console.log('🔐 AuthContext: Setting user from auth state change');
-            setUser(session.user);
+          setUser(session.user);
           } else {
             console.log('🔐 AuthContext: User already set, skipping setUser');
           }

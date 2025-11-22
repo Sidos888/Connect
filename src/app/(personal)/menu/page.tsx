@@ -14,7 +14,7 @@ import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
 import { supabase as supabaseClient } from "@/lib/supabaseClient";
-import ProfileSwitcherSheet from "@/components/profile/ProfileSwitcherSheet";
+import ProfileModal from "@/components/profile/ProfileModal";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
@@ -49,7 +49,7 @@ export default function Page() {
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
   const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings'>('menu');
-  const [showAccountSwitcher, setShowAccountSwitcher] = React.useState(false);
+  const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [selectedFriend, setSelectedFriend] = React.useState<ConnectionUser | null>(null);
   const [showCenteredProfile, setShowCenteredProfile] = React.useState(false);
 
@@ -92,7 +92,7 @@ export default function Page() {
   React.useEffect(() => {
     const handleReset = () => {
       goToView('menu');
-      setShowAccountSwitcher(false);
+      setShowProfileModal(false);
     };
     
     // Listen for resetMenuState custom event
@@ -185,8 +185,19 @@ export default function Page() {
   // No-op: snapshot capture removed
 
   const handleSignOut = async () => {
+    console.log('Menu page: Starting sign out...');
     await signOut();
-    router.push('/');
+    console.log('Menu page: Sign out complete, navigating to explore');
+    // Navigate to explore page (unsigned-in state) using replace to clear history
+    router.replace('/explore');
+    
+    // Force a small delay to ensure state is cleared before navigation
+    setTimeout(() => {
+      // Ensure we're on explore page
+      if (window.location.pathname !== '/explore') {
+        router.replace('/explore');
+      }
+    }, 100);
   };
 
   const handleDeleteAccount = async () => {
@@ -507,14 +518,26 @@ export default function Page() {
 
   // Share Profile View Component
   const ShareProfileView = () => {
-    const from = searchParams?.get('from') || 'menu';
+    const fromParam = searchParams?.get('from');
+    const from = fromParam ? decodeURIComponent(fromParam) : 'menu';
+    
+    const handleBack = () => {
+      // If from is a full pathname (starts with /), navigate directly
+      if (from.startsWith('/')) {
+        router.push(from);
+      } else {
+        // Otherwise, treat it as a view name
+        goToView(from as any);
+      }
+    };
+    
     return (
       <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
           <PageHeader
             title="Share Profile"
             backButton
-            onBack={() => goToView(from as any)}
+            onBack={handleBack}
           />
           <ShareProfile />
           {/* Bottom Blur */}
@@ -1487,7 +1510,7 @@ export default function Page() {
                 backButton={true}
                 customBackButton={
                   <button
-                    onClick={() => setShowAccountSwitcher(true)}
+                    onClick={() => setShowProfileModal(true)}
                     className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                       style={{
                       width: '40px',
@@ -1552,11 +1575,6 @@ export default function Page() {
                   />
                 </div>
 
-                {/* Section Header */}
-                <div style={{ paddingLeft: '20px', paddingRight: '20px', marginBottom: '16px' }}>
-                  <h2 className="text-base font-semibold text-gray-900">Your Tools</h2>
-                </div>
-
                 {/* Menu Grid - 2x3 layout */}
                 <div className="grid grid-cols-2" style={{ 
                   paddingLeft: '22px', 
@@ -1584,13 +1602,15 @@ export default function Page() {
               ).map((item) => (
                         <button
                       key={item.title}
-                      className="rounded-2xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 w-full hover:-translate-y-[1px]"
+                      className="rounded-2xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 w-full hover:-translate-y-[1px] active:scale-[0.98]"
                       style={{
-                        minHeight: '100px',
+                        height: '120px',
                         borderWidth: '0.4px',
                         borderColor: '#E5E7EB',
                         boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                        willChange: 'transform, box-shadow'
+                        willChange: 'transform, box-shadow',
+                        touchAction: 'manipulation',
+                        cursor: 'pointer'
                       }}
                       onClick={() => {
                         if (item.onClick) {
@@ -1732,9 +1752,14 @@ export default function Page() {
       )}
 
       {/* Profile Switcher Sheet */}
-      <ProfileSwitcherSheet 
-        isOpen={showAccountSwitcher}
-        onClose={() => setShowAccountSwitcher(false)}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        name={currentAccount?.name ?? "User"}
+        avatarUrl={currentAccount?.avatarUrl}
+        onViewProfile={() => goToView('profile', 'menu')}
+        onShareProfile={() => goToView('share-profile', 'menu')}
+        onAddBusiness={() => router.push('/create-business')}
       />
 
     </ProtectedRoute>
