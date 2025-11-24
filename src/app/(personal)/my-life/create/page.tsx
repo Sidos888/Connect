@@ -700,24 +700,6 @@ function CreateListingPageContent() {
                   </div>
                 ) : null}
                 
-                {/* Add + Button - Bottom Left */}
-                {photos.length < MAX_PHOTOS && (
-                <button
-                    onClick={handleAddPhoto}
-                    className="absolute bottom-3 left-3 flex items-center justify-center bg-white focus:outline-none z-10"
-                  style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '100px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  }}
-                >
-                    <Plus size={18} className="text-gray-900" />
-                </button>
-                )}
-                
                 {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
@@ -745,6 +727,25 @@ function CreateListingPageContent() {
                     <span className="text-sm font-medium text-gray-900">{photos.length}</span>
                     <ImageIcon size={18} className="text-gray-900" />
                   </button>
+                )}
+                
+                {/* Add + Button - Bottom Right when no photos, to the left of photo count when photos exist */}
+                {/* Spacing: 12px (right-3) from card border to photo count, 53px photo count width, 12px gap, then + button */}
+                {photos.length < MAX_PHOTOS && (
+                <button
+                    onClick={handleAddPhoto}
+                    className={`absolute bottom-3 flex items-center justify-center bg-white focus:outline-none z-10 ${photos.length > 0 ? 'right-[77px]' : 'right-3'}`}
+                  style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '100px',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }}
+                >
+                    <Plus size={18} className="text-gray-900" />
+                </button>
                 )}
               </div>
 

@@ -14,6 +14,7 @@ import MediaPreview from "@/components/chat/MediaPreview";
 import GalleryModal from "@/components/chat/GalleryModal";
 import MediaViewer from "@/components/chat/MediaViewer";
 import type { SimpleMessage, MediaAttachment } from "@/lib/types";
+import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 
 export default function IndividualChatPage() {
   const router = useRouter();
@@ -21,13 +22,13 @@ export default function IndividualChatPage() {
   const chatId = searchParams.get('chat');
   const { account } = useAuth();
   const chatService = useChatService();
-  const { sendMessage, markMessagesAsRead, getConversations } = useAppStore();
+  // Removed old store methods - using chatService directly
   type Participant = { id: string; name: string; profile_pic?: string | null };
   type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean };
   type ChatMessage = { id: string; text: string; sender_id: string };
 
   const [conversation, setConversation] = useState<ConversationLite | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<SimpleMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -44,6 +45,24 @@ export default function IndividualChatPage() {
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
   const [pendingMedia, setPendingMedia] = useState<UploadedMedia[]>([]);
   const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
+  const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
+
+  // FIX: Set body background to transparent to prevent white overlay
+  useEffect(() => {
+    // Store original background
+    const originalBackground = document.body.style.background;
+    const originalBackgroundColor = document.body.style.backgroundColor;
+    
+    // Set body background to transparent
+    document.body.style.background = 'transparent';
+    document.body.style.backgroundColor = 'transparent';
+    
+    // Cleanup: restore original background on unmount
+    return () => {
+      document.body.style.background = originalBackground;
+      document.body.style.backgroundColor = originalBackgroundColor;
+    };
+  }, []);
   
   // Media viewer states
   const [showGallery, setShowGallery] = useState(false);
@@ -76,95 +95,63 @@ export default function IndividualChatPage() {
       }
 
       try {
-        // First try to get conversation from store
-        const storeConversations = getConversations();
-        const storeConversation = storeConversations.find(c => c.id === chatId);
+        // Load conversation from database
+        if (!chatService) {
+          console.error('IndividualChatPage: ChatService not available');
+          setError('Chat service not available');
+          setLoading(false);
+          return;
+        }
         
-        if (storeConversation) {
-          console.log('Individual chat page: Using conversation from store:', storeConversation);
-          console.log('Individual chat page: Store conversation avatarUrl:', storeConversation.avatarUrl);
-          console.log('Individual chat page: Store conversation isGroup:', storeConversation.isGroup);
-          console.log('Individual chat page: Store conversation title:', storeConversation.title);
-          
-          // For group chats, always refresh from database to get latest photo
-          if (storeConversation.isGroup) {
-            console.log('Individual chat page: Group chat detected, refreshing from database for latest photo');
-            const { chat, error: chatError } = await chatService?.getChatById(chatId);
-            if (!chatError && chat) {
-              setParticipants(chat.participants || []);
-              
-              // Update the conversation with fresh data
-              const updatedConversation = {
-                ...storeConversation,
-                avatarUrl: chat.photo || null
-              };
-              console.log('Individual chat page: Updated conversation with fresh photo:', updatedConversation.avatarUrl);
-              setConversation(updatedConversation);
-            } else {
-              setConversation(storeConversation);
-            }
-          } else {
-            setConversation(storeConversation);
-            
-            // Still need to load participants for profile modal
-            const { chat, error: chatError } = await chatService?.getChatById(chatId);
-            if (!chatError && chat) {
-              setParticipants(chat.participants || []);
-            }
-          }
-        } else {
-          // Fallback to loading from database
-          console.log('Individual chat page: Conversation not in store, loading from database');
-          if (!chatService) {
-            console.error('IndividualChatPage: ChatService not available');
-            setError('Chat service not available');
-            setLoading(false);
-            return;
-          }
-          const { chat, error: chatError } = await chatService.getChatById(chatId);
-          if (chatError || !chat) {
-            setError('Conversation not found');
-            setLoading(false);
-            return;
-          }
-
-          // Store participants for profile modal
-          setParticipants(chat.participants || []);
-
-          // Convert to conversation format
-          const otherParticipant = chat.participants.find((p: Participant) => p.id !== account.id);
-          const conversation = {
-            id: chat.id,
-            title: chat.type === 'direct' 
-              ? otherParticipant?.name || 'Unknown User'
-              : chat.name || 'Group Chat',
-            avatarUrl: chat.type === 'direct' 
-              ? otherParticipant?.profile_pic || null
-              : chat.photo || null,
-            isGroup: chat.type === 'group'
-          };
-
-          console.log('Individual chat page: Chat data loaded from database:', chat);
-          console.log('Individual chat page: Chat photo:', chat.photo);
-          console.log('Individual chat page: Chat type:', chat.type);
-          console.log('Individual chat page: Conversation avatarUrl:', conversation.avatarUrl);
-          console.log('Individual chat page: Conversation isGroup:', conversation.isGroup);
-          setConversation(conversation);
+        const { chat, error: chatError } = await chatService.getChatById(chatId);
+        if (chatError || !chat) {
+          setError('Conversation not found');
+          setLoading(false);
+          return;
         }
 
+        // Store participants for profile modal
+        setParticipants(chat.participants || []);
+
+        // Convert to conversation format
+        const otherParticipant = chat.participants.find((p: Participant) => p.id !== account.id);
+        const conversation = {
+          id: chat.id,
+          title: chat.type === 'direct' 
+            ? (otherParticipant?.name || 'Unknown User')
+            : (chat.name || 'Group Chat'),
+          avatarUrl: chat.type === 'direct' 
+            ? (otherParticipant?.profile_pic || null)
+            : (chat.photo || null),
+          isGroup: chat.type === 'group'
+        };
+
+        console.log('Individual chat page: Chat data loaded from database:', chat);
+        console.log('Individual chat page: Conversation avatarUrl:', conversation.avatarUrl);
+        console.log('Individual chat page: Conversation isGroup:', conversation.isGroup);
+        setConversation(conversation);
+
         // Load messages
-        const { messages, error: messagesError } = await chatService?.getChatMessages(chatId);
-        if (!messagesError) {
-          setMessages(messages);
+        if (chatService) {
+          const { messages: chatMessages, error: messagesError } = await chatService.getChatMessages(chatId, 50, 0);
+          if (!messagesError && chatMessages) {
+            setMessages(chatMessages);
+          } else if (messagesError) {
+            console.error('Error loading messages:', messagesError);
+          }
         }
 
         // Load all chat media for the viewer
-        try {
-          const chatMedia = await chatService?.getChatMedia(chatId);
-          setAllChatMedia(chatMedia);
-        } catch (error) {
-          console.error('Failed to load chat media:', error);
-          // Don't fail the entire chat load if media loading fails
+        if (chatService) {
+          try {
+            const { media, error: mediaError } = await chatService.getChatMedia(chatId);
+            if (!mediaError && media) {
+              setAllChatMedia(media);
+            }
+          } catch (error) {
+            console.error('Failed to load chat media:', error);
+            // Don't fail the entire chat load if media loading fails
+          }
         }
 
         setLoading(false);
@@ -174,34 +161,15 @@ export default function IndividualChatPage() {
           messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
         }, 100);
 
-        // Subscribe to reaction changes for real-time updates
-        if (chatId) {
-          const unsubscribeReactions = chatService?.subscribeToReactions(
-            chatId,
-            (messageId) => {
-              console.log('Individual chat page: Reaction update received for message:', messageId);
-              // Refresh the specific message to get updated reactions
-              setMessages(prev => {
-                return prev.map(msg => {
-                  if (msg.id === messageId) {
-                    // Trigger a re-render by updating the message
-                    return { ...msg, reactions: msg.reactions || [] };
-                  }
-                  return msg;
-                });
-              });
-            }
-          );
-          unsubscribeReactionsRef.current = unsubscribeReactions;
-        }
+        // TODO: Add reaction subscriptions when implemented
+        // Reactions feature not yet implemented in ChatService
 
         // Subscribe to real-time messages for this chat
-        if (chatId && account?.id) {
+        if (chatId && account?.id && chatService) {
           console.log('Individual chat page: Subscribing to real-time messages for chat:', chatId);
-          const unsubscribeMessages = chatService?.subscribeToMessages(
+          const unsubscribeMessages = chatService.subscribeToChat(
             chatId,
-            account.id,
-            (newMessage) => {
+            (newMessage: SimpleMessage) => {
               console.log('Individual chat page: New message received:', newMessage);
               setMessages(prev => {
                 // Check if message already exists to avoid duplicates
@@ -216,8 +184,8 @@ export default function IndividualChatPage() {
             }
           );
           
-          // Store the unsubscribe function for cleanup
-          return unsubscribeMessages;
+          // Store the unsubscribe function in ref for cleanup
+          unsubscribeMessagesRef.current = unsubscribeMessages;
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -226,7 +194,7 @@ export default function IndividualChatPage() {
       }
     };
 
-    const unsubscribeMessages = loadData();
+    loadData();
 
     // Cleanup function
     return () => {
@@ -234,8 +202,9 @@ export default function IndividualChatPage() {
         unsubscribeReactionsRef.current();
         unsubscribeReactionsRef.current = null;
       }
-      if (unsubscribeMessages) {
-        unsubscribeMessages();
+      if (unsubscribeMessagesRef.current) {
+        unsubscribeMessagesRef.current();
+        unsubscribeMessagesRef.current = null;
       }
     };
   }, [account?.id, chatId]);
@@ -249,22 +218,27 @@ export default function IndividualChatPage() {
 
   // Mark messages as read when chat is loaded
   useEffect(() => {
-    if (!hasMarkedAsRead.current && account?.id && chatId && conversation) {
-      markMessagesAsRead(chatId, account.id);
+    if (!hasMarkedAsRead.current && account?.id && chatId && conversation && chatService) {
+      chatService.markMessagesAsRead(chatId, account.id);
       hasMarkedAsRead.current = true;
     }
-  }, [conversation, chatId, account?.id, markMessagesAsRead]);
+  }, [conversation, chatId, account?.id, chatService]);
 
 
   // Handle sending messages
   const handleSendMessage = async () => {
-    if ((messageText.trim() || pendingMedia.length > 0) && account?.id && conversation?.id) {
+    if ((messageText.trim() || pendingMedia.length > 0) && account?.id && conversation?.id && chatService) {
       try {
-        // Create the message first
-        const { message: newMessage, error: messageError } = await chatService?.sendMessage(
+        // Convert pendingMedia to MediaAttachment format
+        // Note: UploadedMedia needs to be uploaded first, then we get URLs
+        // For now, we'll send the message without attachments and handle upload separately
+        const attachments: MediaAttachment[] = [];
+
+        // Send message with attachments
+        const { message: newMessage, error: messageError } = await chatService.sendMessage(
           conversation.id,
-          messageText.trim(),
-          replyToMessage?.id
+          messageText.trim() || '',
+          attachments.length > 0 ? attachments : undefined
         );
 
         if (messageError || !newMessage) {
@@ -272,15 +246,8 @@ export default function IndividualChatPage() {
           return;
         }
 
-        // Save attachments if any
-        if (pendingMedia.length > 0) {
-          try {
-            await chatService?.saveAttachments(newMessage.id, pendingMedia);
-          } catch (attachmentError) {
-            console.error('Failed to save attachments:', attachmentError);
-            // Continue anyway - the message was sent successfully
-          }
-        }
+        // Add message to local state immediately (optimistic update)
+        setMessages(prev => [...prev, newMessage]);
 
         // Clear the form
         setMessageText("");
@@ -313,15 +280,13 @@ export default function IndividualChatPage() {
   };
 
   const handleDelete = async (message: SimpleMessage) => {
-    if (account?.id) {
-      await chatService?.deleteMessage(message.id, account.id);
-    }
+    // TODO: Implement deleteMessage in ChatService
+    console.log('Delete message not yet implemented:', message.id);
   };
 
   const handleReact = async (message: SimpleMessage, emoji: string) => {
-    if (account?.id) {
-      await chatService?.addReaction(message.id, account.id, emoji);
-    }
+    // TODO: Implement addReaction in ChatService
+    console.log('Add reaction not yet implemented:', message.id, emoji);
   };
 
   const handleMediaSelected = (media: UploadedMedia[]) => {
@@ -446,9 +411,67 @@ export default function IndividualChatPage() {
     );
   }
 
+  // Profile card component for leftSection
+  const profileCard = (
+    <button 
+      onClick={() => {
+        if (!conversation.isGroup) {
+          const otherParticipant = participants.find((p: any) => p.id !== account?.id);
+          if (otherParticipant) {
+            router.push(`/chat/profile?userId=${otherParticipant.id}`);
+          }
+        } else {
+          router.push(`/chat/profile?chatId=${conversation.id}`);
+        }
+      }}
+      className="absolute left-1/2 transform -translate-x-1/2 flex items-center"
+      style={{
+        top: '0', // Align with back button top position
+        padding: '6px 12px',
+        borderRadius: '12px',
+        background: 'rgba(255, 255, 255, 0.96)',
+        borderWidth: '0.4px',
+        borderColor: '#E5E7EB',
+        borderStyle: 'solid',
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+        willChange: 'transform, box-shadow',
+        maxWidth: '240px',
+        height: '44px', // Match back button height (44px on mobile)
+        display: 'flex',
+        alignItems: 'center', // Center content vertically within the button
+        gap: '8px' // Space between avatar and text
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+      }}
+    >
+      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+        {conversation.avatarUrl ? (
+          <Image
+            src={conversation.avatarUrl}
+            alt={conversation.title}
+            width={32}
+            height={32}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="text-gray-400 text-xs font-semibold">
+            {conversation.title.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+      <div className="text-left min-w-0 flex-1">
+        <div className="font-semibold text-gray-900 text-xs truncate">{conversation.title}</div>
+      </div>
+    </button>
+  );
+
   return (
     <div 
-      className="bg-white relative h-screen" 
+      className="relative h-screen" 
       style={{ 
         transform: `translateX(${dragOffset}px)`,
         transition: isDragging ? 'none' : 'transform 0.2s ease-out',
@@ -458,7 +481,9 @@ export default function IndividualChatPage() {
         right: 0,
         bottom: 0,
         overflow: 'hidden',
-        backgroundColor: 'white'
+        backgroundColor: 'transparent',
+        background: 'transparent',
+        zIndex: 1
       }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -476,83 +501,13 @@ export default function IndividualChatPage() {
         />
       )}
       
-      {/* Fixed Header */}
-      <div 
-        className="bg-white fixed left-0 right-0 z-20"
-        style={{ 
-          paddingTop: '50px',
-          top: '0px',
-          backgroundColor: 'white',
-          height: '132px'
-        }}
-        ref={(el) => {
-          if (el) {
-            console.log('🔍 Header height calculation:', {
-              offsetHeight: el.offsetHeight,
-              paddingTop: el.style.paddingTop,
-              computedHeight: window.getComputedStyle(el).height,
-              styleHeight: el.style.height
-            });
-          }
-        }}
-      >
-        {/* Header Row - All elements on same horizontal line */}
-        <div className="px-4 lg:px-6 py-3 flex items-center justify-center">
-          {/* Back Button */}
-          <button
-            onClick={() => router.push('/chat')}
-            className="p-0 bg-transparent absolute left-4"
-          >
-            <span className="action-btn-circle">
-              <ArrowLeft className="w-5 h-5 text-gray-900" />
-            </span>
-          </button>
-          
-          {/* Profile Card - Centered and narrower */}
-          <button 
-            onClick={() => {
-                     if (!conversation.isGroup) {
-                       // Direct message - find the other participant
-                       const otherParticipant = participants.find((p: any) => p.id !== account?.id);
-                       if (otherParticipant) {
-                         router.push(`/chat/profile?userId=${otherParticipant.id}`);
-                       }
-                     } else {
-                       // Group chat
-                       router.push(`/chat/profile?chatId=${conversation.id}`);
-                     }
-            }}
-            className="bg-white border border-gray-200 rounded-lg px-6 py-2 flex items-center gap-3 shadow-sm hover:bg-gray-50 transition-colors max-w-xs"
-          >
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-              {conversation.avatarUrl ? (
-                <Image
-                  src={conversation.avatarUrl}
-                  alt={conversation.title}
-                  width={40}
-                  height={40}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-gray-400 text-sm font-semibold">
-                  {conversation.title.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-gray-900">{conversation.title}</div>
-            </div>
-          </button>
-        </div>
-        
-        {/* Horizontal line below header */}
-        <div 
-          className="absolute left-0 right-0 border-b border-gray-200"
-          style={{ 
-            bottom: '0px'
-          }}
-        ></div>
-      </div>
+      {/* PageHeader - Now safe to add back since we're using paddingTop instead of top offset */}
+      <PageHeader
+        title=""
+        backButton={true}
+        onBack={() => router.push('/chat')}
+        leftSection={profileCard}
+      />
 
       {/* Reply Preview - Only show when actually replying */}
       {replyToMessage && (
@@ -596,99 +551,106 @@ export default function IndividualChatPage() {
         </div>
       )}
 
-      {/* Fixed Input */}
+      {/* Fixed Input - Just the three components, no overlay */}
       <div 
-        className="bg-white border-t border-gray-200 px-4 fixed left-0 right-0 z-20"
+        className="fixed left-0 right-0 z-20"
         style={{ 
-          height: '80px', 
-          paddingTop: '8px', 
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          bottom: '0px',
-          backgroundColor: 'white'
-        }}
-        ref={(el) => {
-          if (el) {
-            console.log('🔍 Input area height calculation:', {
-              offsetHeight: el.offsetHeight,
-              styleHeight: el.style.height,
-              computedHeight: window.getComputedStyle(el).height,
-              paddingBottom: el.style.paddingBottom
-            });
-          }
+          left: '22px', // Match TabBar padding from explore page
+          right: '22px', // Match TabBar padding from explore page
+          bottom: 'max(env(safe-area-inset-bottom, 20px), 20px)', // Match TabBar positioning from explore page
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          backgroundColor: 'transparent'
         }}
       >
-        <div className="flex items-center gap-3">
-          {/* Add Media Button */}
-          <MediaUploadButton 
-            onMediaSelected={handleMediaSelected}
-            disabled={false}
-          />
-          
-          {/* Input field - 44px height with centered text */}
-          <div className="flex-1 relative flex items-center">
-            <textarea
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              placeholder=""
-              className="w-full h-11 px-4 bg-white rounded-full border-[0.4px] border-[#E5E7EB] focus:outline-none focus:border-[0.8px] focus:border-[#D1D5DB] focus:bg-white transition-all duration-200 resize-none text-sm text-black caret-black"
-              style={{
-                margin: 0,
-                paddingTop: '10px',
-                paddingBottom: '10px',
-                lineHeight: '1.2',
-                boxSizing: 'border-box',
-                verticalAlign: 'middle',
-                boxShadow: `
-                  0 0 1px rgba(100, 100, 100, 0.25),
-                  inset 0 0 2px rgba(27, 27, 27, 0.25)
-                `
-              }}
-              onFocus={(e) => e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)`}
-              onBlur={(e) => e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)`}
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && messageText.trim()) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-          </div>
-          
-          {/* Send Button - White card that turns black when active */}
-          <button
-            onClick={handleSendMessage}
-            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB] ${
-              messageText.trim() || pendingMedia.length > 0
-                ? "bg-gray-900 text-white hover:bg-gray-800" 
-                : "bg-white text-gray-400 cursor-not-allowed"
-            }`}
+        {/* Add Media Button */}
+        <MediaUploadButton 
+          onMediaSelected={handleMediaSelected}
+          disabled={false}
+        />
+        
+        {/* Input field */}
+        <div className="flex-1 relative flex items-center">
+          <textarea
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            placeholder=""
+            className="w-full h-11 bg-white rounded-full border-[0.4px] border-[#E5E7EB] focus:outline-none focus:border-[0.8px] focus:border-[#D1D5DB] focus:bg-white transition-all duration-200 resize-none text-sm text-black caret-black"
             style={{
+              margin: 0,
+              paddingTop: '10px',
+              paddingBottom: '10px',
+              paddingLeft: '16px',
+              paddingRight: '46px', // Make room for send button (32px button + 6px spacing on right + 8px buffer)
+              lineHeight: '1.2',
+              boxSizing: 'border-box',
+              verticalAlign: 'middle',
               boxShadow: `
                 0 0 1px rgba(100, 100, 100, 0.25),
                 inset 0 0 2px rgba(27, 27, 27, 0.25)
               `
             }}
+            onFocus={(e) => e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)`}
+            onBlur={(e) => e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)`}
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && messageText.trim()) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          
+          {/* Send Button - Inside input box */}
+          <button
+            onClick={handleSendMessage}
+            disabled={!messageText.trim() && pendingMedia.length === 0}
+            className={`absolute w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+              messageText.trim() || pendingMedia.length > 0
+                ? "bg-gray-900 text-white hover:bg-gray-800 cursor-pointer" 
+                : "bg-white text-gray-400 cursor-not-allowed"
+            }`}
+            style={{
+              top: '6px', // Even spacing from top (44px textarea - 32px button) / 2 = 6px
+              right: '6px', // Even spacing from right to match top/bottom spacing
+              border: messageText.trim() || pendingMedia.length > 0 
+                ? '0.4px solid #E5E7EB' 
+                : '0.4px solid #E5E7EB',
+              boxShadow: `
+                0 0 1px rgba(100, 100, 100, 0.25),
+                inset 0 0 2px rgba(27, 27, 27, 0.25)
+              `
+            }}
+            onMouseEnter={(e) => {
+              if (messageText.trim() || pendingMedia.length > 0) {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
       </div>
 
-      {/* Chat Section - Scrollable messages area */}
+      {/* Chat Section - Scrollable messages area - Use paddingTop instead of top offset to avoid white gap */}
       <div 
-        className="px-4 overflow-y-auto bg-white"
+        className="px-4 overflow-y-auto"
         style={{
-          height: 'calc(100vh - 200px)', // Header (132px) + Input (80px) = 212px, but using 200px to eliminate gap
-          paddingTop: '16px', // Add space at top for first message
-          paddingBottom: '16px', // Add space at bottom for last message
+          height: '100vh', // Full viewport height - input overlays on top
+          paddingTop: '126px', // Space for header (110px) + first message spacing (16px)
+          paddingBottom: '80px', // Space for input area (80px) - creates scrollable space
           position: 'relative',
           overflowY: 'scroll',
           WebkitOverflowScrolling: 'touch',
-          backgroundColor: 'white',
-          top: '132px' // Position below the header
+          backgroundColor: 'transparent'
+          // NO top offset - use paddingTop instead to avoid creating white gap
+          // Full height with paddingBottom ensures no gap at bottom
         }}
         ref={(el) => {
           if (el) {
@@ -711,19 +673,16 @@ export default function IndividualChatPage() {
           return (
             <div key={message.id} style={{ marginBottom: index < messages.length - 1 ? '12px' : '12px' }}>
               <MessageBubble
-                ref={(el) => {
-                  if (selectedMessage?.id === message.id && el) {
-                    setSelectedMessageElement(el);
+                message={message}
+                currentUserId={account?.id || ''}
+                onReactionToggle={(emoji, msgId) => {
+                  if (msgId === message.id) {
+                    handleReact(message, emoji);
                   }
                 }}
-                message={message}
-                isMe={isMe}
-                isSelected={selectedMessage?.id === message.id}
-                participants={participants}
-                onLongPress={handleMessageLongPress}
-                onReactionClick={handleReact}
-                onProfileClick={(userId) => router.push(`/chat/profile?user=${userId}`)}
                 onAttachmentClick={handleAttachmentClick}
+                onReply={handleReply}
+                onDelete={handleDelete}
               />
             </div>
           );

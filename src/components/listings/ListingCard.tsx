@@ -8,13 +8,15 @@ interface ListingCardProps {
   size?: 'small' | 'medium' | 'large';
   showDate?: boolean;
   className?: string;
+  from?: string; // Optional custom 'from' parameter for navigation
 }
 
 export default function ListingCard({ 
   listing, 
   size = 'medium',
   showDate = true,
-  className = ''
+  className = '',
+  from
 }: ListingCardProps) {
   const router = useRouter();
   
@@ -46,11 +48,14 @@ export default function ListingCard({
   // Use context-agnostic route with source context tracking
   // This allows listings to work from any context (my-life, explore, for-you, chat, etc.)
   const getListingUrl = () => {
-    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/explore';
+    // Use custom 'from' prop if provided, otherwise use current pathname
+    const sourcePath = from || (typeof window !== 'undefined' ? window.location.pathname : '/explore');
     const params = new URLSearchParams();
     params.set('id', listing.id);
-    params.set('from', currentPath);
-    return `/listing?${params.toString()}`;
+    params.set('from', sourcePath);
+    const url = `/listing?${params.toString()}`;
+    console.log('ListingCard: getListingUrl - from prop:', from, 'sourcePath:', sourcePath, 'final URL:', url);
+    return url;
   };
   
   const href = getListingUrl();

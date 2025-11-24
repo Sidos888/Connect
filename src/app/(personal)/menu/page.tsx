@@ -57,6 +57,7 @@ export default function Page() {
   const searchParams = useSearchParams();
   React.useEffect(() => {
     const view = searchParams?.get('view');
+    console.log('Menu page: view parameter:', view, 'currentView:', currentView);
     if (view === 'profile') setCurrentView('profile');
     else if (view === 'highlights') setCurrentView('highlights');
     else if (view === 'timeline') setCurrentView('timeline');
@@ -65,7 +66,10 @@ export default function Page() {
     else if (view === 'settings') setCurrentView('settings');
     else if (view === 'notifications') setCurrentView('notifications');
     else if (view === 'memories') setCurrentView('memories');
-    else if (view === 'saved') setCurrentView('saved');
+    else if (view === 'saved') {
+      console.log('Menu page: Setting currentView to saved');
+      setCurrentView('saved');
+    }
     else if (view === 'edit-profile') setCurrentView('edit-profile');
     else if (view === 'share-profile') setCurrentView('share-profile');
     else if (view === 'account-settings') setCurrentView('account-settings');
@@ -566,18 +570,6 @@ export default function Page() {
             title="Saved"
             backButton
             onBack={() => goToView(from as any)}
-            actions={[
-              {
-                icon: <Plus size={20} className="text-gray-900" />,
-                onClick: () => console.log('Add clicked'),
-                label: "Add"
-              },
-              {
-                icon: <Share size={20} className="text-gray-900" />,
-                onClick: () => console.log('Share clicked'),
-                label: "Share"
-              }
-            ]}
           />
           <Saved />
           {/* Bottom Blur */}

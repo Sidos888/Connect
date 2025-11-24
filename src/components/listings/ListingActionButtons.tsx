@@ -1,22 +1,35 @@
 "use client";
 
-import { UserPlus, MessageCircle, Settings, MoreVertical } from 'lucide-react';
+import { UserPlus, MessageCircle, Settings, MoreVertical, Users, Camera } from 'lucide-react';
+import { Listing } from '@/lib/listingsService';
+import { useRouter } from 'next/navigation';
 
 interface ListingActionButtonsProps {
   userRole: 'host' | 'participant' | 'viewer';
   listingId: string;
+  listing?: Listing | null;
+  isCurrentUserParticipant?: boolean; // Whether current user is already a participant
   onManage?: () => void;
+  onJoin?: () => void;
+  onLeave?: () => void; // Handler for when user clicks "Attending" (to leave)
 }
 
 export default function ListingActionButtons({ 
   userRole, 
   listingId,
-  onManage 
+  listing,
+  isCurrentUserParticipant = false,
+  onManage,
+  onJoin,
+  onLeave
 }: ListingActionButtonsProps) {
-  // Only show action buttons for hosts
-  if (userRole !== 'host') {
-    return null;
-  }
+  const router = useRouter();
+
+  const handleGalleryClick = () => {
+    router.push(`/listing?id=${listingId}&view=gallery`);
+  };
+  // Show participant buttons for both participants and viewers (so viewers can join)
+  // Only hide buttons for non-logged-in users (which would be handled by the parent component)
 
   // Common button styling function
   const getButtonStyles = (isClickable: boolean) => ({
@@ -49,6 +62,107 @@ export default function ListingActionButtons({
     }
   };
 
+  // Participant buttons - shown for both participants and viewers
+  if (userRole === 'participant' || userRole === 'viewer') {
+    // Show gallery button only if user is a participant (not viewer) and listing has gallery enabled
+    const showGallery = userRole === 'participant' && listing?.has_gallery;
+    
+    // Debug logging
+    console.log('🎨 ListingActionButtons - Gallery check:', {
+      userRole,
+      hasGallery: listing?.has_gallery,
+      showGallery,
+      listingId,
+      isCurrentUserParticipant
+    });
+    
+    return (
+      <div className="flex items-center justify-center gap-4 my-6">
+        {/* Join/Attending Button - Clickable */}
+        <button
+          onClick={isCurrentUserParticipant ? onLeave : onJoin}
+          className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+          style={getButtonStyles(true)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div 
+            className="flex items-center justify-center bg-white"
+            style={getIconContainerStyles()}
+          >
+            <Users size={24} className="text-gray-900" />
+          </div>
+          <span className="text-xs font-medium text-gray-900">{isCurrentUserParticipant ? 'Attending' : 'Join'}</span>
+        </button>
+
+        {/* Contact Button - Not clickable but looks normal */}
+        <button
+          className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+          style={getButtonStyles(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Not functional yet
+          }}
+        >
+          <div 
+            className="flex items-center justify-center bg-white"
+            style={getIconContainerStyles()}
+          >
+            <MessageCircle size={24} className="text-gray-900" />
+          </div>
+          <span className="text-xs font-medium text-gray-900">Contact</span>
+        </button>
+
+        {/* Gallery Button - Only show for participants/hosts when gallery is enabled */}
+        {showGallery && (
+          <button
+            onClick={handleGalleryClick}
+            className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+            style={getButtonStyles(true)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div 
+              className="flex items-center justify-center bg-white"
+              style={getIconContainerStyles()}
+            >
+              <Camera size={24} className="text-gray-900" />
+            </div>
+            <span className="text-xs font-medium text-gray-900">Gallery</span>
+          </button>
+        )}
+
+        {/* More Button - Not clickable but looks normal */}
+        <button
+          className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+          style={getButtonStyles(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Not functional yet
+          }}
+        >
+          <div 
+            className="flex items-center justify-center bg-white"
+            style={getIconContainerStyles()}
+          >
+            <MoreVertical size={24} className="text-gray-900" />
+          </div>
+          <span className="text-xs font-medium text-gray-900">More</span>
+        </button>
+      </div>
+    );
+  }
+
+  // Host buttons (3 buttons - removed Chat)
+  // Show gallery button only if listing has gallery enabled
+  const showGallery = listing?.has_gallery;
+  
   return (
     <div className="flex items-center justify-center gap-4 my-6">
       {/* Invite Button - Not clickable but looks normal */}
@@ -72,26 +186,24 @@ export default function ListingActionButtons({
         <span className="text-xs font-medium text-gray-900">Invite</span>
       </button>
 
-      {/* Chat Button - Not clickable but looks normal */}
-      <button
-        className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-        style={getButtonStyles(false)}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          // Not functional yet
-        }}
-      >
-        <div 
-          className="flex items-center justify-center bg-white"
-          style={getIconContainerStyles()}
+      {/* Gallery Button - Only show for hosts when gallery is enabled */}
+      {showGallery && (
+        <button
+          onClick={handleGalleryClick}
+          className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+          style={getButtonStyles(true)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
-          <MessageCircle size={24} className="text-gray-900" />
-        </div>
-        <span className="text-xs font-medium text-gray-900">Chat</span>
-      </button>
+          <div 
+            className="flex items-center justify-center bg-white"
+            style={getIconContainerStyles()}
+          >
+            <Camera size={24} className="text-gray-900" />
+          </div>
+          <span className="text-xs font-medium text-gray-900">Gallery</span>
+        </button>
+      )}
 
       {/* Manage Button - Clickable */}
       <button

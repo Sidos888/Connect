@@ -7,7 +7,7 @@ import { SearchIcon } from "@/components/icons";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import Avatar from "@/components/Avatar";
 import ProfileModal from "@/components/profile/ProfileModal";
-import { Search } from "lucide-react";
+import { Search, MapPin, Clock } from "lucide-react";
 
 export default function ExplorePage() {
   const router = useRouter();
@@ -251,7 +251,7 @@ export default function ExplorePage() {
           borderColor: '#E5E7EB',
           borderStyle: 'solid',
           boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-          padding: '0 16px',
+          padding: '0 18px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -265,11 +265,14 @@ export default function ExplorePage() {
           e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
         }}
       >
-        <div className="flex items-center gap-3">
-          <span className="text-base">📍</span>
+        <div className="flex items-center gap-2.5">
+          <MapPin size={20} className="text-black" strokeWidth={2.5} />
           <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
         </div>
-        <span className="text-xs text-neutral-500">Anytime</span>
+        <div className="flex items-center gap-2.5">
+          <Clock size={20} className="text-black" strokeWidth={2.5} />
+          <span className="text-sm font-semibold text-neutral-900">Anytime</span>
+        </div>
       </div>
 
       {/* Desktop Layout - New Design */}

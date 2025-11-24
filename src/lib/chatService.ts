@@ -1,4 +1,6 @@
 import { getSupabaseClient } from './supabaseClient';
+import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import type { SimpleMessage, SimpleChat, MediaAttachment } from './types';
 
 export interface ChatMessage {
   id: string;
@@ -31,6 +33,7 @@ export interface Chat {
   id: string;
   type: 'direct' | 'event_group';
   name: string | null;
+  photo?: string | null; // Group chat photo
   listing_id: string | null;
   created_by: string;
   created_at: string;
@@ -58,7 +61,16 @@ export interface Conversation {
 }
 
 export class ChatService {
-  private supabase = getSupabaseClient();
+  private supabase: SupabaseClient;
+  private activeSubscriptions: Map<string, RealtimeChannel> = new Map();
+
+  constructor(supabase?: SupabaseClient) {
+    const client = supabase || getSupabaseClient();
+    if (!client) {
+      throw new Error('Supabase client not available');
+    }
+    this.supabase = client;
+  }
 
   // Get all chats for a user
   async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null }> {
@@ -126,10 +138,10 @@ export class ChatService {
       const { data: chats, error } = await this.supabase
         .from('chats')
         .select(`
-          id, type, name, listing_id, created_by, created_at, updated_at, last_message_at
+          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at
         `)
         .in('id', chatIds)
-        .order('last_message_at', { ascending: false, nullsLast: true });
+        .order('last_message_at', { ascending: false, nullsFirst: false });
 
       if (error) {
         // Create a serializable error object first
@@ -144,12 +156,11 @@ export class ChatService {
         if (error.message?.includes('relation "chats" does not exist') || 
             error.message?.includes('relation "chat_participants" does not exist')) {
           console.error('Chat tables not found. Please run the setup script in Supabase:', serializableError);
-          return { chats: [], error: { 
-            message: 'Chat system not set up. Please contact administrator.', 
-            code: 'CHAT_NOT_SETUP',
-            details: 'The chat database tables have not been created yet.',
-            hint: 'Run the setup-chat-system.sql script in Supabase'
-          }};
+          const setupError = new Error('Chat system not set up. Please contact administrator.');
+          (setupError as any).code = 'CHAT_NOT_SETUP';
+          (setupError as any).details = 'The chat database tables have not been created yet.';
+          (setupError as any).hint = 'Run the setup-chat-system.sql script in Supabase';
+          return { chats: [], error: setupError };
         }
         
         // Only log error if it's not a common "no data" error or authentication error
@@ -161,7 +172,39 @@ export class ChatService {
           console.error('Error getting user chats:', serializableError);
         }
         
-        return { chats: [], error: serializableError };
+        const err = new Error(serializableError.message);
+        (err as any).code = serializableError.code;
+        (err as any).details = serializableError.details;
+        (err as any).hint = serializableError.hint;
+        return { chats: [], error: err };
+      }
+
+      // Get participants for all chats in parallel
+      const { data: allParticipants } = await this.supabase
+        .from('chat_participants')
+        .select(`
+          chat_id, user_id, joined_at, last_read_at,
+          accounts!inner(id, name, profile_pic)
+        `)
+        .in('chat_id', chatIds);
+
+      // Group participants by chat_id
+      const participantsByChat = new Map<string, ChatParticipant[]>();
+      if (allParticipants) {
+        allParticipants.forEach((p: any) => {
+          if (!participantsByChat.has(p.chat_id)) {
+            participantsByChat.set(p.chat_id, []);
+          }
+          participantsByChat.get(p.chat_id)!.push({
+            id: p.id || p.user_id,
+            chat_id: p.chat_id,
+            user_id: p.user_id,
+            joined_at: p.joined_at,
+            last_read_at: p.last_read_at,
+            user_name: (p.accounts as any)?.name,
+            user_profile_pic: (p.accounts as any)?.profile_pic
+          });
+        });
       }
 
       // Transform the data to our Chat interface
@@ -169,24 +212,26 @@ export class ChatService {
         id: chat.id,
         type: chat.type,
         name: chat.name,
+        photo: (chat as any).photo || null, // Add photo field for group chats
         listing_id: chat.listing_id,
         created_by: chat.created_by,
         created_at: chat.created_at,
         updated_at: chat.updated_at,
         last_message_at: chat.last_message_at,
-        participants: [] // Will be populated separately if needed
+        participants: participantsByChat.get(chat.id) || []
       }));
 
-      // Get the last message for each chat
-      for (const chat of transformedChats) {
+      // Get the last message for each chat in parallel
+      const lastMessagePromises = transformedChats.map(async (chat) => {
         const { data: lastMessage, error: messageError } = await this.supabase
           .from('chat_messages')
           .select(`
-            id, chat_id, sender_id, message_text, message_type, image_url, images, 
-            created_at, read_by, poll_id, reply_to_message_id, is_pinned,
+            id, chat_id, sender_id, message_text, 
+            created_at, reply_to_message_id,
             accounts!inner(name, profile_pic)
           `)
           .eq('chat_id', chat.id)
+          .is('deleted_at', null)
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
@@ -197,34 +242,37 @@ export class ChatService {
             chat_id: lastMessage.chat_id,
             sender_id: lastMessage.sender_id,
             message_text: lastMessage.message_text,
-            message_type: lastMessage.message_type,
-            image_url: lastMessage.image_url,
-            images: lastMessage.images,
+            message_type: 'text', // Default since column doesn't exist
+            image_url: null,
+            images: null,
             created_at: lastMessage.created_at,
-            read_by: lastMessage.read_by,
-            poll_id: lastMessage.poll_id,
-            reply_to_message_id: lastMessage.reply_to_message_id,
-            is_pinned: lastMessage.is_pinned,
-            sender_name: lastMessage.accounts?.name,
-            sender_profile_pic: lastMessage.accounts?.profile_pic
+            read_by: [],
+            poll_id: null,
+            reply_to_message_id: lastMessage.reply_to_message_id || null,
+            is_pinned: false,
+            sender_name: (lastMessage.accounts as any)?.name,
+            sender_profile_pic: (lastMessage.accounts as any)?.profile_pic
           };
         }
 
         // Calculate unread count for this user
         const userParticipant = chat.participants?.find(p => p.user_id === userId);
         if (userParticipant) {
-          const { data: unreadMessages, error: unreadError } = await this.supabase
+          const { count } = await this.supabase
             .from('chat_messages')
-            .select('id')
+            .select('*', { count: 'exact', head: true })
             .eq('chat_id', chat.id)
             .gt('created_at', userParticipant.last_read_at)
-            .neq('sender_id', userId);
+            .neq('sender_id', userId)
+            .is('deleted_at', null);
 
-          if (!unreadError) {
-            chat.unread_count = unreadMessages?.length || 0;
+          chat.unread_count = count || 0;
+        } else {
+          chat.unread_count = 0;
           }
-        }
-      }
+      });
+
+      await Promise.all(lastMessagePromises);
 
       console.log('Successfully got user chats:', transformedChats.length);
       return { chats: transformedChats, error: null };
@@ -234,28 +282,94 @@ export class ChatService {
     }
   }
 
+  // Helper: Convert ChatMessage to SimpleMessage
+  private convertToSimpleMessage(msg: ChatMessage, attachments: MediaAttachment[] = []): SimpleMessage {
+    return {
+      id: msg.id,
+      chat_id: msg.chat_id,
+      sender_id: msg.sender_id,
+      sender_name: msg.sender_name || 'Unknown User',
+      sender_profile_pic: msg.sender_profile_pic || undefined,
+      text: msg.message_text || '',
+      created_at: msg.created_at,
+      reply_to_message_id: msg.reply_to_message_id || null,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      deleted_at: null
+    };
+  }
+
   // Get messages for a specific chat
-  async getChatMessages(chatId: string, userId: string): Promise<{ messages: ChatMessage[]; error: Error | null }> {
+  async getChatMessages(
+    chatId: string, 
+    limit: number = 50, 
+    offset: number = 0
+  ): Promise<{ messages: SimpleMessage[]; hasMore: boolean; error: Error | null }> {
     try {
-      console.log('ChatService: Getting messages for chat:', chatId);
+      console.log('ChatService: Getting messages for chat:', chatId, 'limit:', limit, 'offset:', offset);
       
+      // Get current user ID for marking as read
+      const { data: { user } } = await this.supabase.auth.getUser();
+      const userId = user?.id;
+      
+      // Fetch messages with limit and offset
+      // Select only columns that exist in the database
       const { data: messages, error } = await this.supabase
         .from('chat_messages')
         .select(`
-          id, chat_id, sender_id, message_text, message_type, image_url, images, 
-          created_at, read_by, poll_id, reply_to_message_id, is_pinned,
+          id, chat_id, sender_id, message_text, 
+          created_at, reply_to_message_id, deleted_at,
           accounts!inner(name, profile_pic)
         `)
         .eq('chat_id', chatId)
-        .order('created_at', { ascending: true });
+        .is('deleted_at', null) // Only get non-deleted messages
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (error) {
         console.error('Error getting chat messages:', error);
-        return { messages: [], error };
+        return { messages: [], hasMore: false, error };
       }
 
-      // Transform messages to our interface
-      const transformedMessages: ChatMessage[] = (messages || []).map(msg => ({
+      // Check if there are more messages
+      const { count } = await this.supabase
+        .from('chat_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('chat_id', chatId)
+        .is('deleted_at', null)
+        .lt('created_at', messages && messages.length > 0 ? messages[messages.length - 1].created_at : new Date().toISOString());
+      
+      const hasMore = (count || 0) > 0;
+
+      // Get attachments for all messages
+      const messageIds = (messages || []).map(m => m.id);
+      let attachmentsMap: Map<string, MediaAttachment[]> = new Map();
+      
+      if (messageIds.length > 0) {
+        const { data: attachments } = await this.supabase
+          .from('attachments')
+          .select('id, message_id, file_url, file_type, thumbnail_url')
+          .in('message_id', messageIds);
+        
+        if (attachments) {
+          attachments.forEach(att => {
+            if (!attachmentsMap.has(att.message_id)) {
+              attachmentsMap.set(att.message_id, []);
+            }
+            attachmentsMap.get(att.message_id)!.push({
+              id: att.id,
+              file_url: att.file_url,
+              file_type: att.file_type as 'image' | 'video',
+              thumbnail_url: att.thumbnail_url || undefined
+            });
+          });
+        }
+      }
+
+      // Transform messages to SimpleMessage format (reverse order for display)
+      const transformedMessages: SimpleMessage[] = (messages || [])
+        .reverse() // Reverse to show oldest first
+        .map(msg => {
+          const chatMsg: ChatMessage = {
         id: msg.id,
           chat_id: msg.chat_id,
           sender_id: msg.sender_id,
@@ -264,49 +378,83 @@ export class ChatService {
         image_url: msg.image_url,
         images: msg.images,
         created_at: msg.created_at,
-        read_by: msg.read_by,
+            read_by: msg.read_by || [],
         poll_id: msg.poll_id,
           reply_to_message_id: msg.reply_to_message_id,
         is_pinned: msg.is_pinned,
-        sender_name: msg.accounts?.name,
-        sender_profile_pic: msg.accounts?.profile_pic
-      }));
+        sender_name: (msg.accounts as any)?.name,
+        sender_profile_pic: (msg.accounts as any)?.profile_pic
+          };
+          return this.convertToSimpleMessage(chatMsg, attachmentsMap.get(msg.id) || []);
+        });
 
       // Mark messages as read for this user
+      if (userId) {
       await this.markMessagesAsRead(chatId, userId);
+      }
 
-      console.log('Successfully got chat messages:', transformedMessages.length);
-      return { messages: transformedMessages, error: null };
+      console.log('Successfully got chat messages:', transformedMessages.length, 'hasMore:', hasMore);
+      return { messages: transformedMessages, hasMore, error: null };
     } catch (error) {
       console.error('Error in getChatMessages:', error);
-      return { messages: [], error: error as Error };
+      return { messages: [], hasMore: false, error: error as Error };
     }
   }
 
   // Send a message to a chat
-  async sendMessage(chatId: string, senderId: string, messageText: string): Promise<{ message: ChatMessage | null; error: Error | null }> {
+  async sendMessage(
+    chatId: string, 
+    content: string, 
+    attachments?: MediaAttachment[]
+  ): Promise<{ message: SimpleMessage | null; error: Error | null }> {
     try {
-      console.log('ChatService: Sending message to chat:', chatId);
+      console.log('ChatService: Sending message to chat:', chatId, 'content:', content.substring(0, 50));
       
+      // Get current user ID
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { message: null, error: new Error('User not authenticated') };
+      }
+      const senderId = user.id;
+      
+      // Insert message
       const { data: message, error } = await this.supabase
         .from('chat_messages')
         .insert({
           chat_id: chatId,
           sender_id: senderId,
-          message_text: messageText,
-          message_type: 'text',
-          read_by: [senderId] // Mark as read by sender
+          message_text: content,
+          // Only use columns that exist in database
         })
-        .select(`
-          id, chat_id, sender_id, message_text, message_type, image_url, images, 
-          created_at, read_by, poll_id, reply_to_message_id, is_pinned,
-          accounts!inner(name, profile_pic)
-        `)
+          .select(`
+            id, chat_id, sender_id, message_text, 
+            created_at, reply_to_message_id,
+            accounts!inner(name, profile_pic)
+          `)
         .single();
 
       if (error) {
         console.error('Error sending message:', error);
         return { message: null, error };
+      }
+
+      // Save attachments if provided
+      if (attachments && attachments.length > 0 && message.id) {
+        const attachmentInserts = attachments.map(att => ({
+          message_id: message.id,
+          file_url: att.file_url,
+          file_type: att.file_type,
+          thumbnail_url: att.thumbnail_url || null
+        }));
+        
+        const { error: attachError } = await this.supabase
+          .from('attachments')
+          .insert(attachmentInserts);
+        
+        if (attachError) {
+          console.error('Error saving attachments:', attachError);
+          // Don't fail the message send, just log the error
+        }
       }
 
       // Update chat's last_message_at
@@ -318,25 +466,27 @@ export class ChatService {
         })
         .eq('id', chatId);
 
-      const transformedMessage: ChatMessage = {
+      const chatMessage: ChatMessage = {
         id: message.id,
         chat_id: message.chat_id,
         sender_id: message.sender_id,
         message_text: message.message_text,
-        message_type: message.message_type,
-        image_url: message.image_url,
-        images: message.images,
-        created_at: message.created_at,
-        read_by: message.read_by,
-        poll_id: message.poll_id,
-        reply_to_message_id: message.reply_to_message_id,
-        is_pinned: message.is_pinned,
-        sender_name: message.accounts?.name,
-        sender_profile_pic: message.accounts?.profile_pic
+          message_type: 'text', // Default since column doesn't exist
+          image_url: null,
+          images: null,
+          created_at: message.created_at,
+          read_by: [],
+          poll_id: null,
+          reply_to_message_id: message.reply_to_message_id || null,
+          is_pinned: false,
+        sender_name: (message.accounts as any)?.name,
+        sender_profile_pic: (message.accounts as any)?.profile_pic
       };
 
-      console.log('Successfully sent message:', transformedMessage.id);
-      return { message: transformedMessage, error: null };
+      const simpleMessage = this.convertToSimpleMessage(chatMessage, attachments || []);
+
+      console.log('Successfully sent message:', simpleMessage.id);
+      return { message: simpleMessage, error: null };
     } catch (error) {
       console.error('Error in sendMessage:', error);
       return { message: null, error: error as Error };
@@ -402,7 +552,11 @@ export class ChatService {
         };
         
         console.error('Error checking existing chats:', serializableError);
-        return { chat: null, error: serializableError };
+        const err = new Error(serializableError.message);
+        (err as any).code = serializableError.code;
+        (err as any).details = serializableError.details;
+        (err as any).hint = serializableError.hint;
+        return { chat: null, error: err };
       }
 
       // Check if any of these chats also has user2Id as a participant
@@ -443,7 +597,11 @@ export class ChatService {
         };
         
         console.error('Error creating chat:', serializableError);
-        return { chat: null, error: serializableError };
+        const err = new Error(serializableError.message);
+        (err as any).code = serializableError.code;
+        (err as any).details = serializableError.details;
+        (err as any).hint = serializableError.hint;
+        return { chat: null, error: err };
       }
 
       // Add both users as participants
@@ -464,7 +622,11 @@ export class ChatService {
         };
         
         console.error('Error adding participants:', serializableError);
-        return { chat: null, error: serializableError };
+        const err = new Error(serializableError.message);
+        (err as any).code = serializableError.code;
+        (err as any).details = serializableError.details;
+        (err as any).hint = serializableError.hint;
+        return { chat: null, error: err };
       }
 
       // Get the full chat data with participants
@@ -490,7 +652,11 @@ export class ChatService {
         };
         
         console.error('Error getting full chat data:', serializableError);
-        return { chat: null, error: serializableError };
+        const err = new Error(serializableError.message);
+        (err as any).code = serializableError.code;
+        (err as any).details = serializableError.details;
+        (err as any).hint = serializableError.hint;
+        return { chat: null, error: err };
       }
 
       const transformedChat: Chat = {
@@ -658,49 +824,21 @@ export class ChatService {
     }
   }
 
-  // Create a direct chat between two users
-  async createDirectChat(otherUserId: string, currentUserId: string): Promise<{ chat: Chat | null; error: Error | null }> {
+
+  // Get a chat by ID
+  async getChatById(chatId: string): Promise<{ chat: SimpleChat | null; error: Error | null }> {
     try {
-      if (!otherUserId || !currentUserId) {
-        return { chat: null, error: new Error('Both user IDs are required') };
+      console.log('ChatService: Getting chat by ID:', chatId);
+      
+      // Get current user ID
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { chat: null, error: new Error('User not authenticated') };
       }
-
-      // For now, skip the existing chat check and always create a new chat
-      // TODO: Implement proper existing chat detection later
-      console.log('Creating new direct chat between:', currentUserId, 'and', otherUserId);
-
-      // Create new direct chat
-      const { data: newChat, error: createError } = await this.supabase
-        .from('chats')
-        .insert({
-          type: 'direct',
-          name: null,
-          created_by: currentUserId
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('Error creating chat:', createError);
-        return { chat: null, error: createError };
-      }
-
-      // Add both users as participants
-      console.log('Adding participants to chat:', newChat.id);
-      const { error: participantsError } = await this.supabase
-        .from('chat_participants')
-        .insert([
-          { chat_id: newChat.id, user_id: currentUserId },
-          { chat_id: newChat.id, user_id: otherUserId }
-        ]);
-
-      if (participantsError) {
-        console.error('Error adding participants:', participantsError);
-        return { chat: null, error: participantsError };
-      }
-
-      // Fetch the complete chat with participants
-      const { data: fullChat, error: fetchError } = await this.supabase
+      const userId = user.id;
+      
+      // Fetch chat with participants
+      const { data: chat, error } = await this.supabase
         .from('chats')
         .select(`
           id, type, name, listing_id, created_by, created_at, updated_at, last_message_at,
@@ -709,19 +847,299 @@ export class ChatService {
             accounts!inner(id, name, profile_pic)
           )
         `)
-        .eq('id', newChat.id)
+        .eq('id', chatId)
         .single();
 
-      if (fetchError) {
-        console.error('Error fetching new chat:', fetchError);
-        return { chat: null, error: fetchError };
+      if (error) {
+        console.error('Error getting chat:', error);
+        return { chat: null, error };
       }
 
-      return { chat: fullChat, error: null };
+      // Get last message
+      const { data: lastMessage } = await this.supabase
+        .from('chat_messages')
+        .select(`
+          id, message_text, created_at, sender_id,
+          accounts!inner(name, profile_pic)
+        `)
+        .eq('chat_id', chatId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // Calculate unread count
+      const userParticipant = chat.chat_participants.find((p: any) => p.user_id === userId);
+      let unreadCount = 0;
+      
+      if (userParticipant) {
+        const { count } = await this.supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('chat_id', chatId)
+          .gt('created_at', userParticipant.last_read_at)
+          .neq('sender_id', userId)
+          .is('deleted_at', null);
+        
+        unreadCount = count || 0;
+      }
+
+      // Transform to SimpleChat
+      const simpleChat: SimpleChat = {
+        id: chat.id,
+        type: chat.type === 'direct' ? 'direct' : 'group',
+        name: chat.name || '',
+        photo: undefined, // TODO: Add photo support
+        participants: chat.chat_participants.map((p: any) => ({
+          id: p.user_id,
+          name: (p.accounts as any)?.name || 'Unknown User',
+          profile_pic: (p.accounts as any)?.profile_pic || undefined
+        })),
+        last_message: lastMessage ? {
+          id: lastMessage.id,
+          content: lastMessage.message_text || '',
+          created_at: lastMessage.created_at,
+            sender: {
+              id: lastMessage.sender_id,
+              name: (lastMessage.accounts as any)?.name || 'Unknown User',
+              profile_pic: (lastMessage.accounts as any)?.profile_pic || undefined
+            }
+        } : undefined,
+        last_message_at: chat.last_message_at,
+        unreadCount
+      };
+
+      console.log('Successfully got chat:', simpleChat.id);
+      return { chat: simpleChat, error: null };
     } catch (error) {
-      console.error('Error in createDirectChat:', error);
-      return { chat: null, error: error instanceof Error ? error : new Error('Unknown error') };
+      console.error('Error in getChatById:', error);
+      return { chat: null, error: error as Error };
     }
+  }
+
+  // Subscribe to realtime updates for a chat
+  subscribeToChat(
+    chatId: string,
+    onNewMessage: (message: SimpleMessage) => void,
+    onMessageUpdate?: (message: SimpleMessage) => void,
+    onMessageDelete?: (messageId: string) => void
+  ): () => void {
+    const channelKey = `chat:${chatId}`;
+    
+    // Unsubscribe from existing channel if any
+    if (this.activeSubscriptions.has(channelKey)) {
+      this.unsubscribeFromChat(chatId);
+    }
+
+    const channel = this.supabase
+      .channel(channelKey)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `chat_id=eq.${chatId}`
+        },
+        async (payload) => {
+          console.log('📨 New message received:', payload.new);
+          
+          // Fetch full message with sender info
+          const { data: message } = await this.supabase
+            .from('chat_messages')
+          .select(`
+            id, chat_id, sender_id, message_text, 
+            created_at, reply_to_message_id,
+            accounts!inner(name, profile_pic)
+          `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (message) {
+            // Get attachments
+            const { data: attachments } = await this.supabase
+              .from('attachments')
+              .select('id, message_id, file_url, file_type, thumbnail_url')
+              .eq('message_id', message.id);
+
+            const chatMsg: ChatMessage = {
+              id: message.id,
+              chat_id: message.chat_id,
+              sender_id: message.sender_id,
+              message_text: message.message_text,
+          message_type: 'text', // Default since column doesn't exist
+          image_url: null,
+          images: null,
+          created_at: message.created_at,
+          read_by: [],
+          poll_id: null,
+          reply_to_message_id: message.reply_to_message_id || null,
+          is_pinned: false,
+              sender_name: (message.accounts as any)?.name,
+              sender_profile_pic: (message.accounts as any)?.profile_pic
+            };
+
+            const simpleMessage = this.convertToSimpleMessage(
+              chatMsg,
+              (attachments || []).map(att => ({
+                id: att.id,
+                file_url: att.file_url,
+                file_type: att.file_type as 'image' | 'video',
+                thumbnail_url: att.thumbnail_url || undefined
+              }))
+            );
+
+            onNewMessage(simpleMessage);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `chat_id=eq.${chatId}`
+        },
+        async (payload) => {
+          if (onMessageUpdate) {
+            // Similar to INSERT but for updates
+            const { data: message } = await this.supabase
+              .from('chat_messages')
+          .select(`
+            id, chat_id, sender_id, message_text, 
+            created_at, reply_to_message_id,
+            accounts!inner(name, profile_pic)
+          `)
+              .eq('id', payload.new.id)
+        .single();
+
+            if (message) {
+              const chatMsg: ChatMessage = {
+                id: message.id,
+                chat_id: message.chat_id,
+                sender_id: message.sender_id,
+                message_text: message.message_text,
+          message_type: 'text', // Default since column doesn't exist
+          image_url: null,
+          images: null,
+          created_at: message.created_at,
+          read_by: [],
+          poll_id: null,
+          reply_to_message_id: message.reply_to_message_id || null,
+          is_pinned: false,
+                sender_name: (message.accounts as any)?.name,
+                sender_profile_pic: (message.accounts as any)?.profile_pic
+              };
+
+              const simpleMessage = this.convertToSimpleMessage(chatMsg);
+              onMessageUpdate(simpleMessage);
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `chat_id=eq.${chatId}`
+        },
+        (payload) => {
+          if (onMessageDelete) {
+            onMessageDelete(payload.old.id);
+          }
+        }
+      )
+      .subscribe();
+
+    this.activeSubscriptions.set(channelKey, channel);
+    console.log('📡 Subscribed to chat:', chatId);
+
+    // Return unsubscribe function
+    return () => {
+      this.unsubscribeFromChat(chatId);
+    };
+  }
+
+  // Unsubscribe from a chat
+  unsubscribeFromChat(chatId: string): void {
+    const channelKey = `chat:${chatId}`;
+    const channel = this.activeSubscriptions.get(channelKey);
+    
+    if (channel) {
+      this.supabase.removeChannel(channel);
+      this.activeSubscriptions.delete(channelKey);
+      console.log('📡 Unsubscribed from chat:', chatId);
+    }
+  }
+
+  // Send typing indicator
+  async sendTypingIndicator(chatId: string, isTyping: boolean): Promise<void> {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) return;
+
+      const channel = this.supabase.channel(`typing:${chatId}`);
+      
+      if (isTyping) {
+        channel.send({
+          type: 'broadcast',
+          event: 'typing',
+          payload: { user_id: user.id, is_typing: true }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending typing indicator:', error);
+    }
+  }
+
+  // Get chat media (attachments)
+  async getChatMedia(chatId: string): Promise<{ media: MediaAttachment[]; error: Error | null }> {
+    try {
+      const { data: messages } = await this.supabase
+        .from('chat_messages')
+        .select('id')
+        .eq('chat_id', chatId)
+        .is('deleted_at', null);
+
+      if (!messages || messages.length === 0) {
+        return { media: [], error: null };
+      }
+
+      const messageIds = messages.map(m => m.id);
+      const { data: attachments, error } = await this.supabase
+        .from('attachments')
+        .select('id, message_id, file_url, file_type, thumbnail_url')
+        .in('message_id', messageIds)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        return { media: [], error };
+      }
+
+      const media: MediaAttachment[] = (attachments || []).map(att => ({
+        id: att.id,
+        file_url: att.file_url,
+        file_type: att.file_type as 'image' | 'video',
+        thumbnail_url: att.thumbnail_url || undefined
+      }));
+
+      return { media, error: null };
+    } catch (error) {
+      return { media: [], error: error as Error };
+    }
+  }
+
+  // Cleanup all subscriptions
+  cleanup(): void {
+    console.log('🧹 Cleaning up all chat subscriptions');
+    const chatIds = Array.from(this.activeSubscriptions.keys());
+    chatIds.forEach(key => {
+      const chatId = key.replace('chat:', '');
+      this.unsubscribeFromChat(chatId);
+    });
   }
 
   // Convert Chat to Conversation format for the store
@@ -755,72 +1173,6 @@ export class ChatService {
     };
   }
 
-  // Create a group chat
-  async createGroupChat(groupName: string, participantIds: string[]): Promise<{ chat: Chat | null; error: Error | null }> {
-    try {
-      if (!groupName || participantIds.length < 2) {
-        return { chat: null, error: new Error('Group name and at least 2 participants are required') };
-      }
-
-      const currentUserId = participantIds[0]; // First participant is the creator
-
-      console.log('Creating group chat:', groupName, 'with participants:', participantIds);
-
-      // Create new group chat
-      const { data: newChat, error: createError } = await this.supabase
-        .from('chats')
-        .insert({
-          type: 'group',
-          name: groupName,
-          created_by: currentUserId
-        })
-        .select()
-            .single();
-
-      if (createError) {
-        console.error('Error creating group chat:', createError);
-        return { chat: null, error: createError };
-      }
-
-      // Add all participants
-      const participants = participantIds.map(userId => ({
-        chat_id: newChat.id,
-        user_id: userId
-      }));
-
-      const { error: participantsError } = await this.supabase
-        .from('chat_participants')
-        .insert(participants);
-
-      if (participantsError) {
-        console.error('Error adding participants to group chat:', participantsError);
-        return { chat: null, error: participantsError };
-      }
-
-      // Fetch the complete chat with participants
-      const { data: fullChat, error: fetchError } = await this.supabase
-        .from('chats')
-        .select(`
-          id, type, name, listing_id, created_by, created_at, updated_at, last_message_at,
-          chat_participants!inner(
-            id, user_id, joined_at, last_read_at,
-            accounts!inner(id, name, profile_pic)
-          )
-        `)
-        .eq('id', newChat.id)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching new group chat:', fetchError);
-        return { chat: null, error: fetchError };
-      }
-
-      return { chat: fullChat, error: null };
-    } catch (error) {
-      console.error('Error in createGroupChat:', error);
-      return { chat: null, error: error as Error };
-    }
-  }
 }
 
 export const chatService = new ChatService();

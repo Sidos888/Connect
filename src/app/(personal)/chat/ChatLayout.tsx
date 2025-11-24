@@ -89,13 +89,7 @@ const ChatLayoutContent = () => {
   // Using the new intuitive time formatting utility
   // Memoize helper functions to prevent recreation on every render
   const getLastMessage = useCallback((conversation: Conversation) => {
-    // Use the new last_message field from SimpleChat interface
-    if (conversation.last_message && typeof conversation.last_message === 'object') {
-      // last_message is now an object with content, sender, etc.
-      return conversation.last_message.content || "No messages yet";
-    }
-    
-    // Fallback for string format (backward compatibility)
+    // Use last_message string if available (new format)
     if (conversation.last_message && typeof conversation.last_message === 'string') {
       if (conversation.last_message.trim()) {
         return conversation.last_message;
@@ -103,6 +97,14 @@ const ChatLayoutContent = () => {
       // Special case: if last_message is exactly "..." (failed attachment), show it
       if (conversation.last_message === "...") {
         return "...";
+      }
+    }
+    
+    // Fallback to messages array (old format)
+    if (conversation.messages && conversation.messages.length > 0) {
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      if (lastMessage.text && lastMessage.text.trim()) {
+        return lastMessage.text;
       }
     }
     
@@ -121,17 +123,45 @@ const ChatLayoutContent = () => {
 
   // Convert chats to conversations format for compatibility
   const conversations = useMemo(() => {
-    return chats.map(chat => ({
-      id: chat.id,
-      title: chat.name || 'Unknown Chat',
-      avatarUrl: chat.photo || (chat.participants?.[0]?.profile_pic) || null,
-      isGroup: chat.type === 'group',
-      unreadCount: chat.unreadCount || 0,
-      last_message: chat.last_message,
-      last_message_at: chat.last_message_at,
-      participants: chat.participants || []
-    }));
-  }, [chats]);
+    if (!account?.id) return [];
+    
+    return chats.map(chat => {
+      // For direct chats, find the other participant
+      const otherParticipant = chat.type === 'direct' 
+        ? chat.participants?.find((p: any) => p.user_id !== account.id)
+        : null;
+      
+      // Determine title and avatar
+      const title = chat.type === 'direct'
+        ? (otherParticipant?.user_name || 'Unknown User')
+        : (chat.name || 'Group Chat');
+      
+      const avatarUrl = chat.type === 'direct'
+        ? (otherParticipant?.user_profile_pic || null)
+        : (chat.photo || null); // Use group photo for group chats
+      
+      // Format last message
+      let lastMessageText: string | undefined = undefined;
+      if (chat.last_message) {
+        if (chat.last_message.message_text) {
+          lastMessageText = chat.last_message.message_text;
+        } else if (chat.last_message.message_type === 'image') {
+          lastMessageText = '📷 Image';
+        }
+      }
+      
+      return {
+        id: chat.id,
+        title,
+        avatarUrl,
+        isGroup: chat.type === 'event_group' || chat.type === 'group',
+        unreadCount: chat.unread_count || 0,
+        last_message: lastMessageText,
+        last_message_at: chat.last_message_at,
+        messages: [] // Empty array for compatibility
+      };
+    });
+  }, [chats, account?.id]);
 
   // Memoize filtered conversations to prevent recalculation on every render
   const filteredConversations = useMemo(() => {
@@ -199,7 +229,7 @@ const ChatLayoutContent = () => {
             id: chat.id,
             title: chat.name || 'Unknown Chat',
             avatarUrl: chat.photo || null,
-            isGroup: chat.type === 'group',
+            isGroup: chat.type === 'event_group' || chat.type === 'group',
           };
           
           console.log('🔬 ChatLayout: Conversation data created:', conversationData);

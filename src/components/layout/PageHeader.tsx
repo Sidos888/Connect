@@ -57,13 +57,13 @@ export default function PageHeader({
           height: headerHeight,
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)'  // Semi-transparent to allow blur effect to show through
+          backgroundColor: 'rgba(255, 255, 255, 0.4)'  // Subtle transparency to allow blur effect to show through
         }} />
         
-        {/* Gradient Overlay - White gradient from 100% to 8% opacity (on top of blur) */}
+        {/* Gradient Overlay - White gradient from 30% to 5% opacity (on top of blur) */}
         <div className="absolute top-0 left-0 right-0" style={{
           height: headerHeight,
-          background: 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0.08) 100%)'
+          background: 'linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%)'
         }} />
         
         {/* Header Content */}
@@ -71,22 +71,59 @@ export default function PageHeader({
           paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
           paddingBottom: '16px',
           position: 'relative',
-          zIndex: 1
+          zIndex: 10 // Increased z-index for content area
         }}>
           {/* Left Section (e.g., profile card) OR Standard Layout */}
           {leftSection ? (
-            <div style={{ pointerEvents: 'auto' }}>
+            <div style={{ pointerEvents: 'auto', position: 'relative', zIndex: 20 }}>
+              {/* Back Button - Always show when backButton is true, even with leftSection */}
+              {backButton && onBack && (
+                <button
+                  onClick={onBack}
+                  className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    top: '0',
+                    width: isMobile ? '44px' : '40px',
+                    height: isMobile ? '44px' : '40px',
+                    borderRadius: '22px',
+                    background: 'rgba(255, 255, 255, 0.96)',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow',
+                    zIndex: 30 // Higher z-index to ensure it's above profile card and overlay
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label={backIcon === 'close' ? 'Close' : 'Back'}
+                >
+                  {backIcon === 'close' ? (
+                    <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  )}
+                </button>
+              )}
               {leftSection}
             </div>
           ) : (
             <div className="relative w-full" style={{ 
               width: '100%', 
-              minHeight: subtitle ? '56px' : '40px',
+              minHeight: subtitle ? '56px' : (isMobile ? '44px' : '40px'),
               pointerEvents: 'auto'
             }}>
               {/* Left: Back Button or Custom Button */}
               {customBackButton ? (
-                <div style={{ position: 'absolute', left: 0, top: 0, height: '40px', display: 'flex', alignItems: 'center' }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, height: isMobile ? '44px' : '40px', display: 'flex', alignItems: 'center' }}>
                   {customBackButton}
                 </div>
               ) : backButton && onBack ? (
@@ -102,14 +139,14 @@ export default function PageHeader({
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
-                    boxShadow: '0px 2px 4px rgba(0,0,0,0.04)',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     willChange: 'transform, box-shadow'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0px 2px 4px rgba(0,0,0,0.04)';
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
                   aria-label={backIcon === 'close' ? 'Close' : 'Back'}
                 >
@@ -282,11 +319,50 @@ export default function PageHeader({
       {/* Header Content */}
       <div className="px-4 lg:px-8" style={{ 
         paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
-        paddingBottom: '16px' 
+        paddingBottom: '16px',
+        position: 'relative',
+        zIndex: 10 // Increased z-index for content area
       }}>
         {/* Left Section (e.g., profile card) OR Standard Layout */}
         {leftSection ? (
-          <div style={{ pointerEvents: 'auto' }}>
+          <div style={{ pointerEvents: 'auto', position: 'relative', zIndex: 20 }}>
+            {/* Back Button - Always show when backButton is true, even with leftSection */}
+            {backButton && onBack && (
+              <button
+                onClick={onBack}
+                className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  top: '0',
+                  width: isMobile ? '44px' : '40px',
+                  height: isMobile ? '44px' : '40px',
+                  borderRadius: '22px',
+                  background: 'rgba(255, 255, 255, 0.96)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow',
+                  zIndex: 30 // Higher z-index to ensure it's above profile card and overlay
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label={backIcon === 'close' ? 'Close' : 'Back'}
+              >
+                {backIcon === 'close' ? (
+                  <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                )}
+              </button>
+            )}
             {leftSection}
           </div>
         ) : (

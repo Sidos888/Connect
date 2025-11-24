@@ -275,12 +275,26 @@ export default function MediaUploadButton({
         onClick={handleClick}
         disabled={disabled || uploading}
         className={`
-          w-10 h-10 rounded-full flex items-center justify-center transition-colors
+          w-11 h-11 rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB]
           ${disabled || uploading
-            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-            : "bg-gray-200 text-gray-600 hover:bg-gray-300 cursor-pointer"
+            ? "bg-white text-gray-400 cursor-not-allowed"
+            : "bg-white text-gray-600 hover:bg-gray-50 cursor-pointer"
           }
         `}
+        style={{
+          boxShadow: `
+            0 0 1px rgba(100, 100, 100, 0.25),
+            inset 0 0 2px rgba(27, 27, 27, 0.25)
+          `
+        }}
+        onMouseEnter={(e) => {
+          if (!disabled && !uploading) {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+        }}
         title={uploading ? "Uploading..." : "Add photos or videos"}
       >
         {uploading ? (

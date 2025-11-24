@@ -13,6 +13,8 @@ interface ListingInfoCardsProps {
     profile_pic?: string | null;
   } | null;
   userRole?: 'host' | 'participant' | 'viewer';
+  isCurrentUserParticipant?: boolean; // Whether current user is registered as participant
+  attendeeCount?: number | null; // Total number of attendees including host
   onLocationClick?: () => void;
   onHostClick?: () => void;
   onViewingClick?: () => void;
@@ -24,6 +26,8 @@ export default function ListingInfoCards({
   location,
   host,
   userRole = 'viewer',
+  isCurrentUserParticipant = false,
+  attendeeCount,
   onLocationClick,
   onHostClick,
   onViewingClick
@@ -51,11 +55,13 @@ export default function ListingInfoCards({
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-base font-semibold text-gray-900 mb-1 truncate">
-            {userRole === 'host' ? 'Me: Hosting' : 'Me: Viewing'}
+            {userRole === 'host' ? 'Me: Hosting' : (isCurrentUserParticipant ? 'Me: Attending' : 'Me: Viewing')}
           </div>
-          <div className="text-sm font-normal text-gray-500 truncate">
-            {capacityUnlimited ? 'Unlimited' : (capacity ? `${capacity}` : 'Unlimited')} attendees • Tap to view more
-          </div>
+          {attendeeCount !== null && attendeeCount !== undefined ? (
+            <div className="text-sm font-normal text-gray-500 truncate">
+              {attendeeCount} {attendeeCount === 1 ? 'Participant' : 'Participants'} • Tap to view
+            </div>
+          ) : null}
         </div>
       </div>
 

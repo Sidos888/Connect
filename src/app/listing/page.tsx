@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { useAuth } from '@/lib/authContext';
 import { Listing } from '@/lib/listingsService';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
 import ListingHeader from '@/components/listings/ListingHeader';
 import ListingActionButtons from '@/components/listings/ListingActionButtons';
@@ -13,11 +13,18 @@ import ListingInfoCards from '@/components/listings/ListingInfoCards';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
-import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check } from 'lucide-react';
+import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Bookmark, Image as ImageIcon } from 'lucide-react';
 import EditListingDetailsView, { EditListingDetailsViewRef } from '@/components/listings/EditListingDetailsView';
 import CancelEventModal from '@/components/listings/CancelEventModal';
+import JoinListingModal from '@/components/listings/JoinListingModal';
+import LeaveEventModal from '@/components/listings/LeaveEventModal';
+import AttendeesModal from '@/components/listings/AttendeesModal';
+import PhotoViewer from '@/components/listings/PhotoViewer';
+import ManageListingPhotosView from '@/components/listings/ManageListingPhotosView';
+import EventGalleryView from '@/components/listings/EventGalleryView';
+import { listingsService } from '@/lib/listingsService';
 
-type ListingView = 'detail' | 'manage' | 'photos' | 'edit-details';
+type ListingView = 'detail' | 'manage' | 'photos' | 'edit-details' | 'manage-photos' | 'gallery';
 
 export default function ListingPage() {
   const router = useRouter();
@@ -25,17 +32,43 @@ export default function ListingPage() {
   const searchParams = useSearchParams();
   const listingId = searchParams.get('id');
   const view = (searchParams.get('view') || 'detail') as ListingView;
-  const from = searchParams.get('from') || '/explore'; // Default to explore if no from param
+  // Decode the 'from' parameter in case it was URL-encoded
+  const fromRaw = searchParams.get('from') || '/explore';
+  const from = fromRaw ? decodeURIComponent(fromRaw) : '/explore'; // Default to explore if no from param
   const manageFrom = searchParams.get('manageFrom'); // Track if we came from manage page
+  const refreshParam = searchParams.get('_refresh'); // Track refresh param to force query refetch
   const { account } = useAuth();
+  const queryClient = useQueryClient();
 
   // Track changes for edit-details view - declare refs early
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const editDetailsRef = useRef<EditListingDetailsViewRef | null>(null);
+  const [isPhotosMounted, setIsPhotosMounted] = useState(false);
+  
+  // Mount check for photos view to avoid hydration errors
+  useEffect(() => {
+    if (view === 'photos') {
+      setIsPhotosMounted(true);
+    } else {
+      setIsPhotosMounted(false);
+    }
+  }, [view]);
   
   // Cancel event modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
+  
+  // Join listing modal state
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  
+  // Leave event modal state
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  
+  // Attendees modal state
+  const [showAttendeesModal, setShowAttendeesModal] = useState(false);
+  
+  // Photo viewer state (for viewing listing photos)
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
 
   // Navigate to a view (like menu page pattern)
   const goToView = (newView: ListingView, id?: string) => {
@@ -78,6 +111,14 @@ export default function ListingPage() {
         return null;
       }
 
+      // Debug logging for gallery
+      console.log('🎨 Listing page - Fetched listing:', {
+        id: data?.id,
+        title: data?.title,
+        has_gallery: data?.has_gallery,
+        allFields: Object.keys(data || {})
+      });
+
       return data as Listing;
     },
     enabled: !!listingId,
@@ -109,18 +150,121 @@ export default function ListingPage() {
     enabled: !!listing?.host_id,
   });
 
-  // Determine user role
-  const getUserRole = (): 'host' | 'participant' | 'viewer' => {
-    if (!account || !listing) return 'viewer';
-    if (listing.host_id === account.id) return 'host';
-    return 'viewer';
-  };
+  // Check if current user is a participant (registered in listing_participants)
+  const { data: isCurrentUserParticipant, refetch: refetchParticipantStatus } = useQuery({
+    queryKey: ['listing-participant', listingId, account?.id, refreshParam], // Include refresh param to force refetch
+    queryFn: async () => {
+      if (!listingId || !account?.id) {
+        console.log('Listing page: Query disabled - missing listingId or account.id');
+        return false;
+      }
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        console.log('Listing page: Query disabled - no supabase client');
+        return false;
+      }
+      
+      console.log('Listing page: Fetching participant status from database...', { listingId, userId: account.id });
+      
+      const { data, error } = await supabase
+        .from('listing_participants')
+        .select('id')
+        .eq('listing_id', listingId)
+        .eq('user_id', account.id)
+        .limit(1)
+        .maybeSingle();
 
-  const userRole = getUserRole();
+      if (error) {
+        console.error('Error checking participant status:', error);
+        return false;
+      }
+
+      const isParticipant = !!data;
+      console.log('Listing page: Participant status check result:', { 
+        listingId, 
+        userId: account.id, 
+        isParticipant, 
+        data, 
+        refreshParam,
+        timestamp: new Date().toISOString()
+      });
+      return isParticipant;
+    },
+    enabled: !!listingId && !!account?.id,
+    staleTime: 0, // Always consider stale to ensure fresh data
+    refetchOnMount: 'always', // Always refetch when component mounts
+    gcTime: 0, // Don't cache - always fetch fresh
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+  });
+
+  // Get attendee count (including host) for the listing
+  const { data: attendeeCount } = useQuery({
+    queryKey: ['listing-attendee-count', listingId],
+    queryFn: async () => {
+      if (!listingId || !listing) return null;
+      const supabase = getSupabaseClient();
+      if (!supabase) return null;
+      
+      // Get all participants from listing_participants (not just count, so we can check if host is included)
+      const { data: participants, error } = await supabase
+        .from('listing_participants')
+        .select('user_id')
+        .eq('listing_id', listingId);
+
+      if (error) {
+        console.error('Error fetching attendee count:', error);
+        return null;
+      }
+
+      // Count participants
+      let count = participants?.length || 0;
+      
+      // Check if host is in participants list
+      const hostInParticipants = participants?.some(p => p.user_id === listing.host_id);
+      
+      // If host is not in participants, add 1 to count (host should always be counted)
+      if (listing.host_id && !hostInParticipants) {
+        count += 1;
+      }
+      
+      // If no participants and no host_id, return 0
+      if (count === 0 && !listing.host_id) {
+        return 0;
+      }
+      
+      // Ensure at least 1 if there's a host
+      if (count === 0 && listing.host_id) {
+        return 1;
+      }
+      
+      return count;
+    },
+    enabled: !!listingId && !!listing,
+  });
+
+  // Determine user role - reactive to isCurrentUserParticipant changes
+  const userRole = useMemo((): 'host' | 'participant' | 'viewer' => {
+    if (!listing) return 'viewer';
+    if (!account) return 'viewer'; // Not logged in = viewer
+    if (listing.host_id === account.id) return 'host';
+    // Only return 'participant' if user is actually registered in listing_participants
+    if (isCurrentUserParticipant) return 'participant';
+    return 'viewer'; // Logged in but not registered = viewer
+  }, [listing, account, isCurrentUserParticipant]);
 
   // Smart back button - returns to source context
   const handleBack = () => {
-    if (view === 'edit-details' && manageFrom === 'manage') {
+    if (view === 'manage-photos') {
+      // If in manage-photos, go back based on manageFrom
+      if (manageFrom === 'edit-details') {
+        goToView('edit-details');
+      } else if (manageFrom === 'manage') {
+        goToView('manage');
+      } else {
+        // Fallback: go to manage
+        goToView('manage');
+      }
+    } else if (view === 'edit-details' && manageFrom === 'manage') {
       // If editing from manage page, go back to manage view
       goToView('manage');
     } else if (view !== 'detail') {
@@ -128,6 +272,8 @@ export default function ListingPage() {
       goToView('detail');
     } else if (from && from !== pathname) {
       // Return to source context
+      // 'from' is already decoded, so we can use it directly
+      console.log('Listing page: Navigating back to:', from);
       router.push(from);
     } else {
       // Fallback to browser back
@@ -217,125 +363,21 @@ export default function ListingPage() {
               
               {/* Listing Details Card */}
               <button
-                onClick={() => {
-                  const params = new URLSearchParams();
-                  params.set('id', listingId || '');
-                  params.set('view', 'edit-details');
-                  if (from) params.set('from', from);
-                  params.set('manageFrom', 'manage');
-                  router.push(`/listing?${params.toString()}`);
-                }}
-                className="bg-white rounded-xl p-4 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  minHeight: '72px',
-                  cursor: 'pointer',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                <div className="flex-shrink-0">
-                  <FileText size={20} className="text-gray-900" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-semibold text-gray-900 mb-1">
-                    Listing Details
-                  </div>
-                  <div className="text-sm font-normal text-gray-500">
-                    Name, description, time and location
-                  </div>
-                </div>
-              </button>
-
-              {/* Attendees Card */}
-              <div 
-                className="bg-white rounded-xl p-4 flex items-center gap-3"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  minHeight: '72px',
-                }}
-              >
-                <div className="flex-shrink-0">
-                  <Users size={20} className="text-gray-900" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-semibold text-gray-900 mb-1">
-                    Attendees
-                  </div>
-                  <div className="text-sm font-normal text-gray-500">
-                    View and manage
-                  </div>
-                </div>
-              </div>
-
-              {/* Hosts Card */}
-              <div 
-                className="bg-white rounded-xl p-4 flex items-center gap-3"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  minHeight: '72px',
-                }}
-              >
-                <div className="flex-shrink-0">
-                  <UserPlus size={20} className="text-gray-900" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-semibold text-gray-900 mb-1">
-                    Hosts
-                  </div>
-                  <div className="text-sm font-normal text-gray-500">
-                    Add Co Hosts
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons Section - Spaced out from cards above */}
-              <div className="mt-6 space-y-3">
-                {/* Start Event Chat Button */}
-                <div 
-                  className="bg-white rounded-xl p-3 flex items-center gap-3"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    minHeight: '56px',
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    params.set('id', listingId || '');
+                    params.set('view', 'edit-details');
+                    if (from) params.set('from', from);
+                    params.set('manageFrom', 'manage');
+                    router.push(`/listing?${params.toString()}`);
                   }}
-                >
-                  <div className="flex-shrink-0">
-                    <MessageCircle size={20} className="text-gray-900" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-gray-900">
-                      Start Event Chat
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cancel Event Button */}
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  className="bg-white rounded-xl p-3 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+                  className="bg-white rounded-xl p-4 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
                   style={{
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    minHeight: '56px',
+                    minHeight: '72px',
                     cursor: 'pointer',
                     willChange: 'transform, box-shadow'
                   }}
@@ -347,13 +389,117 @@ export default function ListingPage() {
                   }}
                 >
                   <div className="flex-shrink-0">
-                    <X size={20} className="text-gray-900" />
+                    <FileText size={20} className="text-gray-900" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-gray-900">
-                      Cancel Event
+                    <div className="text-base font-semibold text-gray-900 mb-1">
+                      Listing Details
+                    </div>
+                    <div className="text-sm font-normal text-gray-500">
+                      Name, description, time and location
                     </div>
                   </div>
+              </button>
+
+              {/* Attendees Card */}
+              <div 
+                  className="bg-white rounded-xl p-4 flex items-center gap-3"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    minHeight: '72px',
+                  }}
+                >
+                  <div className="flex-shrink-0">
+                    <Users size={20} className="text-gray-900" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-semibold text-gray-900 mb-1">
+                      Attendees
+                    </div>
+                    <div className="text-sm font-normal text-gray-500">
+                      View and manage
+                    </div>
+                  </div>
+              </div>
+
+              {/* Hosts Card */}
+              <div 
+                  className="bg-white rounded-xl p-4 flex items-center gap-3"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    minHeight: '72px',
+                  }}
+                >
+                  <div className="flex-shrink-0">
+                    <UserPlus size={20} className="text-gray-900" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-semibold text-gray-900 mb-1">
+                      Hosts
+                    </div>
+                    <div className="text-sm font-normal text-gray-500">
+                      Add Co Hosts
+                    </div>
+                  </div>
+              </div>
+
+              {/* Action Buttons Section - Spaced out from cards above */}
+              <div className="mt-6 space-y-3">
+                {/* Start Event Chat Button */}
+                <div 
+                    className="bg-white rounded-xl p-3 flex items-center gap-3"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      minHeight: '56px',
+                    }}
+                  >
+                    <div className="flex-shrink-0">
+                      <MessageCircle size={20} className="text-gray-900" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-semibold text-gray-900">
+                        Start Event Chat
+                      </div>
+                    </div>
+                </div>
+
+                {/* Cancel Event Button */}
+                <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="bg-white rounded-xl p-3 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      minHeight: '56px',
+                      cursor: 'pointer',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                  >
+                    <div className="flex-shrink-0">
+                      <X size={20} className="text-gray-900" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-semibold text-gray-900">
+                        Cancel Event
+                      </div>
+                    </div>
                 </button>
               </div>
             </div>
@@ -361,7 +507,25 @@ export default function ListingPage() {
         );
 
       case 'edit-details':
-        return <EditListingDetailsView ref={editDetailsRef} listing={listing} listingId={listingId || ''} onBack={handleBack} onSave={() => goToView('manage')} onHasChanges={setHasChanges} onSavingChange={setSaving} />;
+        // When saving, navigate back to the initial listing page (detail view)
+        // The 'from' parameter tells us where to go back to
+        return <EditListingDetailsView 
+          ref={editDetailsRef} 
+          listing={listing} 
+          listingId={listingId || ''} 
+          onBack={handleBack} 
+          onSave={() => {
+            // Navigate back to the initial listing page (detail view) with updated data
+            const params = new URLSearchParams();
+            params.set('id', listingId || '');
+            if (from) {
+              params.set('from', from);
+            }
+            router.push(`/listing?${params.toString()}`);
+          }} 
+          onHasChanges={setHasChanges} 
+          onSavingChange={setSaving} 
+        />;
 
       case 'photos':
         const photos = listing.photo_urls || [];
@@ -372,21 +536,86 @@ export default function ListingPage() {
             </div>
           );
         }
-        return (
-          <div className="px-4 pb-8" style={{ paddingTop: 'var(--saved-content-padding-top, 180px)' }}>
-            <div className="grid grid-cols-4 gap-0.5">
-              {photos.map((photo, index) => (
-                <div
-                  key={index}
-                  className="relative aspect-square bg-gray-100 overflow-hidden rounded-xl"
-                  style={{ borderWidth: '0.4px', borderColor: '#E5E7EB' }}
-                >
-                  <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
-                </div>
-              ))}
+        // For viewing listing photos, show grid that opens PhotoViewer (no X buttons, no drag-and-drop)
+        // Render MobilePage only after mount to avoid hydration issues
+        if (!isPhotosMounted) {
+          return (
+            <div className="px-4 pb-8 text-center text-gray-500" style={{ paddingTop: 'var(--saved-content-padding-top, 180px)' }}>
+              <p>Loading photos...</p>
             </div>
+          );
+        }
+        
+        return (
+          <div style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
+            <MobilePage>
+              <PageHeader
+                title="Listing Photos"
+                subtitle={<span className="text-xs font-medium text-gray-900">{photos.length} {photos.length === 1 ? 'photo' : 'photos'}</span>}
+                backButton
+                onBack={handleBack}
+              />
+              <PageContent>
+                <div className="px-4 pb-8" style={{ paddingTop: 'var(--saved-content-padding-top, 180px)' }}>
+                  <div className="grid grid-cols-4 gap-4">
+                    {photos.map((photo, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedPhotoIndex(index)}
+                        className="relative aspect-square bg-transparent overflow-hidden rounded-xl transition-all duration-200 hover:-translate-y-[1px]"
+                        style={{ 
+                          borderWidth: '0.4px', 
+                          borderColor: '#E5E7EB',
+                          backgroundColor: 'transparent',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          willChange: 'transform, box-shadow',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        }}
+                      >
+                        <img 
+                          src={photo} 
+                          alt={`Photo ${index + 1}`} 
+                          className="w-full h-full object-cover pointer-events-none"
+                          draggable={false}
+                          style={{
+                            backgroundColor: 'transparent',
+                            display: 'block',
+                            width: '100%',
+                            height: '100%'
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </PageContent>
+            </MobilePage>
+            {selectedPhotoIndex !== null && (
+              <PhotoViewer
+                isOpen={selectedPhotoIndex !== null}
+                photos={photos}
+                initialIndex={selectedPhotoIndex}
+                onClose={() => setSelectedPhotoIndex(null)}
+              />
+            )}
           </div>
         );
+
+      case 'manage-photos':
+        // Redirect to the manage photos page component
+        // We'll create a separate component for this to keep the code clean
+        console.log('📸 Listing page: Rendering manage-photos view', { listingId, hasListing: !!listing, manageFrom });
+        return <ManageListingPhotosView listingId={listingId || ''} listing={listing} onBack={handleBack} />;
+
+      case 'gallery':
+        // Render gallery view
+        return <EventGalleryViewWrapper listingId={listingId || ''} listing={listing} onBack={handleBack} />;
 
       case 'detail':
       default:
@@ -397,7 +626,14 @@ export default function ListingPage() {
               <ListingPhotoCollage 
                 photos={listing.photo_urls || []}
                 editable={false}
-                onPhotoClick={() => goToView('photos')}
+                onPhotoClick={() => {
+                  // Navigate to photos view (grid page) instead of opening PhotoViewer directly
+                  const params = new URLSearchParams();
+                  params.set('id', listingId || '');
+                  params.set('view', 'photos');
+                  if (from) params.set('from', from);
+                  router.push(`/listing?${params.toString()}`);
+                }}
               />
 
               {/* Header */}
@@ -410,11 +646,15 @@ export default function ListingPage() {
               {/* Spacing between header and action buttons */}
               <div style={{ height: '8px' }} />
 
-              {/* Action Buttons - Only for hosts */}
+              {/* Action Buttons */}
               <ListingActionButtons
                 userRole={userRole}
                 listingId={listing.id}
+                listing={listing}
+                isCurrentUserParticipant={isCurrentUserParticipant ?? false}
                 onManage={() => goToView('manage')}
+                onJoin={() => setShowJoinModal(true)}
+                onLeave={() => setShowLeaveModal(true)}
               />
 
               {/* Extra spacing between action buttons and info cards */}
@@ -431,11 +671,16 @@ export default function ListingPage() {
                   profile_pic: hostAccount.profile_pic || null
                 } : null}
                 userRole={userRole}
+                isCurrentUserParticipant={isCurrentUserParticipant ?? false}
+                attendeeCount={attendeeCount ?? null}
                 onHostClick={() => {
                   if (hostAccount?.id) {
                     // Use query parameter route for static export compatibility (no RSC navigation)
                     router.push(`/profile?id=${hostAccount.id}`);
                   }
+                }}
+                onViewingClick={() => {
+                  setShowAttendeesModal(true);
                 }}
               />
             </div>
@@ -449,6 +694,7 @@ export default function ListingPage() {
       case 'manage': return 'Manage';
       case 'photos': return 'Listing Photos';
       case 'edit-details': return 'Edit Listing';
+      case 'gallery': return listing?.title || 'Gallery';
       case 'detail':
       default: return '';
     }
@@ -459,11 +705,38 @@ export default function ListingPage() {
       const count = listing.photo_urls.length;
       return <span className="text-xs font-medium text-gray-900">{count} {count === 1 ? 'photo' : 'photos'}</span>;
     }
+    // Gallery subtitle is handled by EventGalleryView component
     return undefined;
   };
 
-  // Show share button in header for detail view when user is host
-  const showShareButton = view === 'detail' && userRole === 'host';
+  // Check if listing is saved by current user
+  const { data: isSaved, refetch: refetchSaved } = useQuery({
+    queryKey: ['listing-saved', listingId, account?.id],
+    queryFn: async () => {
+      if (!listingId || !account?.id) return false;
+      const supabase = getSupabaseClient();
+      if (!supabase) return false;
+      
+      const { data, error } = await supabase
+        .from('saved_listings')
+        .select('id')
+        .eq('listing_id', listingId)
+        .eq('user_id', account.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking saved status:', error);
+        return false;
+      }
+
+      return !!data;
+    },
+    enabled: !!listingId && !!account?.id && userRole !== 'host',
+  });
+
+  // Show saved and share buttons in header for detail view when user is NOT host
+  const showActionButtons = view === 'detail' && userRole !== 'host' && account?.id;
 
   return (
     <ProtectedRoute 
@@ -478,12 +751,86 @@ export default function ListingPage() {
             subtitle={getSubtitle()}
             backButton
             onBack={handleBack}
-            actions={showShareButton ? [
+            actions={showActionButtons ? [
+              {
+                icon: <Bookmark size={20} className={isSaved ? "text-red-600 fill-red-600" : "text-gray-900"} />,
+                label: isSaved ? 'Saved' : 'Save',
+                onClick: async () => {
+                  if (!listingId || !account?.id) return;
+                  const supabase = getSupabaseClient();
+                  if (!supabase) return;
+
+                  if (isSaved) {
+                    // Unsave listing
+                    const { error } = await supabase
+                      .from('saved_listings')
+                      .delete()
+                      .eq('listing_id', listingId)
+                      .eq('user_id', account.id);
+
+                  if (error) {
+                    console.error('Error unsaving listing:', error);
+                  } else {
+                    refetchSaved();
+                    // Invalidate saved listings cache to update Saved page
+                    queryClient.invalidateQueries({ 
+                      queryKey: ['listings', 'saved', account.id] 
+                    });
+                  }
+                  } else {
+                    // Save listing
+                    const { error } = await supabase
+                      .from('saved_listings')
+                      .insert({
+                        listing_id: listingId,
+                        user_id: account.id,
+                        created_at: new Date().toISOString(),
+                      });
+
+                    if (error) {
+                      console.error('Error saving listing:', error);
+                    } else {
+                      refetchSaved();
+                      // Invalidate saved listings cache to update Saved page
+                      queryClient.invalidateQueries({ 
+                        queryKey: ['listings', 'saved', account.id] 
+                      });
+                    }
+                  }
+                }
+              },
               {
                 icon: <Share2 size={20} className="text-gray-900" />,
                 label: 'Share',
-                onClick: () => {
-                  // Not functional yet - display only
+                onClick: async () => {
+                  if (!listing || !listingId) return;
+                  
+                  // Create share URL
+                  const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/listing?id=${listingId}`;
+                  const shareText = `Check out ${listing.title} on Connect!`;
+
+                  // Use Web Share API if available (mobile)
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: listing.title,
+                        text: shareText,
+                        url: shareUrl,
+                      });
+                    } catch (error) {
+                      // User cancelled or error occurred
+                      console.log('Share cancelled or failed:', error);
+                    }
+                  } else {
+                    // Fallback: copy to clipboard
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      // You could show a toast notification here
+                      console.log('Link copied to clipboard');
+                    } catch (error) {
+                      console.error('Failed to copy link:', error);
+                    }
+                  }
                 }
               }
             ] : []}
@@ -540,7 +887,108 @@ export default function ListingPage() {
           }}
         />
       )}
+
+      {/* Join Listing Modal */}
+      {showJoinModal && listing && (
+        <JoinListingModal
+          isOpen={showJoinModal}
+          onClose={() => setShowJoinModal(false)}
+          listing={listing}
+        />
+      )}
+
+      {/* Leave Event Modal */}
+      {showLeaveModal && listing && listingId && (
+        <LeaveEventModal
+          isOpen={showLeaveModal}
+          onClose={() => setShowLeaveModal(false)}
+          listing={listing}
+          listingId={listingId}
+        />
+      )}
+
+      {/* Attendees Modal */}
+      {listingId && account?.id && listing && (
+        <AttendeesModal
+          isOpen={showAttendeesModal}
+          onClose={() => setShowAttendeesModal(false)}
+          listingId={listingId}
+          listingHostId={listing.host_id}
+          currentUserId={account.id}
+          isCurrentUserParticipant={isCurrentUserParticipant ?? false}
+        />
+      )}
+
+      {/* PhotoViewer for listing detail view */}
+      {view === 'detail' && listing && listing.photo_urls && listing.photo_urls.length > 0 && (
+        <PhotoViewer
+          isOpen={selectedPhotoIndex !== null}
+          photos={listing.photo_urls}
+          initialIndex={selectedPhotoIndex ?? 0}
+          onClose={() => setSelectedPhotoIndex(null)}
+        />
+      )}
     </ProtectedRoute>
+  );
+}
+
+// Wrapper component to fetch gallery data and render EventGalleryView
+function EventGalleryViewWrapper({ 
+  listingId, 
+  listing, 
+  onBack 
+}: { 
+  listingId: string; 
+  listing: Listing | null; 
+  onBack: () => void;
+}) {
+  const [gallery, setGallery] = useState<{ id: string; title: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadGallery = async () => {
+      if (!listingId) return;
+      setLoading(true);
+      try {
+        const { gallery: galleryData, error } = await listingsService.getEventGallery(listingId);
+        if (error) {
+          console.error('Error loading gallery:', error);
+        } else if (galleryData) {
+          setGallery(galleryData);
+        }
+      } catch (error) {
+        console.error('Error loading gallery:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGallery();
+  }, [listingId]);
+
+  if (loading) {
+    return (
+      <div className="px-4 py-8 text-center text-gray-500">
+        Loading gallery...
+      </div>
+    );
+  }
+
+  if (!gallery) {
+    return (
+      <div className="px-4 py-8 text-center text-gray-500">
+        Gallery not found
+      </div>
+    );
+  }
+
+  return (
+    <EventGalleryView
+      listingId={listingId}
+      galleryId={gallery.id}
+      title={gallery.title}
+      onBack={onBack}
+    />
   );
 }
 

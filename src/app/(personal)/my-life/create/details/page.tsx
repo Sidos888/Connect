@@ -20,6 +20,7 @@ export default function CreateListingDetailsPage() {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [includeEndTime, setIncludeEndTime] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [hasGallery, setHasGallery] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Format date as "Mon, Nov 17 at 7:00pm"
@@ -55,6 +56,7 @@ export default function CreateListingDetailsPage() {
       const storedEndDate = sessionStorage.getItem('listingEndDate');
       const storedIncludeEndTime = sessionStorage.getItem('listingIncludeEndTime');
       const storedPhotos = sessionStorage.getItem('listingPhotos');
+      const storedHasGallery = sessionStorage.getItem('listingHasGallery');
 
       if (storedTitle) setListingTitle(storedTitle);
       if (storedSummary) setSummary(storedSummary);
@@ -97,10 +99,16 @@ export default function CreateListingDetailsPage() {
           console.error('Error parsing photos from sessionStorage:', e);
         }
       }
+      if (storedHasGallery !== null) setHasGallery(storedHasGallery === 'true');
     } catch (e) {
       console.error('Error loading listing data:', e);
     }
   }, []);
+
+  // Save hasGallery to sessionStorage when it changes
+  useEffect(() => {
+    sessionStorage.setItem('listingHasGallery', hasGallery.toString());
+  }, [hasGallery]);
 
   const getDisplayDate = (): string => {
     if (!startDate) return 'Date and time';
@@ -377,6 +385,7 @@ export default function CreateListingDetailsPage() {
           capacity: capacityUnlimited ? null : capacity,
           is_public: isPublic,
           photo_urls: photoUrls.length > 0 ? photoUrls : null,
+          has_gallery: hasGallery,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -408,6 +417,21 @@ export default function CreateListingDetailsPage() {
         console.log('✅ Creator added as participant');
       }
 
+      // Create event gallery if hasGallery is enabled
+      if (hasGallery && listingData) {
+        const { listingsService } = await import('@/lib/listingsService');
+        const { gallery, error: galleryError } = await listingsService.createEventGallery(
+          listingData.id,
+          listingTitle.trim()
+        );
+        if (galleryError) {
+          console.error('Error creating event gallery:', galleryError);
+          // Don't throw error - listing was created successfully, gallery can be created later
+        } else {
+          console.log('✅ Event gallery created:', gallery);
+        }
+      }
+
       // Clear sessionStorage
       sessionStorage.removeItem('listingTitle');
       sessionStorage.removeItem('listingSummary');
@@ -419,6 +443,7 @@ export default function CreateListingDetailsPage() {
       sessionStorage.removeItem('listingEndDate');
       sessionStorage.removeItem('listingIncludeEndTime');
       sessionStorage.removeItem('listingPhotos');
+      sessionStorage.removeItem('listingHasGallery');
       
       // Navigate back to my-life page
       router.push('/my-life');
@@ -431,7 +456,7 @@ export default function CreateListingDetailsPage() {
   };
 
   return (
-    <div className="lg:hidden" style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
+    <div className="lg:hidden">
       <MobilePage>
         {/* Custom Header with Card */}
         <div className="fixed top-0 left-0 right-0 z-[60] bg-white"
@@ -560,12 +585,45 @@ export default function CreateListingDetailsPage() {
 
         <PageContent>
           <div 
-            className="px-4 pb-16" 
+            className="px-4 pb-16 flex items-center justify-center" 
             style={{ 
-              paddingTop: 'var(--saved-content-padding-top, 180px)',
+              minHeight: '100vh',
             }}
           >
-            {/* Page 2 content will go here */}
+            {/* Gallery Toggle Card - Same width as page 1 cards */}
+            <div 
+              className="w-full bg-white rounded-xl p-4 flex items-center justify-between transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <span className="text-base font-medium text-gray-900">Gallery</span>
+              <button
+                type="button"
+                onClick={() => setHasGallery(!hasGallery)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                  hasGallery ? 'bg-orange-500' : 'bg-gray-300'
+                }`}
+                role="switch"
+                aria-checked={hasGallery}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    hasGallery ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </PageContent>
       </MobilePage>

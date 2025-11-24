@@ -4,8 +4,10 @@ import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 're
 import { Listing } from '@/lib/listingsService';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { Check, MapPin, Plus, Image as ImageIcon } from 'lucide-react';
+import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
 import { useAuth } from '@/lib/authContext';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface EditListingDetailsViewProps {
   listing: Listing;
@@ -24,6 +26,7 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
   ({ listing, listingId, onSave, onBack, onHasChanges, onSavingChange }, ref) => {
   const router = useRouter();
   const { account } = useAuth();
+  const queryClient = useQueryClient();
   const [listingTitle, setListingTitle] = useState(listing.title || '');
   const [summary, setSummary] = useState(listing.summary || '');
   const [location, setLocation] = useState<string>(listing.location || '');
@@ -47,6 +50,23 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
   const [newPhotos, setNewPhotos] = useState<string[]>([]); // Track newly added photos (base64)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const MAX_PHOTOS = 12;
+
+  // Check for pending photo changes from ManageListingPhotosView
+  // These are stored in a separate cache key and will be applied on save
+  useEffect(() => {
+    const pendingPhotos = queryClient.getQueryData<string[]>(['listing-photo-changes', listingId]);
+    
+    if (pendingPhotos) {
+      // Only update if pending photos are different from current photos
+      if (JSON.stringify(pendingPhotos) !== JSON.stringify(photos)) {
+        console.log('📸 EditListingDetailsView: Found pending photo changes', { 
+          oldCount: photos.length, 
+          newCount: pendingPhotos.length 
+        });
+        setPhotos(pendingPhotos);
+      }
+    }
+  }, [listingId, queryClient]);
 
   // Notify parent of saving state changes
   useEffect(() => {
@@ -93,9 +113,15 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
     };
 
     // Compare photos - check if count or URLs changed
+    // Also check for new photos (base64 data URLs) that haven't been uploaded yet
     const photosChanged = 
       photos.length !== originalValues.photos.length ||
-      photos.some((photo, index) => photo !== originalValues.photos[index]);
+      photos.some((photo, index) => {
+        // If photo is a base64 data URL (new photo), it's a change
+        if (photo.startsWith('data:image/')) return true;
+        // Otherwise compare with original
+        return photo !== originalValues.photos[index];
+      });
 
     const changed = 
       currentValues.title !== originalValues.title ||
@@ -340,10 +366,34 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
       
       Promise.all(loadPromises)
         .then((newPhotoBase64) => {
+          // Validate that all photos are base64 data URLs
+          const validBase64Photos = newPhotoBase64.filter(photo => {
+            const isValid = typeof photo === 'string' && photo.startsWith('data:image/');
+            if (!isValid) {
+              console.warn('📸 EditListingDetailsView: Skipping invalid photo (not base64)', photo.substring(0, 50));
+            }
+            return isValid;
+          });
+          
+          if (validBase64Photos.length === 0) {
+            console.warn('📸 EditListingDetailsView: No valid base64 photos to add');
+            return;
+          }
+          
           // Add new photos as base64 (they'll be uploaded on save)
-          setNewPhotos(prev => [...prev, ...newPhotoBase64]);
+          setNewPhotos(prev => [...prev, ...validBase64Photos]);
           // Also add to photos array for display (using base64 data URLs)
-          setPhotos(prev => [...prev, ...newPhotoBase64]);
+          const updatedPhotos = [...photos, ...validBase64Photos];
+          setPhotos(updatedPhotos);
+          
+          // Update query cache so change detection works
+          queryClient.setQueryData(['listing', listingId], (oldData: Listing | undefined) => {
+            if (!oldData) return oldData;
+            return {
+              ...oldData,
+              photo_urls: updatedPhotos
+            };
+          });
         })
         .catch((error) => {
           console.error('Error loading photos:', error);
@@ -371,22 +421,68 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
   };
 
   const handleViewPhotos = () => {
+    console.log('📸 EditListingDetailsView: handleViewPhotos called', { listingId, photosCount: photos.length });
     if (photos.length > 0) {
-      router.push(`/listing?id=${listingId}&view=photos&from=/listing?id=${listingId}&view=edit-details`);
+      // Navigate to manage-photos view with proper URL encoding
+      const params = new URLSearchParams();
+      params.set('id', listingId);
+      params.set('view', 'manage-photos');
+      params.set('manageFrom', 'edit-details');
+      // Encode the current page as 'from' parameter
+      const currentFrom = encodeURIComponent(`/listing?id=${listingId}&view=edit-details`);
+      params.set('from', currentFrom);
+      const finalUrl = `/listing?${params.toString()}`;
+      console.log('📸 EditListingDetailsView: Navigating to', finalUrl);
+      router.push(finalUrl);
+    } else {
+      console.log('📸 EditListingDetailsView: No photos to view');
     }
   };
 
-  // Convert base64 data URL to File
-  const dataURLtoFile = (dataurl: string, filename: string): File => {
-    const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
+  // Convert base64 data URL to Blob (more reliable than File on mobile)
+  const dataURLtoBlob = (dataurl: string): Blob => {
+    try {
+      // Handle data URL format: data:image/jpeg;base64,/9j/4AAQ...
+      if (!dataurl || typeof dataurl !== 'string') {
+        throw new Error('Invalid data URL: not a string');
+      }
+
+      if (!dataurl.includes(',')) {
+        throw new Error('Invalid data URL format: missing comma separator');
+      }
+
+      const arr = dataurl.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      
+      // Decode base64
+      const base64Data = arr[1];
+      
+      // Validate base64 data
+      if (!base64Data || base64Data.length === 0) {
+        throw new Error('Empty base64 data');
+      }
+
+      // Try to decode base64
+      let bstr: string;
+      try {
+        bstr = atob(base64Data);
+      } catch (e) {
+        throw new Error(`Invalid base64 encoding: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      }
+
+      const n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      
+      for (let i = 0; i < n; i++) {
+        u8arr[i] = bstr.charCodeAt(i);
+      }
+      
+      return new Blob([u8arr], { type: mime });
+    } catch (error) {
+      console.error('Error converting data URL to Blob:', error);
+      throw error;
     }
-    return new File([u8arr], filename, { type: mime });
   };
 
   // Upload new photos to Supabase Storage
@@ -402,28 +498,135 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
     
     for (let i = 0; i < newPhotos.length; i++) {
       const photo = newPhotos[i];
-      const file = dataURLtoFile(photo, `listing-photo-${Date.now()}-${i}.jpg`);
       
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const fileName = `${account.id}/${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-      
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('listing-photos')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error('Failed to upload photo:', uploadError);
-        throw new Error(`Failed to upload photo ${i + 1}: ${uploadError.message}`);
+      // Validate that photo is a base64 data URL
+      if (!photo.startsWith('data:image/')) {
+        console.warn(`📸 EditListingDetailsView: Skipping photo ${i + 1} - not a base64 data URL`, photo.substring(0, 50));
+        continue;
       }
+      
+      try {
+        // Convert base64 to Blob (more reliable than File on mobile)
+        let blob: Blob;
+        try {
+          blob = dataURLtoBlob(photo);
+        } catch (conversionError) {
+          console.error(`Failed to convert photo ${i + 1} to blob:`, conversionError);
+          throw new Error(`Photo ${i + 1} is corrupted or invalid: ${conversionError instanceof Error ? conversionError.message : 'Unknown error'}`);
+        }
+        
+        // Validate blob
+        if (!blob || blob.size === 0) {
+          throw new Error(`Photo ${i + 1} is empty (size: ${blob?.size || 0} bytes)`);
+        }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('listing-photos')
-        .getPublicUrl(uploadData.path);
+        // Check blob size (10MB limit)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (blob.size > maxSize) {
+          throw new Error(`Photo ${i + 1} is too large (${Math.round(blob.size / 1024)}KB). Maximum size is 10MB.`);
+        }
 
-      uploadedUrls.push(publicUrl);
+        // Determine file extension from blob type
+        let fileExt = 'jpg';
+        if (blob.type.includes('png')) fileExt = 'png';
+        else if (blob.type.includes('webp')) fileExt = 'webp';
+        else if (blob.type.includes('gif')) fileExt = 'gif';
+        
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 11);
+        const fileName = `${account.id}/${timestamp}_${i}_${randomStr}.${fileExt}`;
+        
+        console.log(`📸 EditListingDetailsView: Uploading photo ${i + 1}/${newPhotos.length}`, {
+          fileName,
+          fileSize: blob.size,
+          fileType: blob.type
+        });
+        
+        // Upload to Supabase Storage with retry logic (like create listing flow)
+        let uploadData;
+        let uploadError;
+        const maxRetries = 3;
+        let retryCount = 0;
+        
+        while (retryCount < maxRetries) {
+          try {
+            const uploadPromise = supabase.storage
+              .from('listing-photos')
+              .upload(fileName, blob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: blob.type
+              });
+            
+            // Add timeout (30 seconds per upload)
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+            );
+            
+            const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
+            uploadData = result.data;
+            uploadError = result.error;
+            
+            if (!uploadError) {
+              break; // Success, exit retry loop
+            }
+            
+            // If error is retryable, try again
+            if (retryCount < maxRetries - 1 && (
+              uploadError.message?.includes('network') || 
+              uploadError.message?.includes('timeout') ||
+              uploadError.message?.includes('Load failed')
+            )) {
+              retryCount++;
+              console.warn(`📸 EditListingDetailsView: Upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+              continue;
+            }
+            
+            break; // Non-retryable error or max retries reached
+          } catch (timeoutError) {
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              console.warn(`📸 EditListingDetailsView: Upload timeout, retrying... (${retryCount}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              continue;
+            }
+            uploadError = timeoutError as any;
+            break;
+          }
+        }
+
+        if (uploadError) {
+          console.error(`📸 EditListingDetailsView: Failed to upload photo ${i + 1} after ${retryCount + 1} attempts:`, uploadError);
+          console.error(`📸 EditListingDetailsView: Upload error details:`, {
+            name: uploadError.name,
+            message: uploadError.message,
+            statusCode: uploadError.statusCode,
+            error: uploadError
+          });
+          throw new Error(`Failed to upload photo ${i + 1}: ${uploadError.message || 'Unknown storage error'}`);
+        }
+
+        if (!uploadData?.path) {
+          throw new Error(`Upload succeeded but no path returned for photo ${i + 1}`);
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('listing-photos')
+          .getPublicUrl(uploadData.path);
+
+        if (!publicUrl) {
+          throw new Error(`Failed to get public URL for photo ${i + 1}`);
+        }
+
+        uploadedUrls.push(publicUrl);
+        console.log(`📸 EditListingDetailsView: Photo ${i + 1} uploaded successfully`, { publicUrl });
+      } catch (photoError) {
+        console.error(`📸 EditListingDetailsView: Error processing photo ${i + 1}:`, photoError);
+        throw new Error(`Failed to upload photo ${i + 1}: ${photoError instanceof Error ? photoError.message : 'Unknown error'}`);
+      }
     }
 
     return uploadedUrls;
@@ -439,15 +642,33 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
         throw new Error('Supabase client not available');
       }
 
-      // Upload new photos if any
-      let finalPhotoUrls = [...photos];
+      // Get current photos - check for pending changes from ManageListingPhotosView first
+      // Then merge with any new photos that need to be uploaded
+      const pendingPhotos = queryClient.getQueryData<string[]>(['listing-photo-changes', listingId]);
+      let currentPhotos = pendingPhotos || photos;
+      
+      console.log('📸 EditListingDetailsView: Saving listing', {
+        pendingPhotosCount: pendingPhotos?.length,
+        currentPhotosCount: photos.length,
+        newPhotosCount: newPhotos.length,
+        finalPhotosCount: currentPhotos.length
+      });
+      
+      // Upload new photos if any (base64 data URLs only)
+      let finalPhotoUrls = [...currentPhotos];
       if (newPhotos.length > 0) {
-        const uploadedUrls = await uploadNewPhotos();
-        // Replace base64 photos with uploaded URLs
-        finalPhotoUrls = [
-          ...photos.filter(photo => !newPhotos.includes(photo)), // Keep existing URLs
-          ...uploadedUrls // Add new uploaded URLs
-        ];
+        try {
+          const uploadedUrls = await uploadNewPhotos();
+          // Replace base64 photos with uploaded URLs
+          finalPhotoUrls = [
+            ...currentPhotos.filter(photo => !photo.startsWith('data:image/')), // Keep existing URLs (not base64)
+            ...uploadedUrls // Add new uploaded URLs
+          ];
+          console.log('📸 EditListingDetailsView: Uploaded new photos', { uploadedCount: uploadedUrls.length });
+        } catch (uploadError) {
+          console.error('📸 EditListingDetailsView: Error uploading photos:', uploadError);
+          throw new Error(`Failed to upload photos: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
+        }
       }
 
       const updateData: any = {
@@ -460,23 +681,41 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
         updated_at: new Date().toISOString()
       };
 
+      console.log('📸 EditListingDetailsView: Updating listing in database', {
+        listingId,
+        photoUrlsCount: finalPhotoUrls.length,
+        updateData: { ...updateData, photo_urls: finalPhotoUrls }
+      });
+
       const { error } = await supabase
         .from('listings')
         .update(updateData)
         .eq('id', listingId);
 
       if (error) {
-        console.error('Error updating listing:', error);
-        alert('Failed to update listing. Please try again.');
-        setSaving(false);
-        return;
+        console.error('📸 EditListingDetailsView: Error updating listing:', error);
+        throw new Error(`Failed to update listing: ${error.message}`);
       }
 
-      // Success - navigate back
+      console.log('📸 EditListingDetailsView: Listing updated successfully');
+
+      // Clear pending photo changes cache
+      queryClient.removeQueries({ queryKey: ['listing-photo-changes', listingId] });
+      
+      // Clear newPhotos state
+      setNewPhotos([]);
+      
+      // Invalidate listing query to refresh with new data
+      await queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
+      
+      console.log('📸 EditListingDetailsView: Cache cleared, navigating back');
+      
+      // Success - navigate back to initial listing page
       onSave();
     } catch (error) {
-      console.error('Error saving listing:', error);
-      alert('Failed to update listing. Please try again.');
+      console.error('📸 EditListingDetailsView: Error saving listing:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to update listing: ${errorMessage}`);
       setSaving(false);
     }
   };
@@ -489,57 +728,43 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
   return (
     <div className="px-4 pb-16" style={{ paddingTop: 'var(--saved-content-padding-top, 140px)' }}>
       <div className="space-y-4" style={{ overflowX: 'hidden' }}>
-        {/* Photos Section - Large Square Card aligned with button inside edges */}
-        <div className="relative rounded-xl bg-gray-100 overflow-hidden"
-          style={{
-            marginLeft: '40px',
-            marginRight: '40px',
-            aspectRatio: '1',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-          }}
-        >
-          {/* Display photos - single for 1-3, grid for 4+ */}
-          {photos.length > 0 && photos.length <= 3 ? (
-            <img 
-              src={photos[0]} 
-              alt="Listing photo" 
-              className="w-full h-full object-cover"
-            />
-          ) : photos.length >= 4 ? (
-            <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0">
-              {photos.slice(0, 4).map((photo, index) => (
-                <div key={index} className="w-full h-full overflow-hidden">
-                  <img 
-                    src={photo} 
-                    alt={`Listing photo ${index + 1}`} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
+        {/* Photos Section - Use ListingPhotoCollage component */}
+        <div style={{ marginLeft: '40px', marginRight: '40px', width: 'calc(100% - 80px)', position: 'relative' }}>
+          <ListingPhotoCollage 
+            photos={photos}
+            editable={false}
+            onPhotoClick={handleViewPhotos}
+          />
           
-          {/* Add + Button - Bottom Left */}
+          {/* Add Photo Button - Positioned to the left of the photo count badge */}
+          {/* Badge is at bottom-3 right-3 (12px from right), 53px wide, so + button should be at right: calc(53px + 12px + 8px) = 73px */}
           {photos.length < MAX_PHOTOS && (
             <button
               onClick={handleAddPhoto}
-              className="absolute bottom-3 left-3 flex items-center justify-center bg-white focus:outline-none z-10"
+              className="absolute bottom-3 flex items-center justify-center bg-white focus:outline-none transition-all duration-200 hover:-translate-y-[1px]"
               style={{
                 width: '40px',
                 height: '40px',
-                borderRadius: '100px',
+                borderRadius: '20px',
                 borderWidth: '0.4px',
                 borderColor: '#E5E7EB',
                 boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                cursor: 'pointer',
+                willChange: 'transform, box-shadow',
+                zIndex: 50,
+                right: 'calc(53px + 12px + 8px)' // Badge width (53px) + badge right offset (12px) + gap (8px)
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
             >
-              <Plus size={18} className="text-gray-900" />
+              <Plus size={20} className="text-gray-900" />
             </button>
           )}
           
-          {/* Hidden file input */}
           <input
             ref={fileInputRef}
             type="file"
@@ -548,25 +773,6 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
             onChange={handlePhotoChange}
             className="hidden"
           />
-          
-          {/* Photo Count - Bottom Right */}
-          {photos.length > 0 && (
-            <button
-              onClick={handleViewPhotos}
-              className="absolute bottom-3 right-3 flex items-center justify-center gap-1.5 bg-white z-10 cursor-pointer"
-              style={{
-                width: '53px',
-                height: '40px',
-                borderRadius: '20px',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              }}
-            >
-              <span className="text-sm font-medium text-gray-900">{photos.length}</span>
-              <ImageIcon size={18} className="text-gray-900" />
-            </button>
-          )}
         </div>
 
         {/* Listing Title Card with Floating Label */}

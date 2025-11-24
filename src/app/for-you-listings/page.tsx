@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from 'next/navigation';
-import { ArrowLeft, Map, Grid3x3, Search, X } from 'lucide-react';
+import { ArrowLeft, Map, Grid3x3, Search, X, MapPin, Clock } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { listingsService, Listing } from "@/lib/listingsService";
@@ -567,7 +567,7 @@ export default function ForYouListingsPage() {
       style={{
         left: '22px',
         right: '22px',
-        bottom: `calc(max(env(safe-area-inset-bottom, 20px), 20px) + 46.5px + 12px)`,
+        bottom: `calc(max(env(safe-area-inset-bottom), 20px) + 46.5px + 12px)`,
         height: '46.5px',
         borderRadius: '100px',
         background: 'rgba(255, 255, 255, 0.9)',
@@ -575,7 +575,7 @@ export default function ForYouListingsPage() {
         borderColor: '#E5E7EB',
         borderStyle: 'solid',
         boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-        padding: '0 16px',
+        padding: '0 18px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -589,11 +589,14 @@ export default function ForYouListingsPage() {
         e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
       }}
     >
-      <div className="flex items-center gap-3">
-        <span className="text-base">📍</span>
+      <div className="flex items-center gap-2.5">
+        <MapPin size={20} className="text-black" strokeWidth={2.5} />
         <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
       </div>
-      <span className="text-xs text-neutral-500">Anytime</span>
+      <div className="flex items-center gap-2.5">
+        <Clock size={20} className="text-black" strokeWidth={2.5} />
+        <span className="text-sm font-semibold text-neutral-900">Anytime</span>
+      </div>
     </div>
     </>
   );

@@ -127,7 +127,7 @@ export default function TabBar({ items }: Props) {
       // Make Search icon bolder (strokeWidth 2.5 instead of 2)
       const isSearchIcon = icon === Search;
       return React.createElement(icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>, {
-        size: 24,
+        size: 20, // Reduced from 24
         strokeWidth: isSearchIcon ? 2.5 : 2,
         fill: active ? "currentColor" : "none",
         stroke: "currentColor"
@@ -176,9 +176,13 @@ export default function TabBar({ items }: Props) {
         style={{ 
           left: '22px',
           right: '22px',
-          bottom: 'calc(max(env(safe-area-inset-bottom, 20px), 20px))',
+          bottom: 'max(env(safe-area-inset-bottom, 20px), 20px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           position: 'fixed',
+          top: 'unset', // Explicitly unset top to prevent any interference
+          marginTop: 'unset', // Explicitly unset margin
+          height: 'auto', // Let content determine height
+          width: 'auto', // Let left/right determine width
           transform: 'translateZ(0)' // Force hardware acceleration and new stacking context
         }}
         data-testid="mobile-bottom-nav"
@@ -209,7 +213,7 @@ export default function TabBar({ items }: Props) {
                   }}
                 >
                   {React.createElement(searchItem.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>, {
-                    size: shouldUseSmallHeight ? 20 : 24,
+                    size: shouldUseSmallHeight ? 18 : 20, // Reduced from 20/24
                     strokeWidth: 2.5,
                     fill: "none",
                     stroke: "currentColor"
@@ -222,9 +226,9 @@ export default function TabBar({ items }: Props) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
-                  placeholder="Search listings"
+                  placeholder="Search"
                   className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400"
-                  style={{ fontSize: shouldUseSmallHeight ? '14px' : '16px' }}
+                  style={{ fontSize: '14px' }}
                 />
               </div>
             ) : (
@@ -273,15 +277,15 @@ export default function TabBar({ items }: Props) {
                 className="flex items-center justify-center flex-shrink-0" 
                 style={{ 
                   width: (lastVisitedItem.href === "/chat" || lastVisitedItem.href === "/chat/") 
-                    ? (shouldUseSmallHeight ? '28px' : '32px')
-                    : (shouldUseSmallHeight ? '22px' : '28px'),
-                  height: shouldUseSmallHeight ? '22px' : '28px'
+                    ? (shouldUseSmallHeight ? '24px' : '28px') // Reduced from 28/32
+                    : (shouldUseSmallHeight ? '18px' : '22px'), // Reduced from 22/28
+                  height: shouldUseSmallHeight ? '18px' : '22px' // Reduced from 22/28
                 }}
               >
                 {React.createElement(lastVisitedItem.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>, {
                   size: (lastVisitedItem.href === "/chat" || lastVisitedItem.href === "/chat/")
-                    ? (shouldUseSmallHeight ? 26 : 30)
-                    : (shouldUseSmallHeight ? 22 : 28),
+                    ? (shouldUseSmallHeight ? 22 : 26) // Reduced from 26/30
+                    : (shouldUseSmallHeight ? 18 : 22), // Reduced from 22/28
                   strokeWidth: 0,
                   fill: "currentColor",
                   stroke: "none"
@@ -307,14 +311,18 @@ export default function TabBar({ items }: Props) {
             {otherItems.map((item, index) => {
             const active = isActive(item.href);
             // Chat icon is wider (21:17 aspect ratio), so adjust container width and size
+            // My Life icon also has a wider aspect ratio (17:18), so needs slightly more width
             const isChatIcon = item.href === "/chat" || item.href === "/chat/";
+            const isMyLifeIcon = item.href === "/my-life" || item.href === "/my-life/";
             const iconContainerWidth = isChatIcon 
               ? (shouldUseSmallHeight ? '36px' : '40px')
+              : isMyLifeIcon
+              ? (shouldUseSmallHeight ? '26px' : '30px') // Slightly wider for My Life icon (17:18 aspect ratio)
               : (shouldUseSmallHeight ? '24px' : '28px');
             const iconContainerHeight = shouldUseSmallHeight ? '24px' : '28px';
             const iconSize = isChatIcon 
-              ? (shouldUseSmallHeight ? 26 : 30)
-              : (shouldUseSmallHeight ? 22 : 26);
+              ? (shouldUseSmallHeight ? 22 : 26) // Reduced from 26/30
+              : (shouldUseSmallHeight ? 18 : 22); // Reduced from 22/26
             
             return (
                 <Link 
@@ -337,7 +345,8 @@ export default function TabBar({ items }: Props) {
                   style={{ 
                     width: iconContainerWidth,
                     height: iconContainerHeight,
-                    padding: '2px' 
+                    padding: isMyLifeIcon ? '1px 2px 3px 2px' : '2px', // Adjust padding: less top, more bottom to nudge icon up
+                    overflow: 'visible' // Prevent clipping of wider icons like My Life
                   }}
                 >
                   {React.createElement(item.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>, {

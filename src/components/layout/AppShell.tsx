@@ -142,11 +142,13 @@ function AppShellContent({ children }: AppShellProps) {
   if (isChatPage) {
     // Chat page: Desktop top nav, Mobile bottom nav (responsive behavior handled in chat component)
     return (
-      <div className="h-screen bg-white flex flex-col">
-        {/* Desktop: Top Navigation Bar */}
-        <div className="hidden sm:block fixed top-0 left-0 right-0 z-50">
-          <TopNavigation />
-        </div>
+      <div className={`h-screen flex flex-col ${isIndividualChatPage ? 'bg-transparent' : 'bg-white'}`}>
+        {/* Desktop: Top Navigation Bar - Hidden on individual chat pages */}
+        {!isIndividualChatPage && (
+          <div className="hidden sm:block fixed top-0 left-0 right-0 z-50">
+            <TopNavigation />
+          </div>
+        )}
         
         {/* Mobile: Top Navigation Bar - Not needed for Chat page (has own PageHeader) */}
         {!isSettingsPage && !isChatPage && (
@@ -156,7 +158,7 @@ function AppShellContent({ children }: AppShellProps) {
         )}
         
         {/* Main Content Area - Mobile has bottom nav, Desktop has top nav offset */}
-        <main className="w-full flex-1 sm:pt-20 pt-32 sm:h-[calc(100vh-4.5rem)] pb-24 sm:pb-0">
+        <main className={`w-full flex-1 ${isIndividualChatPage ? 'sm:pt-0 pt-0 bg-transparent' : 'sm:pt-20 pt-32'} sm:h-[calc(100vh-4.5rem)] ${isIndividualChatPage ? 'pb-0' : 'pb-24'} sm:pb-0`} style={isIndividualChatPage ? { backgroundColor: 'transparent', background: 'transparent' } : {}}>
           <ProtectedRoute>
             {children}
           </ProtectedRoute>

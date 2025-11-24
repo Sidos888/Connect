@@ -458,6 +458,19 @@ nav:not(.tabbar-nav) {
   box-shadow: none !important;
 }
 
+/* Ensure TabBar always stays at bottom - prevent positioning glitches */
+.tabbar-nav,
+nav[data-testid="mobile-bottom-nav"] {
+  position: fixed !important;
+  bottom: max(env(safe-area-inset-bottom, 20px), 20px) !important;
+  top: auto !important;
+  left: 22px !important;
+  right: 22px !important;
+  z-index: 70 !important;
+  transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
 /* Keep white boxes/cards white even when pressed */
 .bg-white:active,
 button.bg-white:active,

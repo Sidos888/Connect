@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense } from "react";
 import Avatar from "@/components/Avatar";
 import BearEmoji from "@/components/BearEmoji";
 import { useAppStore } from "@/lib/store";
@@ -32,8 +32,50 @@ function MessagesPageContent() {
   // Use React Query to fetch chats
   const { data: chats = [], isLoading, error } = useChats(chatService, user?.id || null);
   
+  // Convert chats to conversations format
+  const conversations = useMemo(() => {
+    if (!account?.id) return [];
+    
+    return chats.map(chat => {
+      // For direct chats, find the other participant
+      const otherParticipant = chat.type === 'direct' 
+        ? chat.participants?.find((p: any) => p.user_id !== account.id)
+        : null;
+      
+      // Determine title and avatar
+      const title = chat.type === 'direct'
+        ? (otherParticipant?.user_name || 'Unknown User')
+        : (chat.name || 'Group Chat');
+      
+      const avatarUrl = chat.type === 'direct'
+        ? (otherParticipant?.user_profile_pic || null)
+        : (chat.photo || null); // Use group photo for group chats
+      
+      // Format last message
+      let lastMessageText: string | undefined = undefined;
+      if (chat.last_message) {
+        if (chat.last_message.message_text) {
+          lastMessageText = chat.last_message.message_text;
+        } else if (chat.last_message.message_type === 'image') {
+          lastMessageText = '📷 Image';
+        }
+      }
+      
+      return {
+        id: chat.id,
+        title,
+        avatarUrl,
+        isGroup: chat.type === 'event_group' || chat.type === 'group',
+        unreadCount: chat.unread_count || 0,
+        last_message: lastMessageText,
+        last_message_at: chat.last_message_at,
+        messages: []
+      };
+    });
+  }, [chats, account?.id]);
+  
   // Find the selected conversation
-  const selectedConversation = selectedChatId ? chats.find(c => c.id === selectedChatId) : null;
+  const selectedConversation = selectedChatId ? conversations.find(c => c.id === selectedChatId) : null;
   
   // Mobile-specific state
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
@@ -184,60 +226,77 @@ function MessagesPageContent() {
   };
 
   const getLastMessage = (conversation: Conversation) => {
-    if (!conversation.messages || conversation.messages.length === 0) return "No messages yet";
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    // Use last_message string if available (new format)
+    if (conversation.last_message && typeof conversation.last_message === 'string') {
+      if (conversation.last_message.trim()) {
+        return conversation.last_message;
+      }
+    }
     
-    // Check if message has attachments
-    if (lastMessage.attachments && lastMessage.attachments.length > 0) {
-      const attachment = lastMessage.attachments[0];
-      const mediaType = attachment.file_type === 'video' ? 'video' : 'photo';
-      const mediaIcon = attachment.file_type === 'video' ? '🎥' : '📷';
+    // Fallback to messages array (old format)
+    if (conversation.messages && conversation.messages.length > 0) {
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
       
-      // For group chats, include sender name
-      if (conversation.isGroup && lastMessage.senderName) {
-        return `${lastMessage.senderName}: ${mediaIcon} ${mediaType}`;
+      // Check if message has attachments
+      if (lastMessage.attachments && lastMessage.attachments.length > 0) {
+        const attachment = lastMessage.attachments[0];
+        const mediaType = attachment.file_type === 'video' ? 'video' : 'photo';
+        const mediaIcon = attachment.file_type === 'video' ? '🎥' : '📷';
+        
+        // For group chats, include sender name
+        if (conversation.isGroup && lastMessage.senderName) {
+          return `${lastMessage.senderName}: ${mediaIcon} ${mediaType}`;
+        }
+        
+        return `${mediaIcon} ${mediaType}`;
       }
       
-      return `${mediaIcon} ${mediaType}`;
+      // For text messages in group chats, include sender name
+      if (conversation.isGroup && lastMessage.senderName && lastMessage.text) {
+        return `${lastMessage.senderName}: ${lastMessage.text}`;
+      }
+      
+      // If message has text, show it
+      if (lastMessage.text && lastMessage.text.trim()) {
+        return lastMessage.text;
+      }
     }
     
-    // For text messages in group chats, include sender name
-    if (conversation.isGroup && lastMessage.senderName && lastMessage.text) {
-      return `${lastMessage.senderName}: ${lastMessage.text}`;
-    }
-    
-    // If message has text, show it
-    if (lastMessage.text && lastMessage.text.trim()) {
-      return lastMessage.text;
-    }
-    
-    // If no text and no attachments, show "No messages yet"
     return "No messages yet";
   };
 
-  const getLastMessageTime = (conversation: { messages: Array<{ createdAt: string }> }) => {
-    if (!conversation.messages || conversation.messages.length === 0) return "";
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return lastMessage.createdAt ? formatTime(lastMessage.createdAt) : "";
+  const getLastMessageTime = (conversation: Conversation) => {
+    // Use last_message_at if available (new format)
+    if (conversation.last_message_at) {
+      return formatTime(conversation.last_message_at);
+    }
+    
+    // Fallback to messages array (old format)
+    if (conversation.messages && conversation.messages.length > 0) {
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      return lastMessage.createdAt ? formatTime(lastMessage.createdAt) : "";
+    }
+    
+    return "";
   };
 
   // Mobile category filtering
   const getMobileFilteredConversations = () => {
-    if (!chats || !Array.isArray(chats)) {
-      console.warn('⚠️ getMobileFilteredConversations: chats is not an array:', chats);
+    if (!conversations || !Array.isArray(conversations)) {
+      console.warn('⚠️ getMobileFilteredConversations: conversations is not an array:', conversations);
       return [];
     }
-    const filtered = chats.filter(conv => 
-      (conv.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = conversations.filter(conv => 
+      conv.title?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     switch (mobileActiveCategory) {
       case "unread":
         return filtered.filter(conv => conv.unreadCount > 0);
       case "dm":
-        return filtered.filter(conv => conv.type === 'direct');
+        return filtered.filter(conv => !conv.isGroup);
       case "group":
-        return filtered.filter(conv => conv.type === 'group');
+        return filtered.filter(conv => conv.isGroup);
       default:
         return filtered;
     }
@@ -247,9 +306,9 @@ function MessagesPageContent() {
 
   // Mobile category counts
   const getMobileCategoryCounts = () => {
-    const unreadCount = chats.filter(conv => conv.unreadCount > 0).length;
-    const dmCount = chats.filter(conv => conv.type === 'direct').length;
-    const groupCount = chats.filter(conv => conv.type === 'group').length;
+    const unreadCount = conversations.filter(conv => conv.unreadCount > 0).length;
+    const dmCount = conversations.filter(conv => !conv.isGroup).length;
+    const groupCount = conversations.filter(conv => conv.isGroup).length;
     
     return { unreadCount, dmCount, groupCount };
   };
