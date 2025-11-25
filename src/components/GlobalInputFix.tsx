@@ -14,15 +14,29 @@ export default function GlobalInputFix() {
 
     // Fix all inputs and textareas
     const fixInput = (input: HTMLInputElement | HTMLTextAreaElement) => {
-      // Remove autocapitalize completely - let iOS handle it naturally
-      input.removeAttribute('autocapitalize');
-      
-      // Set other attributes
-      input.setAttribute('autocorrect', 'off');
-      input.setAttribute('spellcheck', 'false');
-      
-      // Ensure text-transform is none
-      input.style.textTransform = 'none';
+      try {
+        // Skip if already fixed (check for handler marker)
+        if ((input as any)._iosFixed) {
+          return;
+        }
+        
+        // Set autocapitalize to none to prevent iOS from auto-capitalizing
+        // This prevents the all-caps issue where iOS capitalizes every word
+        input.setAttribute('autocapitalize', 'none');
+        
+        // Set other attributes
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('spellcheck', 'false');
+        
+        // Ensure text-transform is none
+        input.style.textTransform = 'none';
+        
+        // Mark as fixed
+        (input as any)._iosFixed = true;
+      } catch (error) {
+        console.warn('GlobalInputFix: Error fixing input:', error);
+        return; // Skip this input if there's an error
+      }
       
       // Track the last typed character and caps lock state PER INPUT
       let lastKeyPress: { key: string; capsLock: boolean } | null = null;
@@ -112,7 +126,8 @@ export default function GlobalInputFix() {
       
       // Also handle focus to ensure attributes are set
       const handleFocus = () => {
-        input.removeAttribute('autocapitalize');
+        // Set autocapitalize to none to prevent iOS from auto-capitalizing
+        input.setAttribute('autocapitalize', 'none');
         input.setAttribute('autocorrect', 'off');
         input.setAttribute('spellcheck', 'false');
         input.style.textTransform = 'none';
@@ -124,34 +139,82 @@ export default function GlobalInputFix() {
 
     // Fix existing inputs
     const fixAllInputs = () => {
-      const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="search"], textarea');
-      inputs.forEach(fixInput);
+      try {
+        const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="search"], textarea');
+        inputs.forEach((input) => {
+          try {
+            fixInput(input as HTMLInputElement | HTMLTextAreaElement);
+          } catch (error) {
+            console.warn('GlobalInputFix: Error fixing input in fixAllInputs:', error);
+          }
+        });
+      } catch (error) {
+        console.error('GlobalInputFix: Error in fixAllInputs:', error);
+      }
     };
 
     // Fix inputs immediately
     fixAllInputs();
 
     // Watch for new inputs added to the DOM
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const element = node as Element;
-            // Check if the added node is an input/textarea
-            if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-              fixInput(element as HTMLInputElement | HTMLTextAreaElement);
-            }
-            // Check for inputs/textareas inside the added node
-            const inputs = element.querySelectorAll?.('input[type="text"], input[type="email"], input[type="search"], textarea');
-            inputs?.forEach(fixInput);
+    // Use requestAnimationFrame to batch mutations and avoid blocking the main thread
+    let rafScheduled = false;
+    const pendingMutations: MutationRecord[] = [];
+    
+    const processMutations = () => {
+      try {
+        const mutations = [...pendingMutations];
+        pendingMutations.length = 0;
+        rafScheduled = false;
+        
+        mutations.forEach((mutation) => {
+          try {
+            // Handle new nodes
+            mutation.addedNodes.forEach((node) => {
+              try {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                  const element = node as Element;
+                  // Check if the added node is an input/textarea
+                  if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                    fixInput(element as HTMLInputElement | HTMLTextAreaElement);
+                  }
+                  // Check for inputs/textareas inside the added node
+                  const inputs = element.querySelectorAll?.('input[type="text"], input[type="email"], input[type="search"], textarea');
+                  inputs?.forEach((input) => {
+                    try {
+                      fixInput(input as HTMLInputElement | HTMLTextAreaElement);
+                    } catch (error) {
+                      console.warn('GlobalInputFix: Error fixing input in mutation:', error);
+                    }
+                  });
+                }
+              } catch (error) {
+                console.warn('GlobalInputFix: Error processing added node:', error);
+              }
+            });
+          } catch (error) {
+            console.warn('GlobalInputFix: Error processing mutation:', error);
           }
         });
-      });
+      } catch (error) {
+        console.error('GlobalInputFix: Error in processMutations:', error);
+      }
+    };
+    
+    const observer = new MutationObserver((mutations) => {
+      pendingMutations.push(...mutations);
+      if (!rafScheduled) {
+        rafScheduled = true;
+        requestAnimationFrame(processMutations);
+      }
     });
 
     observer.observe(document.body, {
       childList: true,
       subtree: true,
+      // Temporarily disable attribute watching - it might be causing performance issues
+      // attributes: true,
+      // attributeFilter: ['autocapitalize'],
     });
 
     // Cleanup
@@ -181,4 +244,3 @@ export default function GlobalInputFix() {
 
   return null;
 }
-

@@ -17,6 +17,7 @@ export interface ChatMessage {
   is_pinned: boolean;
   sender_name?: string;
   sender_profile_pic?: string;
+  attachment_count?: number; // Number of attachments for this message
 }
 
 export interface ChatParticipant {
@@ -237,6 +238,18 @@ export class ChatService {
           .single();
 
         if (!messageError && lastMessage) {
+          // Get attachment count for the last message
+          const { count: attachmentCount, error: attachmentError } = await this.supabase
+            .from('attachments')
+            .select('*', { count: 'exact', head: true })
+            .eq('message_id', lastMessage.id);
+
+          if (attachmentError) {
+            console.error('Error getting attachment count for message:', lastMessage.id, attachmentError);
+          }
+
+          const finalAttachmentCount = attachmentCount || 0;
+          
           chat.last_message = {
             id: lastMessage.id,
             chat_id: lastMessage.chat_id,
@@ -251,7 +264,8 @@ export class ChatService {
             reply_to_message_id: lastMessage.reply_to_message_id || null,
             is_pinned: false,
             sender_name: (lastMessage.accounts as any)?.name,
-            sender_profile_pic: (lastMessage.accounts as any)?.profile_pic
+            sender_profile_pic: (lastMessage.accounts as any)?.profile_pic,
+            attachment_count: finalAttachmentCount // Add attachment count
           };
         }
 
@@ -417,6 +431,9 @@ export class ChatService {
       }
       const senderId = user.id;
       
+      // Get current timestamp to ensure consistency
+      const currentTimestamp = new Date().toISOString();
+      
       // Insert message
       const { data: message, error } = await this.supabase
         .from('chat_messages')
@@ -457,14 +474,65 @@ export class ChatService {
         }
       }
 
-      // Update chat's last_message_at
-      await this.supabase
+      // Update chat's last_message_at with current timestamp (use message.created_at or currentTimestamp)
+      // Use message.created_at if available, otherwise use currentTimestamp
+      const timestampToUse = message.created_at || currentTimestamp;
+      console.log('🕐 Updating chat timestamp:', { chatId, timestampToUse, messageCreatedAt: message.created_at });
+      
+      const { data: updateData, error: updateError } = await this.supabase
         .from('chats')
         .update({ 
-          last_message_at: message.created_at,
-          updated_at: message.created_at
+          last_message_at: timestampToUse,
+          updated_at: timestampToUse
         })
-        .eq('id', chatId);
+        .eq('id', chatId)
+        .select('id, last_message_at, updated_at'); // Select to verify update
+      
+      if (updateError) {
+        console.error('❌ Error updating chat timestamp:', {
+          error: updateError,
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint,
+          chatId,
+          timestampToUse
+        });
+        // Don't fail the message send, but log the error
+      } else {
+        console.log('✅ Chat timestamp updated successfully:', {
+          chatId,
+          updatedTimestamp: updateData?.[0]?.last_message_at,
+          requestedTimestamp: timestampToUse,
+          match: updateData?.[0]?.last_message_at === timestampToUse
+        });
+        
+        // Verify the update actually worked
+        if (updateData && updateData[0] && updateData[0].last_message_at !== timestampToUse) {
+          console.warn('⚠️ Timestamp mismatch! Database returned different timestamp:', {
+            requested: timestampToUse,
+            actual: updateData[0].last_message_at
+          });
+        }
+        
+        // Double-check by querying the database directly
+        const { data: verifyData, error: verifyError } = await this.supabase
+          .from('chats')
+          .select('id, last_message_at, updated_at')
+          .eq('id', chatId)
+          .single();
+        
+        if (verifyError) {
+          console.error('❌ Error verifying timestamp update:', verifyError);
+        } else {
+          console.log('🔍 Verification query result:', {
+            chatId,
+            last_message_at: verifyData?.last_message_at,
+            updated_at: verifyData?.updated_at,
+            matches: verifyData?.last_message_at === timestampToUse
+          });
+        }
+      }
 
       const chatMessage: ChatMessage = {
         id: message.id,
@@ -1174,5 +1242,3 @@ export class ChatService {
   }
 
 }
-
-export const chatService = new ChatService();

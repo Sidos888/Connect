@@ -18,6 +18,8 @@ import GroupSetupModal from "@/components/chat/GroupSetupModal";
 import { Plus } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ProfileModal from "@/components/profile/ProfileModal";
+import { SearchIcon } from "@/components/icons";
+import SearchModal from "@/components/chat/SearchModal";
 
 function MessagesPageContent() {
   const { isHydrated } = useAppStore();
@@ -80,6 +82,7 @@ function MessagesPageContent() {
   // Mobile-specific state
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Lock body scroll on desktop
   useEffect(() => {
@@ -317,7 +320,7 @@ function MessagesPageContent() {
 
   const mobileCategoriesTop = [
     { id: "all", label: "All", count: null },
-    { id: "unread", label: "Unread", count: mobileUnreadCount },
+    ...(mobileUnreadCount > 0 ? [{ id: "unread", label: "Unread", count: mobileUnreadCount }] : []),
   ];
 
   const mobileCategoriesBottom = [
@@ -399,75 +402,99 @@ function MessagesPageContent() {
               }}
             >
               <div className="space-y-6 pb-6">
-                {/* Search Card */}
-                <div
-                  className="rounded-2xl bg-white px-4 py-4 transition-all duration-200"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                >
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search"
-                      className="w-full pl-10 pr-2 bg-transparent text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
-                      style={{
-                        fontSize: '16px',
-                        WebkitAppearance: 'none',
-                        WebkitTapHighlightColor: 'transparent'
-                      }}
-                    />
-                    <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
+                {/* Search Bar */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onClick={() => setIsSearchOpen(true)}
+                    readOnly
+                    className="w-full focus:outline-none cursor-pointer"
+                    style={{
+                      borderRadius: '100px',
+                      height: '46.5px',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow',
+                      paddingLeft: '48px',
+                      paddingRight: '24px',
+                      fontSize: '16px',
+                      WebkitAppearance: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      color: '#111827'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                  />
+                  <div className="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none" style={{ width: '48px' }}>
+                    <SearchIcon size={20} className="text-gray-900" style={{ strokeWidth: 2.5 }} />
                   </div>
                 </div>
 
                 {/* Category Pills */}
                 <div>
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
-                    {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => setMobileActiveCategory(category.id)}
-                        className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
-                        style={{
-                          borderWidth: '0.4px',
-                          borderColor: mobileActiveCategory === category.id ? '#D1D5DB' : '#E5E7EB',
-                          borderStyle: 'solid',
-                          boxShadow: mobileActiveCategory === category.id
-                            ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
-                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                          color: mobileActiveCategory === category.id ? '#111827' : '#374151',
-                          willChange: 'transform, box-shadow'
-                        }}
-                      >
-                        <span className="text-sm font-medium leading-none">{category.label}</span>
-                        {category.count !== null && (
-                          <span
-                            className={`ml-2 text-xs leading-none ${
-                              mobileActiveCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'
-                            }`}
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
+                    {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => {
+                      const isActive = mobileActiveCategory === category.id;
+                      return (
+                        <div
+                          key={category.id}
+                          className="flex-shrink-0"
+                          style={{
+                            paddingLeft: isActive ? '2px' : '0',
+                            paddingRight: isActive ? '2px' : '0',
+                            paddingTop: isActive ? '2px' : '0',
+                            paddingBottom: isActive ? '2px' : '0',
+                          }}
+                        >
+                          <button
+                            onClick={() => setMobileActiveCategory(category.id)}
+                            className="inline-flex items-center justify-center gap-2 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                            style={{
+                              minHeight: isActive ? '44px' : '40px',
+                              paddingLeft: isActive ? '18px' : '16px',
+                              paddingRight: isActive ? '18px' : '16px',
+                              paddingTop: isActive ? '12px' : '10px',
+                              paddingBottom: isActive ? '12px' : '10px',
+                              borderWidth: '0.4px',
+                              borderColor: '#E5E7EB',
+                              borderStyle: 'solid',
+                              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                              color: isActive ? '#111827' : '#6B7280',
+                              willChange: 'transform, box-shadow',
+                              transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                              e.currentTarget.style.transform = isActive ? 'scale(1.05) translateY(-1px)' : 'scale(1) translateY(-1px)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                              e.currentTarget.style.transform = isActive ? 'scale(1.05)' : 'scale(1)';
+                            }}
                           >
-                            {category.count}
-                          </span>
-                        )}
-                      </button>
-                    ))}
+                            <span className="text-sm font-medium leading-none">{category.label}</span>
+                            {category.count !== null && (
+                              <span
+                                className={`ml-2 text-xs leading-none ${
+                                  isActive ? 'text-neutral-700' : 'text-neutral-500'
+                                }`}
+                              >
+                                {category.count}
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -521,19 +548,33 @@ function MessagesPageContent() {
                               <h3 className="text-sm font-semibold text-gray-900 truncate">
                                 {conversation.title}
                               </h3>
-                              <span className="text-xs text-gray-500">
-                                {getLastMessageTime(conversation)}
-                              </span>
+                              <div className="relative flex-shrink-0">
+                                <span 
+                                  className={`text-xs ${conversation.unreadCount > 0 ? 'text-orange-500' : 'text-gray-500'}`}
+                                >
+                                  {getLastMessageTime(conversation)}
+                                </span>
+                                {conversation.unreadCount > 0 && (
+                                  <div 
+                                    className="absolute right-0 top-full mt-0.5 rounded-full flex items-center justify-center"
+                                    style={{ 
+                                      backgroundColor: '#F97316',
+                                      width: '20px',
+                                      height: '20px',
+                                      minWidth: '20px'
+                                    }}
+                                  >
+                                    <span className="text-xs text-white font-medium leading-none">
+                                      {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <p className="text-sm text-gray-500 truncate mt-1">
                               {getLastMessage(conversation) || 'No messages yet'}
                             </p>
                           </div>
-                          {conversation.unreadCount > 0 && (
-                            <div className="bg-gray-900 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                              {conversation.unreadCount}
-                            </div>
-                          )}
                         </div>
                       </div>
                     ))
@@ -564,6 +605,15 @@ function MessagesPageContent() {
           onViewProfile={() => router.push(`/profile?id=${account?.id}&from=${encodeURIComponent(pathname)}`)}
           onShareProfile={() => router.push(`/menu?view=share-profile&from=${encodeURIComponent(pathname)}`)}
           onAddBusiness={() => router.push('/create-business')}
+        />
+
+        {/* Search Modal */}
+        <SearchModal
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          conversations={conversations}
         />
       </div>
     </ProtectedRoute>

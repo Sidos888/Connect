@@ -443,14 +443,8 @@ textarea {
   -webkit-text-transform: none !important;
 }
 
-/* Force autocapitalize off for all text inputs on iOS */
-input[type="text"],
-input[type="email"],
-input[type="search"],
-textarea {
-  autocapitalize: none !important;
-  -webkit-autocapitalize: none !important;
-}
+/* Note: autocapitalize is an HTML attribute, not a CSS property */
+/* The attribute is set via GlobalInputFix component for proper iOS behavior */
 
 /* Remove any potential borders from navigation, except TabBar */
 nav:not(.tabbar-nav) {

@@ -33,6 +33,7 @@ export default function IndividualChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -156,11 +157,6 @@ export default function IndividualChatPage() {
 
         setLoading(false);
 
-        // Scroll to bottom after messages are loaded
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
-        }, 100);
-
         // TODO: Add reaction subscriptions when implemented
         // Reactions feature not yet implemented in ChatService
 
@@ -209,12 +205,21 @@ export default function IndividualChatPage() {
     };
   }, [account?.id, chatId]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change or when loading completes
   useEffect(() => {
-    if (messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0 && !loading) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          } else if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+          }
+        }, 50);
+      });
     }
-  }, [messages]);
+  }, [messages, loading]);
 
   // Mark messages as read when chat is loaded
   useEffect(() => {
@@ -279,9 +284,14 @@ export default function IndividualChatPage() {
     navigator.clipboard.writeText(message.text || '');
   };
 
-  const handleDelete = async (message: SimpleMessage) => {
+  const handleDelete = async (messageId: string) => {
     // TODO: Implement deleteMessage in ChatService
-    console.log('Delete message not yet implemented:', message.id);
+    console.log('Delete message not yet implemented:', messageId);
+  };
+
+  const handleDeleteFromModal = async (message: SimpleMessage) => {
+    // Wrapper for MessageActionModal which expects SimpleMessage
+    await handleDelete(message.id);
   };
 
   const handleReact = async (message: SimpleMessage, emoji: string) => {
@@ -523,10 +533,10 @@ export default function IndividualChatPage() {
           <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
             <div className="flex-1">
               <div className="text-xs text-gray-600 mb-1">
-                Replying to {replyToMessage.sender_name}
+                Replying to {replyToMessage.sender_name || 'Unknown'}
               </div>
               <div className="text-sm text-gray-800 truncate">
-                {replyToMessage.text || 'Media message'}
+                {typeof replyToMessage.text === 'string' ? replyToMessage.text : 'Media message'}
               </div>
             </div>
             <button
@@ -653,6 +663,7 @@ export default function IndividualChatPage() {
           // Full height with paddingBottom ensures no gap at bottom
         }}
         ref={(el) => {
+          messagesContainerRef.current = el;
           if (el) {
             console.log('🔍 Chat container height calculation:', {
               viewportHeight: window.innerHeight,
@@ -675,7 +686,7 @@ export default function IndividualChatPage() {
               <MessageBubble
                 message={message}
                 currentUserId={account?.id || ''}
-                onReactionToggle={(emoji, msgId) => {
+                onReactionToggle={(emoji: string, msgId: string) => {
                   if (msgId === message.id) {
                     handleReact(message, emoji);
                   }
@@ -700,7 +711,7 @@ export default function IndividualChatPage() {
         }}
         onReply={handleReply}
         onCopy={handleCopy}
-        onDelete={handleDelete}
+        onDelete={handleDeleteFromModal}
         onReact={handleReact}
         isMe={selectedMessage?.sender_id === account?.id}
       />

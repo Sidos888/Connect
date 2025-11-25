@@ -339,7 +339,7 @@ const ChatLayoutContent = () => {
 
   const categories = [
     { id: "all", label: "All", count: null },
-    { id: "unread", label: "Unread", count: unreadCount },
+    ...(unreadCount > 0 ? [{ id: "unread", label: "Unread", count: unreadCount }] : []),
     { id: "dm", label: "DM", count: dmCount },
     { id: "group", label: "Groups", count: groupCount },
   ];
@@ -411,28 +411,54 @@ const ChatLayoutContent = () => {
 
                 {/* Filter Pills Section - Desktop */}
                 <div className="px-4 py-3 bg-white mb-1">
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1">
-                    {categories.map((category) => (
-                      <button 
-                        key={category.id} 
-                        onClick={() => setActiveCategory(category.id)} 
-                        className="inline-flex items-center justify-center gap-2 h-10 flex-shrink-0 px-4 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
-                        style={{
-                          borderWidth: '0.4px',
-                          borderColor: activeCategory === category.id ? '#D1D5DB' : '#E5E7EB',
-                          borderStyle: 'solid',
-                          boxShadow: activeCategory === category.id 
-                            ? '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)'
-                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                          color: activeCategory === category.id ? '#111827' : '#374151'
-                        }}
-                      >
-                        <span className="text-sm font-medium leading-none">{category.label}</span>
-                        {category.count !== null && (
-                          <span className={`ml-2 text-xs leading-none ${activeCategory === category.id ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
-                        )}
-                      </button>
-                    ))}
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
+                    {categories.map((category) => {
+                      const isActive = activeCategory === category.id;
+                      return (
+                        <div
+                          key={category.id}
+                          className="flex-shrink-0"
+                          style={{
+                            paddingLeft: isActive ? '2px' : '0',
+                            paddingRight: isActive ? '2px' : '0',
+                            paddingTop: isActive ? '2px' : '0',
+                            paddingBottom: isActive ? '2px' : '0',
+                          }}
+                        >
+                          <button 
+                            onClick={() => setActiveCategory(category.id)} 
+                            className="inline-flex items-center justify-center gap-2 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                            style={{
+                              minHeight: isActive ? '44px' : '40px',
+                              paddingLeft: isActive ? '18px' : '16px',
+                              paddingRight: isActive ? '18px' : '16px',
+                              paddingTop: isActive ? '12px' : '10px',
+                              paddingBottom: isActive ? '12px' : '10px',
+                              borderWidth: '0.4px',
+                              borderColor: '#E5E7EB',
+                              borderStyle: 'solid',
+                              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                              color: isActive ? '#111827' : '#6B7280',
+                              willChange: 'transform, box-shadow',
+                              transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                              e.currentTarget.style.transform = isActive ? 'scale(1.05) translateY(-1px)' : 'scale(1) translateY(-1px)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                              e.currentTarget.style.transform = isActive ? 'scale(1.05)' : 'scale(1)';
+                            }}
+                          >
+                            <span className="text-sm font-medium leading-none">{category.label}</span>
+                            {category.count !== null && (
+                              <span className={`ml-2 text-xs leading-none ${isActive ? 'text-neutral-700' : 'text-neutral-500'}`}>{category.count}</span>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -460,11 +486,6 @@ const ChatLayoutContent = () => {
                               {/* Avatar */}
                               <div className="relative flex-shrink-0">
                                 <Avatar src={conversation.avatarUrl ?? undefined} name={conversation.title} size={48} />
-                                {conversation.unreadCount > 0 && (
-                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                                    <span className="text-xs text-white font-medium">{conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}</span>
-                                  </div>
-                                )}
                               </div>
 
                               {/* Conversation Info */}
@@ -480,7 +501,28 @@ const ChatLayoutContent = () => {
                                       </div>
                                     )}
                                   </div>
-                                  <span className="text-xs text-gray-500 flex-shrink-0">{getLastMessageTime(conversation)}</span>
+                                  <div className="relative flex-shrink-0">
+                                    <span 
+                                      className={`text-xs ${conversation.unreadCount > 0 ? 'text-orange-500' : 'text-gray-500'}`}
+                                    >
+                                      {getLastMessageTime(conversation)}
+                                    </span>
+                                    {conversation.unreadCount > 0 && (
+                                      <div 
+                                        className="absolute right-0 top-full mt-0.5 rounded-full flex items-center justify-center"
+                                        style={{ 
+                                          backgroundColor: '#F97316',
+                                          width: '20px',
+                                          height: '20px',
+                                          minWidth: '20px'
+                                        }}
+                                      >
+                                        <span className="text-xs text-white font-medium leading-none">
+                                          {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                                 <p className={`text-xs truncate leading-relaxed ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{getDisplayMessage(conversation)}</p>
                               </div>
