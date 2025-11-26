@@ -64,7 +64,18 @@ export default function ProfileRoute() {
 
   const handleBack = () => {
     if (from) {
+      // Handle different from values
+      if (from === 'connections') {
+        router.push('/menu?view=connections');
+      } else if (from === 'add-person') {
+        router.push('/menu?view=add-person');
+      } else if (from.startsWith('/')) {
+        // If from is a full path, use it directly
       router.push(from);
+      } else {
+        // Default: go back in history
+        router.back();
+      }
     } else {
       router.back();
     }

@@ -32,7 +32,7 @@ export interface ChatParticipant {
 
 export interface Chat {
   id: string;
-  type: 'direct' | 'event_group';
+  type: 'direct' | 'group';
   name: string | null;
   photo?: string | null; // Group chat photo
   listing_id: string | null;
@@ -610,7 +610,8 @@ export class ChatService {
         .eq('type', 'direct')
         .eq('chat_participants.user_id', user1Id);
 
-      if (checkError) {
+      // Only treat as error if it's not a "no rows" type error
+      if (checkError && checkError.code !== 'PGRST116') {
         // Create a serializable error object
         const serializableError = {
           message: checkError.message || 'Unknown error',
@@ -626,6 +627,9 @@ export class ChatService {
         (err as any).hint = serializableError.hint;
         return { chat: null, error: err };
       }
+      
+      // If checkError exists but it's just "no rows", continue (no existing chat found)
+      // existingChats will be null or empty, which is fine
 
       // Check if any of these chats also has user2Id as a participant
       for (const chat of existingChats || []) {
@@ -637,9 +641,48 @@ export class ChatService {
         if (!participantError && participants) {
           const participantIds = participants.map(p => p.user_id);
           if (participantIds.includes(user2Id) && participantIds.length === 2) {
-            // Direct chat already exists
-            console.log('Direct chat already exists:', chat.id);
-            return { chat: null, error: new Error('Direct chat already exists') };
+            // Direct chat already exists - return it instead of error
+            console.log('Direct chat already exists, returning existing chat:', chat.id);
+            
+            // Get the full chat data with participants
+            const { data: fullChat, error: fullChatError } = await this.supabase
+              .from('chats')
+              .select(`
+                id, type, name, listing_id, created_by, created_at, updated_at, last_message_at,
+                chat_participants(
+                  id, user_id, joined_at, last_read_at,
+                  accounts(id, name, profile_pic)
+                )
+              `)
+              .eq('id', chat.id)
+              .single();
+
+            if (fullChatError) {
+              console.error('Error getting existing chat data:', fullChatError);
+              // Continue to create new chat if we can't fetch existing one
+            } else if (fullChat) {
+              const transformedChat: Chat = {
+                id: fullChat.id,
+                type: fullChat.type,
+                name: fullChat.name,
+                listing_id: fullChat.listing_id,
+                created_by: fullChat.created_by,
+                created_at: fullChat.created_at,
+                updated_at: fullChat.updated_at,
+                last_message_at: fullChat.last_message_at,
+                participants: fullChat.chat_participants.map((cp: any) => ({
+                  id: cp.id,
+                  chat_id: cp.chat_id,
+                  user_id: cp.user_id,
+                  joined_at: cp.joined_at,
+                  last_read_at: cp.last_read_at,
+                  user_name: cp.accounts?.name,
+                  user_profile_pic: cp.accounts?.profile_pic
+                })),
+                unread_count: 0
+              };
+              return { chat: transformedChat, error: null };
+            }
           }
         }
       }
@@ -711,20 +754,23 @@ export class ChatService {
         .single();
 
       if (fullChatError) {
-        // Create a serializable error object
-        const serializableError = {
-          message: fullChatError.message || 'Unknown error',
-          code: fullChatError.code || 'UNKNOWN',
-          details: fullChatError.details || null,
-          hint: fullChatError.hint || null
+        // If fetching full details fails, still return the chat with minimal info
+        // since the chat was successfully created
+        console.warn('Error getting full chat data, returning minimal chat:', fullChatError);
+        const minimalChat: Chat = {
+          id: newChat.id,
+          type: newChat.type || 'direct',
+          name: newChat.name,
+          listing_id: newChat.listing_id,
+          created_by: newChat.created_by,
+          created_at: newChat.created_at,
+          updated_at: newChat.updated_at,
+          last_message_at: newChat.last_message_at,
+          participants: [],
+          unread_count: 0
         };
-        
-        console.error('Error getting full chat data:', serializableError);
-        const err = new Error(serializableError.message);
-        (err as any).code = serializableError.code;
-        (err as any).details = serializableError.details;
-        (err as any).hint = serializableError.hint;
-        return { chat: null, error: err };
+        console.log('Successfully created direct chat (minimal):', minimalChat.id);
+        return { chat: minimalChat, error: null };
       }
 
       const transformedChat: Chat = {
@@ -775,8 +821,9 @@ export class ChatService {
       const { data: chat, error: chatError } = await this.supabase
         .from('chats')
         .insert({
-          type: 'event_group',
+          type: 'group',
           name: groupName,
+          photo: groupPhoto || null,
           created_by: user.id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -814,7 +861,7 @@ export class ChatService {
       const { data: fullChat, error: fetchError } = await this.supabase
         .from('chats')
         .select(`
-          id, type, name, listing_id, created_by, created_at, updated_at, last_message_at,
+          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at,
           chat_participants(
             id, user_id, joined_at, last_read_at,
             accounts(id, name, profile_pic)
@@ -831,8 +878,9 @@ export class ChatService {
       // Transform to Chat format
       const transformedChat: Chat = {
         id: fullChat.id,
-        type: fullChat.type as 'direct' | 'event_group',
+        type: fullChat.type as 'direct' | 'group',
         name: fullChat.name,
+        photo: fullChat.photo || null,
         listing_id: fullChat.listing_id,
         created_by: fullChat.created_by,
         created_at: fullChat.created_at,
@@ -867,24 +915,47 @@ export class ChatService {
         return { contacts: [], error: new Error('User ID is required') };
       }
 
-      // TEMPORARY WORKAROUND: Return only the user's actual connections
-      // Based on the REST API accounts table for user 4f04235f-d166-48d9-ae07-a97a6421a328 (Sid Farquharson)
-      const contacts = [
-        {
-          id: '569b346c-3e6e-48cd-a432-190dbfe78120',
-          name: 'Chandan Saddi',
-          profile_pic: 'https://rxlqtyfhsocxnsnnnlwl.supabase.co/storage/v1/object/public/avatars/avatars/569b346c-3e6e-48cd-a432-190dbfe78120.jpeg',
-          is_blocked: false
-        },
-        {
-          id: 'd5943fed-3a45-45a9-a871-937bad29cedb',
-          name: 'Frizzy Valiyff',
-          profile_pic: 'https://rxlqtyfhsocxnsnnnlwl.supabase.co/storage/v1/object/public/avatars/avatars/d5943fed-3a45-45a9-a871-937bad29cedb.jpeg',
-          is_blocked: false
-        }
-      ];
+      // Query connections table to get user's friends/connections
+      // Connections are bidirectional (user1_id and user2_id), so we check both
+      const { data: connectionRows, error: connError } = await this.supabase
+        .from('connections')
+        .select(`
+          user1_id,
+          user2_id,
+          user1_account: accounts!connections_user1_id_fkey(id, name, profile_pic, bio),
+          user2_account: accounts!connections_user2_id_fkey(id, name, profile_pic, bio)
+        `)
+        .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+        .order('created_at', { ascending: false });
 
-      console.log('ChatService: Returning hardcoded contacts:', contacts);
+      if (connError) {
+        console.error('ChatService: Error querying connections:', connError);
+        return { contacts: [], error: connError };
+      }
+
+      // Process connections to get the connected user's profile
+      // If current user is user1, return user2's profile; if user2, return user1's profile
+      const contacts = (connectionRows || [])
+        .map((row: any) => {
+          // If current user is user1, return user2's profile
+          if (row.user1_id === userId) {
+            return row.user2_account;
+          }
+          // If current user is user2, return user1's profile
+          else if (row.user2_id === userId) {
+            return row.user1_account;
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .map((account: any) => ({
+          id: account.id,
+          name: account.name,
+          profile_pic: account.profile_pic,
+          bio: account.bio
+        }));
+
+      console.log('ChatService: Returning contacts from connections:', contacts.length, 'contacts');
       return { contacts, error: null };
     } catch (error) {
       console.error('Error in getContacts:', error);
@@ -1210,6 +1281,58 @@ export class ChatService {
     });
   }
 
+  // Delete a chat (only if it has no messages)
+  async deleteChat(chatId: string): Promise<{ success: boolean; error: Error | null }> {
+    try {
+      // Check if chat has any messages
+      const { data: messages, error: messagesError } = await this.supabase
+        .from('chat_messages')
+        .select('id')
+        .eq('chat_id', chatId)
+        .is('deleted_at', null)
+        .limit(1);
+
+      if (messagesError) {
+        console.error('Error checking messages:', messagesError);
+        return { success: false, error: messagesError as Error };
+      }
+
+      // Only delete if there are no messages
+      if (messages && messages.length > 0) {
+        console.log('Chat has messages, cannot delete');
+        return { success: false, error: new Error('Cannot delete chat with messages') };
+      }
+
+      // Delete chat participants first (cascade should handle this, but being explicit)
+      const { error: participantsError } = await this.supabase
+        .from('chat_participants')
+        .delete()
+        .eq('chat_id', chatId);
+
+      if (participantsError) {
+        console.error('Error deleting participants:', participantsError);
+        // Continue anyway, cascade might handle it
+      }
+
+      // Delete the chat
+      const { error: chatError } = await this.supabase
+        .from('chats')
+        .delete()
+        .eq('id', chatId);
+
+      if (chatError) {
+        console.error('Error deleting chat:', chatError);
+        return { success: false, error: chatError as Error };
+      }
+
+      console.log('Successfully deleted empty chat:', chatId);
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in deleteChat:', error);
+      return { success: false, error: error as Error };
+    }
+  }
+
   // Convert Chat to Conversation format for the store
   convertChatToConversation(chat: Chat, currentUserId: string): Conversation {
     const otherParticipant = chat.participants?.find(p => p.user_id !== currentUserId);
@@ -1236,9 +1359,11 @@ export class ChatService {
       title,
       avatarUrl,
       unreadCount: chat.unread_count || 0,
-      isGroup: chat.type === 'event_group',
+      isGroup: chat.type === 'group',
       messages
     };
   }
 
 }
+export const chatService = new ChatService();
+

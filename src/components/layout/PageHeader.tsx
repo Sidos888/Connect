@@ -75,14 +75,21 @@ export default function PageHeader({
         }}>
           {/* Left Section (e.g., profile card) OR Standard Layout */}
           {leftSection ? (
-            <div style={{ pointerEvents: 'auto', position: 'relative', zIndex: 20 }}>
+            <div style={{ 
+              pointerEvents: 'auto', 
+              position: 'relative', 
+              zIndex: 20,
+              height: isMobile ? '44px' : '40px', // Fixed height to match back button for proper centering
+              display: 'flex',
+              alignItems: 'center' // Center children vertically
+            }}>
               {/* Back Button - Always show when backButton is true, even with leftSection */}
               {backButton && onBack && (
                 <button
                   onClick={onBack}
                   className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
-                    top: '0',
+                    top: '0', // Keep original position
                     width: isMobile ? '44px' : '40px',
                     height: isMobile ? '44px' : '40px',
                     borderRadius: '22px',
@@ -325,14 +332,21 @@ export default function PageHeader({
       }}>
         {/* Left Section (e.g., profile card) OR Standard Layout */}
         {leftSection ? (
-          <div style={{ pointerEvents: 'auto', position: 'relative', zIndex: 20 }}>
+          <div style={{ 
+            pointerEvents: 'auto', 
+            position: 'relative', 
+            zIndex: 20,
+            height: isMobile ? '44px' : '40px', // Fixed height to match back button for proper centering
+            display: 'flex',
+            alignItems: 'center' // Center children vertically
+          }}>
             {/* Back Button - Always show when backButton is true, even with leftSection */}
             {backButton && onBack && (
               <button
                 onClick={onBack}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
-                  top: '0',
+                  top: '0', // Keep original position
                   width: isMobile ? '44px' : '40px',
                   height: isMobile ? '44px' : '40px',
                   borderRadius: '22px',
@@ -482,3 +496,5 @@ export default function PageHeader({
     </div>
   );
 }
+
+

@@ -12,9 +12,12 @@ import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
 import { useChats } from "@/lib/chatQueries";
 import { useModal } from "@/lib/modalContext";
+import { useQuery } from "@tanstack/react-query";
+import { connectionsService } from "@/lib/connectionsService";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NewMessageModal from "@/components/chat/NewMessageModal";
 import GroupSetupModal from "@/components/chat/GroupSetupModal";
+import GroupChatFlowContainer from "@/components/chat/GroupChatFlowContainer";
 import { Plus } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ProfileModal from "@/components/profile/ProfileModal";
@@ -34,11 +37,55 @@ function MessagesPageContent() {
   // Use React Query to fetch chats
   const { data: chats = [], isLoading, error } = useChats(chatService, user?.id || null);
   
+  // Load user's connections (friends) to filter direct chats
+  const { data: connections = [], isLoading: isLoadingConnections } = useQuery({
+    queryKey: ['connections', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return [];
+      console.log('Inbox: Loading connections for filtering...');
+      const { connections, error } = await connectionsService.getConnections(account.id);
+      if (error) {
+        console.error('Error loading connections for inbox filtering:', error);
+        return [];
+      }
+      console.log('Inbox: Loaded connections:', connections?.length || 0);
+      return connections || [];
+    },
+    enabled: !!account?.id,
+    staleTime: 0, // Always consider stale - refetch after invalidation
+    refetchOnMount: true,
+  });
+  
+  // Create a set of friend IDs for quick lookup
+  const friendIds = useMemo(() => {
+    if (!account?.id) return new Set<string>();
+    const ids = new Set<string>();
+    connections.forEach((conn: any) => {
+      if (conn.user1_id === account.id && conn.user2_id) {
+        ids.add(conn.user2_id);
+      } else if (conn.user2_id === account.id && conn.user1_id) {
+        ids.add(conn.user1_id);
+      }
+    });
+    console.log('Inbox: friendIds Set created with', ids.size, 'friends:', Array.from(ids));
+    return ids;
+  }, [connections, account?.id]);
+  
   // Convert chats to conversations format
   const conversations = useMemo(() => {
     if (!account?.id) return [];
     
-    return chats.map(chat => {
+    return chats
+      // Filter out chats with no messages (empty chats)
+      .filter(chat => chat.last_message_at !== null)
+      // Filter out direct chats where the other participant is not a friend
+      .filter(chat => {
+        if (chat.type !== 'direct') return true; // Keep all group chats
+        const otherParticipant = chat.participants?.find((p: any) => p.user_id !== account.id);
+        if (!otherParticipant) return false; // No other participant found
+        return friendIds.has(otherParticipant.user_id); // Only show if they're a friend
+      })
+      .map(chat => {
       // For direct chats, find the other participant
       const otherParticipant = chat.type === 'direct' 
         ? chat.participants?.find((p: any) => p.user_id !== account.id)
@@ -67,14 +114,14 @@ function MessagesPageContent() {
         id: chat.id,
         title,
         avatarUrl,
-        isGroup: chat.type === 'event_group' || chat.type === 'group',
+        isGroup: chat.type === 'group',
         unreadCount: chat.unread_count || 0,
         last_message: lastMessageText,
         last_message_at: chat.last_message_at,
         messages: []
       };
     });
-  }, [chats, account?.id]);
+  }, [chats, account?.id, friendIds]);
   
   // Find the selected conversation
   const selectedConversation = selectedChatId ? conversations.find(c => c.id === selectedChatId) : null;
@@ -102,6 +149,11 @@ function MessagesPageContent() {
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showGroupSetupModal, setShowGroupSetupModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showNewChatSlideModal, setShowNewChatSlideModal] = useState(false);
+  const [showAddMembersModal, setShowAddMembersModal] = useState(false);
+  const [showNewGroupChatModal, setShowNewGroupChatModal] = useState(false);
+  const [selectedGroupMemberIds, setSelectedGroupMemberIds] = useState<string[]>([]);
+  const [groupChatFlowStep, setGroupChatFlowStep] = useState<'new-chat' | 'add-members' | 'new-group-chat'>('new-chat');
 
   // Load specific chat if requested but not in conversations list
   useEffect(() => {
@@ -205,7 +257,51 @@ function MessagesPageContent() {
   };
 
   const handleNewMessageClick = () => {
-    setShowNewMessageModal(true);
+    // On mobile, show slide-up modal instead of full page modal
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    if (isMobile) {
+      setShowNewChatSlideModal(true);
+      setGroupChatFlowStep('new-chat');
+    } else {
+      setShowNewMessageModal(true);
+    }
+  };
+
+  // Handle contact selection from slide modal
+  const handleContactSelect = async (contactId: string) => {
+    if (!chatService || !account?.id) return;
+
+    try {
+      // Close modal first
+      setShowNewChatSlideModal(false);
+      
+      // Create or find direct chat (createDirectChat now returns existing chat if found)
+      const { chat, error } = await chatService.createDirectChat(contactId);
+      
+      if (error) {
+        console.error('Error creating/finding direct chat:', error);
+        console.error('Error details:', {
+          message: error.message,
+          code: (error as any).code,
+          details: (error as any).details
+        });
+        alert('Failed to open chat. Please try again.');
+        return;
+      }
+      
+      if (!chat) {
+        console.error('No chat returned from createDirectChat');
+        alert('Failed to open chat. Please try again.');
+        return;
+      }
+      
+      // Navigate to the individual chat page
+      console.log('Navigating to chat:', chat.id);
+      router.push(`/chat/individual?chat=${chat.id}`);
+    } catch (error) {
+      console.error('Error creating/finding direct chat:', error);
+      alert('Failed to open chat. Please try again.');
+    }
   };
 
 
@@ -340,14 +436,13 @@ function MessagesPageContent() {
   // Show chat content if authenticated
   return (
     <ProtectedRoute title="Chats" description="Log in / sign up to view your chats and messages" buttonText="Log in">
-      <div className="h-full bg-white">
-        {/* Desktop Layout */}
-        <div className="hidden sm:block h-screen overflow-hidden" style={{ maxHeight: '100vh' }}>
-          <ChatLayout />
-        </div>
+      {/* Desktop Layout */}
+      <div className="hidden sm:block h-screen overflow-hidden" style={{ maxHeight: '100vh' }}>
+        <ChatLayout />
+      </div>
 
-        {/* Mobile Layout - Connect design system */}
-        <div className="sm:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+      {/* Mobile Layout - Connect design system */}
+      <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
           <MobilePage>
             <PageHeader
               title="Chats"
@@ -384,13 +479,51 @@ function MessagesPageContent() {
                 </div>
                 </button>
               }
-              actions={[
-                {
-                  icon: <Plus size={20} className="text-gray-900" />,
-                  onClick: () => setShowNewMessageModal(true),
-                  label: "New message"
-                }
-              ]}
+              customActions={
+                <div
+                  className="flex items-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    width: '88px', // Double the normal button width (44px * 2)
+                    height: '44px',
+                    borderRadius: '100px',
+                    background: 'rgba(255, 255, 255, 0.96)',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow',
+                    overflow: 'hidden',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  {/* Search Icon - Left Side */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsSearchOpen(true);
+                    }}
+                    className="flex items-center justify-center flex-1 h-full"
+                  >
+                    <SearchIcon size={20} className="text-gray-900" style={{ strokeWidth: 2.5 }} />
+                  </button>
+                  {/* Plus Icon - Right Side */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNewMessageClick();
+                    }}
+                    className="flex items-center justify-center flex-1 h-full"
+                  >
+                    <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
+                  </button>
+                </div>
+              }
             />
 
             <div
@@ -398,49 +531,16 @@ function MessagesPageContent() {
               style={{
                 paddingTop: 'var(--saved-content-padding-top, 140px)',
                 scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch'
               }}
             >
-              <div className="space-y-6 pb-6">
-                {/* Search Bar */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onClick={() => setIsSearchOpen(true)}
-                    readOnly
-                    className="w-full focus:outline-none cursor-pointer"
-                    style={{
-                      borderRadius: '100px',
-                      height: '46.5px',
-                      background: 'rgba(255, 255, 255, 0.9)',
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow',
-                      paddingLeft: '48px',
-                      paddingRight: '24px',
-                      fontSize: '16px',
-                      WebkitAppearance: 'none',
-                      WebkitTapHighlightColor: 'transparent',
-                      color: '#111827'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                  />
-                  <div className="absolute inset-y-0 left-0 flex items-center justify-center pointer-events-none" style={{ width: '48px' }}>
-                    <SearchIcon size={20} className="text-gray-900" style={{ strokeWidth: 2.5 }} />
-                  </div>
-                </div>
-
-                {/* Category Pills */}
-                <div>
+              {/* Top Spacing */}
+              <div style={{ height: '12px' }} />
+              
+              {/* Category Pills */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
                     {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => {
                       const isActive = mobileActiveCategory === category.id;
@@ -497,9 +597,10 @@ function MessagesPageContent() {
                     })}
                   </div>
                 </div>
+              </div>
 
-                {/* Chat List */}
-                <div className="space-y-2">
+              {/* Chat List */}
+              <div className="space-y-2">
                   {filteredMobileConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 space-y-4">
                       <p className="text-gray-500 text-lg">
@@ -580,7 +681,6 @@ function MessagesPageContent() {
                     ))
                   )}
                 </div>
-              </div>
             </div>
           </MobilePage>
         </div>
@@ -615,7 +715,22 @@ function MessagesPageContent() {
           onSearchChange={setSearchQuery}
           conversations={conversations}
         />
-      </div>
+
+        {/* Group Chat Flow - Horizontal Sliding Container */}
+        {showNewChatSlideModal && (
+          <GroupChatFlowContainer
+            currentStep={groupChatFlowStep}
+            selectedMemberIds={selectedGroupMemberIds}
+            onClose={() => {
+              setShowNewChatSlideModal(false);
+              setGroupChatFlowStep('new-chat');
+              setSelectedGroupMemberIds([]);
+            }}
+            onSelectContact={handleContactSelect}
+            onStepChange={(step) => setGroupChatFlowStep(step)}
+            onSelectedMembersChange={(ids) => setSelectedGroupMemberIds(ids)}
+          />
+        )}
     </ProtectedRoute>
   );
 }
@@ -631,3 +746,4 @@ export default function MessagesPage() {
     </Suspense>
   );
 }
+

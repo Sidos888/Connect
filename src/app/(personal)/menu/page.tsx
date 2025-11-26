@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
 import { LogOut, Trash2, ChevronRightIcon, Eye, Pencil, Settings, MoreVertical, Plus, Share, QrCode } from "lucide-react";
+import { SearchIcon } from "@/components/icons";
 import { connectionsService, User as ConnectionUser, FriendRequest } from '@/lib/connectionsService';
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
@@ -28,6 +29,9 @@ import Highlights from "@/components/highlights/Highlights";
 import Timeline from "@/components/timeline/Timeline";
 import Achievements from "@/components/achievements/Achievements";
 import Connections from "@/components/connections/Connections";
+import AddPage from "@/components/connections/AddPage";
+import FriendRequestsModal from "@/components/connections/FriendRequestsModal";
+import ConnectionsSearchModal from "@/components/connections/ConnectionsSearchModal";
 import SettingsContent from "@/components/settings/SettingsContent";
 import Notifications from "@/components/notifications/Notifications";
 import Memories from "@/components/memories/Memories";
@@ -52,6 +56,9 @@ export default function Page() {
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [selectedFriend, setSelectedFriend] = React.useState<ConnectionUser | null>(null);
   const [showCenteredProfile, setShowCenteredProfile] = React.useState(false);
+  const [showFriendRequestsModal, setShowFriendRequestsModal] = React.useState(false);
+  const [isConnectionsSearchOpen, setIsConnectionsSearchOpen] = React.useState(false);
+  const [connectionsSearchQuery, setConnectionsSearchQuery] = React.useState('');
 
   // Drive currentView from URL query (?view=...)
   const searchParams = useSearchParams();
@@ -76,6 +83,22 @@ export default function Page() {
     else if (view === 'add-person' || view === 'add-friends') setCurrentView('add-person');
     else if (!view) setCurrentView('menu');
   }, [searchParams]);
+
+  // Hide bottom nav when on add-person view - use CSS class like connections view does
+  React.useEffect(() => {
+    if (currentView === 'add-person') {
+      document.body.classList.add('connections-mode');
+      document.body.classList.add('no-scroll');
+    } else {
+      document.body.classList.remove('connections-mode');
+      document.body.classList.remove('no-scroll');
+    }
+
+    return () => {
+      document.body.classList.remove('connections-mode');
+      document.body.classList.remove('no-scroll');
+    };
+  }, [currentView]);
 
   // Helper to update URL to a view on /menu (keeps transitions smooth)
   const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile', from?: string) => {
@@ -300,8 +323,7 @@ export default function Page() {
   const ConnectionsView = () => {
     const from = searchParams?.get('from') || 'menu';
     const handleFriendClick = (friend: ConnectionUser) => {
-      setSelectedFriend(friend);
-      goToView('friend-profile');
+      router.push(`/profile?id=${friend.id}&from=connections`);
     };
 
     return (
@@ -314,12 +336,12 @@ export default function Page() {
             actions={[
               {
                 icon: <Plus size={20} className="text-gray-900" />,
-                onClick: () => goToView('add-person', 'connections'),
+                onClick: () => router.push('/menu?view=add-person'),
                 label: "Add person"
               }
             ]}
           />
-          <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+          <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
             paddingTop: 'var(--saved-content-padding-top, 140px)',
             paddingBottom: '32px',
             scrollbarWidth: 'none',
@@ -926,454 +948,7 @@ export default function Page() {
     );
   };
 
-  // Add Person Component (merged view: Requests card + Suggested/Search)
-  const AddPersonView = () => {
-    const [searchQuery, setSearchQuery] = React.useState('');
-    const [searchResults, setSearchResults] = React.useState<ConnectionUser[]>([]);
-    const [suggestedFriends, setSuggestedFriends] = React.useState<ConnectionUser[]>([]);
-    const [pendingRequests, setPendingRequests] = React.useState<FriendRequest[]>([]);
-    const [loading, setLoading] = React.useState(false);
-    const [searchLoading, setSearchLoading] = React.useState(false);
-    const [userConnectionStatuses, setUserConnectionStatuses] = React.useState<Record<string, 'none' | 'pending_sent' | 'pending_received' | 'connected'>>({});
-    const { account } = useAuth();
-
-    // Load initial data
-    React.useEffect(() => {
-      console.log('🔍 Mobile AddPersonView: Account state changed:', account ? { id: account.id, name: account.name } : null);
-      if (account?.id) {
-        console.log('🔍 Mobile AddPersonView: Loading suggested friends and pending requests for account:', account.id);
-        loadSuggestedFriends();
-        loadPendingRequests();
-      } else {
-        console.log('🔍 Mobile AddPersonView: No account ID available, skipping data loading');
-      }
-    }, [account?.id]);
-
-    // Search users with debounce
-    React.useEffect(() => {
-      const timeoutId = setTimeout(() => {
-        if (searchQuery.trim() && account?.id) {
-          searchUsers();
-        } else {
-          setSearchResults([]);
-        }
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }, [searchQuery, account?.id]);
-
-    const loadSuggestedFriends = async () => {
-      if (!account?.id) return;
-      
-      setLoading(true);
-      const { users, error } = await connectionsService.getSuggestedFriends(account.id);
-      if (!error) {
-        setSuggestedFriends(users);
-        // Load connection statuses for suggested friends
-        loadConnectionStatuses(users);
-      }
-      setLoading(false);
-    };
-
-    const loadPendingRequests = async () => {
-      if (!account?.id) return;
-      
-      const { requests, error } = await connectionsService.getPendingRequests(account.id);
-      if (!error) {
-        setPendingRequests(requests);
-      }
-    };
-
-    const searchUsers = async () => {
-      if (!account?.id || !searchQuery.trim()) return;
-      
-      setSearchLoading(true);
-      const { users, error } = await connectionsService.searchUsers(searchQuery, account.id);
-      if (!error) {
-        setSearchResults(users);
-        // Load connection statuses for search results
-        loadConnectionStatuses(users);
-      }
-      setSearchLoading(false);
-    };
-
-    const sendFriendRequest = async (userId: string) => {
-      if (!account?.id) return;
-      
-      const { error } = await connectionsService.sendFriendRequest(account.id, userId);
-      if (!error) {
-        // Update connection status for this user
-        setUserConnectionStatuses(prev => ({
-          ...prev,
-          [userId]: 'pending_sent'
-        }));
-        console.log('Updated connection status for user', userId, 'to pending_sent');
-      } else {
-        // Show more user-friendly error messages
-        if (error.message.includes('already friends')) {
-          alert('You are already friends with this person');
-        } else if (error.message.includes('already sent')) {
-          alert('Friend request already sent');
-        } else {
-          alert('Failed to send friend request: ' + error.message);
-        }
-      }
-    };
-
-    // Load connection status for users
-    const loadConnectionStatuses = async (users: ConnectionUser[]) => {
-      if (!account?.id) return;
-      
-      const statusPromises = users.map(async (user) => {
-        const { status } = await connectionsService.getConnectionStatus(account.id, user.id);
-        return { userId: user.id, status };
-      });
-      
-      const statuses = await Promise.all(statusPromises);
-      const statusMap: Record<string, 'none' | 'pending_sent' | 'pending_received' | 'connected'> = {};
-      statuses.forEach(({ userId, status }) => {
-        statusMap[userId] = status;
-      });
-      
-      setUserConnectionStatuses(prev => ({ ...prev, ...statusMap }));
-    };
-
-    // Cancel friend request
-    const cancelFriendRequest = async (userId: string) => {
-      if (!account?.id) return;
-      
-    const { error } = await connectionsService.cancelFriendRequest(account.id, userId);
-    if (!error) {
-      // Update connection status for this user back to none
-      setUserConnectionStatuses(prev => ({
-        ...prev,
-        [userId]: 'none'
-      }));
-      console.log('Cancelled friend request for user', userId, '- status updated to none');
-    } else {
-        console.error('Error cancelling friend request:', error);
-        alert('Failed to cancel friend request: ' + error.message);
-      }
-    };
-
-    // Get button text and styling based on connection status
-    const getButtonConfig = (userId: string) => {
-      const status = userConnectionStatuses[userId] || 'none';
-      
-      switch (status) {
-        case 'connected':
-          return { text: 'Friends', className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium cursor-not-allowed' };
-        case 'pending_sent':
-          return { 
-            text: 'Added', 
-            className: 'px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-1.5' 
-          };
-        case 'pending_received':
-          return { text: 'Accept', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
-        default:
-          return { text: 'Add', className: 'px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors' };
-      }
-    };
-
-    const acceptFriendRequest = async (requestId: string) => {
-      const { error } = await connectionsService.acceptFriendRequest(requestId);
-      if (!error) {
-        loadPendingRequests();
-      }
-    };
-
-    const rejectFriendRequest = async (requestId: string) => {
-      const { error } = await connectionsService.rejectFriendRequest(requestId);
-      if (!error) {
-        loadPendingRequests();
-      }
-    };
-
-    // Hide bottom nav when in add-person mode
-    React.useLayoutEffect(() => {
-      document.body.classList.add('connections-mode');
-      document.body.classList.add('no-scroll');
-      
-      return () => {
-        document.body.classList.remove('connections-mode');
-        document.body.classList.remove('no-scroll');
-      };
-    }, []);
-
-    // Hide bottom nav when in add-person mode
-    React.useEffect(() => {
-      const hideBottomNav = () => {
-        // Try multiple selectors to find the bottom nav
-        const selectors = [
-          '[data-testid="mobile-bottom-nav"]',
-          '.tabbar-nav',
-          'nav[class*="bottom"]',
-          'nav[class*="fixed"]',
-          '.fixed.bottom-0'
-        ];
-        
-        let bottomNav = null;
-        for (const selector of selectors) {
-          bottomNav = document.querySelector(selector);
-          if (bottomNav) break;
-        }
-        
-        if (bottomNav) {
-          (bottomNav as HTMLElement).style.display = 'none';
-          (bottomNav as HTMLElement).style.visibility = 'hidden';
-        }
-      };
-      
-      const showBottomNav = () => {
-        const selectors = [
-          '[data-testid="mobile-bottom-nav"]',
-          '.tabbar-nav',
-          'nav[class*="bottom"]',
-          'nav[class*="fixed"]',
-          '.fixed.bottom-0'
-        ];
-        
-        selectors.forEach(selector => {
-          const nav = document.querySelector(selector);
-          if (nav) {
-            (nav as HTMLElement).style.display = '';
-            (nav as HTMLElement).style.visibility = '';
-          }
-        });
-        
-        document.body.style.paddingBottom = '';
-        document.documentElement.style.removeProperty('--bottom-nav-height');
-      };
-      
-      // Add a small delay to ensure DOM is ready
-      setTimeout(() => {
-        hideBottomNav();
-      }, 100);
-      
-      return () => {
-        showBottomNav();
-      };
-    }, []);
-
-    return (
-      <div className="fixed inset-0 z-50 h-screen overflow-hidden bg-white flex flex-col" style={{ paddingBottom: '0' }}>
-        {/* Header */}
-        <div className="bg-white px-4 pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 70px)' }}>
-          <div className="flex items-center justify-center relative w-full" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-            <button
-                onClick={() => goToView('connections')}
-              className="absolute left-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 ring-brand"
-              aria-label="Back to connections"
-            >
-              <span className="action-btn-circle">
-                <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
-              </span>
-            </button>
-            <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Find Friends</h1>
-          </div>
-        </div>
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <div className="space-y-4">
-            {/* Search + Suggested */}
-              <div className="space-y-4">
-                    {/* Search Bar */}
-                    <div className="relative">
-                      <input
-                        type="text"
-                    placeholder="Search..."
-                    className="w-full px-4 py-3 pl-10 bg-white rounded-2xl focus:outline-none focus:ring-0"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                    }}
-                      />
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    {searchLoading && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Search Results */}
-                  {searchQuery.trim() && (
-                    <div className="space-y-3">
-                      <h3 className="text-lg font-semibold text-gray-900">Search Results</h3>
-                        {searchResults.length > 0 ? (
-                          <div className="space-y-2">
-                            {searchResults
-                              .filter(user => userConnectionStatuses[user.id] !== 'connected')
-                              .map((user) => (
-                            <div 
-                              key={user.id} 
-                              className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 flex items-center justify-between"
-                              style={{
-                                boxShadow: `
-                                  0 0 1px rgba(100, 100, 100, 0.25),
-                                  inset 0 0 2px rgba(27, 27, 27, 0.25)
-                                `
-                              }}
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                                  {user.profile_pic ? (
-                                    <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <span className="text-gray-500 text-sm font-medium">
-                                      {user.name.charAt(0).toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                                <div>
-                                    <h4 className="font-medium text-gray-900">{user.name}</h4>
-                                </div>
-                              </div>
-                              {(() => {
-                                const status = userConnectionStatuses[user.id] || 'none';
-                                if (status === 'connected') {
-                                  return null; // Don't show button for friends
-                                }
-                                const buttonConfig = getButtonConfig(user.id);
-                                return (
-                                  <button 
-                                    onClick={() => {
-                                      if (buttonConfig.text === 'Add') {
-                                        sendFriendRequest(user.id);
-                                      } else if (buttonConfig.text === 'Added') {
-                                        cancelFriendRequest(user.id);
-                                      } else if (buttonConfig.text === 'Accept') {
-                                        // Handle accept logic if needed
-                                      }
-                                    }}
-                                    className={buttonConfig.className}
-                                  >
-                                    {buttonConfig.text === 'Added' && (
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    )}
-                                    {buttonConfig.text}
-                                  </button>
-                                );
-                              })()}
-                            </div>
-                          ))}
-                        </div>
-                      ) : !searchLoading ? (
-                        <div className="text-center py-4">
-                          <p className="text-gray-500 text-sm">No users found</p>
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
-
-              {/* Friend Requests summary card (below search) */}
-              {!searchQuery.trim() && (
-                <button 
-                  onClick={() => goToView('friend-requests')}
-                  className="w-full bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] p-5 text-left hover:shadow-[0_0_12px_rgba(0,0,0,0.12)] transition-all"
-                  style={{ boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27,27,27,0.25)' }}
-                  aria-label="Open friend requests"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Friend Requests</h3>
-                    <span className="text-sm font-medium text-gray-700">{pendingRequests.length}</span>
-                  </div>
-                </button>
-                  )}
-
-                {/* Suggested Friends Section */}
-                {!searchQuery.trim() && (
-                  <div className="space-y-3">
-                  <h3 className="text-lg font-semibold text-gray-900 text-center">Suggested Friends</h3>
-                    {loading ? (
-                      <div className="text-center py-4">
-                        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto"></div>
-                        <p className="text-gray-500 text-sm mt-2">Loading suggestions...</p>
-                      </div>
-                    ) : suggestedFriends.length > 0 ? (
-                      <div className="space-y-2">
-                        {suggestedFriends
-                          .filter(user => userConnectionStatuses[user.id] !== 'connected')
-                          .slice(0, 5)
-                          .map((user) => (
-                          <div 
-                            key={user.id} 
-                            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] p-4 flex items-center justify-between"
-                            style={{
-                              boxShadow: `
-                                0 0 1px rgba(100, 100, 100, 0.25),
-                                inset 0 0 2px rgba(27, 27, 27, 0.25)
-                              `
-                            }}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                                {user.profile_pic ? (
-                                  <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="text-gray-500 text-sm font-medium">
-                                    {user.name.charAt(0).toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                              <div>
-                                    <h4 className="font-medium text-gray-900">{user.name}</h4>
-                              </div>
-                            </div>
-                            {(() => {
-                              const status = userConnectionStatuses[user.id] || 'none';
-                              if (status === 'connected') {
-                                return null; // Don't show button for friends
-                              }
-                              const buttonConfig = getButtonConfig(user.id);
-                              return (
-                                <button 
-                                  onClick={() => {
-                                    if (buttonConfig.text === 'Add') {
-                                      sendFriendRequest(user.id);
-                                    } else if (buttonConfig.text === 'Added') {
-                                      cancelFriendRequest(user.id);
-                                    } else if (buttonConfig.text === 'Accept') {
-                                      // Handle accept logic if needed
-                                    }
-                                  }}
-                                  className={buttonConfig.className}
-                                >
-                                  {buttonConfig.text === 'Added' && (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                  {buttonConfig.text}
-                                </button>
-                              );
-                            })()}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <p className="text-gray-500 text-sm">No suggested friends at the moment</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // OLD AddPersonView component removed - now using AddPersonWrapper with AddPage component instead
 
   // Friend Requests full-screen view
   const FriendRequestsView = () => {
@@ -1456,6 +1031,100 @@ export default function Page() {
     );
   };
 
+  // Add Person Wrapper Component
+  const AddPersonWrapper = ({ onBack, onOpenFriendRequests }: { onBack: () => void; onOpenFriendRequests: () => void }) => {
+    console.log('🔍 AddPersonWrapper: Rendering, isConnectionsSearchOpen:', isConnectionsSearchOpen);
+    console.log('🔍 AddPersonWrapper: connectionsSearchQuery:', connectionsSearchQuery);
+    return (
+      <>
+        <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+          <MobilePage>
+            <PageHeader
+              title="Add"
+              backButton
+              backIcon="arrow"
+              onBack={onBack}
+              customActions={
+                <div
+                  className="flex items-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    width: '88px', // Double the normal button width (44px * 2)
+                    height: '44px',
+                    borderRadius: '100px',
+                    background: 'rgba(255, 255, 255, 0.96)',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow',
+                    overflow: 'hidden',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  {/* Search Icon - Left Side */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsConnectionsSearchOpen(true);
+                    }}
+                    className="flex items-center justify-center flex-1 h-full"
+                  >
+                    <SearchIcon size={20} className="text-gray-900" style={{ strokeWidth: 2.5 }} />
+                  </button>
+                  {/* QR Code Icon - Right Side */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Placeholder for QR code functionality
+                      console.log('QR code clicked');
+                    }}
+                    className="flex items-center justify-center flex-1 h-full"
+                  >
+                    <QrCode size={20} className="text-gray-900" strokeWidth={2.5} />
+                  </button>
+                </div>
+              }
+            />
+            <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
+              paddingTop: 'var(--saved-content-padding-top, 140px)',
+              paddingBottom: '32px',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}>
+              <AddPage 
+                onBack={onBack} 
+                onOpenFriendRequests={onOpenFriendRequests}
+              />
+            </div>
+            {/* Bottom Blur */}
+            <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+              <div className="absolute bottom-0 left-0 right-0" style={{
+                height: '80px',
+                background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
+              }} />
+              <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
+              <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
+              <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
+              <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
+            </div>
+          </MobilePage>
+        </div>
+        <ConnectionsSearchModal
+          isOpen={isConnectionsSearchOpen}
+          onClose={() => setIsConnectionsSearchOpen(false)}
+          searchQuery={connectionsSearchQuery}
+          onSearchChange={setConnectionsSearchQuery}
+        />
+      </>
+    );
+  };
+
   return (
     <ProtectedRoute
       title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'achievements' ? "Achievements" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'share-profile' ? "Share Profile" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
@@ -1463,7 +1132,15 @@ export default function Page() {
       buttonText="Log in"
     >
       {currentView === 'add-person' ? (
-        <AddPersonView />
+        <AddPersonWrapper 
+          onBack={() => goToView('connections')}
+          onOpenFriendRequests={() => setShowFriendRequestsModal(true)}
+        />
+      ) : showFriendRequestsModal ? (
+        <FriendRequestsModal 
+          isOpen={showFriendRequestsModal} 
+          onClose={() => setShowFriendRequestsModal(false)} 
+        />
       ) : currentView === 'friend-requests' ? (
         <FriendRequestsView />
       ) : currentView === 'friend-profile' && selectedFriend ? (
@@ -1549,7 +1226,7 @@ export default function Page() {
                 msOverflowStyle: 'none'
               }}>
                 {/* Top Spacing */}
-                <div style={{ height: '36px' }} />
+                <div style={{ height: '12px' }} />
                 
                 {/* Profile Card */}
                 <div style={{ paddingLeft: '22px', paddingRight: '22px', marginBottom: '30px' }}>

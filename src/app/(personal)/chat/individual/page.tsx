@@ -382,7 +382,12 @@ export default function IndividualChatPage() {
     if (isRightSwipe) {
       // Complete the swipe animation and navigate back
       setDragOffset(window.innerWidth);
-      setTimeout(() => {
+      setTimeout(async () => {
+        // If chat has no messages, delete it before navigating back
+        if (chatId && messages.length === 0 && chatService) {
+          console.log('Chat has no messages, deleting before navigating back (swipe)');
+          await chatService.deleteChat(chatId);
+        }
         router.push('/chat');
       }, 200);
     } else {
@@ -425,19 +430,16 @@ export default function IndividualChatPage() {
   const profileCard = (
     <button 
       onClick={() => {
-        if (!conversation.isGroup) {
-          const otherParticipant = participants.find((p: any) => p.id !== account?.id);
-          if (otherParticipant) {
-            router.push(`/chat/profile?userId=${otherParticipant.id}`);
-          }
-        } else {
-          router.push(`/chat/profile?chatId=${conversation.id}`);
+        if (chatId) {
+          router.push(`/chat/details?chat=${chatId}`);
         }
       }}
-      className="absolute left-1/2 transform -translate-x-1/2 flex items-center"
+      className="absolute flex items-center"
       style={{
-        top: '0', // Align with back button top position
-        padding: '6px 12px',
+        top: 'calc(50% - 2px)', // Center vertically, then shift up 2px to align with back button center
+        left: '50%',
+        transform: 'translate(-50%, -50%)', // Center both horizontally and vertically
+        padding: '10px 18px',
         borderRadius: '12px',
         background: 'rgba(255, 255, 255, 0.96)',
         borderWidth: '0.4px',
@@ -445,11 +447,11 @@ export default function IndividualChatPage() {
         borderStyle: 'solid',
         boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
         willChange: 'transform, box-shadow',
-        maxWidth: '240px',
-        height: '44px', // Match back button height (44px on mobile)
+        maxWidth: '300px',
+        height: '60px', // Fixed height instead of minHeight for consistent centering
         display: 'flex',
         alignItems: 'center', // Center content vertically within the button
-        gap: '8px' // Space between avatar and text
+        gap: '12px' // More space between avatar and text
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -458,23 +460,23 @@ export default function IndividualChatPage() {
         e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
       }}
     >
-      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
         {conversation.avatarUrl ? (
           <Image
             src={conversation.avatarUrl}
             alt={conversation.title}
-            width={32}
-            height={32}
+            width={40}
+            height={40}
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="text-gray-400 text-xs font-semibold">
+          <div className="text-gray-400 text-sm font-semibold">
             {conversation.title.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
       <div className="text-left min-w-0 flex-1">
-        <div className="font-semibold text-gray-900 text-xs truncate">{conversation.title}</div>
+        <div className="font-semibold text-gray-900 text-base truncate">{conversation.title}</div>
       </div>
     </button>
   );
@@ -515,7 +517,14 @@ export default function IndividualChatPage() {
       <PageHeader
         title=""
         backButton={true}
-        onBack={() => router.push('/chat')}
+        onBack={async () => {
+          // If chat has no messages, delete it before navigating back
+          if (chatId && messages.length === 0 && chatService) {
+            console.log('Chat has no messages, deleting before navigating back');
+            await chatService.deleteChat(chatId);
+          }
+          router.push('/chat');
+        }}
         leftSection={profileCard}
       />
 

@@ -322,9 +322,12 @@ export default function MyLifeLayout(): React.JSX.Element {
               WebkitOverflowScrolling: 'touch'
             }}
           >
+            {/* Top Spacing */}
+            <div style={{ height: '12px' }} />
+            
             {/* Pills - only show when there's relevant content */}
             {availablePills.length > 0 && (
-              <div className="mt-6 mb-6">
+              <div className="mb-6">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
                     {availablePills.map((p) => {

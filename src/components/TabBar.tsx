@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { Search } from "lucide-react";
+import { Search, MapPin, Clock } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
 export type TabItem = {
@@ -22,15 +22,10 @@ export default function TabBar({ items }: Props) {
   const { resetMenuState } = useAppStore();
   
   // Initialize search mode based on current pathname to prevent glitchy transitions
+  // Listing category pages should NOT be in search mode - they show the category card instead
   const getInitialSearchMode = () => {
-    const isExplorePage = pathname === "/explore" || pathname.startsWith("/explore");
-    const isListingCategoryPage = pathname === "/for-you-listings" || 
-                                   pathname === "/casual-listings" || 
-                                   pathname === "/side-quest-listings" ||
-                                   pathname.startsWith("/for-you-listings") ||
-                                   pathname.startsWith("/casual-listings") ||
-                                   pathname.startsWith("/side-quest-listings");
-    return isExplorePage || isListingCategoryPage;
+    // Don't enter search mode on listing category pages - they show category card
+    return false;
   };
   
   const [isSearchMode, setIsSearchMode] = React.useState(getInitialSearchMode);
@@ -75,7 +70,7 @@ export default function TabBar({ items }: Props) {
     }
   }, [pathname, isSearchMode, otherItems]);
   
-  // Auto-enter search mode when on explore page or listing category pages
+  // Auto-exit search mode on listing category pages and explore page (they show category card)
   React.useEffect(() => {
     const isExplorePage = pathname === "/explore" || pathname.startsWith("/explore");
     const isListingCategoryPage = pathname === "/for-you-listings" || 
@@ -85,10 +80,11 @@ export default function TabBar({ items }: Props) {
                                    pathname.startsWith("/casual-listings") ||
                                    pathname.startsWith("/side-quest-listings");
     
-    const shouldBeInSearchMode = isExplorePage || isListingCategoryPage;
+    // Listing category pages and explore page should NOT be in search mode - they show category card
+    const shouldBeInSearchMode = false;
     
     // Only update state if it needs to change (prevents unnecessary re-renders and glitchy transitions)
-    if (shouldBeInSearchMode !== isSearchMode) {
+    if ((isExplorePage || isListingCategoryPage) && shouldBeInSearchMode !== isSearchMode) {
       setIsSearchMode(shouldBeInSearchMode);
       if (!shouldBeInSearchMode) {
         setSearchQuery("");
@@ -162,9 +158,10 @@ export default function TabBar({ items }: Props) {
                                  pathname.startsWith("/for-you-listings") ||
                                  pathname.startsWith("/casual-listings") ||
                                  pathname.startsWith("/side-quest-listings");
-  const shouldUseSmallHeight = isExplorePage || isListingCategoryPage;
+  // Only listing category pages use small height, explore page uses full height
+  const shouldUseSmallHeight = isListingCategoryPage;
   
-  // Calculate height: 1/4 smaller on explore/listing pages (62px * 3/4 = 46.5px)
+  // Calculate height: 1/4 smaller on listing pages only (62px * 3/4 = 46.5px)
   const navHeight = shouldUseSmallHeight ? '46.5px' : '62px';
   const searchButtonSize = shouldUseSmallHeight ? '46.5px' : '62px';
   
@@ -187,19 +184,37 @@ export default function TabBar({ items }: Props) {
         }}
         data-testid="mobile-bottom-nav"
       >
-        {/* Search Button / Search Bar */}
+        {/* Search Button / Search Bar / Category Card (on explore page) */}
         {searchItem && (
           <div
             className="flex items-center transition-all duration-300 ease-in-out"
             style={{
-              width: isSearchMode ? `calc(100% - ${parseInt(searchButtonSize) + 12}px)` : searchButtonSize,
+              width: isSearchMode ? `calc(100% - ${parseInt(searchButtonSize) + 12}px)` : ((isExplorePage || isListingCategoryPage) ? '100%' : searchButtonSize),
               height: searchButtonSize,
               borderRadius: '100px',
               ...cardStyle,
               overflow: 'hidden'
             }}
           >
-            {isSearchMode ? (
+            {(isExplorePage || isListingCategoryPage) && !isSearchMode ? (
+              /* Category Card - Location & Time filters for Explore page and listing pages */
+              <div 
+                className="flex items-center justify-between w-full h-full px-4 gap-2 cursor-pointer"
+                onClick={() => {
+                  // Handle category card click - could open filter modal
+                  console.log('Category card clicked');
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <MapPin size={18} className="text-black" strokeWidth={2.5} />
+                  <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Clock size={18} className="text-black" strokeWidth={2.5} />
+                  <span className="text-sm font-semibold text-neutral-900">Anytime</span>
+                </div>
+              </div>
+            ) : isSearchMode ? (
               <div 
                 className="flex items-center w-full h-full px-4 gap-3"
                 onClick={() => searchInputRef.current?.focus()}
@@ -253,8 +268,8 @@ export default function TabBar({ items }: Props) {
         )}
 
         {/* Combined Card - My Life, Chat, Menu / Recent Icon Button */}
-        {isSearchMode ? (
-          /* Recent Icon Button - Collapsed State */
+        {(isSearchMode || isExplorePage || isListingCategoryPage) ? (
+          /* Recent Icon Button - Collapsed State (for search mode and explore page) */
           lastVisitedItem && (
             <button
               onClick={handleRecentIconClick}
@@ -262,8 +277,14 @@ export default function TabBar({ items }: Props) {
               style={{
                 width: searchButtonSize,
                 height: searchButtonSize,
+                minWidth: searchButtonSize,
+                minHeight: searchButtonSize,
+                maxWidth: searchButtonSize,
+                maxHeight: searchButtonSize,
+                aspectRatio: '1 / 1',
                 borderRadius: '100px',
                 padding: shouldUseSmallHeight ? '8px' : '12px',
+                boxSizing: 'border-box',
                 ...cardStyle
               }}
               onMouseEnter={(e) => {
@@ -282,13 +303,14 @@ export default function TabBar({ items }: Props) {
                   height: shouldUseSmallHeight ? '18px' : '22px' // Reduced from 22/28
                 }}
               >
-                {React.createElement(lastVisitedItem.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>, {
+                {React.createElement(lastVisitedItem.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string; active?: boolean }>, {
                   size: (lastVisitedItem.href === "/chat" || lastVisitedItem.href === "/chat/")
                     ? (shouldUseSmallHeight ? 22 : 26) // Reduced from 26/30
                     : (shouldUseSmallHeight ? 18 : 22), // Reduced from 22/28
                   strokeWidth: 0,
                   fill: "currentColor",
-                  stroke: "none"
+                  stroke: "none",
+                  active: false // Always inactive in collapsed state
                 })}
               </span>
             </button>
@@ -317,11 +339,13 @@ export default function TabBar({ items }: Props) {
             const iconContainerWidth = isChatIcon 
               ? (shouldUseSmallHeight ? '36px' : '40px')
               : isMyLifeIcon
-              ? (shouldUseSmallHeight ? '26px' : '30px') // Slightly wider for My Life icon (17:18 aspect ratio)
+              ? (shouldUseSmallHeight ? '27px' : '31px') // Slightly wider for My Life icon (17:18 aspect ratio)
               : (shouldUseSmallHeight ? '24px' : '28px');
             const iconContainerHeight = shouldUseSmallHeight ? '24px' : '28px';
             const iconSize = isChatIcon 
               ? (shouldUseSmallHeight ? 22 : 26) // Reduced from 26/30
+              : isMyLifeIcon
+              ? (shouldUseSmallHeight ? 19 : 23) // My Life icon - slightly bigger than default
               : (shouldUseSmallHeight ? 18 : 22); // Reduced from 22/26
             
             return (
@@ -349,11 +373,12 @@ export default function TabBar({ items }: Props) {
                     overflow: 'visible' // Prevent clipping of wider icons like My Life
                   }}
                 >
-                  {React.createElement(item.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>, {
+                  {React.createElement(item.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string; active?: boolean }>, {
                     size: iconSize,
                     strokeWidth: 0,
                     fill: "currentColor",
-                    stroke: "none"
+                    stroke: "none",
+                    active: active
                   })}
                 </span>
                 <span 

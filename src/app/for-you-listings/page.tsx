@@ -7,6 +7,8 @@ import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { listingsService, Listing } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingCard from "@/components/listings/ListingCard";
+import ListingsSearchModal from "@/components/listings/ListingsSearchModal";
+import { SearchIcon } from "@/components/icons";
 
 export default function ForYouListingsPage() {
   const router = useRouter();
@@ -14,6 +16,8 @@ export default function ForYouListingsPage() {
   // Mobile state/refs (ported from Side Quest)
   const [selectedSubcategory, setSelectedSubcategory] = useState('New');
   const [showMap, setShowMap] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const [listStartOffset, setListStartOffset] = useState<number>(269); // Updated to account for 16px increased spacing
@@ -148,21 +152,50 @@ export default function ForYouListingsPage() {
                 <ArrowLeft size={18} className="text-gray-900" />
               </button>
               <h1 className="text-xl font-semibold text-gray-900">For You</h1>
-              <button
-                onClick={() => setShowMap(!showMap)}
-                className="absolute right-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+              {/* Combined Search/Map Button */}
+              <div
+                className="absolute right-0 flex items-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
-                  width: '44px',
+                  width: '88px', // Double the normal button width (44px * 2)
                   height: '44px',
-                  borderRadius: '50%',
-                  background: 'white',
+                  borderRadius: '100px',
+                  background: 'rgba(255, 255, 255, 0.96)',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow',
+                  overflow: 'hidden',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                {showMap ? <Grid3x3 size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
-              </button>
+                {/* Search Icon - Left Side */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSearchOpen(true);
+                  }}
+                  className="flex items-center justify-center flex-1 h-full"
+                >
+                  <SearchIcon size={20} className="text-gray-900" style={{ strokeWidth: 2.5 }} />
+                </button>
+                {/* Map Icon - Right Side */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMap(!showMap);
+                  }}
+                  className="flex items-center justify-center flex-1 h-full"
+                >
+                  {showMap ? <Grid3x3 size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -281,7 +314,7 @@ export default function ForYouListingsPage() {
               top: `${listStartOffset}px`,
               bottom: '0',
               zIndex: showMap ? 4 : 10, // Behind map when map is shown
-              paddingBottom: 'calc(var(--bottom-nav-height, 62px) + 12px + 46.5px + 20px)', // Account for bottom nav and filter
+              paddingBottom: 'calc(var(--bottom-nav-height, 62px) + 12px + 20px)', // Account for bottom nav
               WebkitOverflowScrolling: 'touch',
               backgroundColor: 'white',
               opacity: showMap ? 0 : 1, // Hide listings when map is shown
@@ -561,43 +594,14 @@ export default function ForYouListingsPage() {
       </div>
     </div>
     
-    {/* Location Filter Card - Above Bottom Nav (Mobile Only) */}
-    <div 
-      className="lg:hidden fixed z-[69] transition-all duration-300 ease-in-out"
-      style={{
-        left: '22px',
-        right: '22px',
-        bottom: `calc(max(env(safe-area-inset-bottom), 20px) + 46.5px + 12px)`,
-        height: '46.5px',
-        borderRadius: '100px',
-        background: 'rgba(255, 255, 255, 0.9)',
-        borderWidth: '0.4px',
-        borderColor: '#E5E7EB',
-        borderStyle: 'solid',
-        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-        padding: '0 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        cursor: 'pointer',
-        willChange: 'transform, box-shadow'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-      }}
-    >
-      <div className="flex items-center gap-2.5">
-        <MapPin size={20} className="text-black" strokeWidth={2.5} />
-        <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
-      </div>
-      <div className="flex items-center gap-2.5">
-        <Clock size={20} className="text-black" strokeWidth={2.5} />
-        <span className="text-sm font-semibold text-neutral-900">Anytime</span>
-      </div>
-    </div>
+      {/* Search Modal */}
+      <ListingsSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        listings={allListings}
+      />
     </>
   );
 }

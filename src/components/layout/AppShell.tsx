@@ -37,6 +37,7 @@ function AppShellContent({ children }: AppShellProps) {
   // Calculate all route flags BEFORE any conditional returns
   const isChatPage = pathname.startsWith('/chat');
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
+  const isChatDetailsPage = pathname.startsWith('/chat/details');
   const isMyLifePage = pathname.startsWith('/my-life');
   const isSettingsPage = (
     pathname.startsWith('/settings') ||
@@ -47,7 +48,17 @@ function AppShellContent({ children }: AppShellProps) {
     pathname.startsWith('/saved') ||
     pathname.startsWith('/share-profile')
   );
-  const isMenuPage = pathname === '/menu';
+  const menuView = pathname === '/menu' ? searchParams?.get('view') : null;
+  const isMenuPage = pathname === '/menu' && (menuView === null || menuView === 'menu');
+  const isAddPersonView = pathname === '/menu' && menuView === 'add-person';
+  const isConnectionsView = pathname === '/menu' && menuView === 'connections';
+  
+  // Debug logging for add person view
+  React.useEffect(() => {
+    if (pathname === '/menu') {
+      console.log('AppShell: Menu page detected', { pathname, menuView, isAddPersonView, isMenuPage });
+    }
+  }, [pathname, menuView, isAddPersonView, isMenuPage]);
   const isOnboardingPage = pathname === '/onboarding';
   const isTimelinePage = pathname.startsWith('/timeline');
   const isCreateListingPage = pathname === '/my-life/create' || pathname === '/my-life/create/' || pathname.startsWith('/my-life/create/');
@@ -129,7 +140,7 @@ function AppShellContent({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -142,9 +153,9 @@ function AppShellContent({ children }: AppShellProps) {
   if (isChatPage) {
     // Chat page: Desktop top nav, Mobile bottom nav (responsive behavior handled in chat component)
     return (
-      <div className={`h-screen flex flex-col ${isIndividualChatPage ? 'bg-transparent' : 'bg-white'}`}>
+      <div className={`h-screen flex flex-col ${(isIndividualChatPage || isChatDetailsPage) ? 'bg-transparent' : 'bg-white'}`}>
         {/* Desktop: Top Navigation Bar - Hidden on individual chat pages */}
-        {!isIndividualChatPage && (
+        {!isIndividualChatPage && !isChatDetailsPage && (
           <div className="hidden sm:block fixed top-0 left-0 right-0 z-50">
             <TopNavigation />
           </div>
@@ -158,14 +169,14 @@ function AppShellContent({ children }: AppShellProps) {
         )}
         
         {/* Main Content Area - Mobile has bottom nav, Desktop has top nav offset */}
-        <main className={`w-full flex-1 ${isIndividualChatPage ? 'sm:pt-0 pt-0 bg-transparent' : 'sm:pt-20 pt-32'} sm:h-[calc(100vh-4.5rem)] ${isIndividualChatPage ? 'pb-0' : 'pb-24'} sm:pb-0`} style={isIndividualChatPage ? { backgroundColor: 'transparent', background: 'transparent' } : {}}>
+        <main className={`w-full flex-1 ${(isIndividualChatPage || isChatDetailsPage) ? 'sm:pt-0 pt-0 bg-transparent' : 'sm:pt-20 pt-32'} sm:h-[calc(100vh-4.5rem)] ${(isIndividualChatPage || isChatDetailsPage) ? 'pb-0' : 'pb-24'} sm:pb-0`} style={(isIndividualChatPage || isChatDetailsPage) ? { backgroundColor: 'transparent', background: 'transparent' } : {}}>
           <ProtectedRoute>
             {children}
           </ProtectedRoute>
         </main>
 
-        {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages */}
-        {!isIndividualChatPage && (
+        {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages and details page */}
+        {!isIndividualChatPage && !isChatDetailsPage && (
           <div className="sm:hidden">
             <MobileBottomNavigation />
           </div>
@@ -196,7 +207,7 @@ function AppShellContent({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>

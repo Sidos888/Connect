@@ -154,7 +154,7 @@ const ChatLayoutContent = () => {
         id: chat.id,
         title,
         avatarUrl,
-        isGroup: chat.type === 'event_group' || chat.type === 'group',
+        isGroup: chat.type === 'group',
         unreadCount: chat.unread_count || 0,
         last_message: lastMessageText,
         last_message_at: chat.last_message_at,
@@ -229,7 +229,7 @@ const ChatLayoutContent = () => {
             id: chat.id,
             title: chat.name || 'Unknown Chat',
             avatarUrl: chat.photo || null,
-            isGroup: chat.type === 'event_group' || chat.type === 'group',
+            isGroup: chat.type === 'group',
           };
           
           console.log('🔬 ChatLayout: Conversation data created:', conversationData);

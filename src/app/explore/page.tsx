@@ -98,6 +98,16 @@ export default function ExplorePage() {
                 </div>
               </button>
             }
+            actions={[
+              {
+                icon: <Search size={20} className="text-gray-900" strokeWidth={2.5} />,
+                onClick: () => {
+                  // Handle search - could open search modal or navigate
+                  console.log('Search clicked');
+                },
+                label: "Search"
+              }
+            ]}
           />
 
           <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
@@ -107,20 +117,20 @@ export default function ExplorePage() {
             msOverflowStyle: 'none'
           }}>
             {/* Top Spacing */}
-            <div style={{ height: '36px' }} />
+            <div style={{ height: '12px' }} />
 
-            {/* Feature Cards - For You & Side Quest (Larger) */}
+            {/* Feature Cards - For You & Side Quest */}
             <div className="grid grid-cols-2" style={{ 
               paddingLeft: '22px', 
               paddingRight: '22px',
               gap: '22px',
-              marginBottom: '32px'
+              marginBottom: '44px'
             }}>
               <button
                 onClick={() => router.push('/for-you-listings')}
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
                 style={{
-                  height: '150px',
+                  height: '120px',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
@@ -134,16 +144,16 @@ export default function ExplorePage() {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                <div className="flex flex-col items-start h-full p-6 justify-between">
-                  <div className="text-5xl leading-none">✨</div>
-                  <span className="text-lg font-semibold text-neutral-900 text-left leading-tight">For You</span>
+                <div className="flex flex-col items-start h-full p-4 gap-2">
+                  <div className="text-4xl leading-none">✨</div>
+                  <span className="text-base font-semibold text-neutral-900 text-left leading-tight">For You</span>
                 </div>
               </button>
 
               <button
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
                 style={{ 
-                  height: '150px',
+                  height: '120px',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
@@ -157,9 +167,9 @@ export default function ExplorePage() {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                <div className="flex flex-col items-start h-full p-6 justify-between">
-                  <div className="text-5xl leading-none">🎲</div>
-                  <span className="text-lg font-semibold text-neutral-900 text-left leading-tight">Side Quest</span>
+                <div className="flex flex-col items-start h-full p-4 gap-2">
+                  <div className="text-4xl leading-none">🎲</div>
+                  <span className="text-base font-semibold text-neutral-900 text-left leading-tight">Side Quest</span>
                 </div>
               </button>
             </div>
@@ -237,43 +247,7 @@ export default function ExplorePage() {
         </MobilePage>
       </div>
       
-      {/* Location Filter Card - Above Bottom Nav (Mobile Only) */}
-      <div 
-        className="lg:hidden fixed z-[69] transition-all duration-300 ease-in-out"
-        style={{
-          left: '22px',
-          right: '22px',
-          bottom: `calc(max(env(safe-area-inset-bottom), 20px) + 46.5px + 12px)`,
-          height: '46.5px',
-          borderRadius: '100px',
-          background: 'rgba(255, 255, 255, 0.9)',
-          borderWidth: '0.4px',
-          borderColor: '#E5E7EB',
-          borderStyle: 'solid',
-          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-          padding: '0 18px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: 'pointer',
-          willChange: 'transform, box-shadow'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-        }}
-      >
-        <div className="flex items-center gap-2.5">
-          <MapPin size={20} className="text-black" strokeWidth={2.5} />
-          <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Clock size={20} className="text-black" strokeWidth={2.5} />
-          <span className="text-sm font-semibold text-neutral-900">Anytime</span>
-        </div>
-      </div>
+      {/* Location Filter Card removed - now integrated into bottom nav */}
 
       {/* Desktop Layout - New Design */}
       <div className="hidden lg:block bg-white overflow-hidden" style={{ height: 'calc(100vh - 80px)' }}>

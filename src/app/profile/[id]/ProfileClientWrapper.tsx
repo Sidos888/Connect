@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import InlineProfileView from "@/components/InlineProfileView";
 import MobileTitle from "@/components/MobileTitle";
 import { ArrowLeft } from "lucide-react";
@@ -12,6 +12,7 @@ interface ProfileClientWrapperProps {
 
 export default function ProfileClientWrapper({ userId }: ProfileClientWrapperProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,7 +30,17 @@ export default function ProfileClientWrapper({ userId }: ProfileClientWrapperPro
   };
 
   const handleBack = () => {
+    const from = searchParams?.get('from');
+    
+    // Navigate back based on where we came from
+    if (from === 'connections') {
+      router.push('/menu?view=connections');
+    } else if (from === 'add-person') {
+      router.push('/menu?view=add-person');
+    } else {
+      // Default: go back in history
     router.back();
+    }
   };
 
   if (isLoading) {

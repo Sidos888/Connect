@@ -236,6 +236,26 @@ export class ConnectionsService {
         return { error: new Error('Friend request already sent') };
       }
       
+      // Clean up any old friend requests (including accepted/rejected) that might block the unique constraint
+      // This handles the case where a friend was removed but old friend requests still exist
+      console.log('Cleaning up any old friend requests before sending new one...');
+      
+      // Delete old requests from sender to receiver
+      await this.supabase
+        .from('friend_requests')
+        .delete()
+        .eq('sender_id', senderId)
+        .eq('receiver_id', receiverId);
+      
+      // Delete old requests from receiver to sender (in case they had sent one before)
+      await this.supabase
+        .from('friend_requests')
+        .delete()
+        .eq('sender_id', receiverId)
+        .eq('receiver_id', senderId);
+      
+      console.log('Old friend requests cleaned up, sending new request...');
+      
       const { data, error } = await this.supabase
         .from('friend_requests')
         .insert({
@@ -263,14 +283,48 @@ export class ConnectionsService {
   // Accept friend request
   async acceptFriendRequest(requestId: string): Promise<{ error: Error | null }> {
     try {
-      const { error } = await this.supabase
+      // First, get the friend request to find sender and receiver IDs
+      const { data: request, error: fetchError } = await this.supabase
+        .from('friend_requests')
+        .select('sender_id, receiver_id')
+        .eq('id', requestId)
+        .single();
+
+      if (fetchError || !request) {
+        console.error('Error fetching friend request:', fetchError);
+        return { error: fetchError || new Error('Friend request not found') };
+      }
+
+      const { sender_id, receiver_id } = request;
+
+      // Update the friend request status to accepted
+      const { error: updateError } = await this.supabase
         .from('friend_requests')
         .update({ status: 'accepted' })
         .eq('id', requestId);
 
-      if (error) {
-        console.error('Error accepting friend request:', error);
-        return { error };
+      if (updateError) {
+        console.error('Error accepting friend request:', updateError);
+        return { error: updateError };
+      }
+
+      // Create connection entry in connections table (bidirectional)
+      // Ensure user1_id < user2_id for consistency
+      const [user1Id, user2Id] = sender_id < receiver_id ? [sender_id, receiver_id] : [receiver_id, sender_id];
+
+      const { error: connectionError } = await this.supabase
+        .from('connections')
+        .insert({
+          user1_id: user1Id,
+          user2_id: user2Id
+        });
+
+      if (connectionError) {
+        console.error('Error creating connection:', connectionError);
+        // Don't fail if connection already exists
+        if (connectionError.code !== '23505') { // Unique constraint violation
+          return { error: connectionError };
+        }
       }
 
       return { error: null };
@@ -296,6 +350,26 @@ export class ConnectionsService {
       return { error: null };
     } catch (error) {
       console.error('Error in rejectFriendRequest:', error);
+      return { error: error as Error };
+    }
+  }
+
+  // Delete friend request (remove it entirely, no notification)
+  async deleteFriendRequest(requestId: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase
+        .from('friend_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (error) {
+        console.error('Error deleting friend request:', error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in deleteFriendRequest:', error);
       return { error: error as Error };
     }
   }
@@ -572,20 +646,89 @@ export class ConnectionsService {
     try {
       console.log('ConnectionsService: Removing friend connection between', currentUserId, 'and', friendId);
       
-      const { data, error } = await this.supabase
+      // Try deleting both possible directions separately and combine results
+      // This is more reliable than complex .or() queries
+      let deletedCount = 0;
+      let lastError: any = null;
+      
+      // Try deleting connection where current user is user1
+      const { data: data1, error: error1 } = await this.supabase
         .from('connections')
         .delete()
-        .or(`and(user1_id.eq.${currentUserId},user2_id.eq.${friendId}),and(user1_id.eq.${friendId},user2_id.eq.${currentUserId})`)
+        .eq('user1_id', currentUserId)
+        .eq('user2_id', friendId)
+        .select();
+      
+      if (error1) {
+        console.error('Error deleting connection (direction 1):', error1);
+        lastError = error1;
+      } else if (data1 && data1.length > 0) {
+        console.log('Deleted connection (direction 1):', data1);
+        deletedCount += data1.length;
+      }
+      
+      // Try deleting connection where current user is user2
+      const { data: data2, error: error2 } = await this.supabase
+        .from('connections')
+        .delete()
+        .eq('user1_id', friendId)
+        .eq('user2_id', currentUserId)
         .select();
 
-      console.log('Remove friend result:', { data, error });
-
-      if (error) {
-        console.error('Error removing friend:', error);
-        return { error };
+      if (error2) {
+        console.error('Error deleting connection (direction 2):', error2);
+        lastError = error2;
+      } else if (data2 && data2.length > 0) {
+        console.log('Deleted connection (direction 2):', data2);
+        deletedCount += data2.length;
       }
 
-      console.log('Friend removed successfully:', data);
+      // Clean up old friend requests (both directions) that might have status 'accepted'
+      // This allows users to send new friend requests after removing a friend
+      console.log('Cleaning up old friend requests...');
+      
+      // Delete friend requests where current user sent to friend (both pending and accepted)
+      const { error: deleteSentError } = await this.supabase
+        .from('friend_requests')
+        .delete()
+        .eq('sender_id', currentUserId)
+        .eq('receiver_id', friendId);
+      
+      if (deleteSentError) {
+        console.error('Error deleting sent friend requests:', deleteSentError);
+      } else {
+        console.log('Cleaned up sent friend requests');
+      }
+      
+      // Delete friend requests where friend sent to current user (both pending and accepted)
+      const { error: deleteReceivedError } = await this.supabase
+        .from('friend_requests')
+        .delete()
+        .eq('sender_id', friendId)
+        .eq('receiver_id', currentUserId);
+      
+      if (deleteReceivedError) {
+        console.error('Error deleting received friend requests:', deleteReceivedError);
+      } else {
+        console.log('Cleaned up received friend requests');
+      }
+
+      const allData = [...(data1 || []), ...(data2 || [])];
+      console.log('Remove friend result:', { data: allData, deletedCount, lastError });
+
+      if (lastError) {
+        console.error('Error removing friend:', lastError);
+        return { error: lastError };
+      }
+
+      if (deletedCount === 0) {
+        console.warn('No connection found to delete between', currentUserId, 'and', friendId);
+        // This might be okay if the connection was already deleted
+        // Return success to avoid confusing the user
+        return { error: null };
+      }
+
+      console.log('Friend removed successfully:', allData);
       return { error: null };
     } catch (error) {
       console.error('Error in removeFriend:', error);

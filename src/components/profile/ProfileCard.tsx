@@ -57,9 +57,11 @@ export default function ProfileCard({
   return (
     <div className={`relative ${className}`}>
       <div
-        className={`rounded-2xl bg-white grid items-center cursor-pointer transition-all duration-200 hover:-translate-y-[1px] ${slim ? 'px-6 py-3' : 'px-5 py-4'}`}
+        className={`rounded-2xl bg-white grid items-center cursor-pointer transition-all duration-200 hover:-translate-y-[1px] ${slim ? 'px-6' : 'px-5'}`}
         style={{
           gridTemplateColumns: `${avatarSize}px 1fr 40px`,
+          paddingTop: slim ? '16px' : '16px',
+          paddingBottom: slim ? '16px' : '16px',
           borderWidth: '0.4px',
           borderColor: '#E5E7EB',
           borderStyle: 'solid',
