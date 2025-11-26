@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Plus, MapPin, Check, Image as ImageIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, MapPin, Check, Image as ImageIcon, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
@@ -11,6 +11,8 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 function CreateListingPageContent() {
   const router = useRouter();
   const { account } = useAuth();
+  const [isSlidingUp, setIsSlidingUp] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [listingTitle, setListingTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [isPublic, setIsPublic] = useState(true);
@@ -37,6 +39,23 @@ function CreateListingPageContent() {
   const [saving, setSaving] = useState(false);
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
   const MAX_PHOTOS = 12;
+
+  // Slide up animation on mount
+  useEffect(() => {
+    setIsSlidingUp(true);
+    return () => {
+      setIsSlidingUp(false);
+    };
+  }, []);
+
+  // Handle close with slide down animation
+  const handleClose = () => {
+    setIsClosing(true);
+    setIsSlidingUp(false);
+    setTimeout(() => {
+      router.back();
+    }, 300);
+  };
   
   // Helper function to get the next coming hour
   const getNextHour = (): Date => {
@@ -624,13 +643,57 @@ function CreateListingPageContent() {
   };
 
   return (
-    <div className="lg:hidden" style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
-      <MobilePage>
-        <PageHeader
-          title="Create Listing"
-          subtitle={<span className="text-sm font-medium text-gray-500">Page 1/2</span>}
-          backButton
-          onBack={() => router.back()}
+    <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden lg:hidden">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 transition-opacity duration-300 ease-out"
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          opacity: isClosing ? 0 : 1
+        }}
+        onClick={handleClose}
+      />
+      
+      {/* Content Container with Slide Animation */}
+      <div 
+        className="relative w-full bg-white transition-transform duration-300 ease-out overflow-hidden"
+        style={{
+          height: '100%',
+          transform: isSlidingUp ? 'translateY(0)' : 'translateY(100%)',
+        }}
+      >
+        <div style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
+          <MobilePage>
+            <PageHeader
+              title="Create Listing"
+              subtitle={<span className="text-sm font-medium text-gray-500">Page 1/2</span>}
+              backButton={false}
+              customBackButton={
+                <button
+                  onClick={handleClose}
+                  className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={18} className="text-gray-900" strokeWidth={2.5} />
+                </button>
+              }
           customActions={
             <button
               onClick={handleNextPage}
@@ -1099,6 +1162,8 @@ function CreateListingPageContent() {
           </div>
         </PageContent>
       </MobilePage>
+        </div>
+      </div>
 
       {/* Visibility Modal */}
       {showVisibilityModal && (

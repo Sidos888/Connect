@@ -8,7 +8,7 @@ import RemoveFriendSlideModal from "@/components/chat/RemoveFriendSlideModal";
 import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
 
-export default function ChatSettingsPage() {
+export default function DmSettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const chatId = searchParams.get('chat');
@@ -60,11 +60,11 @@ export default function ChatSettingsPage() {
   }, [chatId, account?.id, chatService]);
 
   const handleCardClick = (cardId: string) => {
-    console.log('ChatSettingsPage: Card clicked:', cardId);
+    console.log('DmSettingsPage: Card clicked:', cardId);
     if (cardId === 'remove-friend') {
-      console.log('ChatSettingsPage: Opening remove friend modal');
-      console.log('ChatSettingsPage: otherParticipantName:', otherParticipantName);
-      console.log('ChatSettingsPage: otherParticipantId:', otherParticipantId);
+      console.log('DmSettingsPage: Opening remove friend modal');
+      console.log('DmSettingsPage: otherParticipantName:', otherParticipantName);
+      console.log('DmSettingsPage: otherParticipantId:', otherParticipantId);
       setShowRemoveFriendModal(true);
     } else {
       // Placeholder - add functionality later
@@ -103,11 +103,11 @@ export default function ChatSettingsPage() {
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
-          title="Chat Settings"
+          title="DM Settings"
           backButton
           onBack={() => {
             if (chatId) {
-              router.push(`/chat/details?chat=${chatId}`);
+              router.push(`/chat/dm-details?chat=${chatId}`);
             } else {
               router.push('/chat');
             }
@@ -145,8 +145,4 @@ export default function ChatSettingsPage() {
     </div>
   );
 }
-
-
-
-
 

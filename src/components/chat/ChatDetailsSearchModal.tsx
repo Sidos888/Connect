@@ -4,56 +4,57 @@ import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SearchIcon } from "@/components/icons";
 import { PageHeader, MobilePage } from "@/components/layout/PageSystem";
-import { listingsService, Listing } from "@/lib/listingsService";
-import ListingCard from "@/components/listings/ListingCard";
 
-interface ListingsSearchModalProps {
+interface Message {
+  id: string;
+  text: string;
+  sender_name?: string;
+  created_at: string;
+}
+
+interface ChatDetailsSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  listings?: Listing[];
+  messages: Message[];
 }
 
-export default function ListingsSearchModal({
+export default function ChatDetailsSearchModal({
   isOpen,
   onClose,
   searchQuery,
   onSearchChange,
-  listings: providedListings = [],
-}: ListingsSearchModalProps) {
+  messages,
+}: ChatDetailsSearchModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isFullyPositioned, setIsFullyPositioned] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Filter listings client-side based on search query
-  const filteredListings = useMemo(() => {
-    if (!searchQuery.trim() || !providedListings || providedListings.length === 0) {
-      return [];
-    }
+  // Filter messages based on search query
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return [];
     
     const query = searchQuery.toLowerCase();
-    return providedListings.filter(listing => 
-      listing.title?.toLowerCase().includes(query) ||
-      listing.summary?.toLowerCase().includes(query) ||
-      listing.location?.toLowerCase().includes(query)
+    return messages.filter(msg => 
+      msg.text?.toLowerCase().includes(query)
     );
-  }, [searchQuery, providedListings]);
+  }, [searchQuery, messages]);
 
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
       setIsFullyPositioned(false);
       document.body.style.overflow = 'hidden';
-
+      
       const timer = setTimeout(() => {
         setIsFullyPositioned(true);
         if (inputRef.current) {
           inputRef.current.focus();
         }
       }, 300);
-
+      
       return () => {
         clearTimeout(timer);
       };
@@ -61,9 +62,8 @@ export default function ListingsSearchModal({
       setIsVisible(false);
       setIsFullyPositioned(false);
       document.body.style.overflow = '';
-      onSearchChange(""); // Clear search query when closing
     }
-  }, [isOpen, onSearchChange]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -89,9 +89,9 @@ export default function ListingsSearchModal({
           <PageHeader
             title=""
           />
-
+          
           {/* Search Bar with X Button */}
-          <div
+          <div 
             className="absolute left-0 right-0 flex items-center gap-3 px-4"
             style={{
               top: 'max(env(safe-area-inset-top, 0px), 70px)',
@@ -106,7 +106,7 @@ export default function ListingsSearchModal({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search listings..."
+                placeholder="Search"
                 className="w-full focus:outline-none"
                 style={{
                   borderRadius: '100px',
@@ -172,7 +172,7 @@ export default function ListingsSearchModal({
               </svg>
             </button>
           </div>
-
+          
           <div
             className="flex-1 px-4 lg:px-8 pb-[max(env(safe-area-inset-bottom),24px)] overflow-y-auto scrollbar-hide"
             style={{
@@ -183,26 +183,30 @@ export default function ListingsSearchModal({
           >
             {/* Search Results */}
             {searchQuery.trim() && (
-              <div className="space-y-2 pt-4">
-                {filteredListings.length === 0 ? (
+              <div className="space-y-2">
+                {filteredMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-64">
-                    <p className="text-gray-500 text-sm">No listings found</p>
+                    <p className="text-gray-500 text-sm">No messages found</p>
                   </div>
                 ) : (
-                  filteredListings.map((listing) => (
-                    <ListingCard
-                      key={listing.id}
-                      listing={listing}
-                      sourcePath="/for-you-listings"
-                    />
+                  filteredMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className="p-4 rounded-2xl bg-white"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      }}
+                    >
+                      <p className="text-sm text-gray-900">{message.text || 'Message'}</p>
+                      {message.sender_name && (
+                        <p className="text-xs text-gray-500 mt-1">{message.sender_name}</p>
+                      )}
+                    </div>
                   ))
                 )}
-              </div>
-            )}
-
-            {!searchQuery.trim() && (
-              <div className="flex flex-col items-center justify-center h-64">
-                <p className="text-gray-500 text-sm">Start typing to search listings</p>
               </div>
             )}
           </div>

@@ -37,7 +37,8 @@ function AppShellContent({ children }: AppShellProps) {
   // Calculate all route flags BEFORE any conditional returns
   const isChatPage = pathname.startsWith('/chat');
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
-  const isChatDetailsPage = pathname.startsWith('/chat/details');
+  const isDmDetailsPage = pathname.startsWith('/chat/dm-details');
+  const isGroupDetailsPage = pathname.startsWith('/chat/group-details');
   const isMyLifePage = pathname.startsWith('/my-life');
   const isSettingsPage = (
     pathname.startsWith('/settings') ||
@@ -153,9 +154,9 @@ function AppShellContent({ children }: AppShellProps) {
   if (isChatPage) {
     // Chat page: Desktop top nav, Mobile bottom nav (responsive behavior handled in chat component)
     return (
-      <div className={`h-screen flex flex-col ${(isIndividualChatPage || isChatDetailsPage) ? 'bg-transparent' : 'bg-white'}`}>
+      <div className={`h-screen flex flex-col ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? 'bg-transparent' : 'bg-white'}`}>
         {/* Desktop: Top Navigation Bar - Hidden on individual chat pages */}
-        {!isIndividualChatPage && !isChatDetailsPage && (
+        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && (
           <div className="hidden sm:block fixed top-0 left-0 right-0 z-50">
             <TopNavigation />
           </div>
@@ -169,14 +170,14 @@ function AppShellContent({ children }: AppShellProps) {
         )}
         
         {/* Main Content Area - Mobile has bottom nav, Desktop has top nav offset */}
-        <main className={`w-full flex-1 ${(isIndividualChatPage || isChatDetailsPage) ? 'sm:pt-0 pt-0 bg-transparent' : 'sm:pt-20 pt-32'} sm:h-[calc(100vh-4.5rem)] ${(isIndividualChatPage || isChatDetailsPage) ? 'pb-0' : 'pb-24'} sm:pb-0`} style={(isIndividualChatPage || isChatDetailsPage) ? { backgroundColor: 'transparent', background: 'transparent' } : {}}>
+        <main className={`w-full flex-1 ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? 'sm:pt-0 pt-0 bg-transparent' : 'sm:pt-20 pt-32'} sm:h-[calc(100vh-4.5rem)] ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? 'pb-0' : 'pb-24'} sm:pb-0`} style={(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? { backgroundColor: 'transparent', background: 'transparent' } : {}}>
           <ProtectedRoute>
             {children}
           </ProtectedRoute>
         </main>
 
         {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages and details page */}
-        {!isIndividualChatPage && !isChatDetailsPage && (
+        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && (
           <div className="sm:hidden">
             <MobileBottomNavigation />
           </div>

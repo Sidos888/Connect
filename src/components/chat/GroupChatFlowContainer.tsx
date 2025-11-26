@@ -25,11 +25,28 @@ export default function GroupChatFlowContainer({
 }: GroupChatFlowContainerProps) {
   const [cornerRadius, setCornerRadius] = useState<number>(45);
   const [isVisible, setIsVisible] = useState(false);
+  const [isSlidingUp, setIsSlidingUp] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
+    // Start slide-up animation
+    setIsSlidingUp(true);
     setIsVisible(true);
-    return () => setIsVisible(false);
+    
+    return () => {
+      setIsVisible(false);
+      setIsSlidingUp(false);
+    };
   }, []);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setIsSlidingUp(false);
+    // Wait for slide-down animation to complete before actually closing
+    setTimeout(() => {
+      onClose();
+    }, 300);
+  };
 
   // Detect device corner radius on mount
   useEffect(() => {
@@ -72,105 +89,83 @@ export default function GroupChatFlowContainer({
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden"
-      style={{ pointerEvents: 'auto' }}
-    >
+    <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 transition-opacity duration-300 ease-out"
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          opacity: 1
+          opacity: isClosing ? 0 : 1
         }}
-        onClick={onClose}
+        onClick={handleClose}
       />
       
-      {/* Horizontal Container */}
+      {/* Content Container with Slide Animation - Full Page */}
       <div 
-        className="relative overflow-hidden"
+        className="relative w-full bg-white transition-transform duration-300 ease-out overflow-hidden"
         style={{
-          width: '100%',
-          height: '92vh',
-          height: '92dvh',
-          marginTop: '20px',
-          marginBottom: '0px',
+          height: '100%',
+          transform: isSlidingUp ? 'translateY(0)' : 'translateY(100%)',
         }}
       >
-        {/* New Chat View */}
-        <div
-          className="absolute inset-y-0 left-0 bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
-          style={{
-            width: '100%',
-            borderTopLeftRadius: `${cornerRadius}px`,
-            borderTopRightRadius: `${cornerRadius}px`,
-            borderBottomLeftRadius: `${cornerRadius}px`,
-            borderBottomRightRadius: `${cornerRadius}px`,
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            transform: getStepTransform('new-chat'),
-          }}
+        {/* Horizontal Container for sliding between steps */}
+        <div 
+          className="relative overflow-hidden w-full h-full"
         >
-          <NewChatSlideModal
-            isOpen={currentStep === 'new-chat'}
-            onClose={onClose}
-            onSelectContact={onSelectContact}
-            onShowAddMembers={handleShowAddMembers}
-            hideBackdrop={true}
-            hideContainer={true}
-          />
-        </div>
+          {/* New Chat View */}
+          <div
+            className="absolute inset-0 bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
+            style={{
+              width: '100%',
+              height: '100%',
+              transform: getStepTransform('new-chat'),
+            }}
+          >
+            <NewChatSlideModal
+              isOpen={currentStep === 'new-chat'}
+              onClose={handleClose}
+              onSelectContact={onSelectContact}
+              onShowAddMembers={handleShowAddMembers}
+              hideBackdrop={true}
+              hideContainer={true}
+            />
+          </div>
 
-        {/* Add Members View */}
-        <div
-          className="absolute inset-y-0 left-0 bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
-          style={{
-            width: '100%',
-            borderTopLeftRadius: `${cornerRadius}px`,
-            borderTopRightRadius: `${cornerRadius}px`,
-            borderBottomLeftRadius: `${cornerRadius}px`,
-            borderBottomRightRadius: `${cornerRadius}px`,
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            transform: getStepTransform('add-members'),
-          }}
-        >
-          <AddMembersSlideModal
-            isOpen={currentStep === 'add-members'}
-            onClose={handleAddMembersBack}
-            onNext={handleAddMembersNext}
-            hideBackdrop={true}
-            hideContainer={true}
-          />
-        </div>
+          {/* Add Members View */}
+          <div
+            className="absolute inset-0 bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
+            style={{
+              width: '100%',
+              height: '100%',
+              transform: getStepTransform('add-members'),
+            }}
+          >
+            <AddMembersSlideModal
+              isOpen={currentStep === 'add-members'}
+              onClose={handleAddMembersBack}
+              onNext={handleAddMembersNext}
+              hideBackdrop={true}
+              hideContainer={true}
+            />
+          </div>
 
-        {/* New Group Chat View */}
-        <div
-          className="absolute inset-y-0 left-0 bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
-          style={{
-            width: '100%',
-            borderTopLeftRadius: `${cornerRadius}px`,
-            borderTopRightRadius: `${cornerRadius}px`,
-            borderBottomLeftRadius: `${cornerRadius}px`,
-            borderBottomRightRadius: `${cornerRadius}px`,
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            transform: getStepTransform('new-group-chat'),
-          }}
-        >
-          <NewGroupChatSlideModal
-            isOpen={currentStep === 'new-group-chat'}
-            onClose={handleNewGroupChatBack}
-            selectedContactIds={selectedMemberIds}
-            hideBackdrop={true}
-            hideContainer={true}
-          />
+          {/* New Group Chat View */}
+          <div
+            className="absolute inset-0 bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
+            style={{
+              width: '100%',
+              height: '100%',
+              transform: getStepTransform('new-group-chat'),
+            }}
+          >
+            <NewGroupChatSlideModal
+              isOpen={currentStep === 'new-group-chat'}
+              onClose={handleNewGroupChatBack}
+              selectedContactIds={selectedMemberIds}
+              hideBackdrop={true}
+              hideContainer={true}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -431,7 +431,12 @@ export default function IndividualChatPage() {
     <button 
       onClick={() => {
         if (chatId) {
-          router.push(`/chat/details?chat=${chatId}`);
+          // Route to group details for group chats, DM details for direct chats
+          if (conversation.isGroup) {
+            router.push(`/chat/group-details?chat=${chatId}`);
+          } else {
+            router.push(`/chat/dm-details?chat=${chatId}`);
+          }
         }
       }}
       className="absolute flex items-center"
@@ -440,7 +445,7 @@ export default function IndividualChatPage() {
         left: '50%',
         transform: 'translate(-50%, -50%)', // Center both horizontally and vertically
         padding: '10px 18px',
-        borderRadius: '12px',
+        borderRadius: '16px',
         background: 'rgba(255, 255, 255, 0.96)',
         borderWidth: '0.4px',
         borderColor: '#E5E7EB',

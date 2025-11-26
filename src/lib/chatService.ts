@@ -980,7 +980,7 @@ export class ChatService {
       const { data: chat, error } = await this.supabase
         .from('chats')
         .select(`
-          id, type, name, listing_id, created_by, created_at, updated_at, last_message_at,
+          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at,
           chat_participants!inner(
             id, user_id, joined_at, last_read_at,
             accounts!inner(id, name, profile_pic)
@@ -1028,7 +1028,7 @@ export class ChatService {
         id: chat.id,
         type: chat.type === 'direct' ? 'direct' : 'group',
         name: chat.name || '',
-        photo: undefined, // TODO: Add photo support
+        photo: (chat as any).photo || undefined, // Group chat photo from chats table
         participants: chat.chat_participants.map((p: any) => ({
           id: p.user_id,
           name: (p.accounts as any)?.name || 'Unknown User',

@@ -127,7 +127,18 @@ export default function ExplorePage() {
               marginBottom: '44px'
             }}>
               <button
-                onClick={() => router.push('/for-you-listings')}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('For You button clicked, navigating to /for-you-listings');
+                  try {
+                    router.push('/for-you-listings');
+                  } catch (error) {
+                    console.error('Error navigating to For You page:', error);
+                    // Fallback to window.location if router fails
+                    window.location.href = '/for-you-listings';
+                  }
+                }}
                 className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
                 style={{
                   height: '120px',
@@ -135,7 +146,8 @@ export default function ExplorePage() {
                   borderColor: '#E5E7EB',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   willChange: 'transform, box-shadow',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  touchAction: 'manipulation'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -194,7 +206,15 @@ export default function ExplorePage() {
                       e.stopPropagation();
                       if (category.href) {
                         console.log('Category clicked, navigating to:', category.href);
-                        router.push(category.href);
+                        try {
+                          router.push(category.href);
+                        } catch (error) {
+                          console.error('Error navigating to category page:', error);
+                          // Fallback to window.location if router fails
+                          window.location.href = category.href;
+                        }
+                      } else {
+                        console.log('Category clicked but no href:', category.title);
                       }
                     }}
                     onTouchEnd={(e) => {
@@ -291,7 +311,18 @@ export default function ExplorePage() {
             <div className="mb-20 flex justify-center">
               <div className="grid grid-cols-2 gap-6">
                 <button
-                  onClick={() => router.push('/for-you-listings')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('For You button clicked (desktop), navigating to /for-you-listings');
+                    try {
+                      router.push('/for-you-listings');
+                    } catch (error) {
+                      console.error('Error navigating to For You page:', error);
+                      // Fallback to window.location if router fails
+                      window.location.href = '/for-you-listings';
+                    }
+                  }}
                   className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
                   style={{
                     width: '157px',
