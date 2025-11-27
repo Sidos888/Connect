@@ -73,7 +73,7 @@ export default function ForYouPage() {
           onBack={() => router.back()}
           actions={[
             {
-              icon: <Search size={20} className="text-gray-900" />,
+              icon: <Search size={20} className="text-gray-900" strokeWidth={2.5} />,
               onClick: () => console.log('Search clicked'),
               label: "Search"
             }

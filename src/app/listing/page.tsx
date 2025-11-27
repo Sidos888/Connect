@@ -800,7 +800,7 @@ export default function ListingPage() {
                 }
               },
               {
-                icon: <Share2 size={20} className="text-gray-900" />,
+                icon: <Share2 size={20} className="text-gray-900" strokeWidth={2.5} />,
                 label: 'Share',
                 onClick: async () => {
                   if (!listing || !listingId) return;

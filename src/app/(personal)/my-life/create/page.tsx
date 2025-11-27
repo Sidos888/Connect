@@ -663,10 +663,10 @@ function CreateListingPageContent() {
         }}
       >
         <div style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
-          <MobilePage>
-            <PageHeader
-              title="Create Listing"
-              subtitle={<span className="text-sm font-medium text-gray-500">Page 1/2</span>}
+      <MobilePage>
+        <PageHeader
+          title="Create Listing"
+          subtitle={<span className="text-sm font-medium text-gray-500">Page 1/2</span>}
               backButton={false}
               customBackButton={
                 <button

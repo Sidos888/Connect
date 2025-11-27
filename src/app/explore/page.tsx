@@ -207,7 +207,7 @@ export default function ExplorePage() {
                       if (category.href) {
                         console.log('Category clicked, navigating to:', category.href);
                         try {
-                          router.push(category.href);
+                        router.push(category.href);
                         } catch (error) {
                           console.error('Error navigating to category page:', error);
                           // Fallback to window.location if router fails

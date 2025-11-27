@@ -24,6 +24,7 @@ export interface ChatParticipant {
   id: string;
   chat_id: string;
   user_id: string;
+  role?: 'admin' | 'member';
   joined_at: string;
   last_read_at: string;
   user_name?: string;
@@ -184,7 +185,7 @@ export class ChatService {
       const { data: allParticipants } = await this.supabase
         .from('chat_participants')
         .select(`
-          chat_id, user_id, joined_at, last_read_at,
+          chat_id, user_id, role, joined_at, last_read_at,
           accounts!inner(id, name, profile_pic)
         `)
         .in('chat_id', chatIds);
@@ -200,6 +201,7 @@ export class ChatService {
             id: p.id || p.user_id,
             chat_id: p.chat_id,
             user_id: p.user_id,
+            role: p.role || 'member',
             joined_at: p.joined_at,
             last_read_at: p.last_read_at,
             user_name: (p.accounts as any)?.name,
@@ -650,7 +652,7 @@ export class ChatService {
               .select(`
                 id, type, name, listing_id, created_by, created_at, updated_at, last_message_at,
                 chat_participants(
-                  id, user_id, joined_at, last_read_at,
+                  id, user_id, role, joined_at, last_read_at,
                   accounts(id, name, profile_pic)
                 )
               `)
@@ -674,6 +676,7 @@ export class ChatService {
                   id: cp.id,
                   chat_id: cp.chat_id,
                   user_id: cp.user_id,
+                  role: cp.role || 'member',
                   joined_at: cp.joined_at,
                   last_read_at: cp.last_read_at,
                   user_name: cp.accounts?.name,
@@ -746,7 +749,7 @@ export class ChatService {
         .select(`
           id, type, name, listing_id, created_by, created_at, updated_at, last_message_at,
           chat_participants(
-            id, user_id, joined_at, last_read_at,
+            id, user_id, role, joined_at, last_read_at,
             accounts(id, name, profile_pic)
           )
         `)
@@ -786,6 +789,7 @@ export class ChatService {
           id: cp.id,
           chat_id: cp.chat_id,
           user_id: cp.user_id,
+          role: cp.role || 'member',
           joined_at: cp.joined_at,
           last_read_at: cp.last_read_at,
           user_name: cp.accounts?.name,
@@ -842,6 +846,7 @@ export class ChatService {
       const participants = allParticipantIds.map(userId => ({
         chat_id: chat.id,
         user_id: userId,
+        role: userId === user.id ? 'admin' : 'member', // Creator is admin, others are members
         joined_at: new Date().toISOString(),
         last_read_at: new Date().toISOString()
       }));
@@ -863,7 +868,7 @@ export class ChatService {
         .select(`
           id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at,
           chat_participants(
-            id, user_id, joined_at, last_read_at,
+            id, user_id, role, joined_at, last_read_at,
             accounts(id, name, profile_pic)
           )
         `)
@@ -890,6 +895,7 @@ export class ChatService {
           id: cp.id,
           chat_id: cp.chat_id,
           user_id: cp.user_id,
+          role: cp.role || 'member',
           joined_at: cp.joined_at,
           last_read_at: cp.last_read_at,
           user_name: cp.accounts?.name,
@@ -903,6 +909,187 @@ export class ChatService {
     } catch (error) {
       console.error('Error in createGroupChat:', error);
       return { chat: null, error: error as Error };
+    }
+  }
+
+  // Add members to an existing group chat
+  async addMembersToGroup(chatId: string, memberIds: string[]): Promise<{ error: Error | null }> {
+    try {
+      console.log('Adding members to group:', { chatId, memberIds });
+
+      // Get current user
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { error: new Error('User not authenticated') };
+      }
+
+      // Verify the chat exists and is a group
+      const { data: chat, error: chatError } = await this.supabase
+        .from('chats')
+        .select('id, type')
+        .eq('id', chatId)
+        .single();
+
+      if (chatError || !chat) {
+        return { error: chatError as Error || new Error('Chat not found') };
+      }
+
+      if (chat.type !== 'group') {
+        return { error: new Error('Can only add members to group chats') };
+      }
+
+      // Check which members are already in the group
+      const { data: existingParticipants } = await this.supabase
+        .from('chat_participants')
+        .select('user_id')
+        .eq('chat_id', chatId)
+        .in('user_id', memberIds);
+
+      const existingMemberIds = new Set((existingParticipants || []).map(p => p.user_id));
+      const newMemberIds = memberIds.filter(id => !existingMemberIds.has(id));
+
+      if (newMemberIds.length === 0) {
+        return { error: new Error('All selected members are already in the group') };
+      }
+
+      // Add new participants (all as 'member' role, not admin)
+      const participants = newMemberIds.map(userId => ({
+        chat_id: chatId,
+        user_id: userId,
+        role: 'member',
+        joined_at: new Date().toISOString(),
+        last_read_at: new Date().toISOString()
+      }));
+
+      const { error: participantsError } = await this.supabase
+        .from('chat_participants')
+        .insert(participants);
+
+      if (participantsError) {
+        console.error('Error adding participants:', participantsError);
+        return { error: participantsError as Error };
+      }
+
+      console.log('Successfully added members to group');
+      return { error: null };
+    } catch (error) {
+      console.error('Error in addMembersToGroup:', error);
+      return { error: error as Error };
+    }
+  }
+
+  // Update group chat details
+  async updateGroupChat(
+    chatId: string,
+    updates: { name?: string; photo?: string | null }
+  ): Promise<{ error: Error | null }> {
+    try {
+      console.log('Updating group chat:', { chatId, updates });
+
+      // Get current user
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { error: new Error('User not authenticated') };
+      }
+
+      // Verify the chat exists and is a group
+      const { data: chat, error: chatError } = await this.supabase
+        .from('chats')
+        .select('id, type, created_by')
+        .eq('id', chatId)
+        .single();
+
+      if (chatError || !chat) {
+        return { error: chatError as Error || new Error('Chat not found') };
+      }
+
+      if (chat.type !== 'group') {
+        return { error: new Error('Can only update group chats') };
+      }
+
+      // Check if user is a participant in the group (admin or member)
+      const { data: participant, error: participantError } = await this.supabase
+        .from('chat_participants')
+        .select('user_id, role')
+        .eq('chat_id', chatId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (participantError || !participant) {
+        return { error: new Error('You must be a member of the group to update group details') };
+      }
+
+      // Allow any participant (admin or member) to update group details
+
+      // Build update object
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (updates.name !== undefined) {
+        updateData.name = updates.name;
+      }
+
+      if (updates.photo !== undefined) {
+        updateData.photo = updates.photo;
+      }
+
+      // Update the chat
+      const { error: updateError } = await this.supabase
+        .from('chats')
+        .update(updateData)
+        .eq('id', chatId);
+
+      if (updateError) {
+        console.error('Error updating group chat:', updateError);
+        return { error: updateError as Error };
+      }
+
+      console.log('Successfully updated group chat');
+      return { error: null };
+    } catch (error) {
+      console.error('Error in updateGroupChat:', error);
+      return { error: error as Error };
+    }
+  }
+
+  // Leave a group chat (remove user from participants)
+  async leaveGroup(chatId: string, userId: string): Promise<{ error: Error | null }> {
+    try {
+      console.log('Leaving group:', { chatId, userId });
+
+      // Verify the chat exists and is a group
+      const { data: chat, error: chatError } = await this.supabase
+        .from('chats')
+        .select('id, type')
+        .eq('id', chatId)
+        .single();
+
+      if (chatError || !chat) {
+        return { error: chatError as Error || new Error('Chat not found') };
+      }
+
+      if (chat.type !== 'group') {
+        return { error: new Error('Can only leave group chats') };
+      }
+
+      // Remove the user from chat_participants
+      const { error: removeError } = await this.supabase
+        .from('chat_participants')
+        .delete()
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (removeError) {
+        console.error('Error removing participant:', removeError);
+        return { error: removeError as Error };
+      }
+
+      console.log('Successfully left group');
+      return { error: null };
+    } catch (error) {
+      console.error('Error in leaveGroup:', error);
+      return { error: error as Error };
     }
   }
 
@@ -982,7 +1169,7 @@ export class ChatService {
         .select(`
           id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at,
           chat_participants!inner(
-            id, user_id, joined_at, last_read_at,
+            id, user_id, role, joined_at, last_read_at,
             accounts!inner(id, name, profile_pic)
           )
         `)
@@ -1032,7 +1219,8 @@ export class ChatService {
         participants: chat.chat_participants.map((p: any) => ({
           id: p.user_id,
           name: (p.accounts as any)?.name || 'Unknown User',
-          profile_pic: (p.accounts as any)?.profile_pic || undefined
+          profile_pic: (p.accounts as any)?.profile_pic || undefined,
+          role: p.role || 'member'
         })),
         last_message: lastMessage ? {
           id: lastMessage.id,
@@ -1364,6 +1552,14 @@ export class ChatService {
     };
   }
 
+  // Unsubscribe from a chat
+  unsubscribeFromChat(chatId: string): void {
+    const channelKey = `chat:${chatId}`;
+    const channel = this.activeSubscriptions.get(channelKey);
+    if (channel) {
+      channel.unsubscribe();
+      this.activeSubscriptions.delete(channelKey);
+      console.log('📡 Unsubscribed from chat:', chatId);
+    }
+  }
 }
-export const chatService = new ChatService();
-

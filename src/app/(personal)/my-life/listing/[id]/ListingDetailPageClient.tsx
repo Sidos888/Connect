@@ -179,14 +179,14 @@ export default function ListingDetailPageClient({ listingId }: ListingDetailPage
           onBack={() => router.push('/my-life')}
           actions={[
             {
-              icon: <Edit size={20} className="text-gray-900" />,
+              icon: <Edit size={20} className="text-gray-900" strokeWidth={2.5} />,
               label: 'Edit',
               onClick: () => {
                 // Display only for now - not clickable yet
               }
             },
             {
-              icon: <Share2 size={20} className="text-gray-900" />,
+              icon: <Share2 size={20} className="text-gray-900" strokeWidth={2.5} />,
               label: 'Share',
               onClick: () => {
                 // Display only for now - not clickable yet

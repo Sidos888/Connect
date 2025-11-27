@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { X, Users } from 'lucide-react';
+import { X, Users, UserPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { getDeviceCornerRadius } from '@/lib/deviceCornerRadius';
 import { useAuth } from '@/lib/authContext';
 import { useChatService } from '@/lib/chatProvider';
@@ -29,6 +30,7 @@ export default function NewChatSlideModal({
 }: NewChatSlideModalProps) {
   const { account } = useAuth();
   const chatService = useChatService();
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const [cornerRadius, setCornerRadius] = useState<number>(45);
@@ -306,21 +308,22 @@ export default function NewChatSlideModal({
           </div>
         </div>
 
-        {/* New Group Card */}
-        <div className="flex-shrink-0" style={{ padding: '0 16px 24px 16px' }}>
+        {/* Add Group and Add Connection Cards */}
+        <div className="flex-shrink-0 flex flex-col gap-3" style={{ padding: '0 16px 16px 16px' }}>
+          {/* Add Group Card */}
           <button
             onClick={() => {
               if (onShowAddMembers) {
                 onShowAddMembers();
               }
             }}
-            className="w-full bg-white rounded-xl p-4 flex items-center gap-3 text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+            className="w-full bg-white rounded-xl p-3 flex items-center gap-3 text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
             style={{
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              minHeight: '72px',
+              minHeight: '60px',
               cursor: 'pointer',
               willChange: 'transform, box-shadow'
             }}
@@ -332,14 +335,54 @@ export default function NewChatSlideModal({
             }}
           >
             {/* Group Icon */}
-            <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '40px', height: '40px' }}>
-              <Users size={20} className="text-gray-900" />
+            <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '36px', height: '36px' }}>
+              <Users size={18} className="text-gray-900" />
             </div>
 
             {/* Title */}
             <div className="flex-1 min-w-0">
               <div className="text-base font-semibold text-gray-900">
-                New Group
+                Add Group
+              </div>
+            </div>
+          </button>
+
+          {/* Add Connection Card */}
+          <button
+            onClick={() => {
+              // Store in session storage that we came from chat to reopen new chat modal on return
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('returnToNewChat', 'true');
+              }
+              router.push('/menu?view=add-person&from=chat');
+              handleClose();
+            }}
+            className="w-full bg-white rounded-xl p-3 flex items-center gap-3 text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              minHeight: '60px',
+              cursor: 'pointer',
+              willChange: 'transform, box-shadow'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            {/* User Plus Icon */}
+            <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '36px', height: '36px' }}>
+              <UserPlus size={18} className="text-gray-900" />
+            </div>
+
+            {/* Title */}
+            <div className="flex-1 min-w-0">
+              <div className="text-base font-semibold text-gray-900">
+                Add Connection
               </div>
             </div>
           </button>

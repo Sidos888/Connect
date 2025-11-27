@@ -237,7 +237,7 @@ export default function InlineProfileView({
           aria-label="Back to previous view"
         >
           <span className="action-btn-circle">
-            <ArrowLeft size={20} className="text-gray-900" />
+            <ArrowLeft size={20} className="text-gray-900" strokeWidth={2.5} />
           </span>
         </button>
         <button 
@@ -433,7 +433,7 @@ export default function InlineProfileView({
                 aria-label="Back"
               >
                 <span className="back-btn-circle">
-                  <ArrowLeft size={20} className="text-gray-700" />
+                  <ArrowLeft size={20} className="text-gray-700" strokeWidth={2.5} />
                 </span>
               </button>
             </div>

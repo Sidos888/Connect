@@ -13,6 +13,7 @@ interface GroupChatFlowContainerProps {
   onSelectContact: (contactId: string) => void;
   onStepChange: (step: 'new-chat' | 'add-members' | 'new-group-chat') => void;
   onSelectedMembersChange: (ids: string[]) => void;
+  skipSlideUpAnimation?: boolean;
 }
 
 export default function GroupChatFlowContainer({
@@ -22,22 +23,33 @@ export default function GroupChatFlowContainer({
   onSelectContact,
   onStepChange,
   onSelectedMembersChange,
+  skipSlideUpAnimation = false,
 }: GroupChatFlowContainerProps) {
   const [cornerRadius, setCornerRadius] = useState<number>(45);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isSlidingUp, setIsSlidingUp] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isSlidingUp, setIsSlidingUp] = useState(skipSlideUpAnimation); // Start with true if skipping animation
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
-    // Start slide-up animation
-    setIsSlidingUp(true);
-    setIsVisible(true);
+    // If skipping animation, don't animate
+    if (skipSlideUpAnimation) {
+      setIsSlidingUp(true);
+      return;
+    }
+    
+    // Ensure element renders first with isSlidingUp: false
+    // Then trigger animation after a brief delay
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsSlidingUp(true);
+      });
+    });
     
     return () => {
       setIsVisible(false);
       setIsSlidingUp(false);
     };
-  }, []);
+  }, [skipSlideUpAnimation]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -95,7 +107,7 @@ export default function GroupChatFlowContainer({
         className="absolute inset-0 transition-opacity duration-300 ease-out"
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          opacity: isClosing ? 0 : 1
+          opacity: isClosing ? 0 : (skipSlideUpAnimation ? 1 : (isSlidingUp ? 1 : 0))
         }}
         onClick={handleClose}
       />

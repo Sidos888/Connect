@@ -12,7 +12,6 @@ import ChatDetailsSearchModal from "@/components/chat/ChatDetailsSearchModal";
 import { useChatMessages } from "@/lib/chatQueries";
 import type { SimpleMessage } from "@/lib/types";
 
-export const dynamic = 'force-dynamic';
 
 function GroupDetailsContent() {
   const searchParams = useSearchParams();
@@ -213,7 +212,9 @@ function GroupDetailsContent() {
           >
             <button
               onClick={() => {
-                // TODO: Navigate to members list page
+                if (chatId) {
+                  router.push(`/chat/group-details/members?chat=${chatId}`);
+                }
               }}
               className="rounded-2xl bg-white flex items-center relative w-full cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
               style={{
@@ -243,12 +244,12 @@ function GroupDetailsContent() {
                 />
               </div>
               
-              {/* Group Name and Members - Left aligned */}
-              <div className="flex-1 flex flex-col ml-3 min-w-0">
-                <div className="text-base font-semibold text-gray-900">
+              {/* Group Name and Members - Left aligned, next to avatar */}
+              <div className="flex-1 flex flex-col ml-3 min-w-0 items-start">
+                <div className="text-base font-semibold text-gray-900 text-left">
                   {groupName}
                 </div>
-                <div className="text-sm text-gray-600 mt-0.5">
+                <div className="text-sm text-gray-600 mt-0.5 text-left">
                   {membersCount} Members - View
                 </div>
               </div>
@@ -353,4 +354,10 @@ export default function GroupDetailsPage() {
     </Suspense>
   );
 }
+
+
+
+
+
+
 

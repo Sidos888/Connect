@@ -39,6 +39,8 @@ function AppShellContent({ children }: AppShellProps) {
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
   const isDmDetailsPage = pathname.startsWith('/chat/dm-details');
   const isGroupDetailsPage = pathname.startsWith('/chat/group-details');
+  const isGroupMembersPage = pathname.startsWith('/chat/group-details/members');
+  const isGroupSettingsPage = pathname.startsWith('/chat/group-details/settings');
   const isMyLifePage = pathname.startsWith('/my-life');
   const isSettingsPage = (
     pathname.startsWith('/settings') ||
@@ -152,11 +154,10 @@ function AppShellContent({ children }: AppShellProps) {
 
   // All other routes require authentication
   if (isChatPage) {
-    // Chat page: Desktop top nav, Mobile bottom nav (responsive behavior handled in chat component)
     return (
-      <div className={`h-screen flex flex-col ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? 'bg-transparent' : 'bg-white'}`}>
+      <div className={`h-screen flex flex-col ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage || isGroupMembersPage || isGroupSettingsPage) ? 'bg-transparent' : 'bg-white'}`}>
         {/* Desktop: Top Navigation Bar - Hidden on individual chat pages */}
-        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && (
+        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && !isGroupMembersPage && !isGroupSettingsPage && (
           <div className="hidden sm:block fixed top-0 left-0 right-0 z-50">
             <TopNavigation />
           </div>
@@ -170,7 +171,7 @@ function AppShellContent({ children }: AppShellProps) {
         )}
         
         {/* Main Content Area - Mobile has bottom nav, Desktop has top nav offset */}
-        <main className={`w-full flex-1 ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? 'sm:pt-0 pt-0 bg-transparent' : 'sm:pt-20 pt-32'} sm:h-[calc(100vh-4.5rem)] ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? 'pb-0' : 'pb-24'} sm:pb-0`} style={(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage) ? { backgroundColor: 'transparent', background: 'transparent' } : {}}>
+        <main className={`w-full flex-1 ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage || isGroupMembersPage || isGroupSettingsPage) ? 'sm:pt-0 pt-0 bg-transparent' : 'sm:pt-20 pt-32'} sm:h-[calc(100vh-4.5rem)] ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage || isGroupMembersPage || isGroupSettingsPage) ? 'pb-0' : 'pb-24'} sm:pb-0`} style={(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage || isGroupMembersPage || isGroupSettingsPage) ? { backgroundColor: 'transparent', background: 'transparent' } : {}}>
           <ProtectedRoute>
             {children}
           </ProtectedRoute>

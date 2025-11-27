@@ -230,62 +230,100 @@ export default function NewGroupChatSlideModal({
 
   const content = (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="relative flex items-center justify-center" style={{ paddingTop: '24px', paddingBottom: '24px', paddingLeft: '0px', paddingRight: '0px', minHeight: '60px' }}>
-        <button
-          onClick={handleCloseWrapper}
-          className="absolute flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-          style={{
-            left: '24px',
-            top: '24px',
-            width: '44px',
-            height: '44px',
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.9)',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            willChange: 'transform, box-shadow'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-        >
-          <ArrowLeft size={18} className="text-gray-900" strokeWidth={2.5} />
-        </button>
-        <h2 className="text-lg font-semibold text-gray-900" style={{ lineHeight: '44px' }}>New Group Chat</h2>
-        <button
-          onClick={handleCreateGroup}
-          disabled={!groupName.trim() || isCreating}
-          className="absolute flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            right: '24px',
-            top: '24px',
-            width: '44px',
-            height: '44px',
-            borderRadius: '50%',
-            background: groupName.trim() && !isCreating ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.5)',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            willChange: 'transform, box-shadow'
-          }}
-          onMouseEnter={(e) => {
-            if (groupName.trim() && !isCreating) {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-        >
-          <Check size={18} className="text-gray-900" strokeWidth={2.5} />
-        </button>
+      {/* Header - Matching new chat page positioning exactly */}
+      <div className="px-4" style={{ 
+        paddingTop: 'max(env(safe-area-inset-top), 70px)',
+        paddingBottom: '16px',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        {/* Inner container matching PageHeader structure */}
+        <div className="relative w-full" style={{ 
+          width: '100%', 
+          minHeight: '44px',
+          pointerEvents: 'auto'
+        }}>
+          {/* Left: Back Button */}
+          <div className="absolute left-0 flex items-center gap-3" style={{ 
+            top: '0', 
+            height: '44px' 
+          }}>
+            <button
+              onClick={handleCloseWrapper}
+              className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.9)',
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <ArrowLeft size={18} className="text-gray-900" strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* Right: Create Button */}
+          <div className="absolute right-0 flex items-center gap-3" style={{ 
+            top: '0', 
+            height: '44px' 
+          }}>
+            <button
+              onClick={handleCreateGroup}
+              disabled={!groupName.trim() || isCreating}
+              className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: groupName.trim() && !isCreating ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.5)',
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                if (groupName.trim() && !isCreating) {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <Check size={18} className="text-gray-900" strokeWidth={2.5} />
+            </button>
+          </div>
+          
+          {/* Center: Title */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ 
+            top: '0', 
+            height: '44px', 
+            justifyContent: 'center' 
+          }}>
+            <h2 className="font-semibold text-gray-900 text-center" style={{ 
+              fontSize: '22px',
+              lineHeight: '28px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              New Group Chat
+            </h2>
+          </div>
+        </div>
       </div>
 
         {/* Content */}
@@ -478,8 +516,3 @@ export default function NewGroupChatSlideModal({
     </div>
   );
 }
-
-
-
-
-

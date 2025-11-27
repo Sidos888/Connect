@@ -304,7 +304,7 @@ export default function MyLifeLayout(): React.JSX.Element {
             }
             actions={[
               {
-                icon: <Plus size={20} className="text-gray-900" />,
+                icon: <Plus size={20} className="text-gray-900" strokeWidth={2.5} />,
                 onClick: () => {
                   navigate('/my-life/create');
                 },

@@ -51,7 +51,7 @@ export default function MobileTopNavigation() {
     if (pathname.startsWith("/chat")) {
       return (
         <button className="flex items-center justify-center" style={{ ...cardStyle, width: '44px', height: '44px' }}>
-          <Plus size={20} className="text-black" />
+          <Plus size={20} className="text-black" strokeWidth={2.5} />
         </button>
       );
     }
@@ -62,20 +62,20 @@ export default function MobileTopNavigation() {
           className="flex items-center justify-center" 
           style={{ ...cardStyle, width: '44px', height: '44px' }}
         >
-          <Bell size={20} className="text-black" />
+          <Bell size={20} className="text-black" strokeWidth={2.5} />
         </button>
       );
     }
     if (pathname.startsWith("/my-life")) {
       return (
         <button className="flex items-center justify-center" style={{ ...cardStyle, width: '44px', height: '44px' }}>
-          <Plus size={20} className="text-black" />
+          <Plus size={20} className="text-black" strokeWidth={2.5} />
         </button>
       );
     }
     return (
       <button className="flex items-center justify-center" style={{ ...cardStyle, width: '44px', height: '44px' }}>
-        <Search size={20} className="text-black" />
+        <Search size={20} className="text-black" strokeWidth={2.5} />
       </button>
     );
   };

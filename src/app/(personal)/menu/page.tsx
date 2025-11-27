@@ -332,10 +332,21 @@ export default function Page() {
           <PageHeader
             title="Connections"
             backButton
-            onBack={() => goToView(from as any)}
+            onBack={() => {
+              // Check if we should return to new chat modal
+              if (typeof window !== 'undefined') {
+                const returnToNewChat = sessionStorage.getItem('returnToNewChat');
+                if (returnToNewChat === 'true') {
+                  sessionStorage.removeItem('returnToNewChat');
+                  router.push('/chat?openNewChat=true');
+                  return;
+                }
+              }
+              goToView(from as any);
+            }}
             actions={[
               {
-                icon: <Plus size={20} className="text-gray-900" />,
+                icon: <Plus size={20} className="text-gray-900" strokeWidth={2.5} />,
                 onClick: () => router.push('/menu?view=add-person'),
                 label: "Add person"
               }
@@ -803,7 +814,7 @@ export default function Page() {
                 aria-label="Back to profile"
               >
                 <span className="back-btn-circle">
-                  <ChevronLeftIcon className="h-5 w-5" />
+                  <ChevronLeftIcon className="h-5 w-5" strokeWidth={2.5} />
                 </span>
               </button>
               <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Edit Profile</h1>
@@ -984,7 +995,7 @@ export default function Page() {
               aria-label="Back to add friends"
             >
               <span className="action-btn-circle">
-                <ChevronLeftIcon className="h-5 w-5 text-gray-900" />
+                <ChevronLeftIcon className="h-5 w-5 text-gray-900" strokeWidth={2.5} />
               </span>
             </button>
             <h1 className="text-xl font-semibold text-gray-900 text-center" style={{ textAlign: 'center', width: '100%', display: 'block' }}>Friend Requests</h1>
@@ -1133,7 +1144,18 @@ export default function Page() {
     >
       {currentView === 'add-person' ? (
         <AddPersonWrapper 
-          onBack={() => goToView('connections')}
+          onBack={() => {
+            // Check if we should return to new chat modal
+            if (typeof window !== 'undefined') {
+              const returnToNewChat = sessionStorage.getItem('returnToNewChat');
+              if (returnToNewChat === 'true') {
+                sessionStorage.removeItem('returnToNewChat');
+                router.push('/chat?openNewChat=true');
+                return;
+              }
+            }
+            goToView('connections');
+          }}
           onOpenFriendRequests={() => setShowFriendRequestsModal(true)}
         />
       ) : showFriendRequestsModal ? (
@@ -1212,7 +1234,7 @@ export default function Page() {
                 }
                 actions={[
                   {
-                    icon: <BellIcon size={22} className="text-gray-900" strokeWidth={2} />,
+                    icon: <BellIcon size={22} className="text-gray-900" strokeWidth={2.5} />,
                     onClick: () => goToView('notifications', 'menu'),
                     label: "Notifications"
                   }

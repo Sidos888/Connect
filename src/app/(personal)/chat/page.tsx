@@ -33,6 +33,7 @@ function MessagesPageContent() {
   const { showAddFriend } = useModal();
   const searchParams = useSearchParams();
   const selectedChatId = searchParams.get("chat");
+  const openNewChat = searchParams.get("openNewChat");
   
   // Use React Query to fetch chats
   const { data: chats = [], isLoading, error } = useChats(chatService, user?.id || null);
@@ -263,7 +264,7 @@ function MessagesPageContent() {
       setShowNewChatSlideModal(true);
       setGroupChatFlowStep('new-chat');
     } else {
-      setShowNewMessageModal(true);
+    setShowNewMessageModal(true);
     }
   };
 
@@ -431,17 +432,41 @@ function MessagesPageContent() {
     }
   }, [isHydrated]);
 
+  // Handle opening new chat modal when returning from connections
+  const [skipSlideUpAnimation, setSkipSlideUpAnimation] = useState(false);
+  
+  useEffect(() => {
+    if (openNewChat === 'true' && account && chatService) {
+      // Check if we're returning from add person page (not a fresh open)
+      if (typeof window !== 'undefined') {
+        const returnToNewChat = sessionStorage.getItem('returnToNewChat');
+        // Skip animation if we're returning (flag will be cleared by the menu page, but we check it here)
+        setSkipSlideUpAnimation(returnToNewChat === 'true');
+        // Clear the flag after checking
+        sessionStorage.removeItem('returnToNewChat');
+      }
+      // Remove the query parameter from URL
+      router.replace('/chat');
+      // Open the new chat modal
+      setShowNewChatSlideModal(true);
+      setGroupChatFlowStep('new-chat');
+    } else {
+      // Reset skip animation flag when opening normally
+      setSkipSlideUpAnimation(false);
+    }
+  }, [openNewChat, account, chatService, router]);
+
 
 
   // Show chat content if authenticated
   return (
     <ProtectedRoute title="Chats" description="Log in / sign up to view your chats and messages" buttonText="Log in">
-      {/* Desktop Layout */}
-      <div className="hidden sm:block h-screen overflow-hidden" style={{ maxHeight: '100vh' }}>
-        <ChatLayout />
-      </div>
+        {/* Desktop Layout */}
+        <div className="hidden sm:block h-screen overflow-hidden" style={{ maxHeight: '100vh' }}>
+          <ChatLayout />
+        </div>
 
-      {/* Mobile Layout - Connect design system */}
+        {/* Mobile Layout - Connect design system */}
       <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
           <MobilePage>
             <PageHeader
@@ -527,18 +552,19 @@ function MessagesPageContent() {
             />
 
             <div
-              className="flex-1 px-4 lg:px-8 pb-[max(env(safe-area-inset-bottom),24px)] overflow-y-auto scrollbar-hide"
+              className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide"
               style={{
                 paddingTop: 'var(--saved-content-padding-top, 140px)',
+                paddingBottom: 'max(env(safe-area-inset-bottom), 120px)', // Ensure cards rest above bottom nav (96px nav + 24px spacing)
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
                 WebkitOverflowScrolling: 'touch'
-              }}
+                    }}
             >
               {/* Top Spacing */}
               <div style={{ height: '12px' }} />
-              
-              {/* Category Pills */}
+
+                {/* Category Pills */}
               <div className="mb-6">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
@@ -596,11 +622,11 @@ function MessagesPageContent() {
                       );
                     })}
                   </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Chat List */}
-              <div className="space-y-2">
+                {/* Chat List */}
+                <div className="space-y-2">
                   {filteredMobileConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 space-y-4">
                       <p className="text-gray-500 text-lg">
@@ -680,7 +706,7 @@ function MessagesPageContent() {
                       </div>
                     ))
                   )}
-                </div>
+              </div>
             </div>
           </MobilePage>
         </div>
@@ -725,10 +751,12 @@ function MessagesPageContent() {
               setShowNewChatSlideModal(false);
               setGroupChatFlowStep('new-chat');
               setSelectedGroupMemberIds([]);
+              setSkipSlideUpAnimation(false); // Reset animation flag on close
             }}
             onSelectContact={handleContactSelect}
             onStepChange={(step) => setGroupChatFlowStep(step)}
             onSelectedMembersChange={(ids) => setSelectedGroupMemberIds(ids)}
+            skipSlideUpAnimation={skipSlideUpAnimation}
           />
         )}
     </ProtectedRoute>

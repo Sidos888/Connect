@@ -17,12 +17,12 @@ export default function SavedPage() {
         onBack={() => router.back()}
         actions={[
           {
-            icon: <Plus size={20} className="text-gray-900" />,
+            icon: <Plus size={20} className="text-gray-900" strokeWidth={2.5} />,
             onClick: () => console.log('Add clicked'),
             label: "Add"
           },
           {
-            icon: <Share size={20} className="text-gray-900" />,
+            icon: <Share size={20} className="text-gray-900" strokeWidth={2.5} />,
             onClick: () => console.log('Share clicked'),
             label: "Share"
           }

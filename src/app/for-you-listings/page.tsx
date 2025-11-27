@@ -192,9 +192,9 @@ export default function ForYouListingsPage() {
                     setShowMap(!showMap);
                   }}
                   className="flex items-center justify-center flex-1 h-full"
-                >
-                  {showMap ? <Grid3x3 size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
-                </button>
+              >
+                {showMap ? <Grid3x3 size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
+              </button>
               </div>
             </div>
           </div>
