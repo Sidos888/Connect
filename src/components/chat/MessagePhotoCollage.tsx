@@ -250,9 +250,3 @@ export default function MessagePhotoCollage({
     </div>
   );
 }
-
-
-
-
-
-

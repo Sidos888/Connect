@@ -70,7 +70,8 @@ export default function IndividualChatPage() {
   const [galleryMessage, setGalleryMessage] = useState<SimpleMessage | null>(null);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
-  const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]);
+  const [viewerMedia, setViewerMedia] = useState<MediaAttachment[]>([]); // Only media from clicked message
+  const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]); // All chat media (for future use)
 
   // Simple mobile optimization - prevent body scroll
   useEffect(() => {
@@ -309,20 +310,16 @@ export default function IndividualChatPage() {
 
   const handleAttachmentClick = (message: SimpleMessage) => {
     setGalleryMessage(message);
+    // Set viewerMedia to only this message's attachments
+    if (message.attachments && message.attachments.length > 0) {
+      setViewerMedia(message.attachments);
+    }
     setShowGallery(true);
   };
 
   const handleGalleryImageClick = (index: number) => {
-    // Find the starting index in allChatMedia for this message's attachments
-    let startIndex = 0;
-    for (let i = 0; i < allChatMedia.length; i++) {
-      if (allChatMedia[i].id === galleryMessage?.attachments?.[0]?.id) {
-        startIndex = i;
-        break;
-      }
-    }
-    
-    setViewerStartIndex(startIndex + index);
+    // Use the index directly since viewerMedia only contains this message's attachments
+    setViewerStartIndex(index);
     setShowMediaViewer(true);
     setShowGallery(false);
   };
@@ -569,158 +566,182 @@ export default function IndividualChatPage() {
         </div>
       )}
 
-      {/* Photos Preview - Horizontal scroll above input card when photos are added */}
-      {pendingMedia.length > 0 && (
-        <div 
-          className="fixed left-4 right-4 z-20 overflow-x-auto"
-          style={{ 
-            bottom: 'max(calc(env(safe-area-inset-bottom, 20px) + 80px), 100px)',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-          }}
-        >
-          <div className="flex gap-3" style={{ width: 'max-content' }}>
-            {pendingMedia.map((media, index) => (
-              <div
-                key={index}
-                className="relative flex-shrink-0 rounded-xl overflow-hidden bg-gray-100"
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                }}
-              >
-                {media.file_type === 'video' ? (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center relative">
-                    {media.thumbnail_url ? (
-                      <>
-                        <img
-                          src={media.thumbnail_url}
-                          alt="Video thumbnail"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-5 h-5 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                            <svg className="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-gray-400">
-                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <img
-                    src={media.file_url}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <button
-                  onClick={() => handleRemoveMedia(index)}
-                  className="absolute top-1 right-1 w-5 h-5 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all z-10"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Simple Input Card - Single rounded container with +, input, and send */}
+      {/* Input Card - Expands when photos are selected */}
       <div 
-        className="fixed left-4 right-4 z-20 flex items-center"
+        className="fixed z-20"
         style={{ 
+          left: '22px',
+          right: '22px',
           bottom: 'max(env(safe-area-inset-bottom, 20px), 20px)',
-          paddingTop: '6px',
+          paddingTop: pendingMedia.length > 0 ? '12px' : '6px',
           paddingBottom: '6px',
           paddingLeft: '6px',
           paddingRight: '6px',
-          borderRadius: '100px',
+          borderRadius: pendingMedia.length > 0 ? '20px' : '100px',
           backgroundColor: 'white',
           borderWidth: '0.4px',
           borderColor: '#E5E7EB',
           borderStyle: 'solid',
-          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+          transition: 'border-radius 0.2s ease-out, padding-top 0.2s ease-out'
         }}
       >
-        {/* + Button - Same size as send button, equal spacing from left edge */}
-        <div style={{ width: '32px', height: '32px', flexShrink: 0 }}>
-          <MediaUploadButton 
-            onMediaSelected={handleMediaSelected}
-            disabled={false}
-          />
-        </div>
-        
-        {/* Text Input */}
-        <textarea
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          placeholder=""
-          className="focus:outline-none resize-none text-sm text-black caret-black"
-          style={{
-            margin: 0,
-            marginLeft: '8px', // Gap between + button and text input
-            marginRight: '8px', // Gap between text input and send button
-            padding: '8px',
-            lineHeight: '1.2',
-            boxSizing: 'border-box',
-            minHeight: '32px',
-            flex: 1,
-            backgroundColor: 'transparent',
-            border: 'none',
-            boxShadow: 'none'
-          }}
-          rows={1}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && (messageText.trim() || pendingMedia.length > 0)) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-        />
+        {/* Photos Preview - Inside the chat box, horizontally scrollable when more than 3 */}
+        {pendingMedia.length > 0 && (
+          <div 
+            className="mb-3 overflow-x-auto no-scrollbar"
+            style={{ 
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
+            <div 
+              className="flex gap-3"
+              style={{ 
+                width: pendingMedia.length > 3 ? 'max-content' : '100%',
+                paddingLeft: '2px',
+                paddingRight: '2px'
+              }}
+            >
+              {pendingMedia.map((media, index) => (
+                <div
+                  key={index}
+                  className="relative flex-shrink-0 rounded-xl overflow-hidden bg-gray-100"
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                  }}
+                >
+                  {media.file_type === 'video' ? (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center relative">
+                      {media.thumbnail_url ? (
+                        <>
+                          <img
+                            src={media.thumbnail_url}
+                            alt="Video thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-5 h-5 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-gray-400">
+                          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <img
+                      src={media.file_url}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  <button
+                    onClick={() => handleRemoveMedia(index)}
+                    className="absolute top-1 right-1 w-5 h-5 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all z-10"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Input Controls Row - + button, text input, and send button */}
+        <div className="flex items-center">
+          {/* + Button - Same size as send button, equal spacing from left edge */}
+          <div style={{ width: '32px', height: '32px', flexShrink: 0 }}>
+            <MediaUploadButton 
+              onMediaSelected={handleMediaSelected}
+              disabled={false}
+            />
+          </div>
           
-        {/* Send Button - Same size as + button */}
-        <button
-          onClick={handleSendMessage}
-          disabled={!messageText.trim() && pendingMedia.length === 0}
-          className={`flex-shrink-0 flex items-center justify-center transition-all ${
-            messageText.trim() || pendingMedia.length > 0
-              ? "cursor-pointer" 
-              : "cursor-not-allowed opacity-50"
-          }`}
-          style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            backgroundColor: 'white',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-          }}
-          onMouseEnter={(e) => {
-            if (messageText.trim() || pendingMedia.length > 0) {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-        >
-          <svg className="w-4 h-4 text-gray-900" fill="currentColor" viewBox="0 0 20 20" style={{ strokeWidth: 2.5 }}>
-            <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
-          </svg>
-        </button>
+          {/* Text Input */}
+          <textarea
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            placeholder=""
+            className="focus:outline-none resize-none text-sm text-black caret-black"
+            style={{
+              margin: 0,
+              marginLeft: '8px', // Gap between + button and text input
+              marginRight: '8px', // Gap between text input and send button
+              padding: '8px',
+              lineHeight: '1.2',
+              boxSizing: 'border-box',
+              minHeight: '32px',
+              flex: 1,
+              backgroundColor: 'transparent',
+              border: 'none',
+              boxShadow: 'none'
+            }}
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && (messageText.trim() || pendingMedia.length > 0)) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+            
+          {/* Send Button - Same size as + button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (messageText.trim() || pendingMedia.length > 0) {
+                handleSendMessage();
+              }
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (messageText.trim() || pendingMedia.length > 0) {
+                handleSendMessage();
+              }
+            }}
+            disabled={!messageText.trim() && pendingMedia.length === 0}
+            className={`flex-shrink-0 flex items-center justify-center transition-all ${
+              messageText.trim() || pendingMedia.length > 0
+                ? "cursor-pointer" 
+                : "cursor-not-allowed opacity-50"
+            }`}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+            }}
+            onMouseEnter={(e) => {
+              if (messageText.trim() || pendingMedia.length > 0) {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            <svg className="w-4 h-4 text-gray-900" fill="currentColor" viewBox="0 0 20 20" style={{ strokeWidth: 2.5 }}>
+              <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Chat Section - Scrollable messages area - Use paddingTop instead of top offset to avoid white gap */}
@@ -729,7 +750,7 @@ export default function IndividualChatPage() {
         style={{
           height: '100vh', // Full viewport height - input overlays on top
           paddingTop: '160px', // Space for header (110px) + nice spacing before first message (50px)
-          paddingBottom: pendingMedia.length > 0 ? '200px' : '100px', // More space when photos are shown
+          paddingBottom: pendingMedia.length > 0 ? '180px' : '100px', // More space when photos are shown (expanded input box)
           position: 'relative',
           overflowY: 'scroll',
           WebkitOverflowScrolling: 'touch',
@@ -802,7 +823,7 @@ export default function IndividualChatPage() {
       {/* Media Viewer */}
       <MediaViewer
         isOpen={showMediaViewer}
-        allMedia={allChatMedia}
+        allMedia={viewerMedia}
         initialIndex={viewerStartIndex}
         onClose={() => setShowMediaViewer(false)}
       />

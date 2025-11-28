@@ -163,7 +163,8 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
   const [galleryMessage, setGalleryMessage] = useState<SimpleMessage | null>(null);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
-  const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]);
+  const [viewerMedia, setViewerMedia] = useState<MediaAttachment[]>([]); // Only media from clicked message
+  const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]); // All chat media (for future use)
   
   // Real-time state
   const [animationPhase, setAnimationPhase] = useState(0); // For JavaScript animation
@@ -281,20 +282,16 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
 
   const handleAttachmentClick = (message: SimpleMessage) => {
     setGalleryMessage(message);
+    // Set viewerMedia to only this message's attachments
+    if (message.attachments && message.attachments.length > 0) {
+      setViewerMedia(message.attachments);
+    }
     setShowGallery(true);
   };
 
   const handleGalleryImageClick = (index: number) => {
-    // Find the starting index in allChatMedia for this message's attachments
-    let startIndex = 0;
-    for (let i = 0; i < allChatMedia.length; i++) {
-      if (allChatMedia[i].id === galleryMessage?.attachments?.[0]?.id) {
-        startIndex = i;
-        break;
-      }
-    }
-    
-    setViewerStartIndex(startIndex + index);
+    // Use the index directly since viewerMedia only contains this message's attachments
+    setViewerStartIndex(index);
     setShowMediaViewer(true);
     setShowGallery(false);
   };
@@ -1082,7 +1079,7 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
       {/* Media Viewer */}
       <MediaViewer
         isOpen={showMediaViewer}
-        allMedia={allChatMedia}
+        allMedia={viewerMedia}
         initialIndex={viewerStartIndex}
         onClose={() => setShowMediaViewer(false)}
       />

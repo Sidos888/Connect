@@ -77,7 +77,9 @@ export default function MediaUploadButton({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = getSupabaseClient();
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!disabled && !uploading) {
       fileInputRef.current?.click();
     }
@@ -273,6 +275,7 @@ export default function MediaUploadButton({
       
       <button
         onClick={handleClick}
+        onTouchStart={handleClick}
         disabled={disabled || uploading}
           className={`
           rounded-full flex items-center justify-center transition-colors border-[0.4px] border-[#E5E7EB]
@@ -297,21 +300,11 @@ export default function MediaUploadButton({
         onMouseLeave={(e) => {
           e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
         }}
-        title={uploading ? "Uploading..." : "Add photos or videos"}
+        title="Add photos or videos"
       >
-        {uploading ? (
-          <div className="relative">
-            {/* Upload progress indicator */}
-            <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-600">
-              {Math.round(uploadProgress)}%
-            </div>
-          </div>
-        ) : (
-          <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ strokeWidth: 2.5 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-        )}
+        <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ strokeWidth: 2.5 }}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
       </button>
     </>
   );

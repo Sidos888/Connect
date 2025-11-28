@@ -86,7 +86,16 @@ export default function PageHeader({
               {/* Back Button - Always show when backButton is true, even with leftSection */}
               {backButton && onBack && (
                 <button
-                  onClick={onBack}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onBack();
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onBack();
+                  }}
                   className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
                     top: '0', // Keep original position
@@ -343,7 +352,16 @@ export default function PageHeader({
             {/* Back Button - Always show when backButton is true, even with leftSection */}
             {backButton && onBack && (
               <button
-                onClick={onBack}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onBack();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onBack();
+                }}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   top: '0', // Keep original position
@@ -392,7 +410,16 @@ export default function PageHeader({
               </div>
             ) : backButton && onBack ? (
               <button
-                onClick={onBack}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onBack();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onBack();
+                }}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   top: '0',

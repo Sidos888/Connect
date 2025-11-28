@@ -505,27 +505,27 @@ function MessagesPageContent() {
                 </button>
               }
               customActions={
-                <div
+            <div
                   className="flex items-center transition-all duration-200 hover:-translate-y-[1px]"
-                  style={{
+              style={{
                     width: '88px', // Double the normal button width (44px * 2)
                     height: '44px',
-                    borderRadius: '100px',
+                      borderRadius: '100px',
                     background: 'rgba(255, 255, 255, 0.96)',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow',
                     overflow: 'hidden',
                     cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
                 >
                   {/* Search Icon - Left Side */}
                   <button
