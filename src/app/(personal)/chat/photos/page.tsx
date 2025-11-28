@@ -5,21 +5,21 @@ import { useState, useEffect } from 'react';
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { useQuery } from '@tanstack/react-query';
 import { getSupabaseClient } from '@/lib/supabaseClient';
-import { Listing } from '@/lib/listingsService';
+import ChatPhotoViewer from "@/components/chat/ChatPhotoViewer";
+import type { MediaAttachment } from '@/lib/types';
 
-export default function ListingPhotosPage() {
+export default function ChatPhotosPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const listingId = searchParams.get('id');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const messageId = searchParams.get('messageId');
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
 
-  // Hide bottom nav on mobile - use multiple approaches for reliability
+  // Hide bottom nav on mobile
   useEffect(() => {
-    // Approach 1: Add CSS class to body
     document.body.classList.add('hide-bottom-nav');
     document.documentElement.classList.add('hide-bottom-nav');
     
-    // Approach 2: Direct DOM manipulation (fallback)
     const hideBottomNav = () => {
       const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
       if (bottomNav) {
@@ -51,10 +51,9 @@ export default function ListingPhotosPage() {
       document.body.style.paddingBottom = '';
     };
 
-    // Hide immediately and also with a small delay to catch late renders
     hideBottomNav();
     const timeoutId = setTimeout(hideBottomNav, 100);
-    const intervalId = setInterval(hideBottomNav, 500); // Keep checking every 500ms
+    const intervalId = setInterval(hideBottomNav, 500);
 
     return () => {
       clearTimeout(timeoutId);
@@ -63,48 +62,56 @@ export default function ListingPhotosPage() {
     };
   }, []);
 
-  // Fetch listing photos
-  const { data: listingData, isLoading } = useQuery({
-    queryKey: ['listing', listingId, 'photos'],
+  // Fetch message attachments
+  const { data: attachmentsData, isLoading } = useQuery({
+    queryKey: ['chat-message-attachments', messageId],
     queryFn: async () => {
-      if (!listingId) return null;
+      if (!messageId) return null;
       const supabase = getSupabaseClient();
       if (!supabase) return null;
       
       const { data, error } = await supabase
-        .from('listings')
-        .select('photo_urls')
-        .eq('id', listingId)
-        .single();
+        .from('attachments')
+        .select('*')
+        .eq('message_id', messageId)
+        .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Error fetching listing photos:', error);
+        console.error('Error fetching message attachments:', error);
         return null;
       }
 
-      return data as { photo_urls: string[] | null };
+      return data as MediaAttachment[];
     },
-    enabled: !!listingId,
+    enabled: !!messageId,
   });
 
   useEffect(() => {
-    if (listingData?.photo_urls) {
-      setPhotos(Array.isArray(listingData.photo_urls) ? listingData.photo_urls : []);
-    } else if (listingData && !listingData.photo_urls) {
-      // No photos found, go back
+    if (attachmentsData) {
+      setAttachments(attachmentsData);
+    } else if (attachmentsData === null && !isLoading) {
+      // No attachments found, go back
       router.back();
     }
-  }, [listingData, router]);
+  }, [attachmentsData, isLoading, router]);
 
   useEffect(() => {
-    if (!listingId && !isLoading) {
-      // No listing ID, go back
+    if (!messageId && !isLoading) {
+      // No message ID, go back
       router.back();
     }
-  }, [listingId, isLoading, router]);
+  }, [messageId, isLoading, router]);
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handlePhotoClick = (index: number) => {
+    setSelectedPhotoIndex(index);
+  };
+
+  const handleClosePhotoViewer = () => {
+    setSelectedPhotoIndex(null);
   };
 
   if (isLoading) {
@@ -112,7 +119,7 @@ export default function ListingPhotosPage() {
       <div className="lg:hidden" style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
         <MobilePage>
           <PageHeader
-            title="Listing Photos"
+            title="Chat Photos"
             backButton
             onBack={handleBack}
           />
@@ -126,12 +133,12 @@ export default function ListingPhotosPage() {
     );
   }
 
-  if (photos.length === 0) {
+  if (attachments.length === 0) {
     return (
       <div className="lg:hidden" style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
         <MobilePage>
           <PageHeader
-            title="Listing Photos"
+            title="Chat Photos"
             backButton
             onBack={handleBack}
           />
@@ -149,8 +156,8 @@ export default function ListingPhotosPage() {
     <div className="lg:hidden" style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
-          title="Listing Photos"
-          subtitle={<span className="text-xs font-medium text-gray-900">{photos.length} {photos.length === 1 ? 'photo' : 'photos'}</span>}
+          title="Chat Photos"
+          subtitle={<span className="text-xs font-medium text-gray-900">{attachments.length} {attachments.length === 1 ? 'photo' : 'photos'}</span>}
           backButton
           onBack={handleBack}
         />
@@ -159,26 +166,56 @@ export default function ListingPhotosPage() {
           <div className="px-4 pb-8" style={{ paddingTop: 'var(--saved-content-padding-top, 180px)', boxSizing: 'border-box' }}>
             {/* Photo Grid - 4 columns */}
             <div className="grid grid-cols-4 gap-0.5" style={{ boxSizing: 'border-box', width: '100%' }}>
-              {photos.map((photo, index) => (
+              {attachments.map((attachment, index) => (
                 <div
-                  key={index}
+                  key={attachment.id || index}
+                  onClick={() => handlePhotoClick(index)}
                   className="relative aspect-square bg-gray-100 overflow-hidden rounded-xl"
                   style={{
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
+                    cursor: 'pointer'
                   }}
                 >
-                  <img 
-                    src={photo} 
-                    alt={`Photo ${index + 1}`} 
-                    className="w-full h-full object-cover"
-                  />
+                  {attachment.file_type === 'video' && attachment.thumbnail_url ? (
+                    <>
+                      <img
+                        src={attachment.thumbnail_url}
+                        alt="Video thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Play icon overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-8 h-8 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <img 
+                      src={attachment.file_url} 
+                      alt={`Photo ${index + 1}`} 
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </PageContent>
       </MobilePage>
+
+      {/* Full Page Photo Viewer */}
+      {selectedPhotoIndex !== null && (
+        <ChatPhotoViewer
+          isOpen={selectedPhotoIndex !== null}
+          attachments={attachments}
+          initialIndex={selectedPhotoIndex}
+          onClose={handleClosePhotoViewer}
+        />
+      )}
     </div>
   );
 }

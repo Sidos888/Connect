@@ -252,6 +252,15 @@ export class ChatService {
 
           const finalAttachmentCount = attachmentCount || 0;
           
+          console.log('ChatService.getUserChats: Last message for chat', chat.id, {
+            messageId: lastMessage.id,
+            hasText: !!lastMessage.message_text,
+            textLength: lastMessage.message_text?.length || 0,
+            attachmentCount: finalAttachmentCount,
+            senderId: lastMessage.sender_id,
+            senderName: (lastMessage.accounts as any)?.name
+          });
+          
           chat.last_message = {
             id: lastMessage.id,
             chat_id: lastMessage.chat_id,
@@ -489,7 +498,7 @@ export class ChatService {
             has_thumbnail: !!ins.thumbnail_url
           }))
         });
-
+        
         const { error: attachError } = await this.supabase
           .from('attachments')
           .insert(attachmentInserts);

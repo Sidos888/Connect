@@ -14,7 +14,7 @@ import { useChats, useRefreshChats } from "@/lib/chatQueries";
 import { useModal } from "@/lib/modalContext";
 import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
-import { Plus } from "lucide-react";
+import { Plus, Image as ImageIcon } from "lucide-react";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
 
 const ChatLayoutContent = () => {
@@ -89,13 +89,23 @@ const ChatLayoutContent = () => {
   // Using the new intuitive time formatting utility
   // Memoize helper functions to prevent recreation on every render
   const getLastMessage = useCallback((conversation: Conversation) => {
+    console.log('ChatLayout.getLastMessage: Called for conversation', conversation.id, {
+      hasLastMessage: !!conversation.last_message,
+      lastMessageType: typeof conversation.last_message,
+      lastMessageValue: conversation.last_message,
+      hasMessages: !!(conversation.messages && conversation.messages.length > 0)
+    });
+    
     // Use last_message string if available (new format)
     if (conversation.last_message && typeof conversation.last_message === 'string') {
-      if (conversation.last_message.trim()) {
-        return conversation.last_message;
+      const trimmed = conversation.last_message.trim();
+      if (trimmed) {
+        console.log('ChatLayout.getLastMessage: Returning string last_message:', trimmed);
+        return trimmed;
       }
       // Special case: if last_message is exactly "..." (failed attachment), show it
       if (conversation.last_message === "...") {
+        console.log('ChatLayout.getLastMessage: Returning "..." (failed attachment)');
         return "...";
       }
     }
@@ -104,10 +114,12 @@ const ChatLayoutContent = () => {
     if (conversation.messages && conversation.messages.length > 0) {
       const lastMessage = conversation.messages[conversation.messages.length - 1];
       if (lastMessage.text && lastMessage.text.trim()) {
+        console.log('ChatLayout.getLastMessage: Returning message text:', lastMessage.text);
         return lastMessage.text;
       }
     }
     
+    console.log('ChatLayout.getLastMessage: Returning default "No messages yet"');
     return "No messages yet";
   }, []);
 
@@ -115,6 +127,21 @@ const ChatLayoutContent = () => {
     // For now, just show the last message - typing indicators will be added later with React Query
     return getLastMessage(conversation);
   }, [getLastMessage]);
+
+  // Helper component to render message with icon instead of emoji
+  const MessageTextWithIcon = ({ text }: { text: string }) => {
+    if (text.includes('📷')) {
+      const parts = text.split('📷');
+      return (
+        <>
+          {parts[0]}
+          <ImageIcon size={16} strokeWidth={2.5} className="inline-block text-gray-500 align-middle" />
+          {parts[1]}
+        </>
+      );
+    }
+    return <>{text}</>;
+  };
 
   const getLastMessageTime = useCallback((conversation: Conversation) => {
     // Use the new last_message_at field from SimpleChat interface
@@ -141,14 +168,64 @@ const ChatLayoutContent = () => {
         : (chat.photo || null); // Use group photo for group chats
       
       // Format last message
-      let lastMessageText: string | undefined = undefined;
+      let lastMessageText: string = 'No messages yet';
       if (chat.last_message) {
-        if (chat.last_message.message_text) {
-          lastMessageText = chat.last_message.message_text;
+        // Get attachment count - check both the field and query if needed
+        const attachmentCount = chat.last_message.attachment_count ?? 0;
+        const isFromCurrentUser = chat.last_message.sender_id === account.id;
+        const senderName = chat.last_message.sender_name || 'Unknown';
+        const messageText = chat.last_message.message_text || '';
+        const hasText = messageText.trim().length > 0;
+        
+        console.log('ChatLayout: Formatting last message for chat', chat.id, {
+          attachmentCount,
+          attachmentCountType: typeof attachmentCount,
+          isFromCurrentUser,
+          senderName,
+          hasText,
+          messageText: messageText.substring(0, 20) || 'empty',
+          messageType: chat.last_message.message_type,
+          lastMessageObject: chat.last_message
+        });
+        
+        // Priority 1: If message has attachments, show attachment count with icon
+        // Check both attachment_count and message_type as fallback
+        if (attachmentCount > 0 || (!hasText && chat.last_message.message_type === 'image')) {
+          const count = attachmentCount > 0 ? attachmentCount : 1; // Default to 1 if message_type is image but no count
+          if (isFromCurrentUser) {
+            // You sent it: "3 📷 Attachments"
+            lastMessageText = `${count} 📷 Attachment${count > 1 ? 's' : ''}`;
+          } else {
+            // Someone else sent it: "John 3 📷 Attachments"
+            lastMessageText = `${senderName} ${count} 📷 Attachment${count > 1 ? 's' : ''}`;
+          }
+          console.log('ChatLayout: ✅ Set attachment message:', lastMessageText);
+        } else if (hasText) {
+          // Priority 2: Regular text message
+          if (isFromCurrentUser) {
+            // You sent it: just show the message
+            lastMessageText = messageText;
+          } else {
+            // Someone else sent it: "John: Hello whats up?"
+            lastMessageText = `${senderName}: ${messageText}`;
+          }
+          console.log('ChatLayout: ✅ Set text message:', lastMessageText);
         } else if (chat.last_message.message_type === 'image') {
-          lastMessageText = '📷 Image';
+          // Priority 3: Legacy image message (no attachment_count)
+          if (isFromCurrentUser) {
+            lastMessageText = '📷 Image';
+          } else {
+            lastMessageText = `${senderName} 📷 Image`;
+          }
+          console.log('ChatLayout: ✅ Set legacy image message:', lastMessageText);
+        } else {
+          console.log('ChatLayout: ⚠️ No condition matched, keeping default "No messages yet"');
         }
+      } else {
+        console.log('ChatLayout: ⚠️ No last_message for chat', chat.id);
       }
+      
+      console.log('ChatLayout: Final lastMessageText for chat', chat.id, ':', lastMessageText);
       
       return {
         id: chat.id,
@@ -524,7 +601,9 @@ const ChatLayoutContent = () => {
                                     )}
                                   </div>
                                 </div>
-                                <p className={`text-xs truncate leading-relaxed ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{getDisplayMessage(conversation)}</p>
+                                <p className={`text-xs truncate leading-relaxed flex items-center gap-1 ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                                  <MessageTextWithIcon text={getDisplayMessage(conversation)} />
+                                </p>
                               </div>
                             </div>
                           </div>

@@ -11,10 +11,11 @@ import MessageBubble from "@/components/chat/MessageBubble";
 import MessageActionModal from "@/components/chat/MessageActionModal";
 import MediaUploadButton, { UploadedMedia } from "@/components/chat/MediaUploadButton";
 import MediaPreview from "@/components/chat/MediaPreview";
-import GalleryModal from "@/components/chat/GalleryModal";
 import MediaViewer from "@/components/chat/MediaViewer";
+import LoadingMessageCard from "@/components/chat/LoadingMessageCard";
 import type { SimpleMessage, MediaAttachment } from "@/lib/types";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function IndividualChatPage() {
   const router = useRouter();
@@ -45,6 +46,8 @@ export default function IndividualChatPage() {
   const [selectedMessageElement, setSelectedMessageElement] = useState<HTMLElement | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
   const [pendingMedia, setPendingMedia] = useState<UploadedMedia[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<Map<string, { status: 'uploading' | 'uploaded' | 'failed'; fileCount: number }>>(new Map());
+  const isSendingRef = useRef(false);
   const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
   const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
 
@@ -65,9 +68,7 @@ export default function IndividualChatPage() {
     };
   }, []);
   
-  // Media viewer states
-  const [showGallery, setShowGallery] = useState(false);
-  const [galleryMessage, setGalleryMessage] = useState<SimpleMessage | null>(null);
+  // Media viewer states (kept for potential future use)
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
   const [viewerMedia, setViewerMedia] = useState<MediaAttachment[]>([]); // Only media from clicked message
@@ -168,6 +169,7 @@ export default function IndividualChatPage() {
             chatId,
             (newMessage: SimpleMessage) => {
               console.log('Individual chat page: New message received:', newMessage);
+              console.log('Individual chat page: Message attachments:', newMessage.attachments);
               setMessages(prev => {
                 // Check if message already exists to avoid duplicates
                 const exists = prev.some(msg => msg.id === newMessage.id);
@@ -175,8 +177,19 @@ export default function IndividualChatPage() {
                   console.log('Individual chat page: Message already exists, skipping');
                   return prev;
                 }
+                
+                // Also filter out any optimistic messages with the same content/timestamp
+                // to prevent showing both optimistic and real message
+                const withoutOptimistic = prev.filter(msg => {
+                  if (msg.id.startsWith('optimistic_')) {
+                    // Remove optimistic message if real message is arriving
+                    return false;
+                  }
+                  return true;
+                });
+                
                 console.log('Individual chat page: Adding new message to list');
-                return [...prev, newMessage];
+                return [...withoutOptimistic, newMessage];
               });
             }
           );
@@ -206,21 +219,84 @@ export default function IndividualChatPage() {
     };
   }, [account?.id, chatId]);
 
+  // Track if we've scrolled to bottom on initial load
+  const hasScrolledToBottomRef = useRef(false);
+
   // Scroll to bottom when messages change or when loading completes
   useEffect(() => {
     if (messages.length > 0 && !loading) {
-      // Use requestAnimationFrame to ensure DOM is updated
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-          } else if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+      // Use multiple attempts to ensure scroll happens after DOM is fully rendered
+      const scrollToBottom = (force = false) => {
+        if (messagesContainerRef.current) {
+          const container = messagesContainerRef.current;
+          // Force scroll to absolute bottom
+          const maxScroll = container.scrollHeight - container.clientHeight;
+          container.scrollTop = maxScroll;
+          
+          // Verify we're at the bottom (with small tolerance for rounding)
+          const isAtBottom = Math.abs(container.scrollTop - maxScroll) < 1;
+          if (isAtBottom || force) {
+            hasScrolledToBottomRef.current = true;
           }
-        }, 50);
+        } else if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'instant', block: 'end', inline: 'nearest' });
+          hasScrolledToBottomRef.current = true;
+        }
+      };
+
+      // First attempt - immediate
+      scrollToBottom();
+      
+      // Second attempt - after a short delay (for initial load)
+      requestAnimationFrame(() => {
+        setTimeout(() => scrollToBottom(true), 50);
       });
+      
+      // Third attempt - after longer delay (for slow renders)
+      setTimeout(() => scrollToBottom(true), 200);
+      
+      // Fourth attempt - after even longer delay (for very slow renders/images)
+      setTimeout(() => scrollToBottom(true), 500);
     }
   }, [messages, loading]);
+
+  // Force scroll to bottom when conversation changes (initial load)
+  useEffect(() => {
+    if (conversation?.id && !loading) {
+      // Reset the flag when conversation changes
+      hasScrolledToBottomRef.current = false;
+      
+      // Wait for messages to load, then scroll
+      const scrollToBottom = () => {
+        if (messagesContainerRef.current) {
+          const container = messagesContainerRef.current;
+          // Calculate maximum scroll position
+          const maxScroll = container.scrollHeight - container.clientHeight;
+          // Set scroll to absolute maximum
+          container.scrollTop = maxScroll;
+          hasScrolledToBottomRef.current = true;
+        } else if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'instant', block: 'end', inline: 'nearest' });
+          hasScrolledToBottomRef.current = true;
+        }
+      };
+
+      // Multiple attempts with increasing delays to ensure it works
+      // Even if messages are already loaded
+      if (messages.length > 0) {
+        scrollToBottom();
+      }
+      
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          scrollToBottom();
+          // Additional attempts for slow image loading
+          setTimeout(scrollToBottom, 200);
+          setTimeout(scrollToBottom, 500);
+        }, 100);
+      });
+    }
+  }, [conversation?.id, loading, messages.length]);
 
   // Mark messages as read when chat is loaded
   useEffect(() => {
@@ -231,8 +307,202 @@ export default function IndividualChatPage() {
   }, [conversation, chatId, account?.id, chatService]);
 
 
+  // Helper function to upload file to Supabase Storage (iOS-compatible)
+  const uploadFileToStorage = async (file: File, chatId: string, index: number): Promise<{ file_url: string; thumbnail_url?: string; width?: number; height?: number }> => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      throw new Error('Supabase client not available');
+    }
+
+    // Generate unique filename with chatId prefix
+    const fileExt = file.name.split('.').pop();
+    const randomSuffix = Math.random().toString(36).substr(2, 9);
+    const timestamp = Date.now();
+    const baseFileName = `${timestamp}_${index}_${randomSuffix}.${fileExt}`;
+    const fileName = `${chatId}/${baseFileName}`;
+
+    console.log(`  📤 Uploading file ${index + 1}: ${file.name}`, {
+      fileName,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
+    // Check if we're on Capacitor (iOS/Android)
+    const isCapacitor = !!(window as any).Capacitor;
+    
+    if (isCapacitor) {
+      // Use Capacitor HTTP to bypass WebKit limitations
+      console.log(`  🔄 Using Capacitor HTTP for native upload...`);
+      
+      try {
+        // Get auth session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('No auth session available');
+        }
+
+        // Get Supabase URL and keys
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (!supabaseUrl || !supabaseAnonKey) {
+          throw new Error('Supabase configuration missing');
+        }
+
+        // Read file as ArrayBuffer and create Blob for upload
+        console.log(`  📖 Reading file as ArrayBuffer...`);
+        const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (reader.result instanceof ArrayBuffer) {
+              resolve(reader.result);
+            } else {
+              reject(new Error('FileReader did not return ArrayBuffer'));
+            }
+          };
+          reader.onerror = () => reject(new Error('FileReader failed'));
+          reader.readAsArrayBuffer(file);
+        });
+
+        console.log(`  ✅ File converted to ArrayBuffer (${Math.round(arrayBuffer.byteLength / 1024)}KB)`);
+
+        // Create Blob from ArrayBuffer
+        const blob = new Blob([arrayBuffer], { type: file.type });
+
+        // Use Capacitor HTTP plugin - Supabase Storage API expects binary data
+        const { CapacitorHttp } = await import('@capacitor/core');
+        
+        const uploadUrl = `${supabaseUrl}/storage/v1/object/chat-media/${fileName}`;
+        console.log(`  ⬆️ Uploading via Capacitor HTTP to: ${uploadUrl.substring(0, 80)}...`);
+
+        // Convert ArrayBuffer to base64 for Capacitor HTTP
+        // Supabase Storage API can accept base64, but we need to send it correctly
+        const base64 = btoa(
+          String.fromCharCode(...new Uint8Array(arrayBuffer))
+        );
+
+        // Use Capacitor HTTP with base64 data
+        // Note: Supabase Storage API expects the raw file bytes
+        const response = await CapacitorHttp.post({
+          url: uploadUrl,
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': supabaseAnonKey,
+            'Content-Type': file.type,
+            'x-upsert': 'false',
+            'cache-control': '3600'
+          },
+          data: base64,
+          responseType: 'text' // Expect text response, not JSON
+        });
+
+        if (response.status < 200 || response.status >= 300) {
+          console.error(`  ❌ Upload failed:`, {
+            status: response.status,
+            statusText: response.statusText,
+            data: response.data
+          });
+          throw new Error(`Upload failed: ${response.statusText || 'Unknown error'} (${response.status})`);
+        }
+
+        console.log(`  ✅ Capacitor HTTP upload completed successfully`);
+      } catch (capacitorError: any) {
+        console.error(`  ❌ Capacitor HTTP upload failed:`, capacitorError);
+        console.log(`  ⚠️ Falling back to Supabase JS client...`);
+        
+        // Fallback to Supabase JS client
+        const { data, error } = await supabase.storage
+          .from('chat-media')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) {
+          console.error(`  ❌ Fallback upload also failed:`, error);
+          throw new Error(`Failed to upload ${file.name}: ${error.message || 'Unknown error'}`);
+        }
+      }
+    } else {
+      // Use standard Supabase JS client for web
+      console.log(`  ⬆️ Uploading to Supabase Storage (web)...`);
+      const { data, error } = await supabase.storage
+        .from('chat-media')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error(`  ❌ Upload error:`, {
+          error,
+          errorName: error.name,
+          errorMessage: error.message,
+          fileName,
+          fileSize: file.size,
+          fileType: file.type
+        });
+        throw new Error(`Failed to upload ${file.name}: ${error.message || 'Unknown error'}`);
+      }
+    }
+
+    // Get public URL (after successful upload via any method)
+    const { data: { publicUrl } } = supabase.storage
+      .from('chat-media')
+      .getPublicUrl(fileName);
+
+    console.log(`  ✅ Upload completed:`, {
+      fileName,
+      publicUrl: publicUrl?.substring(0, 60) + '...'
+    });
+
+    // Get metadata (dimensions, thumbnail)
+    const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
+    let thumbnail_url: string | undefined;
+    let width: number | undefined;
+    let height: number | undefined;
+
+    try {
+      if (file_type === 'video') {
+        // Generate video thumbnail
+        const video = document.createElement('video');
+        video.src = URL.createObjectURL(file);
+        await new Promise((resolve) => {
+          video.onloadedmetadata = resolve;
+        });
+        width = video.videoWidth;
+        height = video.videoHeight;
+        // TODO: Generate actual thumbnail for videos
+      } else {
+        // Get image dimensions
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        width = img.naturalWidth;
+        height = img.naturalHeight;
+      }
+    } catch (metadataError) {
+      console.warn('Failed to extract metadata:', metadataError);
+    }
+
+    return {
+      file_url: publicUrl,
+      thumbnail_url,
+      width,
+      height
+    };
+  };
+
   // Handle sending messages
   const handleSendMessage = async () => {
+    // Prevent double submission
+    if (isSendingRef.current) {
+      console.log('⚠️ handleSendMessage: Already sending, ignoring duplicate call');
+      return;
+    }
+
     console.log('📤 handleSendMessage called', {
       hasText: !!messageText.trim(),
       pendingMediaCount: pendingMedia.length,
@@ -242,57 +512,61 @@ export default function IndividualChatPage() {
     });
 
     if ((messageText.trim() || pendingMedia.length > 0) && account?.id && conversation?.id && chatService) {
+      isSendingRef.current = true;
       try {
-        // Convert pendingMedia to MediaAttachment format
-        console.log('🔄 Converting pendingMedia to MediaAttachment format', {
-          pendingMediaCount: pendingMedia.length,
-          pendingMedia: pendingMedia.map(m => ({
-            file_url: m.file_url?.substring(0, 50) + '...',
-            file_type: m.file_type,
-            has_thumbnail: !!m.thumbnail_url,
-            file_size: m.file_size,
-            is_blob_url: m.file_url?.startsWith('blob:'),
-            is_http_url: m.file_url?.startsWith('http')
-          }))
-        });
-
-        // Check if any media still has blob URLs (upload not complete)
-        const hasBlobUrls = pendingMedia.some(m => m.file_url?.startsWith('blob:'));
-        if (hasBlobUrls) {
-          console.warn('⚠️ Some media still has blob URLs - upload may not be complete yet');
-          console.warn('Pending media:', pendingMedia.map(m => ({
-            file_url: m.file_url?.substring(0, 80),
-            is_blob: m.file_url?.startsWith('blob:')
-          })));
-          alert('Please wait for images to finish uploading before sending.');
-          return;
-        }
-
-        // Check if all media has valid HTTP URLs
-        const hasInvalidUrls = pendingMedia.some(m => !m.file_url || (!m.file_url.startsWith('http://') && !m.file_url.startsWith('https://')));
-        if (hasInvalidUrls) {
-          console.error('❌ Some media has invalid URLs');
-          alert('Failed to upload images. Please try selecting them again.');
-          return;
-        }
-
-        const attachments: MediaAttachment[] = pendingMedia.map((media, index) => {
-          // Generate temporary ID (will be replaced by database on insert)
-          const attachment: MediaAttachment = {
-            id: `temp_${Date.now()}_${index}`, // Temporary ID, database will generate real one
-            file_url: media.file_url,
-            file_type: media.file_type,
-            thumbnail_url: media.thumbnail_url
-          };
-          console.log(`  ✅ Converted attachment ${index + 1}:`, {
-            id: attachment.id,
-            file_url: attachment.file_url?.substring(0, 50) + '...',
-            file_type: attachment.file_type,
-            has_thumbnail: !!attachment.thumbnail_url,
-            is_valid_url: attachment.file_url?.startsWith('http')
+        // Step 1: Upload files if any are pending (NEW: Upload on send, not on selection)
+        let attachments: MediaAttachment[] = [];
+        
+        if (pendingMedia.length > 0) {
+          console.log('📤 Uploading files before sending message...', {
+            count: pendingMedia.length,
+            hasFiles: pendingMedia.every(m => !!m.file)
           });
-          return attachment;
-        });
+
+          // Check if we have File objects (new flow) or URLs (old flow for backward compatibility)
+          const hasFiles = pendingMedia.some(m => !!m.file);
+          
+          if (hasFiles) {
+            // New flow: Upload files now
+            const uploadPromises = pendingMedia.map(async (media, index) => {
+              if (!media.file) {
+                throw new Error(`File object missing for media ${index + 1}`);
+              }
+
+              const uploadResult = await uploadFileToStorage(media.file, conversation.id, index);
+              
+              return {
+                id: `temp_${Date.now()}_${index}`,
+                file_url: uploadResult.file_url,
+                file_type: media.file_type,
+                thumbnail_url: uploadResult.thumbnail_url || media.thumbnail_url,
+                width: uploadResult.width || media.width,
+                height: uploadResult.height || media.height
+              } as MediaAttachment;
+            });
+
+            attachments = await Promise.all(uploadPromises);
+            console.log('✅ All files uploaded:', {
+              count: attachments.length,
+              attachments: attachments.map(a => ({
+                id: a.id,
+                file_type: a.file_type,
+                file_url: a.file_url?.substring(0, 50) + '...'
+              }))
+            });
+          } else {
+            // Old flow: Files already uploaded (backward compatibility)
+            console.log('⚠️ Using old flow - files should already be uploaded');
+            attachments = pendingMedia
+              .filter(m => m.file_url && (m.file_url.startsWith('http://') || m.file_url.startsWith('https://')))
+              .map((media, index) => ({
+                id: `temp_${Date.now()}_${index}`,
+                file_url: media.file_url!,
+                file_type: media.file_type,
+                thumbnail_url: media.thumbnail_url
+              } as MediaAttachment));
+          }
+        }
 
         console.log('📎 Final attachments array:', {
           count: attachments.length,
@@ -302,6 +576,32 @@ export default function IndividualChatPage() {
             file_url_preview: a.file_url?.substring(0, 50) + '...'
           }))
         });
+
+        // Create optimistic message with loading state if we have attachments
+        let optimisticMessageId: string | null = null;
+        if (attachments.length > 0) {
+          optimisticMessageId = `optimistic_${Date.now()}`;
+          setOptimisticMessages(prev => {
+            const newMap = new Map(prev);
+            newMap.set(optimisticMessageId!, { status: 'uploading', fileCount: attachments.length });
+            return newMap;
+          });
+          
+          // Add optimistic message to UI immediately
+          const optimisticMsg: SimpleMessage = {
+            id: optimisticMessageId,
+            chat_id: conversation.id,
+            sender_id: account.id,
+            sender_name: account.name || 'You',
+            sender_profile_pic: account.profile_pic || null,
+            text: messageText.trim() || '',
+            created_at: new Date().toISOString(),
+            reply_to_message_id: replyToMessage?.id || null,
+            attachments: [], // Will be updated when upload completes
+            deleted_at: null
+          };
+          setMessages(prev => [...prev, optimisticMsg]);
+        }
 
         // Send message with attachments
         console.log('🚀 Calling chatService.sendMessage', {
@@ -325,6 +625,16 @@ export default function IndividualChatPage() {
 
         if (messageError || !newMessage) {
           console.error('❌ Failed to send message:', messageError);
+          
+          // Update optimistic message to failed state
+          if (optimisticMessageId) {
+            setOptimisticMessages(prev => {
+              const newMap = new Map(prev);
+              newMap.set(optimisticMessageId, { status: 'failed', fileCount: attachments.length });
+              return newMap;
+            });
+          }
+          isSendingRef.current = false; // Reset flag on error
           return;
         }
 
@@ -334,29 +644,54 @@ export default function IndividualChatPage() {
           attachmentCount: newMessage.attachments?.length || 0
         });
 
-        // Add message to local state immediately (optimistic update)
-        setMessages(prev => [...prev, newMessage]);
+        // Remove optimistic message
+        if (optimisticMessageId) {
+          setOptimisticMessages(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(optimisticMessageId!);
+            return newMap;
+          });
+          
+          // Remove optimistic message from list
+          setMessages(prev => prev.filter(msg => msg.id !== optimisticMessageId));
+        }
 
-        // Clear the form
+        // Clear the form immediately
         setMessageText("");
         setReplyToMessage(null);
         setPendingMedia([]);
 
+        // Wait a brief moment for the database to be fully updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         console.log('🔄 Refreshing messages to show attachments...');
         // Refresh messages to show the new message with attachments
+        // This replaces all messages, so we don't need to manually add newMessage
         const { messages: updatedMessages } = await chatService?.getChatMessages(conversation.id);
         if (updatedMessages) {
           console.log('✅ Messages refreshed, count:', updatedMessages.length);
-          setMessages(updatedMessages);
+          // Use functional update to ensure we're working with latest state
+          setMessages(prev => {
+            // Remove any optimistic messages that might still be there
+            const withoutOptimistic = prev.filter(msg => !msg.id.startsWith('optimistic_'));
+            // Merge with fresh messages from database, avoiding duplicates
+            const existingIds = new Set(withoutOptimistic.map(m => m.id));
+            const newMessages = updatedMessages.filter(m => !existingIds.has(m.id));
+            return [...withoutOptimistic, ...newMessages];
+          });
         } else {
           console.warn('⚠️ No messages returned from refresh');
         }
+        
+        // Reset sending flag after successful completion
+        isSendingRef.current = false;
       } catch (error) {
         console.error('❌ Error sending message:', error);
         console.error('Error details:', {
           message: error instanceof Error ? error.message : 'Unknown error',
           stack: error instanceof Error ? error.stack : undefined
         });
+        isSendingRef.current = false; // Reset flag on error
       }
     } else {
       console.warn('⚠️ handleSendMessage: Conditions not met', {
@@ -366,6 +701,7 @@ export default function IndividualChatPage() {
         hasConversation: !!conversation?.id,
         hasChatService: !!chatService
       });
+      isSendingRef.current = false;
     }
   };
 
@@ -404,15 +740,17 @@ export default function IndividualChatPage() {
       media: media.map((m, i) => ({
         index: i + 1,
         file_type: m.file_type,
+        has_file: !!m.file,
+        previewUrl: m.previewUrl?.substring(0, 60) + '...',
         file_url: m.file_url?.substring(0, 60) + '...',
         has_thumbnail: !!m.thumbnail_url,
         file_size: m.file_size,
-        is_blob_url: m.file_url?.startsWith('blob:'),
+        is_blob_url: m.previewUrl?.startsWith('blob:') || m.file_url?.startsWith('blob:'),
         is_http_url: m.file_url?.startsWith('http')
       }))
     });
     setPendingMedia(media);
-    console.log('✅ pendingMedia state updated');
+    console.log('✅ pendingMedia state updated - files ready for upload on send');
   };
 
   const handleRemoveMedia = (index: number) => {
@@ -420,20 +758,12 @@ export default function IndividualChatPage() {
   };
 
   const handleAttachmentClick = (message: SimpleMessage) => {
-    setGalleryMessage(message);
-    // Set viewerMedia to only this message's attachments
+    // Navigate to chat photos page instead of opening modal
     if (message.attachments && message.attachments.length > 0) {
-      setViewerMedia(message.attachments);
+      router.push(`/chat/photos?messageId=${message.id}`);
     }
-    setShowGallery(true);
   };
 
-  const handleGalleryImageClick = (index: number) => {
-    // Use the index directly since viewerMedia only contains this message's attachments
-    setViewerStartIndex(index);
-    setShowMediaViewer(true);
-    setShowGallery(false);
-  };
 
   const cancelReply = () => {
     setReplyToMessage(null);
@@ -752,7 +1082,7 @@ export default function IndividualChatPage() {
                     </div>
                   ) : (
                     <img
-                      src={media.file_url}
+                      src={media.previewUrl || media.file_url}
                       alt="Preview"
                       className="w-full h-full object-cover"
                     />
@@ -820,9 +1150,8 @@ export default function IndividualChatPage() {
             onTouchStart={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (messageText.trim() || pendingMedia.length > 0) {
-                handleSendMessage();
-              }
+              // Don't call handleSendMessage here - let onClick handle it
+              // This prevents double submission on iOS
             }}
             disabled={!messageText.trim() && pendingMedia.length === 0}
             className={`flex-shrink-0 flex items-center justify-center transition-all ${
@@ -888,6 +1217,27 @@ export default function IndividualChatPage() {
         }}
       >
         {messages.map((message, index) => {
+          // Check if this is an optimistic message with loading state
+          const optimisticState = optimisticMessages.get(message.id);
+          const isOptimistic = message.id.startsWith('optimistic_');
+          
+          // Show loading card for optimistic messages
+          if (isOptimistic && optimisticState) {
+            const isOwnMessage = message.sender_id === account?.id;
+            return (
+              <div 
+                key={message.id}
+                className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+              >
+                <LoadingMessageCard 
+                  fileCount={optimisticState.fileCount}
+                  status={optimisticState.status}
+                />
+              </div>
+            );
+          }
+          
+          // Regular message
           const isMe = message.sender_id === account?.id;
           return (
             <div key={message.id} style={{ marginBottom: index < messages.length - 1 ? '12px' : '12px' }}>
@@ -922,14 +1272,6 @@ export default function IndividualChatPage() {
         onDelete={handleDeleteFromModal}
         onReact={handleReact}
         isMe={selectedMessage?.sender_id === account?.id}
-      />
-
-      {/* Gallery Modal */}
-      <GalleryModal 
-        isOpen={showGallery}
-        message={galleryMessage}
-        onClose={() => setShowGallery(false)}
-        onImageClick={handleGalleryImageClick}
       />
 
       {/* Media Viewer */}

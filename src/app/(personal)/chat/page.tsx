@@ -18,7 +18,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import NewMessageModal from "@/components/chat/NewMessageModal";
 import GroupSetupModal from "@/components/chat/GroupSetupModal";
 import GroupChatFlowContainer from "@/components/chat/GroupChatFlowContainer";
-import { Plus } from "lucide-react";
+import { Plus, Image as ImageIcon } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ProfileModal from "@/components/profile/ProfileModal";
 import { SearchIcon } from "@/components/icons";
@@ -102,13 +102,42 @@ function MessagesPageContent() {
         : (chat.photo || null); // Use group photo for group chats
       
       // Format last message
-      let lastMessageText: string | undefined = undefined;
+      let lastMessageText: string = 'No messages yet';
       if (chat.last_message) {
-        if (chat.last_message.message_text) {
-          lastMessageText = chat.last_message.message_text;
+        const attachmentCount = chat.last_message.attachment_count ?? 0;
+        const isFromCurrentUser = chat.last_message.sender_id === account.id;
+        const senderName = chat.last_message.sender_name || 'Unknown';
+        const messageText = chat.last_message.message_text || '';
+        const hasText = messageText.trim().length > 0;
+        
+        // Priority 1: If message has attachments, show attachment count with icon
+        if (attachmentCount > 0 || (!hasText && chat.last_message.message_type === 'image')) {
+          const count = attachmentCount > 0 ? attachmentCount : 1; // Default to 1 if message_type is image but no count
+          if (isFromCurrentUser) {
+            // You sent it: "3 📷 Attachments"
+            lastMessageText = `${count} 📷 Attachment${count > 1 ? 's' : ''}`;
+          } else {
+            // Someone else sent it: "John 3 📷 Attachments"
+            lastMessageText = `${senderName} ${count} 📷 Attachment${count > 1 ? 's' : ''}`;
+          }
+        } else if (hasText) {
+          // Priority 2: Regular text message
+          if (isFromCurrentUser) {
+            // You sent it: just show the message
+            lastMessageText = messageText;
+          } else {
+            // Someone else sent it: "John: Hello whats up?"
+            lastMessageText = `${senderName}: ${messageText}`;
+          }
         } else if (chat.last_message.message_type === 'image') {
-          lastMessageText = '📷 Image';
+          // Priority 3: Legacy image message (no attachment_count)
+          if (isFromCurrentUser) {
+            lastMessageText = '📷 Image';
+          } else {
+            lastMessageText = `${senderName} 📷 Image`;
+          }
         }
+        // If none of the above, lastMessageText remains 'No messages yet'
       }
       
       return {
@@ -363,6 +392,21 @@ function MessagesPageContent() {
     }
     
     return "No messages yet";
+  };
+
+  // Helper component to render message with icon instead of emoji
+  const MessageTextWithIcon = ({ text }: { text: string }) => {
+    if (text.includes('📷')) {
+      const parts = text.split('📷');
+      return (
+        <>
+          {parts[0]}
+          <ImageIcon size={16} strokeWidth={2.5} className="inline-block text-gray-500 align-middle" />
+          {parts[1]}
+        </>
+      );
+    }
+    return <>{text}</>;
   };
 
   const getLastMessageTime = (conversation: Conversation) => {
@@ -698,8 +742,8 @@ function MessagesPageContent() {
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-500 truncate mt-1">
-                              {getLastMessage(conversation) || 'No messages yet'}
+                            <p className="text-sm text-gray-500 truncate mt-1 flex items-center gap-1">
+                              <MessageTextWithIcon text={getLastMessage(conversation) || 'No messages yet'} />
                             </p>
                           </div>
                         </div>

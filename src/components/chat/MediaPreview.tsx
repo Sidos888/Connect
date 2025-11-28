@@ -69,7 +69,7 @@ export default function MediaPreview({ pendingMedia, onRemove }: MediaPreviewPro
               ) : (
                 <div className="w-full h-full relative">
                   <img
-                    src={media.file_url}
+                    src={media.previewUrl || media.file_url}
                     alt="Preview"
                     className="w-full h-full object-cover"
                     style={{

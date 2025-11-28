@@ -1,6 +1,7 @@
 "use client";
 
 import { Image as ImageIcon } from 'lucide-react';
+import { useState } from 'react';
 import type { MediaAttachment } from '@/lib/types';
 
 interface MessagePhotoCollageProps {
@@ -12,9 +13,16 @@ export default function MessagePhotoCollage({
   attachments, 
   onPhotoClick
 }: MessagePhotoCollageProps) {
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+
   if (attachments.length === 0) {
     return null;
   }
+
+  const handleImageError = (url: string) => {
+    console.error('MessagePhotoCollage: Failed to load image:', url);
+    setImageErrors(prev => new Set(prev).add(url));
+  };
 
   const PhotoCountBadge = ({ count, onClick }: { count: number; onClick?: () => void }) => {
     const badgeContent = (
@@ -121,11 +129,21 @@ export default function MessagePhotoCollage({
             )}
           </div>
         ) : (
-          <img 
-            src={firstAttachment.file_url} 
-            alt="Attachment" 
-            className="w-full h-full object-cover pointer-events-none"
-          />
+          <div className="w-full h-full relative bg-gray-100">
+            {imageErrors.has(firstAttachment.file_url) ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <ImageIcon className="w-12 h-12 text-gray-400" />
+              </div>
+            ) : (
+              <img 
+                src={firstAttachment.file_url} 
+                alt="Attachment" 
+                className="w-full h-full object-cover pointer-events-none"
+                onError={() => handleImageError(firstAttachment.file_url)}
+                onLoad={() => console.log('MessagePhotoCollage: Image loaded successfully:', firstAttachment.file_url)}
+              />
+            )}
+          </div>
         )}
         {attachments.length > 0 && onPhotoClick && <PhotoCountBadge count={attachments.length} onClick={onPhotoClick} />}
       </>
@@ -201,11 +219,21 @@ export default function MessagePhotoCollage({
                 )}
               </div>
             ) : (
-              <img 
-                src={attachment.file_url} 
-                alt={`Attachment ${index + 1}`} 
-                className="w-full h-full object-cover"
-              />
+              <div className="w-full h-full relative bg-gray-100">
+                {imageErrors.has(attachment.file_url) ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                  </div>
+                ) : (
+                  <img 
+                    src={attachment.file_url} 
+                    alt={`Attachment ${index + 1}`} 
+                    className="w-full h-full object-cover"
+                    onError={() => handleImageError(attachment.file_url)}
+                    onLoad={() => console.log('MessagePhotoCollage: Grid image loaded:', attachment.file_url)}
+                  />
+                )}
+              </div>
             )}
           </div>
         ))}
