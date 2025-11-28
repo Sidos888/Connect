@@ -1115,6 +1115,7 @@ export default function IndividualChatPage() {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             placeholder=""
+            autoCapitalize="sentences"
             className="focus:outline-none resize-none text-sm text-black caret-black"
             style={{
               margin: 0,

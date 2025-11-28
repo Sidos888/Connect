@@ -156,9 +156,9 @@ export default function ListingPhotosPage() {
         />
 
         <PageContent>
-          <div className="px-4 pb-8" style={{ paddingTop: 'var(--saved-content-padding-top, 180px)', boxSizing: 'border-box' }}>
+          <div className="px-4 pb-8" style={{ paddingTop: 'var(--saved-content-padding-top, 180px)' }}>
             {/* Photo Grid - 4 columns */}
-            <div className="grid grid-cols-4 gap-0.5" style={{ boxSizing: 'border-box', width: '100%' }}>
+            <div className="grid grid-cols-4 gap-0.5">
               {photos.map((photo, index) => (
                 <div
                   key={index}

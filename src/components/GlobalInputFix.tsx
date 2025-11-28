@@ -20,9 +20,17 @@ export default function GlobalInputFix() {
           return;
         }
         
-        // Set autocapitalize to none to prevent iOS from auto-capitalizing
-        // This prevents the all-caps issue where iOS capitalizes every word
-        input.setAttribute('autocapitalize', 'none');
+        // Don't force autocapitalize - let iOS use default behavior (sentences for textareas, none for inputs)
+        // Only set autocapitalize if it's not already set by the component
+        if (!input.hasAttribute('autocapitalize')) {
+          // For textareas, use 'sentences' (normal iOS behavior)
+          // For inputs, use 'off' (prevents unwanted capitalization)
+          if (input.tagName === 'TEXTAREA') {
+            input.setAttribute('autocapitalize', 'sentences');
+          } else {
+            input.setAttribute('autocapitalize', 'off');
+          }
+        }
         
         // Set other attributes
         input.setAttribute('autocorrect', 'off');
@@ -126,8 +134,14 @@ export default function GlobalInputFix() {
       
       // Also handle focus to ensure attributes are set
       const handleFocus = () => {
-        // Set autocapitalize to none to prevent iOS from auto-capitalizing
-        input.setAttribute('autocapitalize', 'none');
+        // Don't override autocapitalize if already set by component
+        if (!input.hasAttribute('autocapitalize')) {
+          if (input.tagName === 'TEXTAREA') {
+            input.setAttribute('autocapitalize', 'sentences');
+          } else {
+            input.setAttribute('autocapitalize', 'off');
+          }
+        }
         input.setAttribute('autocorrect', 'off');
         input.setAttribute('spellcheck', 'false');
         input.style.textTransform = 'none';

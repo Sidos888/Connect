@@ -36,6 +36,7 @@ function AppShellContent({ children }: AppShellProps) {
 
   // Calculate all route flags BEFORE any conditional returns
   const isChatPage = pathname.startsWith('/chat');
+  const isChatPhotosPage = pathname.startsWith('/chat/photos');
   const isIndividualChatPage = pathname.startsWith('/chat/individual');
   const isDmDetailsPage = pathname.startsWith('/chat/dm-details');
   const isGroupDetailsPage = pathname.startsWith('/chat/group-details');
@@ -153,7 +154,8 @@ function AppShellContent({ children }: AppShellProps) {
   }
 
   // All other routes require authentication
-  if (isChatPage) {
+  // Exclude chat photos page from chat-specific styling (it uses MobilePage with fixed positioning)
+  if (isChatPage && !isChatPhotosPage) {
     return (
       <div className={`h-screen flex flex-col ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage || isGroupMembersPage || isGroupSettingsPage) ? 'bg-transparent' : 'bg-white'}`}>
         {/* Desktop: Top Navigation Bar - Hidden on individual chat pages */}
