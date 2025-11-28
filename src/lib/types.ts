@@ -92,3 +92,39 @@ export type Conversation = {
   messages: Message[];
 };
 
+// Chat service types
+export type SimpleMessage = {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_profile_pic?: string;
+  text: string;
+  created_at: string;
+  reply_to_message_id?: string | null;
+  attachments?: MediaAttachment[];
+  deleted_at?: string | null;
+};
+
+export type MediaAttachment = {
+  id: string;
+  file_url: string;
+  file_type: 'image' | 'video';
+  thumbnail_url?: string;
+};
+
+export type SimpleChat = {
+  id: string;
+  name?: string;
+  type: 'direct' | 'group';
+  photo?: string;
+  last_message_at?: string | null;
+  participants: Array<{
+    id: string;
+    name: string;
+    profile_pic?: string | null;
+  }>;
+  last_message?: SimpleMessage | null;
+  unread_count?: number;
+};
+

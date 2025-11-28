@@ -458,6 +458,19 @@ export class ChatService {
       }
 
       // Save attachments if provided
+      console.log('📎 ChatService.sendMessage: Processing attachments', {
+        hasAttachments: !!(attachments && attachments.length > 0),
+        attachmentCount: attachments?.length || 0,
+        messageId: message.id,
+        attachments: attachments?.map((att, i) => ({
+          index: i + 1,
+          id: att.id,
+          file_url: att.file_url?.substring(0, 60) + '...',
+          file_type: att.file_type,
+          has_thumbnail: !!att.thumbnail_url
+        }))
+      });
+
       if (attachments && attachments.length > 0 && message.id) {
         const attachmentInserts = attachments.map(att => ({
           message_id: message.id,
@@ -466,14 +479,40 @@ export class ChatService {
           thumbnail_url: att.thumbnail_url || null
         }));
         
+        console.log('💾 ChatService.sendMessage: Inserting attachments into database', {
+          count: attachmentInserts.length,
+          inserts: attachmentInserts.map((ins, i) => ({
+            index: i + 1,
+            message_id: ins.message_id,
+            file_url: ins.file_url?.substring(0, 60) + '...',
+            file_type: ins.file_type,
+            has_thumbnail: !!ins.thumbnail_url
+          }))
+        });
+
         const { error: attachError } = await this.supabase
           .from('attachments')
           .insert(attachmentInserts);
         
         if (attachError) {
-          console.error('Error saving attachments:', attachError);
+          console.error('❌ ChatService.sendMessage: Error saving attachments:', attachError);
+          console.error('Error details:', {
+            message: attachError.message,
+            code: attachError.code,
+            details: attachError.details,
+            hint: attachError.hint
+          });
           // Don't fail the message send, just log the error
+        } else {
+          console.log('✅ ChatService.sendMessage: Attachments saved successfully', {
+            count: attachmentInserts.length
+          });
         }
+      } else {
+        console.log('ℹ️ ChatService.sendMessage: No attachments to save', {
+          hasAttachments: !!(attachments && attachments.length > 0),
+          hasMessageId: !!message.id
+        });
       }
 
       // Update chat's last_message_at with current timestamp (use message.created_at or currentTimestamp)

@@ -233,24 +233,106 @@ export default function IndividualChatPage() {
 
   // Handle sending messages
   const handleSendMessage = async () => {
+    console.log('📤 handleSendMessage called', {
+      hasText: !!messageText.trim(),
+      pendingMediaCount: pendingMedia.length,
+      accountId: account?.id,
+      conversationId: conversation?.id,
+      hasChatService: !!chatService
+    });
+
     if ((messageText.trim() || pendingMedia.length > 0) && account?.id && conversation?.id && chatService) {
       try {
         // Convert pendingMedia to MediaAttachment format
-        // Note: UploadedMedia needs to be uploaded first, then we get URLs
-        // For now, we'll send the message without attachments and handle upload separately
-        const attachments: MediaAttachment[] = [];
+        console.log('🔄 Converting pendingMedia to MediaAttachment format', {
+          pendingMediaCount: pendingMedia.length,
+          pendingMedia: pendingMedia.map(m => ({
+            file_url: m.file_url?.substring(0, 50) + '...',
+            file_type: m.file_type,
+            has_thumbnail: !!m.thumbnail_url,
+            file_size: m.file_size,
+            is_blob_url: m.file_url?.startsWith('blob:'),
+            is_http_url: m.file_url?.startsWith('http')
+          }))
+        });
+
+        // Check if any media still has blob URLs (upload not complete)
+        const hasBlobUrls = pendingMedia.some(m => m.file_url?.startsWith('blob:'));
+        if (hasBlobUrls) {
+          console.warn('⚠️ Some media still has blob URLs - upload may not be complete yet');
+          console.warn('Pending media:', pendingMedia.map(m => ({
+            file_url: m.file_url?.substring(0, 80),
+            is_blob: m.file_url?.startsWith('blob:')
+          })));
+          alert('Please wait for images to finish uploading before sending.');
+          return;
+        }
+
+        // Check if all media has valid HTTP URLs
+        const hasInvalidUrls = pendingMedia.some(m => !m.file_url || (!m.file_url.startsWith('http://') && !m.file_url.startsWith('https://')));
+        if (hasInvalidUrls) {
+          console.error('❌ Some media has invalid URLs');
+          alert('Failed to upload images. Please try selecting them again.');
+          return;
+        }
+
+        const attachments: MediaAttachment[] = pendingMedia.map((media, index) => {
+          // Generate temporary ID (will be replaced by database on insert)
+          const attachment: MediaAttachment = {
+            id: `temp_${Date.now()}_${index}`, // Temporary ID, database will generate real one
+            file_url: media.file_url,
+            file_type: media.file_type,
+            thumbnail_url: media.thumbnail_url
+          };
+          console.log(`  ✅ Converted attachment ${index + 1}:`, {
+            id: attachment.id,
+            file_url: attachment.file_url?.substring(0, 50) + '...',
+            file_type: attachment.file_type,
+            has_thumbnail: !!attachment.thumbnail_url,
+            is_valid_url: attachment.file_url?.startsWith('http')
+          });
+          return attachment;
+        });
+
+        console.log('📎 Final attachments array:', {
+          count: attachments.length,
+          attachments: attachments.map(a => ({
+            id: a.id,
+            file_type: a.file_type,
+            file_url_preview: a.file_url?.substring(0, 50) + '...'
+          }))
+        });
 
         // Send message with attachments
+        console.log('🚀 Calling chatService.sendMessage', {
+          chatId: conversation.id,
+          content: messageText.trim() || '(empty text)',
+          attachmentsCount: attachments.length
+        });
+
         const { message: newMessage, error: messageError } = await chatService.sendMessage(
           conversation.id,
           messageText.trim() || '',
           attachments.length > 0 ? attachments : undefined
         );
 
+        console.log('📬 sendMessage response:', {
+          hasMessage: !!newMessage,
+          messageId: newMessage?.id,
+          hasError: !!messageError,
+          error: messageError?.message
+        });
+
         if (messageError || !newMessage) {
-          console.error('Failed to send message:', messageError);
+          console.error('❌ Failed to send message:', messageError);
           return;
         }
+
+        console.log('✅ Message sent successfully:', {
+          messageId: newMessage.id,
+          hasAttachments: !!(newMessage.attachments && newMessage.attachments.length > 0),
+          attachmentCount: newMessage.attachments?.length || 0
+        });
 
         // Add message to local state immediately (optimistic update)
         setMessages(prev => [...prev, newMessage]);
@@ -260,14 +342,30 @@ export default function IndividualChatPage() {
         setReplyToMessage(null);
         setPendingMedia([]);
 
+        console.log('🔄 Refreshing messages to show attachments...');
         // Refresh messages to show the new message with attachments
         const { messages: updatedMessages } = await chatService?.getChatMessages(conversation.id);
         if (updatedMessages) {
+          console.log('✅ Messages refreshed, count:', updatedMessages.length);
           setMessages(updatedMessages);
+        } else {
+          console.warn('⚠️ No messages returned from refresh');
         }
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('❌ Error sending message:', error);
+        console.error('Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
       }
+    } else {
+      console.warn('⚠️ handleSendMessage: Conditions not met', {
+        hasText: !!messageText.trim(),
+        pendingMediaCount: pendingMedia.length,
+        hasAccount: !!account?.id,
+        hasConversation: !!conversation?.id,
+        hasChatService: !!chatService
+      });
     }
   };
 
@@ -301,7 +399,20 @@ export default function IndividualChatPage() {
   };
 
   const handleMediaSelected = (media: UploadedMedia[]) => {
+    console.log('📥 handleMediaSelected called in IndividualChatPage:', {
+      count: media.length,
+      media: media.map((m, i) => ({
+        index: i + 1,
+        file_type: m.file_type,
+        file_url: m.file_url?.substring(0, 60) + '...',
+        has_thumbnail: !!m.thumbnail_url,
+        file_size: m.file_size,
+        is_blob_url: m.file_url?.startsWith('blob:'),
+        is_http_url: m.file_url?.startsWith('http')
+      }))
+    });
     setPendingMedia(media);
+    console.log('✅ pendingMedia state updated');
   };
 
   const handleRemoveMedia = (index: number) => {
@@ -662,7 +773,8 @@ export default function IndividualChatPage() {
         <div className="flex items-center">
           {/* + Button - Same size as send button, equal spacing from left edge */}
           <div style={{ width: '32px', height: '32px', flexShrink: 0 }}>
-            <MediaUploadButton 
+            <MediaUploadButton
+              chatId={conversation?.id} 
               onMediaSelected={handleMediaSelected}
               disabled={false}
             />
