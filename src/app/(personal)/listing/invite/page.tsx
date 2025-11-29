@@ -68,8 +68,10 @@ export default function InvitePage() {
           return;
         }
 
-        // Fetch existing pending invites for this listing
+        // Fetch existing pending invites and participants for this listing
         const supabase = getSupabaseClient();
+        
+        // Get pending invites
         const { data: existingInvites, error: invitesError } = await supabase
           .from('listing_invites')
           .select('invitee_id')
@@ -78,17 +80,33 @@ export default function InvitePage() {
 
         if (invitesError) {
           console.error('Error fetching existing invites:', invitesError);
-          // Continue anyway, just won't filter
         }
 
-        // Create a set of user IDs who already have pending invites
+        // Get existing participants (attending users)
+        const { data: existingParticipants, error: participantsError } = await supabase
+          .from('listing_participants')
+          .select('user_id')
+          .eq('listing_id', listingId)
+          .eq('status', 'upcoming'); // Only filter active participants
+
+        if (participantsError) {
+          console.error('Error fetching existing participants:', participantsError);
+        }
+
+        // Create sets of user IDs to exclude
         const pendingInviteeIds = new Set(
           (existingInvites || []).map((inv: any) => inv.invitee_id)
         );
+        const participantIds = new Set(
+          (existingParticipants || []).map((p: any) => p.user_id)
+        );
 
-        // Filter out contacts who already have pending invites
+        // Combine both sets for filtering
+        const excludedIds = new Set([...pendingInviteeIds, ...participantIds]);
+
+        // Filter out contacts who already have pending invites OR are already participants
         const friendsList: Contact[] = contacts
-          .filter(contact => !pendingInviteeIds.has(contact.id))
+          .filter(contact => !excludedIds.has(contact.id))
           .map(contact => ({
             id: contact.id,
             name: contact.name,
