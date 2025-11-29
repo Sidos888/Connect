@@ -35,6 +35,7 @@ export default function IndividualChatPage() {
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -259,6 +260,29 @@ export default function IndividualChatPage() {
       setTimeout(() => scrollToBottom(true), 500);
     }
   }, [messages, loading]);
+
+  // Ensure textarea autocapitalize is removed on mount and when conversation changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      // Remove autocapitalize immediately
+      textarea.removeAttribute('autocapitalize');
+      // Try to prevent React from re-applying it
+      try {
+        Object.defineProperty(textarea, 'autocapitalize', {
+          value: undefined,
+          writable: false,
+          configurable: true
+        });
+      } catch (err) {
+        // Ignore if already defined
+      }
+      console.log('💬 Chat textarea: Removed autocapitalize on mount/conversation change', {
+        autocapitalize: textarea.getAttribute('autocapitalize'),
+        hasAttribute: textarea.hasAttribute('autocapitalize')
+      });
+    }
+  }, [conversation?.id]);
 
   // Force scroll to bottom when conversation changes (initial load)
   useEffect(() => {
@@ -513,22 +537,66 @@ export default function IndividualChatPage() {
 
     if ((messageText.trim() || pendingMedia.length > 0) && account?.id && conversation?.id && chatService) {
       isSendingRef.current = true;
+      
+      // Store pending media BEFORE clearing (we need it for uploads)
+      const mediaToUpload = [...pendingMedia];
+      const pendingMediaCount = mediaToUpload.length;
+      const hasPendingMedia = pendingMediaCount > 0;
+      
+      // Step 1: Create optimistic message IMMEDIATELY (before uploads start)
+      // This makes the loading card appear instantly and clears the chat box
+      let optimisticMessageId: string | null = null;
+      if (hasPendingMedia) {
+        optimisticMessageId = `optimistic_${Date.now()}`;
+        setOptimisticMessages(prev => {
+          const newMap = new Map(prev);
+          newMap.set(optimisticMessageId!, { status: 'uploading', fileCount: pendingMediaCount });
+          return newMap;
+        });
+        
+        // Add optimistic message to UI immediately
+        const optimisticMsg: SimpleMessage = {
+          id: optimisticMessageId,
+          chat_id: conversation.id,
+          sender_id: account.id,
+          sender_name: account.name || 'You',
+          sender_profile_pic: account.profile_pic || null,
+          text: messageText.trim() || '',
+          created_at: new Date().toISOString(),
+          reply_to_message_id: replyToMessage?.id || null,
+          attachments: [], // Will be updated when upload completes
+          deleted_at: null
+        };
+        setMessages(prev => [...prev, optimisticMsg]);
+        
+        // Clear pending media immediately so it disappears from chat box
+        setPendingMedia([]);
+        
+        // Scroll to bottom to show the loading card
+        setTimeout(() => {
+          if (messagesContainerRef.current) {
+            const container = messagesContainerRef.current;
+            container.scrollTop = container.scrollHeight;
+          }
+        }, 50);
+      }
+      
       try {
-        // Step 1: Upload files if any are pending (NEW: Upload on send, not on selection)
+        // Step 2: Upload files if any are pending (after showing loading card)
         let attachments: MediaAttachment[] = [];
         
-        if (pendingMedia.length > 0) {
-          console.log('📤 Uploading files before sending message...', {
-            count: pendingMedia.length,
-            hasFiles: pendingMedia.every(m => !!m.file)
+        if (hasPendingMedia) {
+          console.log('📤 Uploading files after showing loading card...', {
+            count: pendingMediaCount,
+            hasFiles: mediaToUpload.some(m => !!m.file)
           });
 
           // Check if we have File objects (new flow) or URLs (old flow for backward compatibility)
-          const hasFiles = pendingMedia.some(m => !!m.file);
+          const hasFiles = mediaToUpload.some(m => !!m.file);
           
           if (hasFiles) {
-            // New flow: Upload files now
-            const uploadPromises = pendingMedia.map(async (media, index) => {
+            // New flow: Upload files now (using stored mediaToUpload array)
+            const uploadPromises = mediaToUpload.map(async (media, index) => {
               if (!media.file) {
                 throw new Error(`File object missing for media ${index + 1}`);
               }
@@ -557,7 +625,7 @@ export default function IndividualChatPage() {
           } else {
             // Old flow: Files already uploaded (backward compatibility)
             console.log('⚠️ Using old flow - files should already be uploaded');
-            attachments = pendingMedia
+            attachments = mediaToUpload
               .filter(m => m.file_url && (m.file_url.startsWith('http://') || m.file_url.startsWith('https://')))
               .map((media, index) => ({
                 id: `temp_${Date.now()}_${index}`,
@@ -576,32 +644,6 @@ export default function IndividualChatPage() {
             file_url_preview: a.file_url?.substring(0, 50) + '...'
           }))
         });
-
-        // Create optimistic message with loading state if we have attachments
-        let optimisticMessageId: string | null = null;
-        if (attachments.length > 0) {
-          optimisticMessageId = `optimistic_${Date.now()}`;
-          setOptimisticMessages(prev => {
-            const newMap = new Map(prev);
-            newMap.set(optimisticMessageId!, { status: 'uploading', fileCount: attachments.length });
-            return newMap;
-          });
-          
-          // Add optimistic message to UI immediately
-          const optimisticMsg: SimpleMessage = {
-            id: optimisticMessageId,
-            chat_id: conversation.id,
-            sender_id: account.id,
-            sender_name: account.name || 'You',
-            sender_profile_pic: account.profile_pic || null,
-            text: messageText.trim() || '',
-            created_at: new Date().toISOString(),
-            reply_to_message_id: replyToMessage?.id || null,
-            attachments: [], // Will be updated when upload completes
-            deleted_at: null
-          };
-          setMessages(prev => [...prev, optimisticMsg]);
-        }
 
         // Send message with attachments
         console.log('🚀 Calling chatService.sendMessage', {
@@ -656,10 +698,9 @@ export default function IndividualChatPage() {
           setMessages(prev => prev.filter(msg => msg.id !== optimisticMessageId));
         }
 
-        // Clear the form immediately
+        // Clear the form immediately (pendingMedia already cleared above)
         setMessageText("");
         setReplyToMessage(null);
-        setPendingMedia([]);
 
         // Wait a brief moment for the database to be fully updated
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1112,10 +1153,52 @@ export default function IndividualChatPage() {
           
           {/* Text Input */}
           <textarea
+            ref={textareaRef}
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             placeholder=""
-            autoCapitalize="sentences"
+            autoCorrect="off"
+            spellCheck={false}
+            onFocus={(e) => {
+              const textarea = e.currentTarget;
+              console.log('💬 Chat textarea focused (BEFORE)', {
+                autocapitalize: textarea.getAttribute('autocapitalize'),
+                autoCapitalize: (textarea as any).autocapitalize,
+                hasAttribute: textarea.hasAttribute('autocapitalize'),
+                tagName: textarea.tagName
+              });
+              // Force remove autocapitalize using direct DOM manipulation
+              // Use Object.defineProperty to prevent React from re-applying it
+              try {
+                textarea.removeAttribute('autocapitalize');
+                // Override the property descriptor to prevent React from setting it
+                Object.defineProperty(textarea, 'autocapitalize', {
+                  value: undefined,
+                  writable: false,
+                  configurable: true
+                });
+                // Also try setting it to empty string (some iOS versions prefer this)
+                setTimeout(() => {
+                  if (textareaRef.current) {
+                    textareaRef.current.removeAttribute('autocapitalize');
+                    console.log('💬 Chat textarea: Re-checked after timeout');
+                  }
+                }, 0);
+                console.log('💬 Chat textarea: Removed autocapitalize and locked property');
+              } catch (err) {
+                console.warn('💬 Chat textarea: Error removing autocapitalize', err);
+              }
+              console.log('💬 Chat textarea focused (AFTER)', {
+                autocapitalize: textarea.getAttribute('autocapitalize'),
+                autoCapitalize: (textarea as any).autocapitalize,
+                hasAttribute: textarea.hasAttribute('autocapitalize'),
+                tagName: textarea.tagName
+              });
+              
+              // Note: The iOS caps lock inversion is handled by GlobalInputFix
+              // The keyboard may appear in caps lock mode, but GlobalInputFix will
+              // correct the characters as you type
+            }}
             className="focus:outline-none resize-none text-sm text-black caret-black"
             style={{
               margin: 0,

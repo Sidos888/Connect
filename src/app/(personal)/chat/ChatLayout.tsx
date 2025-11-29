@@ -213,7 +213,7 @@ const ChatLayoutContent = () => {
         } else if (chat.last_message.message_type === 'image') {
           // Priority 3: Legacy image message (no attachment_count)
           if (isFromCurrentUser) {
-            lastMessageText = '📷 Image';
+          lastMessageText = '📷 Image';
           } else {
             lastMessageText = `${senderName} 📷 Image`;
           }

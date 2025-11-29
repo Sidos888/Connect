@@ -931,11 +931,33 @@ const PersonalChatPanel = ({ conversation }: PersonalChatPanelProps) => {
           <div className="flex-1 relative flex items-center">
             <textarea
               value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-              }}
+              onChange={(e) => setText(e.target.value)}
+              autoCorrect="off"
+              spellCheck={false}
               onFocus={(e) => {
                 handleTyping();
+                const textarea = e.currentTarget;
+                console.log('💬 PersonalChatPanel textarea focused (BEFORE)', {
+                  autocapitalize: textarea.getAttribute('autocapitalize'),
+                  autoCapitalize: (textarea as any).autocapitalize,
+                  hasAttribute: textarea.hasAttribute('autocapitalize'),
+                  tagName: textarea.tagName
+                });
+                // Remove autocapitalize to let iOS use its default (prevents caps lock)
+                if (textarea.hasAttribute('autocapitalize')) {
+                  textarea.removeAttribute('autocapitalize');
+                  console.log('💬 PersonalChatPanel textarea: Removed autocapitalize attribute');
+                }
+                if ((textarea as any).autocapitalize !== undefined) {
+                  (textarea as any).autocapitalize = undefined;
+                  console.log('💬 PersonalChatPanel textarea: Cleared autocapitalize property');
+                }
+                console.log('💬 PersonalChatPanel textarea focused (AFTER)', {
+                  autocapitalize: textarea.getAttribute('autocapitalize'),
+                  autoCapitalize: (textarea as any).autocapitalize,
+                  hasAttribute: textarea.hasAttribute('autocapitalize'),
+                  tagName: textarea.tagName
+                });
                 e.target.style.boxShadow = `0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)`;
               }}
               onBlur={(e) => {

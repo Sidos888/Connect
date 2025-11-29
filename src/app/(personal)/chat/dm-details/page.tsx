@@ -25,7 +25,7 @@ function DmDetailsContent() {
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [otherUserName, setOtherUserName] = useState<string>('User Name');
   const [otherUserAvatar, setOtherUserAvatar] = useState<string | null>(null);
-  const [mediaCount, setMediaCount] = useState<number>(4);
+  const [mediaCount, setMediaCount] = useState<number>(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -66,6 +66,14 @@ function DmDetailsContent() {
             setOtherUserAvatar(otherParticipant.profile_pic || null);
           } else {
             router.replace('/chat');
+          }
+        }
+        
+        // Fetch media count
+        if (chatId) {
+          const { media, error } = await chatService.getChatMedia(chatId);
+          if (!error && media) {
+            setMediaCount(media.length);
           }
         }
       } catch (error) {
@@ -260,13 +268,47 @@ function DmDetailsContent() {
           </div>
 
           {/* Media Section */}
-          <div
-            className="bg-white rounded-2xl p-4 mb-4 flex items-center justify-between"
+          <button
+            type="button"
+            disabled={!chatId}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('📷 Media button clicked', { chatId, mediaCount });
+              if (chatId) {
+                router.push(`/chat/media?chat=${chatId}`);
+              } else {
+                console.warn('📷 Media button: No chatId available');
+              }
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('📷 Media button touched', { chatId, mediaCount });
+              if (chatId) {
+                router.push(`/chat/media?chat=${chatId}`);
+              } else {
+                console.warn('📷 Media button: No chatId available');
+              }
+            }}
+            className="bg-white rounded-2xl p-4 mb-4 flex items-center justify-between w-full cursor-pointer transition-all duration-200 hover:-translate-y-[1px] active:scale-[0.98]"
             style={{
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow',
+              position: 'relative',
+              zIndex: 10,
+              pointerEvents: 'auto',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
             }}
           >
             <div className="text-base font-semibold text-gray-900">Media</div>
@@ -274,7 +316,7 @@ function DmDetailsContent() {
               <span className="text-base text-gray-600">{mediaCount}</span>
               <ChevronRight size={20} className="text-gray-400" />
             </div>
-          </div>
+          </button>
 
           {/* Events Section */}
           <div className="mb-4">

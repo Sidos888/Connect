@@ -10,7 +10,11 @@ export default function GlobalInputFix() {
   useEffect(() => {
     // Only run on iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (!isIOS) return;
+    console.log('🔧 GlobalInputFix: Initializing', { isIOS, userAgent: navigator.userAgent });
+    if (!isIOS) {
+      console.log('🔧 GlobalInputFix: Not iOS, skipping');
+      return;
+    }
 
     // Fix all inputs and textareas
     const fixInput = (input: HTMLInputElement | HTMLTextAreaElement) => {
@@ -20,15 +24,46 @@ export default function GlobalInputFix() {
           return;
         }
         
-        // Don't force autocapitalize - let iOS use default behavior (sentences for textareas, none for inputs)
+        // iOS caps lock issue: Even with autocapitalize="sentences", iOS may default to caps lock
+        // Solution: For textareas, try removing autocapitalize entirely to let iOS use its true default
         // Only set autocapitalize if it's not already set by the component
-        if (!input.hasAttribute('autocapitalize')) {
-          // For textareas, use 'sentences' (normal iOS behavior)
+        const existingAttr = input.getAttribute('autocapitalize');
+        const existingProp = (input as any).autocapitalize;
+        const hasExisting = existingAttr !== null || existingProp !== undefined;
+        
+        console.log('🔧 GlobalInputFix: Processing input', {
+          tagName: input.tagName,
+          type: (input as HTMLInputElement).type || 'textarea',
+          hasAttribute: input.hasAttribute('autocapitalize'),
+          existingAttr,
+          existingProp,
+          hasExisting,
+          id: input.id,
+          className: input.className
+        });
+        
+        if (!hasExisting) {
+          // For textareas, REMOVE autocapitalize entirely to let iOS use its natural default
+          // This prevents iOS from defaulting to caps lock mode
           // For inputs, use 'off' (prevents unwanted capitalization)
           if (input.tagName === 'TEXTAREA') {
-            input.setAttribute('autocapitalize', 'sentences');
+            // Don't set autocapitalize - let iOS use its default behavior
+            // This should prevent caps lock default
+            console.log('🔧 GlobalInputFix: Textarea - NOT setting autocapitalize (using iOS default)');
           } else {
             input.setAttribute('autocapitalize', 'off');
+            console.log('🔧 GlobalInputFix: Set autocapitalize="off" for input', { tagName: input.tagName });
+          }
+        } else {
+          // If component set it to "sentences", try removing it for textareas to test
+          if (input.tagName === 'TEXTAREA' && (existingAttr === 'sentences' || existingProp === 'sentences')) {
+            console.log('🔧 GlobalInputFix: Textarea has autocapitalize="sentences" - removing to test iOS default');
+            input.removeAttribute('autocapitalize');
+            if ((input as any).autocapitalize !== undefined) {
+              (input as any).autocapitalize = undefined;
+            }
+          } else {
+            console.log('🔧 GlobalInputFix: Skipping - autocapitalize already set', { existingAttr, existingProp });
           }
         }
         
@@ -47,7 +82,7 @@ export default function GlobalInputFix() {
       }
       
       // Track the last typed character and caps lock state PER INPUT
-      let lastKeyPress: { key: string; capsLock: boolean } | null = null;
+      let lastKeyPress: { key: string; reportedCapsLock: boolean; desiredCase: 'upper' | 'lower' } | null = null;
       
       // Intercept keydown to track what was actually pressed
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,22 +90,45 @@ export default function GlobalInputFix() {
         if (target !== input) return;
         
         // Track the actual key pressed and caps lock state
-        // NOTE: iOS reports caps lock backwards, so we invert it
+        // iOS CAPS LOCK INVERSION BUG:
+        // - When keyboard shows CAPS (visual caps lock ON), iOS reports capsLock = FALSE
+        // - When keyboard shows lowercase (visual caps lock OFF), iOS reports capsLock = TRUE
+        // - User wants: When keyboard shows CAPS, type lowercase. When keyboard shows lowercase, type uppercase.
+        // - So: If reportedCapsLock is FALSE (keyboard shows CAPS), we want lowercase
+        //       If reportedCapsLock is TRUE (keyboard shows lowercase), we want uppercase
         if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
           const reportedCapsLock = e.getModifierState('CapsLock');
+          
+          // Determine desired case based on iOS's inverted reporting
+          // FALSE = keyboard shows CAPS, user wants lowercase
+          // TRUE = keyboard shows lowercase, user wants uppercase
+          const desiredCase: 'upper' | 'lower' = reportedCapsLock ? 'upper' : 'lower';
+          
           lastKeyPress = {
-            key: e.key,
-            capsLock: !reportedCapsLock // INVERT because iOS reports it backwards
+            key: e.key, // What iOS says was pressed
+            reportedCapsLock, // What iOS reports
+            desiredCase // What case we actually want
           };
+          
+          console.log('🔧 GlobalInputFix: KeyDown', {
+            reportedKey: e.key,
+            reportedCapsLock,
+            keyboardShowsCaps: !reportedCapsLock, // Inverted: false means keyboard shows caps
+            desiredCase,
+            expectedChar: desiredCase === 'upper' ? e.key.toUpperCase() : e.key.toLowerCase()
+          });
         } else {
           lastKeyPress = null;
         }
       };
       
-      // Intercept input event to correct iOS's inversion
+      // Track previous value for sentence capitalization
+      let previousValue = input.value || '';
+      
+      // Intercept input event to correct iOS's inversion and handle sentence capitalization
       const handleInput = (e: Event) => {
         const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-        if (target !== input || !lastKeyPress) {
+        if (target !== input) {
           lastKeyPress = null;
           return;
         }
@@ -78,12 +136,20 @@ export default function GlobalInputFix() {
         const currentValue = target.value;
         const selectionStart = target.selectionStart || 0;
         
-        // If we just typed a letter and iOS inverted it, correct it
-        if (selectionStart > 0 && lastKeyPress.key.length === 1) {
+        // Check if text was added (not deleted)
+        const textWasAdded = currentValue.length > previousValue.length;
+        const addedText = textWasAdded ? currentValue.slice(previousValue.length) : '';
+        
+        let needsCorrection = false;
+        let correctedValue = currentValue;
+        let newCursorPosition = selectionStart;
+        
+        // 1. Handle iOS caps lock inversion correction
+        if (lastKeyPress && selectionStart > 0 && lastKeyPress.key.length === 1) {
           const lastChar = currentValue[selectionStart - 1];
           
-          // Determine what the character SHOULD be based on caps lock
-          const expectedChar = lastKeyPress.capsLock 
+          // Calculate what the character SHOULD be based on desired case
+          const expectedChar = lastKeyPress.desiredCase === 'upper' 
             ? lastKeyPress.key.toUpperCase() 
             : lastKeyPress.key.toLowerCase();
           
@@ -92,36 +158,70 @@ export default function GlobalInputFix() {
               lastChar.toLowerCase() === expectedChar.toLowerCase() &&
               /[a-zA-Z]/.test(lastChar)) {
             
+            console.log('🔧 GlobalInputFix: Correcting inverted character', { 
+              from: lastChar, 
+              to: expectedChar,
+              reason: `iOS reported capsLock=${lastKeyPress.reportedCapsLock}, keyboard shows ${lastKeyPress.reportedCapsLock ? 'lowercase' : 'CAPS'}, but typed ${lastChar}, correcting to ${expectedChar}`
+            });
+            
             // Replace the inverted character with the correct one
             const before = currentValue.substring(0, selectionStart - 1);
             const after = currentValue.substring(selectionStart);
-            const corrected = before + expectedChar + after;
-            
-            // Use native setter to update value (bypasses React's controlled component)
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-              window.HTMLInputElement.prototype,
-              'value'
-            )?.set;
-            const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
-              window.HTMLTextAreaElement.prototype,
-              'value'
-            )?.set;
-            
-            if (nativeInputValueSetter && target instanceof HTMLInputElement) {
-              nativeInputValueSetter.call(target, corrected);
-            } else if (nativeTextAreaValueSetter && target instanceof HTMLTextAreaElement) {
-              nativeTextAreaValueSetter.call(target, corrected);
-            }
-            
-            // Restore cursor position
-            target.setSelectionRange(selectionStart, selectionStart);
-            
-            // Dispatch input event to notify React of the change
-            const inputEvent = new Event('input', { bubbles: true });
-            target.dispatchEvent(inputEvent);
+            correctedValue = before + expectedChar + after;
+            needsCorrection = true;
           }
         }
         
+        // 2. Handle sentence capitalization (only for textareas, and only when text is added)
+        if (textWasAdded && input.tagName === 'TEXTAREA' && addedText.length === 1) {
+          const textBeforeCursor = correctedValue.slice(0, selectionStart);
+          const isSentenceStart = 
+            selectionStart === 1 || // First character
+            /[.!?]\s*$/.test(textBeforeCursor.slice(0, -1)); // After sentence ending (. ! ?)
+          
+          // If it's a sentence start and user typed a lowercase letter, capitalize it
+          if (isSentenceStart && /[a-z]/.test(addedText)) {
+            const capitalized = addedText.toUpperCase();
+            const before = correctedValue.slice(0, selectionStart - 1);
+            const after = correctedValue.slice(selectionStart);
+            correctedValue = before + capitalized + after;
+            needsCorrection = true;
+            console.log('🔧 GlobalInputFix: Capitalizing sentence start', { 
+              from: addedText, 
+              to: capitalized,
+              position: selectionStart
+            });
+          }
+        }
+        
+        // Apply corrections if needed
+        if (needsCorrection && correctedValue !== currentValue) {
+          // Use native setter to update value (bypasses React's controlled component)
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            'value'
+          )?.set;
+          const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype,
+            'value'
+          )?.set;
+          
+          if (nativeInputValueSetter && target instanceof HTMLInputElement) {
+            nativeInputValueSetter.call(target, correctedValue);
+          } else if (nativeTextAreaValueSetter && target instanceof HTMLTextAreaElement) {
+            nativeTextAreaValueSetter.call(target, correctedValue);
+          }
+          
+          // Restore cursor position
+          target.setSelectionRange(selectionStart, selectionStart);
+          
+          // Dispatch input event to notify React of the change
+          const inputEvent = new Event('input', { bubbles: true });
+          target.dispatchEvent(inputEvent);
+        }
+        
+        // Update previous value for next comparison
+        previousValue = target.value;
         lastKeyPress = null;
       };
       
@@ -134,12 +234,32 @@ export default function GlobalInputFix() {
       
       // Also handle focus to ensure attributes are set
       const handleFocus = () => {
-        // Don't override autocapitalize if already set by component
-        if (!input.hasAttribute('autocapitalize')) {
-          if (input.tagName === 'TEXTAREA') {
-            input.setAttribute('autocapitalize', 'sentences');
-          } else {
+        const existingAttr = input.getAttribute('autocapitalize');
+        const existingProp = (input as any).autocapitalize;
+        const hasExisting = existingAttr !== null || existingProp !== undefined;
+        
+        console.log('🔧 GlobalInputFix: Focus handler', {
+          tagName: input.tagName,
+          hasAttribute: input.hasAttribute('autocapitalize'),
+          existingAttr,
+          existingProp,
+          hasExisting
+        });
+        
+        // For textareas, remove autocapitalize to let iOS use default (prevents caps lock)
+        if (input.tagName === 'TEXTAREA') {
+          if (hasExisting) {
+            console.log('🔧 GlobalInputFix: Removing autocapitalize from textarea on focus to prevent caps lock');
+            input.removeAttribute('autocapitalize');
+            if ((input as any).autocapitalize !== undefined) {
+              (input as any).autocapitalize = undefined;
+            }
+          }
+        } else {
+          // For inputs, set to 'off' if not already set
+          if (!hasExisting) {
             input.setAttribute('autocapitalize', 'off');
+            console.log('🔧 GlobalInputFix: Set autocapitalize="off" on focus for input');
           }
         }
         input.setAttribute('autocorrect', 'off');
@@ -155,6 +275,7 @@ export default function GlobalInputFix() {
     const fixAllInputs = () => {
       try {
         const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="search"], textarea');
+        console.log('🔧 GlobalInputFix: Found', inputs.length, 'inputs/textareas to fix');
         inputs.forEach((input) => {
           try {
             fixInput(input as HTMLInputElement | HTMLTextAreaElement);
@@ -162,6 +283,7 @@ export default function GlobalInputFix() {
             console.warn('GlobalInputFix: Error fixing input in fixAllInputs:', error);
           }
         });
+        console.log('🔧 GlobalInputFix: Finished fixing', inputs.length, 'inputs/textareas');
       } catch (error) {
         console.error('GlobalInputFix: Error in fixAllInputs:', error);
       }

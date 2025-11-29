@@ -133,15 +133,15 @@ export default function MessagePhotoCollage({
             {imageErrors.has(firstAttachment.file_url) ? (
               <div className="w-full h-full flex items-center justify-center">
                 <ImageIcon className="w-12 h-12 text-gray-400" />
-              </div>
-            ) : (
-              <img 
-                src={firstAttachment.file_url} 
-                alt="Attachment" 
-                className="w-full h-full object-cover pointer-events-none"
+          </div>
+        ) : (
+          <img 
+            src={firstAttachment.file_url} 
+            alt="Attachment" 
+            className="w-full h-full object-cover pointer-events-none"
                 onError={() => handleImageError(firstAttachment.file_url)}
                 onLoad={() => console.log('MessagePhotoCollage: Image loaded successfully:', firstAttachment.file_url)}
-              />
+          />
             )}
           </div>
         )}
@@ -223,15 +223,15 @@ export default function MessagePhotoCollage({
                 {imageErrors.has(attachment.file_url) ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <ImageIcon className="w-6 h-6 text-gray-400" />
-                  </div>
-                ) : (
-                  <img 
-                    src={attachment.file_url} 
-                    alt={`Attachment ${index + 1}`} 
-                    className="w-full h-full object-cover"
+              </div>
+            ) : (
+              <img 
+                src={attachment.file_url} 
+                alt={`Attachment ${index + 1}`} 
+                className="w-full h-full object-cover"
                     onError={() => handleImageError(attachment.file_url)}
                     onLoad={() => console.log('MessagePhotoCollage: Grid image loaded:', attachment.file_url)}
-                  />
+              />
                 )}
               </div>
             )}
