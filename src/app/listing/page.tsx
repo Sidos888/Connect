@@ -13,7 +13,7 @@ import ListingInfoCards from '@/components/listings/ListingInfoCards';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
-import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Bookmark, Image as ImageIcon } from 'lucide-react';
+import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Bookmark, Image as ImageIcon, Share } from 'lucide-react';
 import EditListingDetailsView, { EditListingDetailsViewRef } from '@/components/listings/EditListingDetailsView';
 import CancelEventModal from '@/components/listings/CancelEventModal';
 import JoinListingModal from '@/components/listings/JoinListingModal';
@@ -787,8 +787,10 @@ export default function ListingPage() {
     enabled: !!listingId && !!account?.id && userRole !== 'host',
   });
 
-  // Show saved and share buttons in header for detail view when user is NOT host
-  const showActionButtons = view === 'detail' && userRole !== 'host' && account?.id;
+  // Show saved button only when user is NOT host (hosts don't need to save their own listings)
+  // Show share button for everyone (hosts should be able to share their listings)
+  const showSaveButton = view === 'detail' && userRole !== 'host' && account?.id;
+  const showShareButton = view === 'detail' && account?.id;
 
   return (
     <ProtectedRoute 
@@ -803,89 +805,75 @@ export default function ListingPage() {
             subtitle={getSubtitle()}
             backButton
             onBack={handleBack}
-            actions={showActionButtons ? [
-              {
-                icon: <Bookmark size={20} className={isSaved ? "text-red-600 fill-red-600" : "text-gray-900"} />,
-                label: isSaved ? 'Saved' : 'Save',
-                onClick: async () => {
-                  if (!listingId || !account?.id) return;
-                  const supabase = getSupabaseClient();
-                  if (!supabase) return;
-
-                  if (isSaved) {
-                    // Unsave listing
-                    const { error } = await supabase
-                      .from('saved_listings')
-                      .delete()
-                      .eq('listing_id', listingId)
-                      .eq('user_id', account.id);
-
-                  if (error) {
-                    console.error('Error unsaving listing:', error);
-                  } else {
-                    refetchSaved();
-                    // Invalidate saved listings cache to update Saved page
-                    queryClient.invalidateQueries({ 
-                      queryKey: ['listings', 'saved', account.id] 
-                    });
-                  }
-                  } else {
-                    // Save listing
-                    const { error } = await supabase
-                      .from('saved_listings')
-                      .insert({
-                        listing_id: listingId,
-                        user_id: account.id,
-                        created_at: new Date().toISOString(),
-                      });
-
-                    if (error) {
-                      console.error('Error saving listing:', error);
-                    } else {
-                      refetchSaved();
-                      // Invalidate saved listings cache to update Saved page
-                      queryClient.invalidateQueries({ 
-                        queryKey: ['listings', 'saved', account.id] 
-                      });
+            actions={(() => {
+              const actions = [];
+              
+              // Share button - show for everyone (including hosts)
+              if (showShareButton) {
+                actions.push({
+                  icon: <Share size={20} className="text-gray-900" strokeWidth={2.5} />,
+                  label: 'Share',
+                  onClick: () => {
+                    if (listingId) {
+                      router.push(`/listing/share?id=${listingId}`);
                     }
                   }
-                }
-              },
-              {
-                icon: <Share2 size={20} className="text-gray-900" strokeWidth={2.5} />,
-                label: 'Share',
-                onClick: async () => {
-                  if (!listing || !listingId) return;
-                  
-                  // Create share URL
-                  const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/listing?id=${listingId}`;
-                  const shareText = `Check out ${listing.title} on Connect!`;
-
-                  // Use Web Share API if available (mobile)
-                  if (navigator.share) {
-                    try {
-                      await navigator.share({
-                        title: listing.title,
-                        text: shareText,
-                        url: shareUrl,
-                      });
-                    } catch (error) {
-                      // User cancelled or error occurred
-                      console.log('Share cancelled or failed:', error);
-                    }
-                  } else {
-                    // Fallback: copy to clipboard
-                    try {
-                      await navigator.clipboard.writeText(shareUrl);
-                      // You could show a toast notification here
-                      console.log('Link copied to clipboard');
-                    } catch (error) {
-                      console.error('Failed to copy link:', error);
-                    }
-                  }
-                }
+                });
               }
-            ] : []}
+              
+              // Save button - only show for non-hosts
+              if (showSaveButton) {
+                actions.push({
+                  icon: <Bookmark size={20} className={isSaved ? "text-red-600 fill-red-600" : "text-gray-900"} />,
+                  label: isSaved ? 'Saved' : 'Save',
+                  onClick: async () => {
+                    if (!listingId || !account?.id) return;
+                    const supabase = getSupabaseClient();
+                    if (!supabase) return;
+
+                    if (isSaved) {
+                      // Unsave listing
+                      const { error } = await supabase
+                        .from('saved_listings')
+                        .delete()
+                        .eq('listing_id', listingId)
+                        .eq('user_id', account.id);
+
+                      if (error) {
+                        console.error('Error unsaving listing:', error);
+                      } else {
+                        refetchSaved();
+                        // Invalidate saved listings cache to update Saved page
+                        queryClient.invalidateQueries({ 
+                          queryKey: ['listings', 'saved', account.id] 
+                        });
+                      }
+                    } else {
+                      // Save listing
+                      const { error } = await supabase
+                        .from('saved_listings')
+                        .insert({
+                          listing_id: listingId,
+                          user_id: account.id,
+                          created_at: new Date().toISOString(),
+                        });
+
+                      if (error) {
+                        console.error('Error saving listing:', error);
+                      } else {
+                        refetchSaved();
+                        // Invalidate saved listings cache to update Saved page
+                        queryClient.invalidateQueries({ 
+                          queryKey: ['listings', 'saved', account.id] 
+                        });
+                      }
+                    }
+                  }
+                });
+              }
+              
+              return actions;
+            })()}
             customActions={view === 'edit-details' ? (
               <button
                 onClick={async () => {

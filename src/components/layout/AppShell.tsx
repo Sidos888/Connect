@@ -46,6 +46,7 @@ function AppShellContent({ children }: AppShellProps) {
   const isEventChatPage = pathname.startsWith('/my-life/listing/event-chat');
   const isInvitePage = pathname.startsWith('/listing/invite');
   const isAttendeesPage = pathname.startsWith('/listing/attendees');
+  const isSharePage = pathname.startsWith('/listing/share');
   const isMyLifePage = pathname.startsWith('/my-life');
   const isSettingsPage = (
     pathname.startsWith('/settings') ||
@@ -215,7 +216,7 @@ function AppShellContent({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isEventChatPage && !isInvitePage && !isAttendeesPage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isEventChatPage && !isInvitePage && !isAttendeesPage && !isSharePage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>

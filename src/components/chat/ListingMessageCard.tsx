@@ -253,7 +253,7 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
 
         {/* Action Buttons */}
         <div className="flex gap-2">
-          {/* View Listing Button */}
+          {/* View Button */}
           <button
             onClick={handleViewListing}
             className="flex-1 bg-white text-gray-900 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:-translate-y-[1px]"
@@ -270,7 +270,7 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
               e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
             }}
           >
-            View Listing
+            View
           </button>
 
           {/* Join/Attending Button */}

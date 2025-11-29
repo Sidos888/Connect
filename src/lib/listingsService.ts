@@ -792,6 +792,31 @@ export class ListingsService {
         // Still return success since invite was accepted
       }
 
+      // Check if listing has event_chat_id and add user to that chat
+      const { data: listingData, error: listingError } = await this.supabase
+        .from('listings')
+        .select('event_chat_id')
+        .eq('id', inviteData.listing_id)
+        .single();
+
+      if (!listingError && listingData?.event_chat_id) {
+        // Add user to event chat
+        const { error: chatParticipantError } = await this.supabase
+          .from('chat_participants')
+          .upsert({
+            chat_id: listingData.event_chat_id,
+            user_id: userId,
+            role: 'member'
+          }, {
+            onConflict: 'chat_id,user_id'
+          });
+
+        if (chatParticipantError) {
+          console.error('Error adding user to event chat:', chatParticipantError);
+          // Don't fail the accept operation if chat add fails
+        }
+      }
+
       return { success: true, error: null };
     } catch (error) {
       console.error('Error in acceptListingInvite:', error);
@@ -852,6 +877,50 @@ export class ListingsService {
       return { success: true, error: null };
     } catch (error) {
       console.error('Error in markInvitesAsAcceptedForListing:', error);
+      return { success: false, error: error as Error };
+    }
+  }
+
+  /**
+   * Cancel/delete a listing invitation (host only)
+   * This removes the invite from the database, so it disappears from notifications and the invite page
+   */
+  async cancelListingInvite(inviteId: string, listingId: string, hostId: string): Promise<{ success: boolean; error: Error | null }> {
+    if (!this.supabase) {
+      return { success: false, error: new Error('Supabase client not available') };
+    }
+
+    try {
+      // Verify the user is the host
+      const { data: listing, error: listingError } = await this.supabase
+        .from('listings')
+        .select('host_id')
+        .eq('id', listingId)
+        .single();
+
+      if (listingError || !listing) {
+        return { success: false, error: new Error('Listing not found') };
+      }
+
+      if (listing.host_id !== hostId) {
+        return { success: false, error: new Error('Only the host can cancel invites') };
+      }
+
+      // Delete the invite
+      const { error } = await this.supabase
+        .from('listing_invites')
+        .delete()
+        .eq('id', inviteId)
+        .eq('listing_id', listingId);
+
+      if (error) {
+        console.error('Error canceling invite:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in cancelListingInvite:', error);
       return { success: false, error: error as Error };
     }
   }

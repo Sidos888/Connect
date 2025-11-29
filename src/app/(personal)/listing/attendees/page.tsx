@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { listingsService } from '@/lib/listingsService';
 import { getSupabaseClient } from '@/lib/supabaseClient';
+import { useQueryClient } from '@tanstack/react-query';
 import { MobilePage, PageHeader } from '@/components/layout/PageSystem';
 import { Plus } from 'lucide-react';
 
@@ -21,12 +22,14 @@ interface InvitedUser {
   profile_pic: string | null;
   inviter_id: string;
   status: 'pending' | 'accepted' | 'declined';
+  invite_id: string; // The listing_invites.id
 }
 
 export default function ListingAttendeesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { account } = useAuth();
+  const queryClient = useQueryClient();
   const listingId = searchParams.get('id');
   const from = searchParams.get('from') || '/listing?id=' + listingId + '&view=manage';
 
@@ -35,6 +38,7 @@ export default function ListingAttendeesPage() {
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
     if (listingId) {
@@ -105,6 +109,19 @@ export default function ListingAttendeesPage() {
         })));
       }
 
+      // Check if user is host
+      if (account) {
+        const { data: listingData, error: listingError } = await supabase
+          .from('listings')
+          .select('host_id')
+          .eq('id', listingId)
+          .single();
+
+        if (!listingError && listingData) {
+          setIsHost(listingData.host_id === account.id);
+        }
+      }
+
       // Load invited users
       console.log('📋 Attendees page: Loading invited users for listing', listingId);
       const { data: invitesData, error: invitesError } = await supabase
@@ -136,7 +153,8 @@ export default function ListingAttendeesPage() {
             name: inv.accounts.name,
             profile_pic: inv.accounts.profile_pic,
             inviter_id: inv.inviter_id,
-            status: inv.status
+            status: inv.status,
+            invite_id: inv.id
           }));
         console.log('📋 Attendees page: Loaded invited users', {
           total: invited.length,
@@ -168,6 +186,41 @@ export default function ListingAttendeesPage() {
   const handleProfileClick = (userId: string) => {
     const currentPath = `/listing/attendees?id=${listingId}&from=${encodeURIComponent(from)}`;
     router.push(`/profile?id=${userId}&from=${encodeURIComponent(currentPath)}`);
+  };
+
+  const handleCancelInvite = async (inviteId: string, inviteeId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the profile click
+    
+    if (!listingId || !account) {
+      console.error('Cannot cancel invite: missing listingId or account');
+      return;
+    }
+
+    try {
+      const { success, error } = await listingsService.cancelListingInvite(
+        inviteId,
+        listingId,
+        account.id
+      );
+
+      if (error || !success) {
+        console.error('Error canceling invite:', error);
+        alert('Failed to cancel invite. Please try again.');
+        return;
+      }
+
+      // Remove the invite from the local state
+      setInvitedUsers(prev => prev.filter(inv => inv.invite_id !== inviteId));
+
+      // Invalidate queries to refresh notifications
+      queryClient.invalidateQueries({ queryKey: ['listing-invites', inviteeId] });
+      queryClient.invalidateQueries({ queryKey: ['listing-invites'] });
+      
+      console.log('✅ Invite canceled successfully');
+    } catch (err) {
+      console.error('Error canceling invite:', err);
+      alert('Failed to cancel invite. Please try again.');
+    }
   };
 
   const attendingCount = attendees.length;
@@ -357,6 +410,33 @@ export default function ListingAttendeesPage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-gray-900 truncate">{invited.name}</h3>
                       </div>
+                      {isHost && (
+                        <button
+                          onClick={(e) => handleCancelInvite(invited.invite_id, invited.id, e)}
+                          onTouchStart={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          className="flex-shrink-0 px-4 py-2.5 bg-white rounded-xl text-sm font-medium text-gray-900 transition-all duration-200 hover:-translate-y-[1px]"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            borderStyle: 'solid',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            willChange: 'transform, box-shadow',
+                            touchAction: 'manipulation',
+                            WebkitTapHighlightColor: 'transparent'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                          }}
+                        >
+                          Cancel Invite
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
