@@ -429,12 +429,12 @@ export default function ListingPage() {
                   router.push(`/listing/attendees?id=${listingId}&from=${encodeURIComponent(currentPath)}`);
                 }}
                 className="w-full bg-white rounded-xl p-4 flex items-center gap-3 text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  minHeight: '72px',
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    minHeight: '72px',
                   cursor: 'pointer',
                   willChange: 'transform, box-shadow'
                 }}
@@ -447,19 +447,19 @@ export default function ListingPage() {
                 onTouchStart={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                }}
-              >
-                <div className="flex-shrink-0">
-                  <Users size={20} className="text-gray-900" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-semibold text-gray-900 mb-1">
-                    Attendees
+                  }}
+                >
+                  <div className="flex-shrink-0">
+                    <Users size={20} className="text-gray-900" />
                   </div>
-                  <div className="text-sm font-normal text-gray-500">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-semibold text-gray-900 mb-1">
+                      Attendees
+                    </div>
+                    <div className="text-sm font-normal text-gray-500">
                     View, add and manage
+                    </div>
                   </div>
-                </div>
               </button>
 
               {/* Hosts Card */}
@@ -494,11 +494,11 @@ export default function ListingPage() {
                   }
                 }}
                 className="bg-white rounded-xl p-4 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   minHeight: '72px',
                   cursor: 'pointer',
                   willChange: 'transform, box-shadow'
@@ -508,52 +508,52 @@ export default function ListingPage() {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                <div className="flex-shrink-0">
-                  <MessageCircle size={20} className="text-gray-900" />
-                </div>
-                <div className="flex-1 min-w-0">
+                    }}
+                  >
+                    <div className="flex-shrink-0">
+                      <MessageCircle size={20} className="text-gray-900" />
+                    </div>
+                    <div className="flex-1 min-w-0">
                   <div className="text-base font-semibold text-gray-900 mb-1">
                     Event Chat
-                  </div>
+                      </div>
                   <div className="text-sm font-normal text-gray-500">
                     {eventChatStatus?.enabled ? 'Enabled' : 'Disabled'}
-                  </div>
+                    </div>
                 </div>
               </button>
-            </div>
+                </div>
 
             {/* Cancel Event Button - Positioned at bottom with red text */}
             <div className="mt-auto pt-16 pb-8">
-              <button
-                onClick={() => setShowCancelModal(true)}
+                <button
+                    onClick={() => setShowCancelModal(true)}
                 className="bg-white rounded-xl p-4 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   minHeight: '72px',
-                  cursor: 'pointer',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                <div className="flex-shrink-0">
+                      cursor: 'pointer',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                  >
+                    <div className="flex-shrink-0">
                   <X size={20} className="text-red-600" />
-                </div>
-                <div className="flex-1 min-w-0">
+                    </div>
+                    <div className="flex-1 min-w-0">
                   <div className="text-base font-semibold text-red-600">
-                    Cancel Event
-                  </div>
-                </div>
-              </button>
+                        Cancel Event
+                      </div>
+                    </div>
+                </button>
             </div>
           </div>
         );

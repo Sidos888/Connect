@@ -137,7 +137,7 @@ function MessagesPageContent() {
           lastMessageText = '📷 Image';
           } else {
             lastMessageText = `${senderName} 📷 Image`;
-          }
+        }
         }
         // If none of the above, lastMessageText remains 'No messages yet'
       }
@@ -818,11 +818,11 @@ function MessagesPageContent() {
                             </div>
                           ) : (
                             // Regular chat: circular avatar
-                            <Avatar
-                              src={conversation.avatarUrl}
-                              name={conversation.title}
-                              size={48}
-                            />
+                          <Avatar
+                            src={conversation.avatarUrl}
+                            name={conversation.title}
+                            size={48}
+                          />
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">

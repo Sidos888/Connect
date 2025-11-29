@@ -291,7 +291,7 @@ export default function IndividualChatPage() {
     if (messages.length > 0 && !loading) {
       // Use multiple attempts to ensure scroll happens after DOM is fully rendered
       const scrollToBottom = (force = false) => {
-        if (messagesContainerRef.current) {
+          if (messagesContainerRef.current) {
           const container = messagesContainerRef.current;
           // Force scroll to absolute bottom
           const maxScroll = container.scrollHeight - container.clientHeight;
@@ -302,10 +302,10 @@ export default function IndividualChatPage() {
           if (isAtBottom || force) {
             hasScrolledToBottomRef.current = true;
           }
-        } else if (messagesEndRef.current) {
+          } else if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: 'instant', block: 'end', inline: 'nearest' });
           hasScrolledToBottomRef.current = true;
-        }
+          }
       };
 
       // First attempt - immediate
@@ -979,7 +979,7 @@ export default function IndividualChatPage() {
         height: "100%",
       }}
     >
-      <button
+      <button 
         onClick={() => {
           if (!chatId) return;
 
@@ -993,10 +993,10 @@ export default function IndividualChatPage() {
           }
 
           // Regular chats: open chat details
-          if (conversation.isGroup) {
-            router.push(`/chat/group-details?chat=${chatId}`);
-          } else {
-            router.push(`/chat/dm-details?chat=${chatId}`);
+            if (conversation.isGroup) {
+              router.push(`/chat/group-details?chat=${chatId}`);
+            } else {
+              router.push(`/chat/dm-details?chat=${chatId}`);
           }
         }}
         className="w-full flex items-center"
@@ -1035,19 +1035,19 @@ export default function IndividualChatPage() {
             }}
           >
             {eventListing.photo_urls && eventListing.photo_urls.length > 0 ? (
-              <Image
+            <Image
                 src={eventListing.photo_urls[0]}
                 alt={eventListing.title}
-                width={40}
-                height={40}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="text-gray-400 text-sm font-semibold">
+              width={40}
+              height={40}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-gray-400 text-sm font-semibold">
                 {eventListing.title.charAt(0).toUpperCase()}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
         ) : (
           // Regular chat: circular avatar
           <Avatar
@@ -1170,13 +1170,13 @@ export default function IndividualChatPage() {
         }}
       >
         {/* Photos Preview - Inside the chat box, horizontally scrollable when more than 3 */}
-        {pendingMedia.length > 0 && (
-          <div 
+      {pendingMedia.length > 0 && (
+        <div 
             className="mb-3 overflow-x-auto no-scrollbar"
-            style={{ 
+          style={{ 
               WebkitOverflowScrolling: 'touch',
-            }}
-          >
+          }}
+        >
             <div 
               className="flex gap-3"
               style={{ 
@@ -1185,80 +1185,80 @@ export default function IndividualChatPage() {
                 paddingRight: '2px'
               }}
             >
-              {pendingMedia.map((media, index) => (
-                <div
-                  key={index}
-                  className="relative flex-shrink-0 rounded-xl overflow-hidden bg-gray-100"
-                  style={{
-                    width: '80px',
-                    height: '80px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                  }}
-                >
-                  {media.file_type === 'video' ? (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center relative">
-                      {media.thumbnail_url ? (
-                        <>
-                          <img
-                            src={media.thumbnail_url}
-                            alt="Video thumbnail"
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-5 h-5 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </div>
+            {pendingMedia.map((media, index) => (
+              <div
+                key={index}
+                className="relative flex-shrink-0 rounded-xl overflow-hidden bg-gray-100"
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                }}
+              >
+                {media.file_type === 'video' ? (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center relative">
+                    {media.thumbnail_url ? (
+                      <>
+                        <img
+                          src={media.thumbnail_url}
+                          alt="Video thumbnail"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-5 h-5 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
                           </div>
-                        </>
-                      ) : (
-                        <div className="text-gray-400">
-                          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <img
+                      </>
+                    ) : (
+                      <div className="text-gray-400">
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <img
                       src={media.previewUrl || media.file_url}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                  <button
-                    onClick={() => handleRemoveMedia(index)}
-                    className="absolute top-1 right-1 w-5 h-5 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all z-10"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                <button
+                  onClick={() => handleRemoveMedia(index)}
+                  className="absolute top-1 right-1 w-5 h-5 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all z-10"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
         {/* Input Controls Row - + button, text input, and send button */}
         <div className="flex items-center">
-          {/* + Button - Same size as send button, equal spacing from left edge */}
-          <div style={{ width: '32px', height: '32px', flexShrink: 0 }}>
-            <MediaUploadButton
+        {/* + Button - Same size as send button, equal spacing from left edge */}
+        <div style={{ width: '32px', height: '32px', flexShrink: 0 }}>
+          <MediaUploadButton 
               chatId={conversation?.id} 
-              onMediaSelected={handleMediaSelected}
-              disabled={false}
-            />
-          </div>
-          
-          {/* Text Input */}
-          <textarea
+            onMediaSelected={handleMediaSelected}
+            disabled={false}
+          />
+        </div>
+        
+        {/* Text Input */}
+        <textarea
             ref={textareaRef}
             data-no-global-input-fix="true"
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            placeholder=""
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          placeholder=""
             autoCorrect="off"
             spellCheck={false}
             onFocus={(e) => {
@@ -1301,31 +1301,31 @@ export default function IndividualChatPage() {
               // The keyboard may appear in caps lock mode, but GlobalInputFix will
               // correct the characters as you type
             }}
-            className="focus:outline-none resize-none text-sm text-black caret-black"
-            style={{
-              margin: 0,
-              marginLeft: '8px', // Gap between + button and text input
-              marginRight: '8px', // Gap between text input and send button
-              padding: '8px',
-              lineHeight: '1.2',
-              boxSizing: 'border-box',
-              minHeight: '32px',
-              flex: 1,
-              backgroundColor: 'transparent',
-              border: 'none',
-              boxShadow: 'none'
-            }}
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && (messageText.trim() || pendingMedia.length > 0)) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-          />
-            
-          {/* Send Button - Same size as + button */}
-          <button
+          className="focus:outline-none resize-none text-sm text-black caret-black"
+          style={{
+            margin: 0,
+            marginLeft: '8px', // Gap between + button and text input
+            marginRight: '8px', // Gap between text input and send button
+            padding: '8px',
+            lineHeight: '1.2',
+            boxSizing: 'border-box',
+            minHeight: '32px',
+            flex: 1,
+            backgroundColor: 'transparent',
+            border: 'none',
+            boxShadow: 'none'
+          }}
+          rows={1}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && (messageText.trim() || pendingMedia.length > 0)) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+        />
+          
+        {/* Send Button - Same size as + button */}
+        <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -1339,35 +1339,35 @@ export default function IndividualChatPage() {
               // Don't call handleSendMessage here - let onClick handle it
               // This prevents double submission on iOS
             }}
-            disabled={!messageText.trim() && pendingMedia.length === 0}
-            className={`flex-shrink-0 flex items-center justify-center transition-all ${
-              messageText.trim() || pendingMedia.length > 0
-                ? "cursor-pointer" 
-                : "cursor-not-allowed opacity-50"
-            }`}
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              backgroundColor: 'white',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-            }}
-            onMouseEnter={(e) => {
-              if (messageText.trim() || pendingMedia.length > 0) {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-          >
-            <svg className="w-4 h-4 text-gray-900" fill="currentColor" viewBox="0 0 20 20" style={{ strokeWidth: 2.5 }}>
-              <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
-            </svg>
-          </button>
+          disabled={!messageText.trim() && pendingMedia.length === 0}
+          className={`flex-shrink-0 flex items-center justify-center transition-all ${
+            messageText.trim() || pendingMedia.length > 0
+              ? "cursor-pointer" 
+              : "cursor-not-allowed opacity-50"
+          }`}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            backgroundColor: 'white',
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+          }}
+          onMouseEnter={(e) => {
+            if (messageText.trim() || pendingMedia.length > 0) {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+        >
+          <svg className="w-4 h-4 text-gray-900" fill="currentColor" viewBox="0 0 20 20" style={{ strokeWidth: 2.5 }}>
+            <path fillRule="evenodd" d="M10 17a1 1 0 01-1-1V6.414l-2.293 2.293a1 1 0 11-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 6.414V16a1 1 0 01-1 1z" clipRule="evenodd" />
+          </svg>
+        </button>
         </div>
       </div>
 

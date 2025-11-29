@@ -117,23 +117,23 @@ export default function Notifications() {
             <p className="text-gray-400 text-sm">You'll see invitations and updates here</p>
           </div>
         ) : (
-          <div className="space-y-3">
+        <div className="space-y-3">
             {invites.map((invite) => {
               if (!invite.listing || !invite.inviter) return null;
 
               return (
-                <div
+            <div
                   key={invite.id}
                   className="relative mb-6"
                 >
                   <div
                     onClick={() => handleCardClick(invite)}
                     className="bg-white rounded-2xl border border-gray-200 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow',
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow',
                       backgroundColor: 'white'
                     }}
                     onMouseEnter={(e) => {
@@ -218,14 +218,14 @@ export default function Notifications() {
                               borderStyle: 'solid',
                               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                               willChange: 'transform, box-shadow'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                            }}
-                          >
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
                             Decline
                           </button>
                         </div>
@@ -240,10 +240,10 @@ export default function Notifications() {
                 </div>
               );
             })}
-          </div>
-        )}
-      </div>
-    </div>
+                </div>
+                )}
+              </div>
+            </div>
   );
 
   return (
@@ -388,7 +388,7 @@ export default function Notifications() {
                 </div>
               );
             })}
-          </div>
+        </div>
         )}
       </div>
     </div>

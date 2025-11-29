@@ -481,7 +481,7 @@ export default function CreateListingDetailsPage() {
           console.log('✅ Event chat created and marked:', eventChatId);
         }
       }
-
+      
       // Create listing record in database
       const { data: listingData, error: listingError } = await supabase
         .from('listings')

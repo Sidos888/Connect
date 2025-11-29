@@ -1191,40 +1191,40 @@ export default function ProfileMenu() {
         )}
       </div>
         
-      {/* Centered Connections Modal (for friend profiles only - not part of unified system) */}
-      {showCenteredConnectionsModal && connectionsModalUserId && (
-        <ConnectionsModal
-          isOpen={true}
-          onClose={() => {
-            setShowCenteredConnectionsModal(false);
-            setConnectionsModalUserId(null);
-          }}
-          onBack={() => {
-            setShowCenteredConnectionsModal(false);
-            setConnectionsModalUserId(null);
-            // TODO: Friend profile view needs to be implemented with unified modal system
-            // setShowCenteredFriendProfile(true);
-          }}
-          userId={connectionsModalUserId}
-          onRemoveFriend={(removedUserId) => {
-            // Handle friend removal if needed
-          }}
-        />
-      )}
+        {/* Centered Connections Modal (for friend profiles only - not part of unified system) */}
+        {showCenteredConnectionsModal && connectionsModalUserId && (
+          <ConnectionsModal
+            isOpen={true}
+            onClose={() => {
+              setShowCenteredConnectionsModal(false);
+              setConnectionsModalUserId(null);
+            }}
+            onBack={() => {
+              setShowCenteredConnectionsModal(false);
+              setConnectionsModalUserId(null);
+              // TODO: Friend profile view needs to be implemented with unified modal system
+              // setShowCenteredFriendProfile(true);
+            }}
+            userId={connectionsModalUserId}
+            onRemoveFriend={(removedUserId) => {
+              // Handle friend removal if needed
+            }}
+          />
+        )}
 
-      {/* Settings Modal (local to ProfileMenu) */}
-      {selectedFriend && (
-        <SettingsModal
-          isOpen={showSettingsModal}
-          onClose={() => {
-            setShowSettingsModal(false);
-          }}
-          onBack={() => {
-            setShowSettingsModal(false);
-          }}
-          userId={selectedFriend.id}
-        />
-      )}
+        {/* Settings Modal (local to ProfileMenu) */}
+        {selectedFriend && (
+          <SettingsModal
+            isOpen={showSettingsModal}
+            onClose={() => {
+              setShowSettingsModal(false);
+            }}
+            onBack={() => {
+              setShowSettingsModal(false);
+            }}
+            userId={selectedFriend.id}
+          />
+        )}
     </>
   );
 }

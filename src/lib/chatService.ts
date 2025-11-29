@@ -425,20 +425,20 @@ export class ChatService {
         .reverse() // Reverse to show oldest first
         .map(msg => {
           const chatMsg: ChatMessage = {
-            id: msg.id,
-            chat_id: msg.chat_id,
-            sender_id: msg.sender_id,
-            message_text: msg.message_text,
+        id: msg.id,
+          chat_id: msg.chat_id,
+          sender_id: msg.sender_id,
+        message_text: msg.message_text,
             message_type: msg.message_type || 'text',
             image_url: null,
             images: null,
-            created_at: msg.created_at,
+        created_at: msg.created_at,
             read_by: [],
             poll_id: null,
-            reply_to_message_id: msg.reply_to_message_id,
+          reply_to_message_id: msg.reply_to_message_id,
             is_pinned: false,
-            sender_name: (msg.accounts as any)?.name,
-            sender_profile_pic: (msg.accounts as any)?.profile_pic
+        sender_name: (msg.accounts as any)?.name,
+        sender_profile_pic: (msg.accounts as any)?.profile_pic
           };
           const simpleMsg = this.convertToSimpleMessage(chatMsg, attachmentsMap.get(msg.id) || []);
           // Add listing_id if present
@@ -1391,13 +1391,13 @@ export class ChatService {
         })),
         last_message: lastMessage
           ? {
-              id: lastMessage.id,
+          id: lastMessage.id,
               chat_id: lastMessage.chat_id,
               sender_id: lastMessage.sender_id,
               sender_name: (lastMessage.accounts as any)?.name || 'Unknown User',
               sender_profile_pic: (lastMessage.accounts as any)?.profile_pic || undefined,
               text: lastMessage.message_text || '',
-              created_at: lastMessage.created_at,
+          created_at: lastMessage.created_at,
               reply_to_message_id: lastMessage.reply_to_message_id || null,
               attachments: [],
               deleted_at: null

@@ -219,37 +219,67 @@ export default function InvitePage() {
         
         if (!existing) {
           // No existing invite - create new one
+          // But first check if they're already a participant
+          const { data: participant } = await supabase
+            .from('listing_participants')
+            .select('id')
+            .eq('listing_id', listingId)
+            .eq('user_id', contact.id)
+            .eq('status', 'upcoming')
+            .maybeSingle();
+
+          if (participant) {
+            console.log('📧 handleSendInvites: Skipping - user is already a participant', { contactId: contact.id });
+            continue; // User is already attending, cannot invite
+          }
+          
           newInvites.push({
             listing_id: listingId,
             inviter_id: account.id,
             invitee_id: contact.id,
             status: 'pending'
           });
+        } else if (existing.status === 'pending') {
+          // User already has a pending invite - cannot invite again
+          console.log('📧 handleSendInvites: Skipping - user already has pending invite', { 
+            contactId: contact.id, 
+            inviteId: existing.id 
+          });
+          continue;
         } else if (existing.status === 'declined' || existing.status === 'accepted') {
-          // Existing invite is declined or accepted - update to pending (re-invite)
-          // Check if user is still a participant (if accepted)
-          if (existing.status === 'accepted') {
-            const { data: participant } = await supabase
-              .from('listing_participants')
-              .select('id')
-              .eq('listing_id', listingId)
-              .eq('user_id', contact.id)
-              .eq('status', 'upcoming')
-              .maybeSingle();
+          // Existing invite is declined or accepted - check if can re-invite
+          // First check if user is still a participant (if accepted)
+          const { data: participant } = await supabase
+            .from('listing_participants')
+            .select('id')
+            .eq('listing_id', listingId)
+            .eq('user_id', contact.id)
+            .eq('status', 'upcoming')
+            .maybeSingle();
 
-            // If user is still a participant, skip re-inviting
-            if (participant) {
-              continue;
-            }
+          // If user is still a participant (attending), cannot re-invite
+          if (participant) {
+            console.log('📧 handleSendInvites: Skipping - user is already attending', { 
+              contactId: contact.id,
+              inviteId: existing.id,
+              inviteStatus: existing.status
+            });
+            continue;
           }
           
-          // User declined or left - re-invite by updating to pending
+          // User declined or left (accepted but not attending) - can re-invite
+          console.log('📧 handleSendInvites: Re-inviting user', { 
+            contactId: contact.id,
+            inviteId: existing.id,
+            previousStatus: existing.status,
+            reason: existing.status === 'declined' ? 'previously declined' : 'left event'
+          });
+          
           invitesToUpdate.push({
             id: existing.id,
             status: 'pending'
           });
         }
-        // If status is 'pending', skip (already invited)
       }
 
       console.log('📧 handleSendInvites: Processing invites', {
