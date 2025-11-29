@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 
 interface ListingMessageCardProps {
@@ -28,6 +29,7 @@ interface ParticipantStatus {
 export default function ListingMessageCard({ listingId, chatId }: ListingMessageCardProps) {
   const router = useRouter();
   const { account } = useAuth();
+  const queryClient = useQueryClient();
   const [listing, setListing] = useState<ListingData | null>(null);
   const [participantStatus, setParticipantStatus] = useState<ParticipantStatus>({
     isAttending: false,
@@ -140,6 +142,26 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
               onConflict: 'chat_id,user_id'
             });
         }
+      }
+
+      // Mark any pending invites for this listing as accepted
+      const { error: inviteUpdateError } = await supabase
+        .from('listing_invites')
+        .update({ status: 'accepted' })
+        .eq('listing_id', listingId)
+        .eq('invitee_id', account.id)
+        .eq('status', 'pending');
+
+      if (inviteUpdateError) {
+        console.error('Error updating invites:', inviteUpdateError);
+        // Don't fail the join operation if invite update fails
+      }
+
+      // Invalidate queries to update UI
+      if (account?.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['listing-invites', account.id] 
+        });
       }
 
       setParticipantStatus({

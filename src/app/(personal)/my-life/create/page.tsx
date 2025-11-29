@@ -671,7 +671,7 @@ function CreateListingPageContent() {
       if (groupChatId) {
         router.push(`/my-life/create/details?group=${groupChatId}`);
       } else {
-        router.push('/my-life/create/details');
+      router.push('/my-life/create/details');
       }
     }
   };
@@ -1161,30 +1161,30 @@ function CreateListingPageContent() {
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowVisibilityModal(true)}
-                  className="rounded-xl bg-white px-4 h-14 flex items-center justify-between w-full text-left"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.95';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <span className="text-base font-semibold text-gray-900">Visibility</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">{isPublic ? 'Public' : 'Private'}</span>
-                    <div className="flex flex-col">
-                      <ChevronUp size={16} className="text-gray-400 -mb-1" />
-                      <ChevronDown size={16} className="text-gray-400" />
-                    </div>
+              <button
+                onClick={() => setShowVisibilityModal(true)}
+                className="rounded-xl bg-white px-4 h-14 flex items-center justify-between w-full text-left"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.95';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                <span className="text-base font-semibold text-gray-900">Visibility</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">{isPublic ? 'Public' : 'Private'}</span>
+                  <div className="flex flex-col">
+                    <ChevronUp size={16} className="text-gray-400 -mb-1" />
+                    <ChevronDown size={16} className="text-gray-400" />
                   </div>
-                </button>
+                </div>
+              </button>
               )}
 
               {/* Capacity */}

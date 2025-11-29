@@ -16,6 +16,7 @@ import LoadingMessageCard from "@/components/chat/LoadingMessageCard";
 import type { SimpleMessage, MediaAttachment } from "@/lib/types";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import Avatar from "@/components/Avatar";
 
 export default function IndividualChatPage() {
   const router = useRouter();
@@ -81,8 +82,9 @@ export default function IndividualChatPage() {
     end_date: string | null;
     photo_urls: string[] | null;
   } | null>(null);
+  const [isEventChatFromDB, setIsEventChatFromDB] = useState(false);
 
-  const isEventChat = !!eventListing;
+  const isEventChat = !!eventListing || isEventChatFromDB;
 
   const formatListingDateTime = (dateString: string | null) => {
     if (!dateString) return "Date and Time";
@@ -138,6 +140,9 @@ export default function IndividualChatPage() {
           setLoading(false);
           return;
         }
+
+        // Store whether this is an event chat from the database
+        setIsEventChatFromDB(chat.is_event_chat || false);
 
         // Store participants for profile modal
         setParticipants(chat.participants || []);
@@ -919,8 +924,8 @@ export default function IndividualChatPage() {
       // Complete the swipe animation and navigate back
       setDragOffset(window.innerWidth);
       setTimeout(async () => {
-        // If chat has no messages, delete it before navigating back
-        if (chatId && messages.length === 0 && chatService) {
+        // If chat has no messages and is not an event chat, delete it before navigating back
+        if (chatId && messages.length === 0 && chatService && !isEventChat) {
           console.log('Chat has no messages, deleting before navigating back (swipe)');
           await chatService.deleteChat(chatId);
         }
@@ -1019,29 +1024,38 @@ export default function IndividualChatPage() {
             "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)";
         }}
       >
-        <div className="w-10 h-10 bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 rounded-md">
-          {isEventChat && eventListing && eventListing.photo_urls && eventListing.photo_urls.length > 0 ? (
-            <Image
-              src={eventListing.photo_urls[0]}
-              alt={eventListing.title}
-              width={40}
-              height={40}
-              className="w-full h-full object-cover"
-            />
-          ) : conversation.avatarUrl ? (
-            <Image
-              src={conversation.avatarUrl}
-              alt={conversation.title}
-              width={40}
-              height={40}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="text-gray-400 text-sm font-semibold">
-              {conversation.title.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
+        {isEventChat && eventListing ? (
+          // Event chat: squared image
+          <div 
+            className="w-10 h-10 bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 rounded-md"
+            style={{
+              borderWidth: '0.5px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(0, 0, 0, 0.08)'
+            }}
+          >
+            {eventListing.photo_urls && eventListing.photo_urls.length > 0 ? (
+              <Image
+                src={eventListing.photo_urls[0]}
+                alt={eventListing.title}
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-gray-400 text-sm font-semibold">
+                {eventListing.title.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+        ) : (
+          // Regular chat: circular avatar
+          <Avatar
+            src={conversation.avatarUrl}
+            name={conversation.title}
+            size={40}
+          />
+        )}
         <div className="text-left min-w-0 flex-1">
           <div className="font-semibold text-gray-900 text-base truncate">
             {isEventChat && eventListing ? eventListing.title : conversation.title}
@@ -1093,8 +1107,8 @@ export default function IndividualChatPage() {
         title=""
         backButton={true}
         onBack={async () => {
-          // If chat has no messages, delete it before navigating back
-          if (chatId && messages.length === 0 && chatService) {
+          // If chat has no messages and is not an event chat, delete it before navigating back
+          if (chatId && messages.length === 0 && chatService && !isEventChat) {
             console.log('Chat has no messages, deleting before navigating back');
             await chatService.deleteChat(chatId);
           }

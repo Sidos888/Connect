@@ -191,7 +191,14 @@ export default function CenteredAddPerson({
                 <div className="space-y-2">
                   {searchResults.filter(user => userConnectionStatuses[user.id] !== 'connected').map((user) => (
                     <div key={user.id} className="bg-white rounded-2xl p-6 py-8 relative min-h-[70px] mx-auto max-w-md transition-all duration-200 hover:-translate-y-[1px]" style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', willChange: 'transform, box-shadow' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'; }}>
-                      <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                      <div 
+                        className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+                        style={{
+                          borderWidth: '0.5px',
+                          borderStyle: 'solid',
+                          borderColor: 'rgba(0, 0, 0, 0.08)'
+                        }}
+                      >
                         {user.profile_pic ? (
                           <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
                         ) : (
@@ -240,7 +247,14 @@ export default function CenteredAddPerson({
                 <div className="space-y-2">
                   {suggestedFriends.filter(user => userConnectionStatuses[user.id] !== 'connected').slice(0, 5).map((user) => (
                     <div key={user.id} className="bg-white rounded-2xl p-6 py-8 relative min-h-[70px] mx-auto max-w-md transition-all duration-200 hover:-translate-y-[1px]" style={{ borderWidth: '0.4px', borderColor: '#E5E7EB', borderStyle: 'solid', boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)', willChange: 'transform, box-shadow' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'; }}>
-                      <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                      <div 
+                        className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+                        style={{
+                          borderWidth: '0.5px',
+                          borderStyle: 'solid',
+                          borderColor: 'rgba(0, 0, 0, 0.08)'
+                        }}
+                      >
                         {user.profile_pic ? (
                           <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
                         ) : (
@@ -280,4 +294,3 @@ export default function CenteredAddPerson({
     </div>
   );
 }
-

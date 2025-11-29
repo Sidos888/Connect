@@ -139,13 +139,39 @@ export class ChatService {
 
       // Get the actual chat details
       const chatIds = userChats.map(chat => chat.chat_id);
+      console.log('🔍 ChatService.getUserChats: Fetching chat details for', chatIds.length, 'chats');
       const { data: chats, error } = await this.supabase
         .from('chats')
         .select(`
-          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat
+          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat, is_archived
         `)
         .in('id', chatIds)
+        // Show chats that are not explicitly archived. Old rows may have is_archived = null.
+        .or('is_archived.is.null,is_archived.eq.false')
         .order('last_message_at', { ascending: false, nullsFirst: false });
+      
+      // Log any missing chats (participant exists but chat not returned)
+      if (chats && chatIds.length > chats.length) {
+        const returnedChatIds = new Set(chats.map(c => c.id));
+        const missingChatIds = chatIds.filter(id => !returnedChatIds.has(id));
+        console.warn('⚠️ ChatService.getUserChats: Some chats were filtered out:', {
+          totalParticipantChats: chatIds.length,
+          returnedChats: chats.length,
+          missingChatIds
+        });
+      }
+
+      console.log('🔍 ChatService.getUserChats: Fetched', chats?.length || 0, 'chats after filtering');
+      if (chats) {
+        chats.forEach(chat => {
+          console.log('🔍 ChatService.getUserChats: Chat', chat.id, {
+            name: chat.name,
+            is_event_chat: chat.is_event_chat,
+            is_archived: chat.is_archived,
+            last_message_at: chat.last_message_at
+          });
+        });
+      }
 
       if (error) {
         // Create a serializable error object first
@@ -399,20 +425,20 @@ export class ChatService {
         .reverse() // Reverse to show oldest first
         .map(msg => {
           const chatMsg: ChatMessage = {
-        id: msg.id,
-          chat_id: msg.chat_id,
-          sender_id: msg.sender_id,
-        message_text: msg.message_text,
-        message_type: msg.message_type || 'text',
-        image_url: msg.image_url,
-        images: msg.images,
-        created_at: msg.created_at,
-            read_by: msg.read_by || [],
-        poll_id: msg.poll_id,
-          reply_to_message_id: msg.reply_to_message_id,
-        is_pinned: msg.is_pinned,
-        sender_name: (msg.accounts as any)?.name,
-        sender_profile_pic: (msg.accounts as any)?.profile_pic
+            id: msg.id,
+            chat_id: msg.chat_id,
+            sender_id: msg.sender_id,
+            message_text: msg.message_text,
+            message_type: msg.message_type || 'text',
+            image_url: null,
+            images: null,
+            created_at: msg.created_at,
+            read_by: [],
+            poll_id: null,
+            reply_to_message_id: msg.reply_to_message_id,
+            is_pinned: false,
+            sender_name: (msg.accounts as any)?.name,
+            sender_profile_pic: (msg.accounts as any)?.profile_pic
           };
           const simpleMsg = this.convertToSimpleMessage(chatMsg, attachmentsMap.get(msg.id) || []);
           // Add listing_id if present
@@ -1307,7 +1333,7 @@ export class ChatService {
       const { data: chat, error } = await this.supabase
         .from('chats')
         .select(`
-          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at,
+          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat,
           chat_participants!inner(
             id, user_id, role, joined_at, last_read_at,
             accounts!inner(id, name, profile_pic)
@@ -1325,7 +1351,7 @@ export class ChatService {
       const { data: lastMessage } = await this.supabase
         .from('chat_messages')
         .select(`
-          id, message_text, created_at, sender_id,
+          id, chat_id, message_text, created_at, sender_id, reply_to_message_id,
           accounts!inner(name, profile_pic)
         `)
         .eq('chat_id', chatId)
@@ -1356,24 +1382,29 @@ export class ChatService {
         type: chat.type === 'direct' ? 'direct' : 'group',
         name: chat.name || '',
         photo: (chat as any).photo || undefined, // Group chat photo from chats table
+        is_event_chat: (chat as any).is_event_chat || false,
         participants: chat.chat_participants.map((p: any) => ({
           id: p.user_id,
           name: (p.accounts as any)?.name || 'Unknown User',
           profile_pic: (p.accounts as any)?.profile_pic || undefined,
           role: p.role || 'member'
         })),
-        last_message: lastMessage ? {
-          id: lastMessage.id,
-          content: lastMessage.message_text || '',
-          created_at: lastMessage.created_at,
-            sender: {
-              id: lastMessage.sender_id,
-              name: (lastMessage.accounts as any)?.name || 'Unknown User',
-              profile_pic: (lastMessage.accounts as any)?.profile_pic || undefined
+        last_message: lastMessage
+          ? {
+              id: lastMessage.id,
+              chat_id: lastMessage.chat_id,
+              sender_id: lastMessage.sender_id,
+              sender_name: (lastMessage.accounts as any)?.name || 'Unknown User',
+              sender_profile_pic: (lastMessage.accounts as any)?.profile_pic || undefined,
+              text: lastMessage.message_text || '',
+              created_at: lastMessage.created_at,
+              reply_to_message_id: lastMessage.reply_to_message_id || null,
+              attachments: [],
+              deleted_at: null
             }
-        } : undefined,
+          : undefined,
         last_message_at: chat.last_message_at,
-        unreadCount
+        unread_count: unreadCount
       };
 
       console.log('Successfully got chat:', simpleChat.id);
@@ -1690,16 +1721,5 @@ export class ChatService {
       isGroup: chat.type === 'group',
       messages
     };
-  }
-
-  // Unsubscribe from a chat
-  unsubscribeFromChat(chatId: string): void {
-    const channelKey = `chat:${chatId}`;
-    const channel = this.activeSubscriptions.get(channelKey);
-    if (channel) {
-      channel.unsubscribe();
-      this.activeSubscriptions.delete(channelKey);
-      console.log('📡 Unsubscribed from chat:', chatId);
-    }
   }
 }

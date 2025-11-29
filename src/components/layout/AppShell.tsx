@@ -43,6 +43,9 @@ function AppShellContent({ children }: AppShellProps) {
   const isGroupMembersPage = pathname.startsWith('/chat/group-details/members');
   const isGroupSettingsPage = pathname.startsWith('/chat/group-details/settings');
   const isChatEventsPage = pathname.startsWith('/chat/events');
+  const isEventChatPage = pathname.startsWith('/my-life/listing/event-chat');
+  const isInvitePage = pathname.startsWith('/listing/invite');
+  const isAttendeesPage = pathname.startsWith('/listing/attendees');
   const isMyLifePage = pathname.startsWith('/my-life');
   const isSettingsPage = (
     pathname.startsWith('/settings') ||
@@ -181,7 +184,7 @@ function AppShellContent({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages, details pages, and group events */}
-        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && !isChatEventsPage && (
+        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && !isChatEventsPage && !isEventChatPage && (
           <div className="sm:hidden">
             <MobileBottomNavigation />
           </div>
@@ -212,7 +215,7 @@ function AppShellContent({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isEventChatPage && !isInvitePage && !isAttendeesPage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>

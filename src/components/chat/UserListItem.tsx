@@ -57,7 +57,14 @@ export default function UserListItem({
       aria-label={`${isSelected ? 'Selected' : 'Select'} ${contact.name}`}
     >
       {/* Avatar - positioned absolutely on the left */}
-      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+      <div 
+        className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+        style={{
+          borderWidth: '0.5px',
+          borderStyle: 'solid',
+          borderColor: 'rgba(0, 0, 0, 0.08)'
+        }}
+      >
         {contact.profile_pic || contact.profilePic ? (
           <img 
             src={contact.profile_pic || contact.profilePic} 

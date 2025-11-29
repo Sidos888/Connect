@@ -325,7 +325,14 @@ function AddPersonView({
                           borderStyle: 'solid',
                           boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                         }}>
-                        <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                        <div 
+                          className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+                          style={{
+                            borderWidth: '0.5px',
+                            borderStyle: 'solid',
+                            borderColor: 'rgba(0, 0, 0, 0.08)'
+                          }}
+                        >
                           {request.sender?.profile_pic ? (
                             <img src={request.sender.profile_pic} alt={request.sender.name} className="w-full h-full object-cover" />
                           ) : (
@@ -429,7 +436,14 @@ function AddPersonView({
                                   borderStyle: 'solid',
                                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                                 }}>
-                                <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                <div 
+                                  className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+                                  style={{
+                                    borderWidth: '0.5px',
+                                    borderStyle: 'solid',
+                                    borderColor: 'rgba(0, 0, 0, 0.08)'
+                                  }}
+                                >
                                   {user.profile_pic ? (
                                     <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
                                   ) : (
@@ -499,7 +513,14 @@ function AddPersonView({
                               borderStyle: 'solid',
                               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                             }}>
-                            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                            <div 
+                              className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+                              style={{
+                                borderWidth: '0.5px',
+                                borderStyle: 'solid',
+                                borderColor: 'rgba(0, 0, 0, 0.08)'
+                              }}
+                            >
                               {user.profile_pic ? (
                                 <img src={user.profile_pic} alt={user.name} className="w-full h-full object-cover" />
                               ) : (
@@ -1168,43 +1189,42 @@ export default function ProfileMenu() {
             )}
             </div>
         )}
+      </div>
         
-        {/* Centered Connections Modal (for friend profiles only - not part of unified system) */}
-        {showCenteredConnectionsModal && connectionsModalUserId && (
-          <ConnectionsModal
-            isOpen={true}
-            onClose={() => {
-              setShowCenteredConnectionsModal(false);
-              setConnectionsModalUserId(null);
-            }}
-            onBack={() => {
-              setShowCenteredConnectionsModal(false);
-              setConnectionsModalUserId(null);
-              // TODO: Friend profile view needs to be implemented with unified modal system
-              // setShowCenteredFriendProfile(true);
-            }}
-            userId={connectionsModalUserId}
-            onRemoveFriend={(removedUserId) => {
-              // Handle friend removal if needed
-            }}
-          />
-        )}
+      {/* Centered Connections Modal (for friend profiles only - not part of unified system) */}
+      {showCenteredConnectionsModal && connectionsModalUserId && (
+        <ConnectionsModal
+          isOpen={true}
+          onClose={() => {
+            setShowCenteredConnectionsModal(false);
+            setConnectionsModalUserId(null);
+          }}
+          onBack={() => {
+            setShowCenteredConnectionsModal(false);
+            setConnectionsModalUserId(null);
+            // TODO: Friend profile view needs to be implemented with unified modal system
+            // setShowCenteredFriendProfile(true);
+          }}
+          userId={connectionsModalUserId}
+          onRemoveFriend={(removedUserId) => {
+            // Handle friend removal if needed
+          }}
+        />
+      )}
 
-        {/* Settings Modal (local to ProfileMenu) */}
-        {selectedFriend && (
-          <SettingsModal
-            isOpen={showSettingsModal}
-            onClose={() => {
-              setShowSettingsModal(false);
-            }}
-            onBack={() => {
-              setShowSettingsModal(false);
-            }}
-            userId={selectedFriend.id}
-          />
-        )}
-
-              </div>
+      {/* Settings Modal (local to ProfileMenu) */}
+      {selectedFriend && (
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => {
+            setShowSettingsModal(false);
+          }}
+          onBack={() => {
+            setShowSettingsModal(false);
+          }}
+          userId={selectedFriend.id}
+        />
+      )}
     </>
   );
 }

@@ -224,8 +224,8 @@ export default function ListingDetailPageClient({ listingId }: ListingDetailPage
                 userRole={userRole}
                 listingId={listing.id}
                 onManage={() => {
-                  // Use query parameter route for static export compatibility (no RSC navigation needed)
-                  router.push(`/my-life/listing/manage?id=${listing.id}`);
+                  // Navigate to listing page with manage view
+                  router.push(`/listing?id=${listing.id}&view=manage`);
                 }}
               />
 

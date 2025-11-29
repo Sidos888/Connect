@@ -430,12 +430,12 @@ function GroupDetailsContent() {
                       {/* Event Image */}
                       <div
                         className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-200"
-                        style={{
-                          borderWidth: '0.4px',
-                          borderColor: '#E5E7EB',
-                          borderStyle: 'solid',
-                        }}
-                      >
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                }}
+              >
                         {thumbnailUrl ? (
                           <img
                             src={thumbnailUrl}
@@ -447,18 +447,18 @@ function GroupDetailsContent() {
                             Event
                           </div>
                         )}
-                      </div>
+              </div>
 
-                      {/* Event Details */}
+              {/* Event Details */}
                       <div className="flex-1 min-w-0 text-left">
-                        <div className="text-base font-semibold text-gray-900 mb-1 truncate">
+                <div className="text-base font-semibold text-gray-900 mb-1 truncate">
                           {event.title}
-                        </div>
-                        <div className="text-sm text-gray-500 truncate">
+                </div>
+                <div className="text-sm text-gray-500 truncate">
                           {event.start_date ? formatDateTime(event.start_date) : 'Date and time'}
-                        </div>
-                      </div>
-                    </div>
+                </div>
+              </div>
+              </div>
                   );
                 })()
               )}

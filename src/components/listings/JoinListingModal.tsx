@@ -114,6 +114,19 @@ export default function JoinListingModal({ isOpen, onClose, listing }: JoinListi
         return;
       }
 
+      // Mark any pending invites for this listing as accepted
+      const { error: inviteUpdateError } = await supabase
+        .from('listing_invites')
+        .update({ status: 'accepted' })
+        .eq('listing_id', listing.id)
+        .eq('invitee_id', account.id)
+        .eq('status', 'pending');
+
+      if (inviteUpdateError) {
+        console.error('Error updating invites:', inviteUpdateError);
+        // Don't fail the join operation if invite update fails
+      }
+
       // Invalidate React Query caches to update UI immediately
       // 1. Invalidate listing participant status (to update status card)
       queryClient.invalidateQueries({ 
@@ -128,6 +141,11 @@ export default function JoinListingModal({ isOpen, onClose, listing }: JoinListi
       // 3. Invalidate attendee count (to update attendee count display)
       queryClient.invalidateQueries({ 
         queryKey: ['listing-attendee-count', listing.id] 
+      });
+      
+      // 4. Invalidate listing invites (to hide invite notification)
+      queryClient.invalidateQueries({ 
+        queryKey: ['listing-invites', account.id] 
       });
 
       // Successfully joined - navigate to My Life page (defaults to upcoming view)

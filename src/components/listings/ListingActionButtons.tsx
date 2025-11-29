@@ -1,8 +1,10 @@
 "use client";
 
-import { UserPlus, MessageCircle, Settings, MoreVertical, Users, Camera } from 'lucide-react';
+import { useState } from 'react';
+import { UserPlus, MessageCircle, Settings, MoreHorizontal, Users, Camera } from 'lucide-react';
 import { Listing } from '@/lib/listingsService';
 import { useRouter } from 'next/navigation';
+import MoreOptionsModal from './MoreOptionsModal';
 
 interface ListingActionButtonsProps {
   userRole: 'host' | 'participant' | 'viewer';
@@ -24,6 +26,7 @@ export default function ListingActionButtons({
   onLeave
 }: ListingActionButtonsProps) {
   const router = useRouter();
+  const [showMoreModal, setShowMoreModal] = useState(false);
 
   const handleGalleryClick = () => {
     router.push(`/listing?id=${listingId}&view=gallery`);
@@ -95,27 +98,6 @@ export default function ListingActionButtons({
           <span className="text-xs font-medium text-gray-900">{isCurrentUserParticipant ? 'Attending' : 'Join'}</span>
         </button>
 
-        {/* Contact Button - Not clickable but looks normal */}
-        <button
-          className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-          style={getButtonStyles(false)}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Not functional yet
-          }}
-        >
-          <div 
-            className="flex items-center justify-center bg-white"
-            style={getIconContainerStyles()}
-          >
-            <MessageCircle size={24} className="text-gray-900" />
-          </div>
-          <span className="text-xs font-medium text-gray-900">Contact</span>
-        </button>
-
         {/* Gallery Button - Only show for participants/hosts when gallery is enabled */}
         {showGallery && (
           <button
@@ -135,26 +117,30 @@ export default function ListingActionButtons({
           </button>
         )}
 
-        {/* More Button - Not clickable but looks normal */}
+        {/* More Button - Opens modal */}
         <button
+          onClick={() => setShowMoreModal(true)}
           className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-          style={getButtonStyles(false)}
+          style={getButtonStyles(true)}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Not functional yet
-          }}
         >
           <div 
             className="flex items-center justify-center bg-white"
             style={getIconContainerStyles()}
           >
-            <MoreVertical size={24} className="text-gray-900" />
+            <MoreHorizontal size={24} className="text-gray-900" />
           </div>
           <span className="text-xs font-medium text-gray-900">More</span>
         </button>
+
+        {/* More Options Modal */}
+        <MoreOptionsModal
+          isOpen={showMoreModal}
+          onClose={() => setShowMoreModal(false)}
+          hostId={listing?.host_id || null}
+          userRole={userRole}
+        />
       </div>
     );
   }
@@ -165,17 +151,13 @@ export default function ListingActionButtons({
   
   return (
     <div className="flex items-center justify-center gap-4 my-6">
-      {/* Invite Button - Not clickable but looks normal */}
+      {/* Invite Button - Opens invite page */}
       <button
+        onClick={() => router.push(`/listing/invite?id=${listingId}`)}
         className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-        style={getButtonStyles(false)}
+        style={getButtonStyles(true)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          // Not functional yet
-        }}
       >
         <div 
           className="flex items-center justify-center bg-white"
@@ -222,26 +204,30 @@ export default function ListingActionButtons({
         <span className="text-xs font-medium text-gray-900">Manage</span>
       </button>
 
-      {/* More Button - Not clickable but looks normal */}
+      {/* More Button - Opens modal */}
       <button
+        onClick={() => setShowMoreModal(true)}
         className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-        style={getButtonStyles(false)}
+        style={getButtonStyles(true)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          // Not functional yet
-        }}
       >
         <div 
           className="flex items-center justify-center bg-white"
           style={getIconContainerStyles()}
         >
-          <MoreVertical size={24} className="text-gray-900" />
+          <MoreHorizontal size={24} className="text-gray-900" />
         </div>
         <span className="text-xs font-medium text-gray-900">More</span>
       </button>
+
+      {/* More Options Modal */}
+      <MoreOptionsModal
+        isOpen={showMoreModal}
+        onClose={() => setShowMoreModal(false)}
+        hostId={listing?.host_id || null}
+        userRole={userRole}
+      />
     </div>
   );
 }

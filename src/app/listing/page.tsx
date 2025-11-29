@@ -126,6 +126,26 @@ export default function ListingPage() {
 
   const listing = listingData;
 
+  // Fetch event chat status
+  const { data: eventChatStatus } = useQuery({
+    queryKey: ['event-chat-status', listing?.event_chat_id],
+    queryFn: async () => {
+      if (!listing?.event_chat_id) return { enabled: false };
+      const supabase = getSupabaseClient();
+      if (!supabase) return { enabled: false };
+      
+      const { data, error } = await supabase
+        .from('chats')
+        .select('id, is_archived')
+        .eq('id', listing.event_chat_id)
+        .single();
+
+      if (error || !data) return { enabled: false };
+      return { enabled: !data.is_archived };
+    },
+    enabled: !!listing?.event_chat_id,
+  });
+
   // Fetch host account details
   const { data: hostAccount } = useQuery({
     queryKey: ['host-account', listing?.host_id],
@@ -357,8 +377,8 @@ export default function ListingPage() {
     switch (view) {
       case 'manage':
         return (
-          <div className="px-4 pb-16" style={{ paddingTop: 'var(--saved-content-padding-top, 140px)' }}>
-            <div className="space-y-3">
+          <div className="px-4 pb-16 flex flex-col" style={{ paddingTop: 'var(--saved-content-padding-top, 140px)', minHeight: 'calc(100vh - var(--saved-content-padding-top, 140px))' }}>
+            <div className="space-y-3 flex-1">
               {/* Management Section Cards */}
               
               {/* Listing Details Card */}
@@ -402,28 +422,45 @@ export default function ListingPage() {
               </button>
 
               {/* Attendees Card */}
-              <div 
-                  className="bg-white rounded-xl p-4 flex items-center gap-3"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    minHeight: '72px',
-                  }}
-                >
-                  <div className="flex-shrink-0">
-                    <Users size={20} className="text-gray-900" />
+              <button
+                onClick={() => {
+                  if (!listingId) return;
+                  const currentPath = `/listing?id=${listingId}&view=manage`;
+                  router.push(`/listing/attendees?id=${listingId}&from=${encodeURIComponent(currentPath)}`);
+                }}
+                className="w-full bg-white rounded-xl p-4 flex items-center gap-3 text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  minHeight: '72px',
+                  cursor: 'pointer',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <div className="flex-shrink-0">
+                  <Users size={20} className="text-gray-900" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold text-gray-900 mb-1">
+                    Attendees
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-gray-900 mb-1">
-                      Attendees
-                    </div>
-                    <div className="text-sm font-normal text-gray-500">
-                      View and manage
-                    </div>
+                  <div className="text-sm font-normal text-gray-500">
+                    View, add and manage
                   </div>
-              </div>
+                </div>
+              </button>
 
               {/* Hosts Card */}
               <div 
@@ -449,59 +486,74 @@ export default function ListingPage() {
                   </div>
               </div>
 
-              {/* Action Buttons Section - Spaced out from cards above */}
-              <div className="mt-6 space-y-3">
-                {/* Start Event Chat Button */}
-                <div 
-                    className="bg-white rounded-xl p-3 flex items-center gap-3"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      minHeight: '56px',
-                    }}
-                  >
-                    <div className="flex-shrink-0">
-                      <MessageCircle size={20} className="text-gray-900" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base font-semibold text-gray-900">
-                        Start Event Chat
-                      </div>
-                    </div>
+              {/* Event Chat Card - Same height as other cards */}
+              <button
+                onClick={() => {
+                  if (listingId) {
+                    router.push(`/my-life/listing/event-chat?id=${listingId}`);
+                  }
+                }}
+                className="bg-white rounded-xl p-4 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  minHeight: '72px',
+                  cursor: 'pointer',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+              >
+                <div className="flex-shrink-0">
+                  <MessageCircle size={20} className="text-gray-900" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold text-gray-900 mb-1">
+                    Event Chat
+                  </div>
+                  <div className="text-sm font-normal text-gray-500">
+                    {eventChatStatus?.enabled ? 'Enabled' : 'Disabled'}
+                  </div>
+                </div>
+              </button>
+            </div>
 
-                {/* Cancel Event Button */}
-                <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="bg-white rounded-xl p-3 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      minHeight: '56px',
-                      cursor: 'pointer',
-                      willChange: 'transform, box-shadow'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                  >
-                    <div className="flex-shrink-0">
-                      <X size={20} className="text-gray-900" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base font-semibold text-gray-900">
-                        Cancel Event
-                      </div>
-                    </div>
-                </button>
-              </div>
+            {/* Cancel Event Button - Positioned at bottom with red text */}
+            <div className="mt-auto pt-16 pb-8">
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="bg-white rounded-xl p-4 flex items-center gap-3 w-full text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  minHeight: '72px',
+                  cursor: 'pointer',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+              >
+                <div className="flex-shrink-0">
+                  <X size={20} className="text-red-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold text-red-600">
+                    Cancel Event
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
         );

@@ -139,7 +139,14 @@ export default function Connections({
                 }}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div 
+                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
+                    style={{
+                      borderWidth: '0.5px',
+                      borderStyle: 'solid',
+                      borderColor: 'rgba(0, 0, 0, 0.08)'
+                    }}
+                  >
                     {friend.profile_pic ? (
                       <img src={friend.profile_pic} alt={friend.name} className="w-full h-full object-cover" />
                     ) : (
@@ -179,7 +186,14 @@ export default function Connections({
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                <div className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                <div 
+                  className="absolute left-6 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+                  style={{
+                    borderWidth: '0.5px',
+                    borderStyle: 'solid',
+                    borderColor: 'rgba(0, 0, 0, 0.08)'
+                  }}
+                >
                   {business.profile_pic ? (
                     <img src={business.profile_pic} alt={business.name} className="w-full h-full object-cover" />
                   ) : (
@@ -202,4 +216,3 @@ export default function Connections({
     </>
   );
 }
-

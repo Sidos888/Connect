@@ -41,6 +41,19 @@ export interface EventGalleryWithItems extends EventGallery {
   people_count: number;
 }
 
+export interface ListingInvite {
+  id: string;
+  listing_id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  listing?: Listing;
+  inviter?: { id: string; name: string; profile_pic: string | null };
+}
+
 export class ListingsService {
   private supabase = getSupabaseClient();
 
@@ -620,6 +633,226 @@ export class ListingsService {
     } catch (error) {
       console.error('Error in getGalleryPeopleCount:', error);
       return { count: 0, error: error as Error };
+    }
+  }
+
+  /**
+   * Get listing invitations for a user
+   * Filters out invites where user is already a participant
+   */
+  async getListingInvites(userId: string): Promise<{ invites: ListingInvite[]; error: Error | null }> {
+    if (!this.supabase) {
+      return { invites: [], error: new Error('Supabase client not available') };
+    }
+
+    try {
+      // First, get all pending invites
+      const { data, error } = await this.supabase
+        .from('listing_invites')
+        .select(`
+          id,
+          listing_id,
+          inviter_id,
+          invitee_id,
+          status,
+          created_at,
+          updated_at,
+          listings (
+            id,
+            host_id,
+            title,
+            summary,
+            location,
+            start_date,
+            end_date,
+            capacity,
+            is_public,
+            photo_urls,
+            created_at,
+            updated_at
+          ),
+          inviter:accounts!listing_invites_inviter_id_fkey (
+            id,
+            name,
+            profile_pic
+          )
+        `)
+        .eq('invitee_id', userId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching listing invites:', error);
+        return { invites: [], error };
+      }
+
+      if (!data || data.length === 0) {
+        return { invites: [], error: null };
+      }
+
+      // Get listing IDs from invites
+      const listingIds = data.map((item: any) => item.listing_id);
+
+      // Check which listings the user is already a participant in
+      const { data: participants, error: participantError } = await this.supabase
+        .from('listing_participants')
+        .select('listing_id')
+        .eq('user_id', userId)
+        .in('listing_id', listingIds)
+        .eq('status', 'upcoming');
+
+      if (participantError) {
+        console.error('Error checking participants:', participantError);
+        // Continue anyway, but log the error
+      }
+
+      // Get set of listing IDs where user is already a participant
+      const participantListingIds = new Set(
+        (participants || []).map((p: any) => p.listing_id)
+      );
+
+      // Filter out invites for listings where user is already a participant
+      const filteredData = data.filter((item: any) => 
+        !participantListingIds.has(item.listing_id)
+      );
+
+      const invites: ListingInvite[] = filteredData.map((item: any) => ({
+        id: item.id,
+        listing_id: item.listing_id,
+        inviter_id: item.inviter_id,
+        invitee_id: item.invitee_id,
+        status: item.status,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        listing: item.listings ? {
+          ...item.listings,
+          role: undefined,
+          status: undefined,
+        } : undefined,
+        inviter: item.inviter ? {
+          id: item.inviter.id,
+          name: item.inviter.name,
+          profile_pic: item.inviter.profile_pic,
+        } : undefined,
+      }));
+
+      return { invites, error: null };
+    } catch (error) {
+      console.error('Error in getListingInvites:', error);
+      return { invites: [], error: error as Error };
+    }
+  }
+
+  /**
+   * Accept a listing invitation
+   */
+  async acceptListingInvite(inviteId: string, userId: string): Promise<{ success: boolean; error: Error | null }> {
+    if (!this.supabase) {
+      return { success: false, error: new Error('Supabase client not available') };
+    }
+
+    try {
+      // Get the invite to get listing_id
+      const { data: inviteData, error: inviteError } = await this.supabase
+        .from('listing_invites')
+        .select('listing_id')
+        .eq('id', inviteId)
+        .eq('invitee_id', userId)
+        .eq('status', 'pending')
+        .single();
+
+      if (inviteError || !inviteData) {
+        return { success: false, error: new Error('Invitation not found') };
+      }
+
+      // Update invite status to accepted
+      const { error: updateError } = await this.supabase
+        .from('listing_invites')
+        .update({ status: 'accepted' })
+        .eq('id', inviteId);
+
+      if (updateError) {
+        return { success: false, error: updateError };
+      }
+
+      // Add user to listing_participants
+      const { error: participantError } = await this.supabase
+        .from('listing_participants')
+        .upsert({
+          listing_id: inviteData.listing_id,
+          user_id: userId,
+          role: 'participant',
+          status: 'upcoming',
+        }, {
+          onConflict: 'listing_id,user_id'
+        });
+
+      if (participantError) {
+        console.error('Error adding participant:', participantError);
+        // Still return success since invite was accepted
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in acceptListingInvite:', error);
+      return { success: false, error: error as Error };
+    }
+  }
+
+  /**
+   * Decline a listing invitation
+   */
+  async declineListingInvite(inviteId: string, userId: string): Promise<{ success: boolean; error: Error | null }> {
+    if (!this.supabase) {
+      return { success: false, error: new Error('Supabase client not available') };
+    }
+
+    try {
+      const { error } = await this.supabase
+        .from('listing_invites')
+        .update({ status: 'declined' })
+        .eq('id', inviteId)
+        .eq('invitee_id', userId)
+        .eq('status', 'pending');
+
+      if (error) {
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in declineListingInvite:', error);
+      return { success: false, error: error as Error };
+    }
+  }
+
+  /**
+   * Mark pending invites as accepted when user joins a listing
+   * This is called when user joins via Join button (not via Accept invite)
+   */
+  async markInvitesAsAcceptedForListing(listingId: string, userId: string): Promise<{ success: boolean; error: Error | null }> {
+    if (!this.supabase) {
+      return { success: false, error: new Error('Supabase client not available') };
+    }
+
+    try {
+      // Update all pending invites for this listing and user to 'accepted'
+      const { error } = await this.supabase
+        .from('listing_invites')
+        .update({ status: 'accepted' })
+        .eq('listing_id', listingId)
+        .eq('invitee_id', userId)
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('Error marking invites as accepted:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.error('Error in markInvitesAsAcceptedForListing:', error);
+      return { success: false, error: error as Error };
     }
   }
 }

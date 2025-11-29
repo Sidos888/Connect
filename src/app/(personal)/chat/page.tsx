@@ -23,6 +23,8 @@ import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import ProfileModal from "@/components/profile/ProfileModal";
 import { SearchIcon } from "@/components/icons";
 import SearchModal from "@/components/chat/SearchModal";
+import { getSupabaseClient } from "@/lib/supabaseClient";
+import Image from "next/image";
 
 function MessagesPageContent() {
   const { isHydrated } = useAppStore();
@@ -154,6 +156,65 @@ function MessagesPageContent() {
     });
   }, [chats, account?.id, friendIds]);
   
+  // Event listing data for event chats
+  const [eventListings, setEventListings] = useState<Map<string, {
+    id: string;
+    title: string;
+    start_date: string | null;
+    end_date: string | null;
+    photo_urls: string[] | null;
+  }>>(new Map());
+  
+  // Fetch event listing data for event chats
+  useEffect(() => {
+    const fetchEventListings = async () => {
+      const eventChats = conversations.filter(conv => conv.isEventChat);
+      if (eventChats.length === 0) {
+        setEventListings(new Map());
+        return;
+      }
+      
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+      
+      const newEventListings = new Map<string, {
+        id: string;
+        title: string;
+        start_date: string | null;
+        end_date: string | null;
+        photo_urls: string[] | null;
+      }>();
+      
+      await Promise.all(
+        eventChats.map(async (conv) => {
+          try {
+            const { data: listing, error } = await supabase
+              .from('listings')
+              .select('id, title, start_date, end_date, photo_urls, event_chat_id')
+              .eq('event_chat_id', conv.id)
+              .maybeSingle();
+            
+            if (!error && listing) {
+              newEventListings.set(conv.id, {
+                id: listing.id,
+                title: listing.title,
+                start_date: listing.start_date,
+                end_date: listing.end_date,
+                photo_urls: listing.photo_urls || null
+              });
+            }
+          } catch (err) {
+            console.error('Error fetching event listing for chat:', conv.id, err);
+          }
+        })
+      );
+      
+      setEventListings(newEventListings);
+    };
+    
+    fetchEventListings();
+  }, [conversations]);
+  
   // Find the selected conversation
   const selectedConversation = selectedChatId ? conversations.find(c => c.id === selectedChatId) : null;
   
@@ -161,6 +222,23 @@ function MessagesPageContent() {
   const [mobileActiveCategory, setMobileActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
+  // Format listing date/time helper
+  const formatListingDateTime = (dateString: string | null) => {
+    if (!dateString) return "Date and Time";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return "Date and Time";
+    }
+  };
 
   // Lock body scroll on desktop
   useEffect(() => {
@@ -714,15 +792,44 @@ function MessagesPageContent() {
                         }}
                       >
                         <div className="flex items-center space-x-3">
-                          <Avatar
-                            src={conversation.avatarUrl}
-                            name={conversation.title}
-                            size={48}
-                          />
+                          {conversation.isEventChat && eventListings.has(conversation.id) ? (
+                            // Event chat: squared image
+                            <div 
+                              className="w-12 h-12 bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 rounded-md"
+                              style={{
+                                borderWidth: '0.5px',
+                                borderStyle: 'solid',
+                                borderColor: 'rgba(0, 0, 0, 0.08)'
+                              }}
+                            >
+                              {eventListings.get(conversation.id)?.photo_urls && eventListings.get(conversation.id)!.photo_urls!.length > 0 ? (
+                                <Image
+                                  src={eventListings.get(conversation.id)!.photo_urls![0]}
+                                  alt={eventListings.get(conversation.id)!.title}
+                                  width={48}
+                                  height={48}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="text-gray-400 text-sm font-semibold">
+                                  {eventListings.get(conversation.id)?.title.charAt(0).toUpperCase() || 'E'}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            // Regular chat: circular avatar
+                            <Avatar
+                              src={conversation.avatarUrl}
+                              name={conversation.title}
+                              size={48}
+                            />
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <h3 className="text-sm font-semibold text-gray-900 truncate">
-                                {conversation.title}
+                                {conversation.isEventChat && eventListings.has(conversation.id)
+                                  ? eventListings.get(conversation.id)!.title
+                                  : conversation.title}
                               </h3>
                               <div className="relative flex-shrink-0">
                                 <span 
@@ -823,4 +930,3 @@ export default function MessagesPage() {
     </Suspense>
   );
 }
-

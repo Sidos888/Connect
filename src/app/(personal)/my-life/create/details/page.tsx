@@ -33,6 +33,7 @@ export default function CreateListingDetailsPage() {
   const [includeEndTime, setIncludeEndTime] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [hasGallery, setHasGallery] = useState(false);
+  const [enableEventChat, setEnableEventChat] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Fetch group chat info if group context
@@ -89,6 +90,7 @@ export default function CreateListingDetailsPage() {
       const storedIncludeEndTime = sessionStorage.getItem('listingIncludeEndTime');
       const storedPhotos = sessionStorage.getItem('listingPhotos');
       const storedHasGallery = sessionStorage.getItem('listingHasGallery');
+      const storedEnableEventChat = sessionStorage.getItem('listingEnableEventChat');
 
       if (storedTitle) setListingTitle(storedTitle);
       if (storedSummary) setSummary(storedSummary);
@@ -132,6 +134,7 @@ export default function CreateListingDetailsPage() {
         }
       }
       if (storedHasGallery !== null) setHasGallery(storedHasGallery === 'true');
+      if (storedEnableEventChat !== null) setEnableEventChat(storedEnableEventChat === 'true');
     } catch (e) {
       console.error('Error loading listing data:', e);
     }
@@ -141,6 +144,11 @@ export default function CreateListingDetailsPage() {
   useEffect(() => {
     sessionStorage.setItem('listingHasGallery', hasGallery.toString());
   }, [hasGallery]);
+
+  // Save enableEventChat to sessionStorage when it changes
+  useEffect(() => {
+    sessionStorage.setItem('listingEnableEventChat', enableEventChat.toString());
+  }, [enableEventChat]);
 
   const getDisplayDate = (): string => {
     if (!startDate) return 'Date and time';
@@ -430,13 +438,48 @@ export default function CreateListingDetailsPage() {
 
         eventChatId = newEventChat.id;
         
-        // Mark chat as event chat
-        await supabase
+        // Mark chat as event chat and ensure it's not archived
+        const { error: updateError } = await supabase
           .from('chats')
-          .update({ is_event_chat: true })
+          .update({ is_event_chat: true, is_archived: false })
           .eq('id', eventChatId);
 
-        console.log('✅ Event chat created:', eventChatId);
+        if (updateError) {
+          console.error('Error updating event chat flags:', updateError);
+        } else {
+          console.log('✅ Event chat created and marked:', eventChatId);
+        }
+      } else if (enableEventChat && !groupChatId) {
+        // For regular listings (not group), create event chat if enabled
+        if (!chatService) {
+          throw new Error('Chat service not available');
+        }
+
+        // Create new group chat for event participants
+        const { chat: newEventChat, error: chatError } = await chatService.createGroupChat(
+          listingTitle.trim(),
+          [],
+          photoUrls.length > 0 ? photoUrls[0] : undefined
+        );
+
+        if (chatError || !newEventChat) {
+          console.error('Error creating event chat:', chatError);
+          throw new Error('Failed to create event chat');
+        }
+
+        eventChatId = newEventChat.id;
+        
+        // Mark chat as event chat and ensure it's not archived
+        const { error: updateError2 } = await supabase
+          .from('chats')
+          .update({ is_event_chat: true, is_archived: false })
+          .eq('id', eventChatId);
+
+        if (updateError2) {
+          console.error('Error updating event chat flags:', updateError2);
+        } else {
+          console.log('✅ Event chat created and marked:', eventChatId);
+        }
       }
 
       // Create listing record in database
@@ -512,6 +555,7 @@ export default function CreateListingDetailsPage() {
       sessionStorage.removeItem('listingIncludeEndTime');
       sessionStorage.removeItem('listingPhotos');
       sessionStorage.removeItem('listingHasGallery');
+      sessionStorage.removeItem('listingEnableEventChat');
       
       // Navigate back to my-life page
       router.push('/my-life');
@@ -772,6 +816,41 @@ export default function CreateListingDetailsPage() {
                 </button>
               </div>
             )}
+
+            {/* Event Chat Toggle Card - For all listings */}
+            <div 
+              className="w-full bg-white rounded-xl p-4 flex items-center justify-between transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <span className="text-base font-medium text-gray-900">Event Chat</span>
+              <button
+                type="button"
+                onClick={() => setEnableEventChat(!enableEventChat)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                  enableEventChat ? 'bg-orange-500' : 'bg-gray-300'
+                }`}
+                role="switch"
+                aria-checked={enableEventChat}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    enableEventChat ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
 
             {/* Gallery Toggle Card - Same width as page 1 cards */}
             <div 
