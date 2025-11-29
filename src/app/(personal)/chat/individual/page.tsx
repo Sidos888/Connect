@@ -480,10 +480,9 @@ export default function IndividualChatPage() {
         if (response.status < 200 || response.status >= 300) {
           console.error(`  ❌ Upload failed:`, {
             status: response.status,
-            statusText: response.statusText,
             data: response.data
           });
-          throw new Error(`Upload failed: ${response.statusText || 'Unknown error'} (${response.status})`);
+          throw new Error(`Upload failed: ${response.status} (${typeof response.data === 'string' ? response.data.substring(0, 100) : 'Unknown error'})`);
         }
 
         console.log(`  ✅ Capacitor HTTP upload completed successfully`);
@@ -556,7 +555,7 @@ export default function IndividualChatPage() {
         // TODO: Generate actual thumbnail for videos
       } else {
         // Get image dimensions
-        const img = new Image();
+        const img = document.createElement('img');
         img.src = URL.createObjectURL(file);
         await new Promise((resolve, reject) => {
           img.onload = resolve;
@@ -1242,6 +1241,7 @@ export default function IndividualChatPage() {
           {/* Text Input */}
           <textarea
             ref={textareaRef}
+            data-no-global-input-fix="true"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             placeholder=""

@@ -9,7 +9,7 @@ import { useEffect } from 'react';
 export default function GlobalInputFix() {
   useEffect(() => {
     // Only run on iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     console.log('🔧 GlobalInputFix: Initializing', { isIOS, userAgent: navigator.userAgent });
     if (!isIOS) {
       console.log('🔧 GlobalInputFix: Not iOS, skipping');
@@ -19,6 +19,17 @@ export default function GlobalInputFix() {
     // Fix all inputs and textareas
     const fixInput = (input: HTMLInputElement | HTMLTextAreaElement) => {
       try {
+        // Allow specific inputs/textareas to opt out entirely via data attribute
+        // This is used for highly controlled fields like the chat message box
+        if ((input as any).dataset?.noGlobalInputFix === 'true') {
+          console.log('🔧 GlobalInputFix: Skipping input with data-no-global-input-fix', {
+            tagName: input.tagName,
+            id: input.id,
+            className: input.className,
+          });
+          return;
+        }
+
         // Skip if already fixed (check for handler marker)
         if ((input as any)._iosFixed) {
           return;
@@ -85,7 +96,7 @@ export default function GlobalInputFix() {
       let lastKeyPress: { key: string; reportedCapsLock: boolean; desiredCase: 'upper' | 'lower' } | null = null;
       
       // Intercept keydown to track what was actually pressed
-      const handleKeyDown = (e: KeyboardEvent) => {
+      const handleKeyDown = (e: any) => {
         const target = e.target as HTMLInputElement | HTMLTextAreaElement;
         if (target !== input) return;
         
