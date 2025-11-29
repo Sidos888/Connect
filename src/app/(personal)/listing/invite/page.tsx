@@ -259,8 +259,29 @@ export default function InvitePage() {
 
       // Update declined/accepted invites to pending
       if (invitesToUpdate.length > 0) {
-        console.log('📧 handleSendInvites: Updating invites', { count: invitesToUpdate.length, inviteIds: invitesToUpdate.map(i => i.id) });
+        console.log('📧 handleSendInvites: Updating invites', { 
+          count: invitesToUpdate.length, 
+          inviteIds: invitesToUpdate.map(i => i.id),
+          currentUserId: account.id,
+          listingId: listingId
+        });
+        
         for (const invite of invitesToUpdate) {
+          // First, verify we can see the invite before updating
+          const { data: inviteCheck, error: checkError } = await supabase
+            .from('listing_invites')
+            .select('id, inviter_id, invitee_id, status')
+            .eq('id', invite.id)
+            .single();
+          
+          console.log('📧 handleSendInvites: Pre-update invite check', {
+            inviteId: invite.id,
+            inviteCheck,
+            checkError: checkError?.message,
+            isInviter: inviteCheck?.inviter_id === account.id,
+            isInvitee: inviteCheck?.invitee_id === account.id
+          });
+          
           const { data: updatedData, error: updateError } = await supabase
             .from('listing_invites')
             .update({ status: 'pending', updated_at: new Date().toISOString() })
@@ -268,7 +289,14 @@ export default function InvitePage() {
             .select();
 
           if (updateError) {
-            console.error('📧 handleSendInvites: Error updating invite:', updateError);
+            console.error('📧 handleSendInvites: Error updating invite:', {
+              inviteId: invite.id,
+              error: updateError,
+              errorCode: updateError.code,
+              errorMessage: updateError.message,
+              errorDetails: updateError.details,
+              errorHint: updateError.hint
+            });
             throw updateError; // Throw error to prevent navigation
           } else {
             console.log('📧 handleSendInvites: Update response', { 
@@ -280,8 +308,13 @@ export default function InvitePage() {
             
             // Verify the update actually worked
             if (!updatedData || updatedData.length === 0) {
-              console.error('📧 handleSendInvites: WARNING - No rows updated', { inviteId: invite.id });
-              throw new Error(`Failed to update invite ${invite.id}: No rows affected`);
+              console.error('📧 handleSendInvites: WARNING - No rows updated', { 
+                inviteId: invite.id,
+                inviteCheck,
+                currentUserId: account.id,
+                possibleRLSBlock: 'RLS policy may be blocking update'
+              });
+              throw new Error(`Failed to update invite ${invite.id}: No rows affected. This may be an RLS policy issue.`);
             }
             
             if (updatedData[0].status !== 'pending') {
