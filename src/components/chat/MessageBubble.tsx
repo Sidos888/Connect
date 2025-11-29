@@ -5,6 +5,7 @@ import { SimpleMessage } from '@/lib/types';
 import { X, MoreVertical } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import MessagePhotoCollage from '@/components/chat/MessagePhotoCollage';
+import ListingMessageCard from '@/components/chat/ListingMessageCard';
 
 interface MessageBubbleProps {
   message: SimpleMessage;
@@ -131,8 +132,18 @@ const MessageBubble = React.memo(({
           </div>
         )}
 
+        {/* Listing message card */}
+        {!isDeleted && message.message_type === 'listing' && message.listing_id && (
+          <div className="mb-2 max-w-full">
+            <ListingMessageCard 
+              listingId={message.listing_id} 
+              chatId={message.chat_id}
+            />
+          </div>
+        )}
+
         {/* Media attachments - outside message bubble */}
-        {!isDeleted && message.attachments && message.attachments.length > 0 && (
+        {!isDeleted && message.message_type !== 'listing' && message.attachments && message.attachments.length > 0 && (
           <div className="mb-2">
             <MessagePhotoCollage
               attachments={message.attachments}
@@ -158,8 +169,8 @@ const MessageBubble = React.memo(({
           </div>
         )}
 
-        {/* Main message bubble - only for text content */}
-        {!isDeleted && message.text && (
+        {/* Main message bubble - only for text content (not for listing messages) */}
+        {!isDeleted && message.message_type !== 'listing' && message.text && (
           <div 
             className="bg-white text-gray-900 rounded-2xl px-4 py-3 cursor-pointer"
             style={{

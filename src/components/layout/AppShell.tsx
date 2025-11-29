@@ -42,6 +42,7 @@ function AppShellContent({ children }: AppShellProps) {
   const isGroupDetailsPage = pathname.startsWith('/chat/group-details');
   const isGroupMembersPage = pathname.startsWith('/chat/group-details/members');
   const isGroupSettingsPage = pathname.startsWith('/chat/group-details/settings');
+  const isChatEventsPage = pathname.startsWith('/chat/events');
   const isMyLifePage = pathname.startsWith('/my-life');
   const isSettingsPage = (
     pathname.startsWith('/settings') ||
@@ -179,8 +180,8 @@ function AppShellContent({ children }: AppShellProps) {
           </ProtectedRoute>
         </main>
 
-        {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages and details page */}
-        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && (
+        {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages, details pages, and group events */}
+        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && !isChatEventsPage && (
           <div className="sm:hidden">
             <MobileBottomNavigation />
           </div>

@@ -74,6 +74,31 @@ export default function IndividualChatPage() {
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
   const [viewerMedia, setViewerMedia] = useState<MediaAttachment[]>([]); // Only media from clicked message
   const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]); // All chat media (for future use)
+  const [eventListing, setEventListing] = useState<{
+    id: string;
+    title: string;
+    start_date: string | null;
+    end_date: string | null;
+    photo_urls: string[] | null;
+  } | null>(null);
+
+  const isEventChat = !!eventListing;
+
+  const formatListingDateTime = (dateString: string | null) => {
+    if (!dateString) return "Date and Time";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return "Date and Time";
+    }
+  };
 
   // Simple mobile optimization - prevent body scroll
   useEffect(() => {
@@ -143,6 +168,39 @@ export default function IndividualChatPage() {
           } else if (messagesError) {
             console.error('Error loading messages:', messagesError);
           }
+        }
+
+        // Load event listing linked to this chat (event-specific chats)
+        try {
+          const supabase = getSupabaseClient();
+          if (!supabase) {
+            console.error('Supabase client not available when loading event listing');
+          } else {
+            const { data: listing, error: listingError } = await supabase
+            .from('listings')
+            .select('id, title, start_date, end_date, photo_urls, event_chat_id')
+            .eq('event_chat_id', chatId)
+            .maybeSingle();
+
+            if (listingError) {
+              console.error('Error loading event listing for chat:', listingError);
+            } else {
+              if (listing) {
+                console.log('Individual chat page: Event listing loaded for chat:', listing);
+                setEventListing({
+                  id: listing.id,
+                  title: listing.title,
+                  start_date: listing.start_date,
+                  end_date: listing.end_date,
+                  photo_urls: listing.photo_urls || null
+                });
+              } else {
+                setEventListing(null);
+              }
+            }
+          }
+        } catch (listingErr) {
+          console.error('Unexpected error loading event listing for chat:', listingErr);
         }
 
         // Load all chat media for the viewer
@@ -560,7 +618,7 @@ export default function IndividualChatPage() {
           chat_id: conversation.id,
           sender_id: account.id,
           sender_name: account.name || 'You',
-          sender_profile_pic: account.profile_pic || null,
+          sender_profile_pic: account.profile_pic || undefined,
           text: messageText.trim() || '',
           created_at: new Date().toISOString(),
           reply_to_message_id: replyToMessage?.id || null,
@@ -607,7 +665,7 @@ export default function IndividualChatPage() {
                 id: `temp_${Date.now()}_${index}`,
                 file_url: uploadResult.file_url,
                 file_type: media.file_type,
-                thumbnail_url: uploadResult.thumbnail_url || media.thumbnail_url,
+                thumbnail_url: uploadResult.thumbnail_url ?? media.thumbnail_url ?? undefined,
                 width: uploadResult.width || media.width,
                 height: uploadResult.height || media.height
               } as MediaAttachment;
@@ -907,48 +965,71 @@ export default function IndividualChatPage() {
 
   // Profile card component - Full width with page padding
   const profileCard = (
-    <div className="absolute left-0 right-0 flex items-center justify-center" style={{
-      top: '50%',
-      transform: 'translateY(-50%)',
-      paddingLeft: '72px', // Back button (44px) + spacing (12px) + page padding (16px)
-      paddingRight: '16px',
-      height: '100%'
-    }}>
-      <button 
+    <div
+      className="absolute left-0 right-0 flex items-center justify-center"
+      style={{
+        top: "50%",
+        transform: "translateY(-50%)",
+        paddingLeft: "72px", // Back button (44px) + spacing (12px) + page padding (16px)
+        paddingRight: "16px",
+        height: "100%",
+      }}
+    >
+      <button
         onClick={() => {
-          if (chatId) {
-            // Route to group details for group chats, DM details for direct chats
-            if (conversation.isGroup) {
-              router.push(`/chat/group-details?chat=${chatId}`);
-            } else {
-              router.push(`/chat/dm-details?chat=${chatId}`);
-            }
+          if (!chatId) return;
+
+          // For event-specific chats, open listing page instead of chat details
+          if (isEventChat && eventListing) {
+            const from = `/chat/individual?chat=${chatId}`;
+            router.push(
+              `/listing?id=${eventListing.id}&from=${encodeURIComponent(from)}`
+            );
+            return;
+          }
+
+          // Regular chats: open chat details
+          if (conversation.isGroup) {
+            router.push(`/chat/group-details?chat=${chatId}`);
+          } else {
+            router.push(`/chat/dm-details?chat=${chatId}`);
           }
         }}
         className="w-full flex items-center"
         style={{
-          padding: '10px 18px',
-          borderRadius: '16px',
-          background: 'rgba(255, 255, 255, 0.96)',
-          borderWidth: '0.4px',
-          borderColor: '#E5E7EB',
-          borderStyle: 'solid',
-          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-          willChange: 'transform, box-shadow',
-          height: '60px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
+          padding: "10px 18px",
+          borderRadius: "16px",
+          background: "rgba(255, 255, 255, 0.96)",
+          borderWidth: "0.4px",
+          borderColor: "#E5E7EB",
+          borderStyle: "solid",
+          boxShadow:
+            "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)",
+          willChange: "transform, box-shadow",
+          height: "60px",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          e.currentTarget.style.boxShadow =
+            "0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          e.currentTarget.style.boxShadow =
+            "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)";
         }}
       >
-        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-          {conversation.avatarUrl ? (
+        <div className="w-10 h-10 bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 rounded-md">
+          {isEventChat && eventListing && eventListing.photo_urls && eventListing.photo_urls.length > 0 ? (
+            <Image
+              src={eventListing.photo_urls[0]}
+              alt={eventListing.title}
+              width={40}
+              height={40}
+              className="w-full h-full object-cover"
+            />
+          ) : conversation.avatarUrl ? (
             <Image
               src={conversation.avatarUrl}
               alt={conversation.title}
@@ -963,7 +1044,14 @@ export default function IndividualChatPage() {
           )}
         </div>
         <div className="text-left min-w-0 flex-1">
-          <div className="font-semibold text-gray-900 text-base truncate">{conversation.title}</div>
+          <div className="font-semibold text-gray-900 text-base truncate">
+            {isEventChat && eventListing ? eventListing.title : conversation.title}
+          </div>
+          {isEventChat && (
+            <div className="text-xs text-gray-500">
+              {formatListingDateTime(eventListing?.start_date ?? null)}
+            </div>
+          )}
         </div>
       </button>
     </div>

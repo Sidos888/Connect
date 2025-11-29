@@ -88,6 +88,7 @@ export type Conversation = {
   title: string;
   avatarUrl?: string | null;
   isGroup?: boolean;
+  isEventChat?: boolean;
   unreadCount: number;
   messages: Message[];
 };
@@ -104,6 +105,8 @@ export type SimpleMessage = {
   reply_to_message_id?: string | null;
   attachments?: MediaAttachment[];
   deleted_at?: string | null;
+  message_type?: 'text' | 'image' | 'file' | 'system' | 'listing';
+  listing_id?: string | null;
 };
 
 export type MediaAttachment = {

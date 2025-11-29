@@ -1,16 +1,25 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Plus, MapPin, Check, Image as ImageIcon, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import { useChatService } from '@/lib/chatProvider';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Avatar from '@/components/Avatar';
 
 function CreateListingPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { account } = useAuth();
+  const chatService = useChatService();
+  
+  // Check if this is a group event creation
+  const groupChatId = searchParams.get('group');
+  const [groupChat, setGroupChat] = useState<any>(null);
+  const [groupChatLoading, setGroupChatLoading] = useState(false);
   const [isSlidingUp, setIsSlidingUp] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [listingTitle, setListingTitle] = useState("");
@@ -39,6 +48,26 @@ function CreateListingPageContent() {
   const [saving, setSaving] = useState(false);
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
   const MAX_PHOTOS = 12;
+
+  // Fetch group chat info if group context
+  useEffect(() => {
+    const fetchGroupChat = async () => {
+      if (groupChatId && chatService) {
+        setGroupChatLoading(true);
+        try {
+          const { chat, error } = await chatService.getChatById(groupChatId);
+          if (!error && chat) {
+            setGroupChat(chat);
+          }
+        } catch (error) {
+          console.error('Error fetching group chat:', error);
+        } finally {
+          setGroupChatLoading(false);
+        }
+      }
+    };
+    fetchGroupChat();
+  }, [groupChatId, chatService]);
 
   // Slide up animation on mount
   useEffect(() => {
@@ -638,7 +667,12 @@ function CreateListingPageContent() {
       } catch (e) {
         console.error('Error storing listing data:', e);
       }
-      router.push('/my-life/create/details');
+      // Preserve group context so Page 2 can show the Group Chat card
+      if (groupChatId) {
+        router.push(`/my-life/create/details?group=${groupChatId}`);
+      } else {
+        router.push('/my-life/create/details');
+      }
     }
   };
 
@@ -1106,31 +1140,52 @@ function CreateListingPageContent() {
                 )}
               </div>
 
-              {/* Visibility */}
-              <button
-                onClick={() => setShowVisibilityModal(true)}
-                className="rounded-xl bg-white px-4 h-14 flex items-center justify-between w-full text-left"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.95';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <span className="text-base font-semibold text-gray-900">Visibility</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">{isPublic ? 'Public' : 'Private'}</span>
-                  <div className="flex flex-col">
-                    <ChevronUp size={16} className="text-gray-400 -mb-1" />
-                    <ChevronDown size={16} className="text-gray-400" />
+              {/* Visibility - Show group card if group context, otherwise show public/private */}
+              {groupChatId && groupChat ? (
+                <div
+                  className="rounded-xl bg-white px-4 h-14 flex items-center justify-between w-full"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }}
+                >
+                  <span className="text-base font-semibold text-gray-900">Visibility</span>
+                  <div className="flex items-center gap-2">
+                    <Avatar
+                      src={groupChat.photo}
+                      name={groupChat.name || 'Group'}
+                      size={24}
+                    />
+                    <span className="text-sm font-medium text-gray-700">{groupChat.name || 'Group'}</span>
                   </div>
                 </div>
-              </button>
+              ) : (
+                <button
+                  onClick={() => setShowVisibilityModal(true)}
+                  className="rounded-xl bg-white px-4 h-14 flex items-center justify-between w-full text-left"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.95';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  <span className="text-base font-semibold text-gray-900">Visibility</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">{isPublic ? 'Public' : 'Private'}</span>
+                    <div className="flex flex-col">
+                      <ChevronUp size={16} className="text-gray-400 -mb-1" />
+                      <ChevronDown size={16} className="text-gray-400" />
+                    </div>
+                  </div>
+                </button>
+              )}
 
               {/* Capacity */}
               <button

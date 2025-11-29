@@ -1,15 +1,27 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Check } from 'lucide-react';
 import { MobilePage, PageContent } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import { useChatService } from '@/lib/chatProvider';
+import Avatar from '@/components/Avatar';
 
 export default function CreateListingDetailsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { account } = useAuth();
+  const chatService = useChatService();
+  
+  // Check if this is a group event creation
+  const groupChatId = searchParams.get('group');
+  const [groupChat, setGroupChat] = useState<any>(null);
+  const [groupChatLoading, setGroupChatLoading] = useState(false);
+  
+  // Group chat selection state (for page 2)
+  const [createNewChat, setCreateNewChat] = useState(false); // false = use current group chat, true = create new chat
   const [listingTitle, setListingTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [location, setLocation] = useState("");
@@ -22,6 +34,26 @@ export default function CreateListingDetailsPage() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [hasGallery, setHasGallery] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Fetch group chat info if group context
+  useEffect(() => {
+    const fetchGroupChat = async () => {
+      if (groupChatId && chatService) {
+        setGroupChatLoading(true);
+        try {
+          const { chat, error } = await chatService.getChatById(groupChatId);
+          if (!error && chat) {
+            setGroupChat(chat);
+          }
+        } catch (error) {
+          console.error('Error fetching group chat:', error);
+        } finally {
+          setGroupChatLoading(false);
+        }
+      }
+    };
+    fetchGroupChat();
+  }, [groupChatId, chatService]);
 
   // Format date as "Mon, Nov 17 at 7:00pm"
   const formatDateTime = (date: Date): string => {
@@ -372,6 +404,41 @@ export default function CreateListingDetailsPage() {
       // Upload photos to Supabase Storage
       const photoUrls = await uploadPhotos();
       
+      // Determine target chat and event chat creation
+      let targetChatId = groupChatId || null;
+      let eventChatId: string | null = null;
+
+      // If group context and option 2 selected (create new chat), create event chat
+      if (groupChatId && createNewChat) {
+        if (!chatService) {
+          throw new Error('Chat service not available');
+        }
+
+        // Create new group chat for event participants
+        // - No initial participant IDs (chatService will add current user as admin)
+        // - Use listing cover photo as the group photo if available
+        const { chat: newEventChat, error: chatError } = await chatService.createGroupChat(
+          listingTitle.trim(),
+          [],
+          photoUrls.length > 0 ? photoUrls[0] : undefined
+        );
+
+        if (chatError || !newEventChat) {
+          console.error('Error creating event chat:', chatError);
+          throw new Error('Failed to create event chat');
+        }
+
+        eventChatId = newEventChat.id;
+        
+        // Mark chat as event chat
+        await supabase
+          .from('chats')
+          .update({ is_event_chat: true })
+          .eq('id', eventChatId);
+
+        console.log('✅ Event chat created:', eventChatId);
+      }
+
       // Create listing record in database
       const { data: listingData, error: listingError } = await supabase
         .from('listings')
@@ -383,9 +450,11 @@ export default function CreateListingDetailsPage() {
           start_date: startDate?.toISOString() || null,
           end_date: includeEndTime && endDate ? endDate.toISOString() : null,
           capacity: capacityUnlimited ? null : capacity,
-          is_public: isPublic,
+          is_public: groupChatId ? false : isPublic, // Group events are always private to the group
           photo_urls: photoUrls.length > 0 ? photoUrls : null,
           has_gallery: hasGallery,
+          group_chat_id: groupChatId || null,
+          event_chat_id: eventChatId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -399,15 +468,14 @@ export default function CreateListingDetailsPage() {
 
       console.log('✅ Listing created successfully:', listingData);
 
-      // Add creator as both host and participant (so it appears in both Upcoming and Hosting)
+      // Add creator as host + upcoming participant (so it appears in Upcoming & Hosting)
       const { error: participantError } = await supabase
         .from('listing_participants')
         .insert({
           listing_id: listingData.id,
           user_id: account.id,
           role: 'host',
-          status: 'upcoming',
-          joined_at: new Date().toISOString()
+          status: 'upcoming'
         });
 
       if (participantError) {
@@ -585,11 +653,126 @@ export default function CreateListingDetailsPage() {
 
         <PageContent>
           <div 
-            className="px-4 pb-16 flex items-center justify-center" 
+            className="px-4 pb-16 flex flex-col items-center justify-center gap-4" 
             style={{ 
               minHeight: '100vh',
             }}
           >
+            {/* Group Chat Selection Card - Only show if group context */}
+            {groupChatId && groupChat && (
+              <div 
+                className="w-full bg-white rounded-xl p-4 transition-all duration-200"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                }}
+              >
+                <div className="text-base font-semibold text-gray-900 mb-3">Group Chat</div>
+                <div className="text-sm text-gray-600 mb-4">Select</div>
+                
+                {/* Option 1: Current Group Chat (Default) */}
+                <button
+                  type="button"
+                  onClick={() => setCreateNewChat(false)}
+                  className="w-full text-left p-4 rounded-xl mb-3 transition-all bg-white hover:bg-gray-50"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Left: Group avatar */}
+                    <Avatar
+                      src={groupChat.photo}
+                      name={groupChat.name || 'Group'}
+                      size={32}
+                    />
+
+                    {/* Center: Text */}
+                    <div className="flex-1">
+                      <div className="text-base font-semibold text-gray-900">{groupChat.name || 'Group'}</div>
+                    </div>
+
+                    {/* Right: Selection circle */}
+                    <div
+                      className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        !createNewChat ? 'border-[#FF6600] bg-[#FF6600]' : 'border-gray-300 bg-white'
+                      }`}
+                      style={{
+                        borderWidth: '2px',
+                      }}
+                    >
+                      {!createNewChat && (
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                </button>
+
+                {/* Option 2: New Chat for Participants */}
+                <button
+                  type="button"
+                  onClick={() => setCreateNewChat(true)}
+                  className="w-full text-left p-4 rounded-xl transition-all bg-white hover:bg-gray-50"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Left: Listing image thumbnail */}
+                    <div
+                      className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-gray-100"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                      }}
+                    >
+                      {photos.length > 0 ? (
+                        <img
+                          src={photos[0]}
+                          alt="Listing"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
+                          Photo
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Center: Text */}
+                    <div className="flex-1">
+                      <div className="text-base font-semibold text-gray-900">New chat for participants</div>
+                    </div>
+
+                    {/* Right: Selection circle */}
+                    <div
+                      className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        createNewChat ? 'border-[#FF6600] bg-[#FF6600]' : 'border-gray-300 bg-white'
+                      }`}
+                      style={{
+                        borderWidth: '2px',
+                      }}
+                    >
+                      {createNewChat && (
+                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+
             {/* Gallery Toggle Card - Same width as page 1 cards */}
             <div 
               className="w-full bg-white rounded-xl p-4 flex items-center justify-between transition-all duration-200 hover:-translate-y-[1px]"

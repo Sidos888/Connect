@@ -7,7 +7,7 @@ export interface ChatMessage {
   chat_id: string;
   sender_id: string;
   message_text: string | null;
-  message_type: 'text' | 'image' | 'poll';
+  message_type: 'text' | 'image' | 'poll' | 'listing';
   image_url: string | null;
   images: string[] | null;
   created_at: string;
@@ -18,6 +18,7 @@ export interface ChatMessage {
   sender_name?: string;
   sender_profile_pic?: string;
   attachment_count?: number; // Number of attachments for this message
+  listing_id?: string | null;
 }
 
 export interface ChatParticipant {
@@ -41,6 +42,7 @@ export interface Chat {
   created_at: string;
   updated_at: string;
   last_message_at: string;
+  is_event_chat?: boolean;
   participants?: ChatParticipant[];
   last_message?: ChatMessage;
   unread_count?: number;
@@ -140,7 +142,7 @@ export class ChatService {
       const { data: chats, error } = await this.supabase
         .from('chats')
         .select(`
-          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at
+          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat
         `)
         .in('id', chatIds)
         .order('last_message_at', { ascending: false, nullsFirst: false });
@@ -221,6 +223,7 @@ export class ChatService {
         created_at: chat.created_at,
         updated_at: chat.updated_at,
         last_message_at: chat.last_message_at,
+        is_event_chat: (chat as any).is_event_chat || false,
         participants: participantsByChat.get(chat.id) || []
       }));
 
@@ -343,6 +346,7 @@ export class ChatService {
         .select(`
           id, chat_id, sender_id, message_text, 
           created_at, reply_to_message_id, deleted_at,
+          message_type, listing_id,
           accounts!inner(name, profile_pic)
         `)
         .eq('chat_id', chatId)
@@ -399,7 +403,7 @@ export class ChatService {
           chat_id: msg.chat_id,
           sender_id: msg.sender_id,
         message_text: msg.message_text,
-        message_type: msg.message_type,
+        message_type: msg.message_type || 'text',
         image_url: msg.image_url,
         images: msg.images,
         created_at: msg.created_at,
@@ -410,7 +414,16 @@ export class ChatService {
         sender_name: (msg.accounts as any)?.name,
         sender_profile_pic: (msg.accounts as any)?.profile_pic
           };
-          return this.convertToSimpleMessage(chatMsg, attachmentsMap.get(msg.id) || []);
+          const simpleMsg = this.convertToSimpleMessage(chatMsg, attachmentsMap.get(msg.id) || []);
+          // Add listing_id if present
+          if (msg.listing_id) {
+            simpleMsg.listing_id = msg.listing_id;
+          }
+          // Add message_type if present
+          if (msg.message_type) {
+            simpleMsg.message_type = msg.message_type as 'text' | 'image' | 'file' | 'system' | 'listing';
+          }
+          return simpleMsg;
         });
 
       // Mark messages as read for this user
@@ -423,6 +436,85 @@ export class ChatService {
     } catch (error) {
       console.error('Error in getChatMessages:', error);
       return { messages: [], hasMore: false, error: error as Error };
+    }
+  }
+
+  // Send a listing message to a chat
+  async sendListingMessage(
+    chatId: string,
+    listingId: string
+  ): Promise<{ message: SimpleMessage | null; error: Error | null }> {
+    try {
+      console.log('ChatService: Sending listing message to chat:', chatId, 'listingId:', listingId);
+      
+      // Get current user ID
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { message: null, error: new Error('User not authenticated') };
+      }
+      const senderId = user.id;
+      
+      // Get current timestamp
+      const currentTimestamp = new Date().toISOString();
+      
+      // Insert listing message
+      const { data: message, error } = await this.supabase
+        .from('chat_messages')
+        .insert({
+          chat_id: chatId,
+          sender_id: senderId,
+          message_text: '', // Empty text for listing messages
+          message_type: 'listing',
+          listing_id: listingId
+        })
+        .select(`
+          id, chat_id, sender_id, message_text, 
+          created_at, reply_to_message_id, message_type, listing_id,
+          accounts!inner(name, profile_pic)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error sending listing message:', error);
+        return { message: null, error };
+      }
+
+      // Update chat's last_message_at
+      await this.supabase
+        .from('chats')
+        .update({ 
+          last_message_at: message.created_at || currentTimestamp,
+          updated_at: message.created_at || currentTimestamp
+        })
+        .eq('id', chatId);
+
+      const chatMessage: ChatMessage = {
+        id: message.id,
+        chat_id: message.chat_id,
+        sender_id: message.sender_id,
+        message_text: message.message_text,
+        message_type: 'listing',
+        image_url: null,
+        images: null,
+        created_at: message.created_at,
+        read_by: [],
+        poll_id: null,
+        reply_to_message_id: message.reply_to_message_id || null,
+        is_pinned: false,
+        sender_name: (message.accounts as any)?.name,
+        sender_profile_pic: (message.accounts as any)?.profile_pic,
+        listing_id: listingId
+      };
+
+      const simpleMessage = this.convertToSimpleMessage(chatMessage, []);
+      simpleMessage.message_type = 'listing';
+      simpleMessage.listing_id = listingId;
+
+      console.log('Successfully sent listing message:', simpleMessage.id);
+      return { message: simpleMessage, error: null };
+    } catch (error) {
+      console.error('Error in sendListingMessage:', error);
+      return { message: null, error: error as Error };
     }
   }
 

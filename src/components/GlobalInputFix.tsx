@@ -196,28 +196,28 @@ export default function GlobalInputFix() {
         
         // Apply corrections if needed
         if (needsCorrection && correctedValue !== currentValue) {
-          // Use native setter to update value (bypasses React's controlled component)
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            window.HTMLInputElement.prototype,
-            'value'
-          )?.set;
-          const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
-            window.HTMLTextAreaElement.prototype,
-            'value'
-          )?.set;
-          
-          if (nativeInputValueSetter && target instanceof HTMLInputElement) {
+            // Use native setter to update value (bypasses React's controlled component)
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+              window.HTMLInputElement.prototype,
+              'value'
+            )?.set;
+            const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
+              window.HTMLTextAreaElement.prototype,
+              'value'
+            )?.set;
+            
+            if (nativeInputValueSetter && target instanceof HTMLInputElement) {
             nativeInputValueSetter.call(target, correctedValue);
-          } else if (nativeTextAreaValueSetter && target instanceof HTMLTextAreaElement) {
+            } else if (nativeTextAreaValueSetter && target instanceof HTMLTextAreaElement) {
             nativeTextAreaValueSetter.call(target, correctedValue);
-          }
-          
-          // Restore cursor position
-          target.setSelectionRange(selectionStart, selectionStart);
-          
-          // Dispatch input event to notify React of the change
-          const inputEvent = new Event('input', { bubbles: true });
-          target.dispatchEvent(inputEvent);
+            }
+            
+            // Restore cursor position
+            target.setSelectionRange(selectionStart, selectionStart);
+            
+            // Dispatch input event to notify React of the change
+            const inputEvent = new Event('input', { bubbles: true });
+            target.dispatchEvent(inputEvent);
         }
         
         // Update previous value for next comparison

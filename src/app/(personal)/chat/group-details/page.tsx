@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
-import { ArrowLeft, Settings, ChevronRight } from "lucide-react";
+import { ArrowLeft, Settings, ChevronRight, Plus } from "lucide-react";
 import { SearchIcon } from "@/components/icons";
 import Avatar from "@/components/Avatar";
 import ChatDetailsSearchModal from "@/components/chat/ChatDetailsSearchModal";
@@ -25,6 +25,8 @@ function GroupDetailsContent() {
   const [groupPhoto, setGroupPhoto] = useState<string | null>(null);
   const [membersCount, setMembersCount] = useState<number>(0);
   const [mediaCount, setMediaCount] = useState<number>(0);
+  const [events, setEvents] = useState<any[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -71,6 +73,28 @@ function GroupDetailsContent() {
           if (!error && media) {
             setMediaCount(media.length);
           }
+        }
+
+        // Fetch events for this group
+        if (chatId) {
+          try {
+            const supabase = chatService['supabase']; // Access supabase client
+            const { data: groupEvents, error: eventsError } = await supabase
+              .from('listings')
+              .select('id, title, start_date, end_date, photo_urls')
+              .eq('group_chat_id', chatId)
+              .order('start_date', { ascending: true });
+
+            if (!eventsError && groupEvents) {
+              setEvents(groupEvents);
+            }
+          } catch (error) {
+            console.error('Error fetching events:', error);
+          } finally {
+            setEventsLoading(false);
+          }
+        } else {
+          setEventsLoading(false);
         }
       } catch (error) {
         console.error('Error in loadChat:', error);
@@ -152,7 +176,7 @@ function GroupDetailsContent() {
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
-          title="Chat Details"
+          title="Group Details"
           backButton
           onBack={handleBack}
           customActions={
@@ -317,44 +341,127 @@ function GroupDetailsContent() {
 
           {/* Events Section */}
           <div className="mb-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Events</h2>
-            
-            {/* Event Card */}
             <div
-              className="bg-white rounded-2xl p-4 flex items-center gap-3"
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                if (chatId) {
+                  router.push(`/chat/events?chat=${chatId}`);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (chatId) {
+                    router.push(`/chat/events?chat=${chatId}`);
+                  }
+                }
+              }}
+              className="bg-white rounded-2xl p-4 w-full transition-all duration-200 hover:-translate-y-[1px] cursor-pointer"
               style={{
                 borderWidth: '0.4px',
                 borderColor: '#E5E7EB',
                 borderStyle: 'solid',
                 boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow =
+                  '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow =
+                  '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
             >
-              {/* Event Placeholder Image */}
-              <div
-                className="flex-shrink-0 w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                }}
-              >
-                <div className="text-gray-400 text-xs">Event</div>
+              {/* Header row: title, count, plus */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-gray-900">Events</span>
+                  {events.length > 0 && !eventsLoading && (
+                    <span className="text-sm font-medium text-gray-500">{events.length}</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (chatId) {
+                      router.push(`/my-life/create?group=${chatId}`);
+                    }
+                  }}
+                  className="p-0 bg-transparent border-none outline-none flex items-center justify-center"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Plus size={20} className="text-gray-900" strokeWidth={2.4} />
+                </button>
               </div>
 
-              {/* Event Details */}
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-gray-900 mb-1 truncate">
-                  Event Name
-                </div>
-                <div className="text-sm text-gray-500 truncate">
-                  Date and Time
-                </div>
-              </div>
+              {/* Body: loading / empty / first event preview */}
+              {eventsLoading ? (
+                <div className="text-sm text-gray-500 py-2">Loading events...</div>
+              ) : events.length === 0 ? (
+                <div className="text-sm text-gray-500 py-2">No events yet</div>
+              ) : (
+                (() => {
+                  const event = events[0];
+                  const formatDateTime = (dateString: string) => {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    });
+                  };
 
-              {/* Navigation Arrow */}
-              <div className="flex-shrink-0">
-                <ChevronRight size={20} className="text-gray-400" />
-              </div>
+                  const thumbnailUrl =
+                    event.photo_urls && event.photo_urls.length > 0 ? event.photo_urls[0] : null;
+
+                  return (
+                    <div
+                      className="mt-1 bg-white rounded-2xl px-4 py-3 flex items-center gap-3"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                      }}
+                    >
+                      {/* Event Image */}
+                      <div
+                        className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-200"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          borderStyle: 'solid',
+                        }}
+                      >
+                        {thumbnailUrl ? (
+                          <img
+                            src={thumbnailUrl}
+                            alt={event.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                            Event
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Event Details */}
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="text-base font-semibold text-gray-900 mb-1 truncate">
+                          {event.title}
+                        </div>
+                        <div className="text-sm text-gray-500 truncate">
+                          {event.start_date ? formatDateTime(event.start_date) : 'Date and time'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
             </div>
           </div>
         </div>

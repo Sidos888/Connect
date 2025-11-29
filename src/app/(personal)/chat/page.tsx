@@ -145,6 +145,7 @@ function MessagesPageContent() {
         title,
         avatarUrl,
         isGroup: chat.type === 'group',
+        isEventChat: chat.is_event_chat || false,
         unreadCount: chat.unread_count || 0,
         last_message: lastMessageText,
         last_message_at: chat.last_message_at,
@@ -440,7 +441,9 @@ function MessagesPageContent() {
       case "dm":
         return filtered.filter(conv => !conv.isGroup);
       case "group":
-        return filtered.filter(conv => conv.isGroup);
+        return filtered.filter(conv => conv.isGroup && !conv.isEventChat);
+      case "events":
+        return filtered.filter(conv => conv.isEventChat);
       default:
         return filtered;
     }
@@ -452,12 +455,13 @@ function MessagesPageContent() {
   const getMobileCategoryCounts = () => {
     const unreadCount = conversations.filter(conv => conv.unreadCount > 0).length;
     const dmCount = conversations.filter(conv => !conv.isGroup).length;
-    const groupCount = conversations.filter(conv => conv.isGroup).length;
+    const groupCount = conversations.filter(conv => conv.isGroup && !conv.isEventChat).length;
+    const eventsCount = conversations.filter(conv => conv.isEventChat).length;
     
-    return { unreadCount, dmCount, groupCount };
+    return { unreadCount, dmCount, groupCount, eventsCount };
   };
 
-  const { unreadCount: mobileUnreadCount, dmCount: mobileDmCount, groupCount: mobileGroupCount } = getMobileCategoryCounts();
+  const { unreadCount: mobileUnreadCount, dmCount: mobileDmCount, groupCount: mobileGroupCount, eventsCount: mobileEventsCount } = getMobileCategoryCounts();
 
   const mobileCategoriesTop = [
     { id: "all", label: "All", count: null },
@@ -467,6 +471,7 @@ function MessagesPageContent() {
   const mobileCategoriesBottom = [
     { id: "dm", label: "DM", count: mobileDmCount },
     { id: "group", label: "Groups", count: mobileGroupCount },
+    ...(mobileEventsCount > 0 ? [{ id: "events", label: "Events", count: mobileEventsCount }] : []),
   ];
 
   // Force hydration immediately to prevent loading state issues
