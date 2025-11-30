@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
@@ -10,6 +10,7 @@ import Image from 'next/image';
 interface ListingMessageCardProps {
   listingId: string;
   chatId: string;
+  onLongPress?: (element: HTMLElement) => void;
 }
 
 interface ListingData {
@@ -26,7 +27,7 @@ interface ParticipantStatus {
   isLoading: boolean;
 }
 
-export default function ListingMessageCard({ listingId, chatId }: ListingMessageCardProps) {
+export default function ListingMessageCard({ listingId, chatId, onLongPress }: ListingMessageCardProps) {
   const router = useRouter();
   const { account } = useAuth();
   const queryClient = useQueryClient();
@@ -36,6 +37,8 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
     isLoading: false
   });
   const [loading, setLoading] = useState(true);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch listing data
   useEffect(() => {
@@ -194,6 +197,58 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
     return date.toLocaleDateString('en-US', options);
   };
 
+  // Long press detection
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!onLongPress) return;
+    
+    longPressTimerRef.current = setTimeout(() => {
+      if (containerRef.current && onLongPress) {
+        onLongPress(containerRef.current);
+      }
+    }, 500); // 500ms for long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if user moves finger
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!onLongPress || e.button !== 0) return;
+    
+    longPressTimerRef.current = setTimeout(() => {
+      if (containerRef.current && onLongPress) {
+        onLongPress(containerRef.current);
+      }
+    }, 500);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
   if (loading || !listing) {
     return (
       <div className="bg-white rounded-2xl p-4" style={{
@@ -216,6 +271,7 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
 
   return (
     <div 
+      ref={containerRef}
       className="bg-white rounded-2xl overflow-hidden"
       style={{
         borderWidth: '0.4px',
@@ -228,6 +284,11 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
         msUserSelect: 'none',
         WebkitTouchCallout: 'none'
       }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
     >
       {/* Photo */}
       <div className="relative w-full" style={{ aspectRatio: '16/9', backgroundColor: '#F3F4F6', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}>

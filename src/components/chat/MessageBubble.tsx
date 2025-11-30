@@ -286,6 +286,12 @@ const MessageBubble = React.memo(({
             <ListingMessageCard 
               listingId={message.listing_id} 
               chatId={message.chat_id}
+              onLongPress={(element) => {
+                // Use the entire message container (menuRef) for positioning, not just the listing card
+                if (onLongPress && menuRef.current) {
+                  onLongPress(message, menuRef.current);
+                }
+              }}
             />
           </div>
         )}
@@ -296,6 +302,12 @@ const MessageBubble = React.memo(({
             <MessagePhotoCollage
               attachments={message.attachments}
               onPhotoClick={() => onAttachmentClick?.(message)}
+              onLongPress={(element) => {
+                // Use the entire message container (menuRef) for positioning, not just the image card
+                if (onLongPress && menuRef.current) {
+                  onLongPress(message, menuRef.current);
+                }
+              }}
             />
           </div>
         )}

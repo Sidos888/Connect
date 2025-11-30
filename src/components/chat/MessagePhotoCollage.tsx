@@ -1,19 +1,24 @@
 "use client";
 
 import { Image as ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { MediaAttachment } from '@/lib/types';
+import React from 'react';
 
 interface MessagePhotoCollageProps {
   attachments: MediaAttachment[];
   onPhotoClick?: () => void;
+  onLongPress?: (element: HTMLElement) => void;
 }
 
 export default function MessagePhotoCollage({ 
   attachments, 
-  onPhotoClick
+  onPhotoClick,
+  onLongPress
 }: MessagePhotoCollageProps) {
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   if (attachments.length === 0) {
     return null;
@@ -23,6 +28,58 @@ export default function MessagePhotoCollage({
     console.error('MessagePhotoCollage: Failed to load image:', url);
     setImageErrors(prev => new Set(prev).add(url));
   };
+
+  // Long press detection
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!onLongPress) return;
+    
+    longPressTimerRef.current = setTimeout(() => {
+      if (containerRef.current && onLongPress) {
+        onLongPress(containerRef.current);
+      }
+    }, 500); // 500ms for long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if user moves finger
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!onLongPress || e.button !== 0) return;
+    
+    longPressTimerRef.current = setTimeout(() => {
+      if (containerRef.current && onLongPress) {
+        onLongPress(containerRef.current);
+      }
+    }, 500);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
 
   const PhotoCountBadge = ({ count, onClick }: { count: number; onClick?: () => void }) => {
     const badgeContent = (
@@ -154,6 +211,7 @@ export default function MessagePhotoCollage({
     if (onPhotoClick) {
       return (
         <div
+          ref={containerRef}
           className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:-translate-y-[1px] focus:outline-none max-w-xs"
           style={{
             borderWidth: '0.4px',
@@ -175,6 +233,11 @@ export default function MessagePhotoCollage({
               onPhotoClick();
             }
           }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
         >
           {content}
         </div>
@@ -182,7 +245,15 @@ export default function MessagePhotoCollage({
     }
 
     return (
-      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative max-w-xs">
+      <div 
+        ref={containerRef}
+        className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative max-w-xs"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+      >
         {content}
       </div>
     );
@@ -249,6 +320,7 @@ export default function MessagePhotoCollage({
   if (onPhotoClick) {
     return (
       <div
+        ref={containerRef}
         className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:-translate-y-[1px] focus:outline-none max-w-xs"
         style={{
           borderWidth: '0.4px',
@@ -270,6 +342,11 @@ export default function MessagePhotoCollage({
             onPhotoClick();
           }
         }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
       >
         {gridContent}
       </div>
@@ -277,7 +354,15 @@ export default function MessagePhotoCollage({
   }
 
   return (
-    <div className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative max-w-xs">
+    <div 
+      ref={containerRef}
+      className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative max-w-xs"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+    >
       {gridContent}
     </div>
   );

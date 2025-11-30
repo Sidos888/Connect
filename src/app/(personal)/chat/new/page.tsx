@@ -286,11 +286,11 @@ export default function NewChatPage() {
             transform: isSlidingUp ? 'translateY(0)' : 'translateY(100%)',
           }}
         >
-          <div className="h-full bg-white flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-              <p className="text-gray-500">Loading...</p>
-              <p className="text-sm text-gray-400 mt-2">Please make sure you&apos;re logged in</p>
+      <div className="h-full bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading...</p>
+          <p className="text-sm text-gray-400 mt-2">Please make sure you&apos;re logged in</p>
             </div>
           </div>
         </div>
@@ -511,7 +511,7 @@ export default function NewChatPage() {
               {/* New Group Chat and Add Connection Cards */}
               <div className="space-y-3">
                 {/* New Group Chat Card */}
-                <button
+              <button
                   onClick={handleNewGroupChat}
                   className="w-full bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
@@ -544,7 +544,7 @@ export default function NewChatPage() {
                       </div>
                     </div>
                   </div>
-                </button>
+              </button>
 
                 {/* Add Connection Card */}
                 <button
@@ -579,9 +579,9 @@ export default function NewChatPage() {
                         Add Connection
                       </div>
                     </div>
-                  </div>
+          </div>
                 </button>
-              </div>
+            </div>
 
               {/* Recent Chats Section */}
               {filteredRecentChats.length > 0 && (

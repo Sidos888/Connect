@@ -50,8 +50,10 @@ export default function IndividualChatPage() {
   const [selectedMessageElement, setSelectedMessageElement] = useState<HTMLElement | null>(null);
   const [longPressedMessage, setLongPressedMessage] = useState<SimpleMessage | null>(null);
   const [longPressedElement, setLongPressedElement] = useState<HTMLElement | null>(null);
-  const [longPressedPosition, setLongPressedPosition] = useState<{ top: number; left: number; right: number; bottom: number; isOwnMessage: boolean } | null>(null);
+  const [longPressedPosition, setLongPressedPosition] = useState<{ top: number; left: number; right: number; bottom: number; width: number; isOwnMessage: boolean } | null>(null);
   const longPressContainerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
+  const chatInputRef = useRef<HTMLDivElement | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
   const [pendingMedia, setPendingMedia] = useState<UploadedMedia[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<Map<string, { status: 'uploading' | 'uploaded' | 'failed'; fileCount: number }>>(new Map());
@@ -864,6 +866,7 @@ export default function IndividualChatPage() {
       left: rect.left,
       right: rect.right,
       bottom: rect.bottom,
+      width: rect.width, // Preserve original width
       isOwnMessage: isMe
     });
   };
@@ -873,6 +876,151 @@ export default function IndividualChatPage() {
     setLongPressedMessage(null);
     setLongPressedElement(null);
     setLongPressedPosition(null);
+  };
+
+  // Calculate boundaries and constrained positions for cards
+  const calculateConstrainedPositions = () => {
+    if (!longPressedPosition || typeof window === 'undefined') return null;
+
+    // Calculate top boundary (bottom of PageHeader/profile card)
+    // Try to find the PageHeader element to get its actual bottom position
+    const headerElements = document.querySelectorAll('[class*="absolute top-0"][class*="z-20"]');
+    let topBoundary = 130; // Default fallback
+    
+    if (headerElements.length > 0) {
+      const headerElement = headerElements[0] as HTMLElement;
+      const headerRect = headerElement.getBoundingClientRect();
+      topBoundary = headerRect.bottom;
+    } else {
+      // Fallback calculation
+      const isMobile = window.innerWidth < 1024;
+      const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || '0');
+      const headerPaddingTop = Math.max(safeAreaTop, 70);
+      const headerContentHeight = isMobile ? 44 : 40;
+      const headerPaddingBottom = 16;
+      topBoundary = headerPaddingTop + headerContentHeight + headerPaddingBottom;
+    }
+
+    // Calculate bottom boundary (top of chat input)
+    // Use the chat input ref if available, otherwise query DOM
+    let bottomBoundary = window.innerHeight - 100; // Default fallback
+    
+    const chatInputElement = chatInputRef.current || 
+      document.querySelector('[style*="fixed z-20"][style*="bottom"]') as HTMLElement;
+    
+    if (chatInputElement) {
+      const inputRect = chatInputElement.getBoundingClientRect();
+      bottomBoundary = inputRect.top;
+    } else {
+      // Fallback calculation
+      const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)') || '0');
+      const bottomOffset = Math.max(safeAreaBottom, 20);
+      const chatInputHeight = pendingMedia.length > 0 ? 180 : 100;
+      bottomBoundary = window.innerHeight - bottomOffset - chatInputHeight;
+    }
+
+    // Estimate card heights (approximate - measured from components)
+    const emojiCardHeight = 60; // MessageReactionCard: px-4 py-3 = ~60px total
+    const actionCardHeight = 60; // MessageActionCard: px-4 py-3 = ~60px total
+
+    // Message dimensions
+    const messageHeight = longPressedPosition.bottom - longPressedPosition.top;
+    const SPACING = 8; // 8px spacing between cards and message
+
+    // Step 1: Check if cards need to be constrained based on original message position
+    const desiredEmojiBottom = longPressedPosition.top - SPACING;
+    const minEmojiBottom = topBoundary + emojiCardHeight;
+    const emojiNeedsConstraint = desiredEmojiBottom < minEmojiBottom;
+
+    const desiredActionTop = longPressedPosition.bottom + SPACING;
+    const maxActionTop = bottomBoundary - actionCardHeight;
+    const actionNeedsConstraint = desiredActionTop > maxActionTop;
+
+    // Step 2: Calculate constrained message position
+    let constrainedMessageTop: number;
+    
+    if (emojiNeedsConstraint && actionNeedsConstraint) {
+      // Both cards need constraint - find message position that fits both
+      // Message top must allow emoji card to fit above (messageTop >= topBoundary + emojiCardHeight + SPACING)
+      // Message bottom must allow action card to fit below (messageTop <= bottomBoundary - actionCardHeight - SPACING - messageHeight)
+      const minMessageTop = topBoundary + emojiCardHeight + SPACING;
+      const maxMessageTop = bottomBoundary - actionCardHeight - SPACING - messageHeight;
+      constrainedMessageTop = Math.max(minMessageTop, Math.min(maxMessageTop, longPressedPosition.top));
+    } else if (emojiNeedsConstraint) {
+      // Only emoji card needs constraint - shift message down
+      constrainedMessageTop = topBoundary + emojiCardHeight + SPACING;
+    } else if (actionNeedsConstraint) {
+      // Only action card needs constraint - shift message up
+      constrainedMessageTop = bottomBoundary - actionCardHeight - SPACING - messageHeight;
+    } else {
+      // No constraints needed - use original position
+      constrainedMessageTop = longPressedPosition.top;
+    }
+
+    // Step 3: Ensure message doesn't go outside boundaries
+    constrainedMessageTop = Math.max(topBoundary, Math.min(constrainedMessageTop, bottomBoundary - messageHeight));
+
+    // Step 4: Recalculate card positions based on constrained message position to maintain exact spacing
+    // We'll calculate ideal positions first, then adjust message if cards get constrained
+    
+    const constrainedMessageBottom = constrainedMessageTop + messageHeight;
+    
+    // Ideal positions: exactly SPACING pixels from message
+    const idealEmojiBottom = constrainedMessageTop - SPACING;
+    const idealActionTop = constrainedMessageBottom + SPACING;
+    
+    // Check if cards can fit at ideal positions
+    const emojiFits = idealEmojiBottom >= minEmojiBottom;
+    const actionFits = idealActionTop <= maxActionTop;
+    
+    let finalMessageTop = constrainedMessageTop;
+    let finalEmojiBottom: number;
+    let finalActionTop: number;
+    
+    if (!emojiFits && !actionFits) {
+      // Both cards need constraint - position message to fit both with exact spacing
+      // Emoji card needs: messageTop >= topBoundary + emojiCardHeight + SPACING
+      // Action card needs: messageTop <= bottomBoundary - actionCardHeight - SPACING - messageHeight
+      const minTop = topBoundary + emojiCardHeight + SPACING;
+      const maxTop = bottomBoundary - actionCardHeight - SPACING - messageHeight;
+      finalMessageTop = Math.max(minTop, Math.min(maxTop, constrainedMessageTop));
+      
+      // Calculate card positions with exact spacing from adjusted message
+      finalEmojiBottom = finalMessageTop - SPACING;
+      const adjustedMessageBottom = finalMessageTop + messageHeight;
+      finalActionTop = adjustedMessageBottom + SPACING;
+    } else if (!emojiFits) {
+      // Only emoji card needs constraint - shift message down, action card maintains spacing
+      finalMessageTop = topBoundary + emojiCardHeight + SPACING;
+      finalEmojiBottom = finalMessageTop - SPACING;
+      const adjustedMessageBottom = finalMessageTop + messageHeight;
+      finalActionTop = adjustedMessageBottom + SPACING;
+    } else if (!actionFits) {
+      // Only action card needs constraint - shift message up, emoji card maintains spacing
+      finalMessageTop = bottomBoundary - actionCardHeight - SPACING - messageHeight;
+      finalEmojiBottom = finalMessageTop - SPACING;
+      const adjustedMessageBottom = finalMessageTop + messageHeight;
+      finalActionTop = adjustedMessageBottom + SPACING;
+    } else {
+      // Both cards fit - use ideal positions with exact spacing
+      finalEmojiBottom = idealEmojiBottom;
+      finalActionTop = idealActionTop;
+    }
+    
+    // Ensure final positions respect boundaries (should already, but double-check)
+    const finalEmojiBottomConstrained = Math.max(minEmojiBottom, finalEmojiBottom);
+    const finalActionTopConstrained = Math.min(maxActionTop, finalActionTop);
+    
+    // The emoji card uses translateY(-100%), so 'top' represents where the bottom of the card will be
+    const emojiTop = finalEmojiBottomConstrained;
+
+    return {
+      emojiTop,
+      actionTop: finalActionTopConstrained,
+      messageTop: constrainedMessageTop,
+      topBoundary,
+      bottomBoundary
+    };
   };
 
   // DIAGNOSTIC: Log all computed styles when long press state changes
@@ -1367,6 +1515,7 @@ export default function IndividualChatPage() {
 
       {/* Input Card - Expands when photos are selected */}
       <div 
+        ref={chatInputRef}
         className="fixed z-20"
         style={{ 
           left: '22px',
@@ -1723,13 +1872,17 @@ export default function IndividualChatPage() {
       )}
 
       {/* Selected message and cards - rendered OUTSIDE messages container to avoid blur */}
-      {longPressedMessage && longPressedPosition && (
+      {longPressedMessage && longPressedPosition && (() => {
+        const constrained = calculateConstrainedPositions();
+        if (!constrained) return null;
+
+        return (
         <>
           {/* Reaction card - above message */}
           <div
             style={{
               position: 'fixed',
-              top: longPressedPosition.top - 8, // Position top edge 8px above message
+              top: constrained.emojiTop,
               left: longPressedPosition.isOwnMessage ? 'auto' : longPressedPosition.left,
               right: longPressedPosition.isOwnMessage ? window.innerWidth - longPressedPosition.right : 'auto',
               zIndex: 200, // High z-index to be above blur overlay (98)
@@ -1758,7 +1911,7 @@ export default function IndividualChatPage() {
           <div
             style={{
               position: 'fixed',
-              top: longPressedPosition.top,
+              top: constrained.messageTop,
               left: longPressedPosition.isOwnMessage ? 'auto' : longPressedPosition.left,
               right: longPressedPosition.isOwnMessage ? window.innerWidth - longPressedPosition.right : 'auto',
               zIndex: 199, // High z-index to be above blur overlay (98), below cards (200)
@@ -1770,8 +1923,8 @@ export default function IndividualChatPage() {
               WebkitBackdropFilter: 'none' as any,
               willChange: 'transform',
               isolation: 'isolate',
-              width: 'auto',
-              maxWidth: '100%'
+              width: `${longPressedPosition.width}px`, // Preserve original width to prevent shrinking
+              maxWidth: '100%' // Still respect viewport limits
             }}
           >
             <MessageBubble
@@ -1793,7 +1946,7 @@ export default function IndividualChatPage() {
           <div
             style={{
               position: 'fixed',
-              top: longPressedPosition.bottom + 8, // Position below message
+              top: constrained.actionTop,
               left: longPressedPosition.isOwnMessage ? 'auto' : longPressedPosition.left,
               right: longPressedPosition.isOwnMessage ? window.innerWidth - longPressedPosition.right : 'auto',
               zIndex: 200, // High z-index to be above blur overlay (98)
@@ -1827,7 +1980,8 @@ export default function IndividualChatPage() {
             />
           </div>
         </>
-      )}
+        );
+      })()}
 
       {/* Message Action Modal */}
       <MessageActionModal
