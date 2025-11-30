@@ -23,6 +23,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ProfilePage from "@/components/profile/ProfilePage";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import MenuTopActions from "@/components/layout/MenuTopActions";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 import Highlights from "@/components/highlights/Highlights";
@@ -1238,13 +1239,12 @@ export default function Page() {
                       </div>
                   </button>
                 }
-                actions={[
-                  {
-                    icon: <BellIcon size={22} className="text-gray-900" strokeWidth={2.5} />,
-                    onClick: () => goToView('notifications', 'menu'),
-                    label: "Notifications"
-                  }
-                ]}
+                customActions={
+                  <MenuTopActions
+                    onSettingsClick={() => goToView('settings', 'menu')}
+                    onNotificationsClick={() => goToView('notifications', 'menu')}
+                  />
+                }
               />
 
               <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
@@ -1293,8 +1293,6 @@ export default function Page() {
                   { title: "Achievements", icon: "🏆", view: "achievements" },
                   { title: "Timeline", icon: "🧭", view: "timeline" },
                   { title: "Connections", icon: "👬", view: "connections" },
-                  { title: "Saved", icon: "❤️", view: "saved" },
-                  { title: "Settings", icon: "⚙️", view: "settings" },
                 ]
               ).map((item) => (
                         <button
@@ -1392,8 +1390,6 @@ export default function Page() {
                   { title: "Achievements", icon: "🏆", view: "achievements" },
                   { title: "Timeline", icon: "🧭", view: "timeline" },
                         { title: "Connections", icon: "👬", view: "connections" },
-                  { title: "Saved", icon: "❤️", href: "/saved" },
-                  { title: "Settings", icon: "⚙️", view: "settings" },
                 ]
               ).map((item) => (
                 <button

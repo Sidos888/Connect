@@ -13,7 +13,7 @@ import ListingInfoCards from '@/components/listings/ListingInfoCards';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
-import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Bookmark, Image as ImageIcon, Share } from 'lucide-react';
+import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Image as ImageIcon, Share } from 'lucide-react';
 import EditListingDetailsView, { EditListingDetailsViewRef } from '@/components/listings/EditListingDetailsView';
 import CancelEventModal from '@/components/listings/CancelEventModal';
 import JoinListingModal from '@/components/listings/JoinListingModal';
@@ -762,35 +762,7 @@ export default function ListingPage() {
     return undefined;
   };
 
-  // Check if listing is saved by current user
-  const { data: isSaved, refetch: refetchSaved } = useQuery({
-    queryKey: ['listing-saved', listingId, account?.id],
-    queryFn: async () => {
-      if (!listingId || !account?.id) return false;
-      const supabase = getSupabaseClient();
-      if (!supabase) return false;
-      
-      const { data, error } = await supabase
-        .from('saved_listings')
-        .select('id')
-        .eq('listing_id', listingId)
-        .eq('user_id', account.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error checking saved status:', error);
-        return false;
-      }
-
-      return !!data;
-    },
-    enabled: !!listingId && !!account?.id && userRole !== 'host',
-  });
-
-  // Show saved button only when user is NOT host (hosts don't need to save their own listings)
   // Show share button for everyone (hosts should be able to share their listings)
-  const showSaveButton = view === 'detail' && userRole !== 'host' && account?.id;
   const showShareButton = view === 'detail' && account?.id;
 
   return (
@@ -819,57 +791,6 @@ export default function ListingPage() {
                       router.push(`/listing/share?id=${listingId}`);
                     }
                   }
-                });
-              }
-              
-              // Save button - only show for non-hosts
-              if (showSaveButton) {
-                actions.push({
-                icon: <Bookmark size={20} className={isSaved ? "text-red-600 fill-red-600" : "text-gray-900"} />,
-                label: isSaved ? 'Saved' : 'Save',
-                onClick: async () => {
-                  if (!listingId || !account?.id) return;
-                  const supabase = getSupabaseClient();
-                  if (!supabase) return;
-
-                  if (isSaved) {
-                    // Unsave listing
-                    const { error } = await supabase
-                      .from('saved_listings')
-                      .delete()
-                      .eq('listing_id', listingId)
-                      .eq('user_id', account.id);
-
-                  if (error) {
-                    console.error('Error unsaving listing:', error);
-                  } else {
-                    refetchSaved();
-                    // Invalidate saved listings cache to update Saved page
-                    queryClient.invalidateQueries({ 
-                      queryKey: ['listings', 'saved', account.id] 
-                    });
-                  }
-                  } else {
-                    // Save listing
-                    const { error } = await supabase
-                      .from('saved_listings')
-                      .insert({
-                        listing_id: listingId,
-                        user_id: account.id,
-                        created_at: new Date().toISOString(),
-                      });
-
-                    if (error) {
-                      console.error('Error saving listing:', error);
-                    } else {
-                      refetchSaved();
-                      // Invalidate saved listings cache to update Saved page
-                      queryClient.invalidateQueries({ 
-                        queryKey: ['listings', 'saved', account.id] 
-                      });
-                    }
-                  }
-                }
                 });
               }
               
