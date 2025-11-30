@@ -122,6 +122,7 @@ export type SimpleChat = {
   type: 'direct' | 'group';
   photo?: string;
   last_message_at?: string | null;
+  is_event_chat?: boolean;
   participants: Array<{
     id: string;
     name: string;

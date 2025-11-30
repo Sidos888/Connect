@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo, Suspense } from "react";
 import Avatar from "@/components/Avatar";
-import BearEmoji from "@/components/BearEmoji";
 import { useAppStore } from "@/lib/store";
 import type { Conversation } from "@/lib/types";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -753,12 +752,16 @@ function MessagesPageContent() {
 
                 {/* Chat List */}
                 <div className="space-y-2">
-                  {filteredMobileConversations.length === 0 ? (
+                  {isLoading || isLoadingConnections ? (
+                    <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                      <p className="text-gray-500 text-sm">Loading chats...</p>
+                    </div>
+                  ) : filteredMobileConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 space-y-4">
                       <p className="text-gray-500 text-lg">
                         {account?.id ? "No chats yet" : "Please log in to see your chats"}
                       </p>
-                      <BearEmoji size="6xl" />
                     </div>
                   ) : (
                     filteredMobileConversations.map((conversation) => (

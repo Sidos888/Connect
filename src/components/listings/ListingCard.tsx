@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
 import { Listing } from '@/lib/listingsService';
 
 interface ListingCardProps {
@@ -19,6 +20,9 @@ export default function ListingCard({
   from
 }: ListingCardProps) {
   const router = useRouter();
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchMovedRef = useRef<boolean>(false);
+  const [isTouching, setIsTouching] = useState(false);
   
   // Format date for display
   const formatListingDate = (dateString: string | null): string => {
@@ -60,12 +64,55 @@ export default function ListingCard({
   
   const href = getListingUrl();
   
-  // Handle click - use context-agnostic route
-  const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('ListingCard: Navigating to:', href, 'Listing:', { id: listing.id, title: listing.title });
-    router.push(href);
+  // Handle touch start - track initial position
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchMovedRef.current = false;
+    setIsTouching(true);
+  };
+
+  // Handle touch move - detect if user is scrolling
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+    const threshold = 10; // pixels
+    
+    // If movement exceeds threshold, user is scrolling
+    if (deltaX > threshold || deltaY > threshold) {
+      touchMovedRef.current = true;
+    }
+  };
+
+  // Handle touch end - only navigate if it was a tap, not a scroll
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    setIsTouching(false);
+    
+    // Only navigate if touch didn't move significantly (it was a tap, not a scroll)
+    if (!touchMovedRef.current && touchStartRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('ListingCard: Navigating to:', href, 'Listing:', { id: listing.id, title: listing.title });
+      router.push(href);
+    }
+    
+    // Reset for next touch
+    touchStartRef.current = null;
+    touchMovedRef.current = false;
+  };
+  
+  // Handle click (for mouse/desktop) - use context-agnostic route
+  const handleClick = (e: React.MouseEvent) => {
+    // Only handle click if not from a touch event
+    if (!isTouching) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('ListingCard: Navigating to:', href, 'Listing:', { id: listing.id, title: listing.title });
+      router.push(href);
+    }
   };
 
   // Size-based styles
@@ -93,9 +140,11 @@ export default function ListingCard({
     <button
       type="button"
       onClick={handleClick}
-      onTouchEnd={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       className={`flex flex-col gap-1.5 text-left transition-all duration-200 hover:-translate-y-[1px] focus:outline-none cursor-pointer active:scale-[0.98] ${className}`}
-      style={{ touchAction: 'manipulation', position: 'relative', zIndex: 1 }}
+      style={{ touchAction: 'pan-y', position: 'relative', zIndex: 1 }}
     >
       {/* Card Image */}
       <div

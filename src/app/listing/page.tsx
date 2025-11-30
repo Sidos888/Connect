@@ -704,6 +704,7 @@ export default function ListingPage() {
                 listingId={listing.id}
                 listing={listing}
                 isCurrentUserParticipant={isCurrentUserParticipant ?? false}
+                eventChatEnabled={eventChatStatus?.enabled ?? false}
                 onManage={() => goToView('manage')}
                 onJoin={() => setShowJoinModal(true)}
                 onLeave={() => setShowLeaveModal(true)}

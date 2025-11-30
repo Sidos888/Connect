@@ -12,6 +12,7 @@ export interface Listing {
   is_public: boolean;
   photo_urls: string[] | null;
   has_gallery?: boolean;
+  event_chat_id?: string | null;
   created_at: string;
   updated_at: string;
   // Joined from listing_participants

@@ -11,6 +11,7 @@ interface ListingActionButtonsProps {
   listingId: string;
   listing?: Listing | null;
   isCurrentUserParticipant?: boolean; // Whether current user is already a participant
+  eventChatEnabled?: boolean; // Whether event chat is enabled
   onManage?: () => void;
   onJoin?: () => void;
   onLeave?: () => void; // Handler for when user clicks "Attending" (to leave)
@@ -21,6 +22,7 @@ export default function ListingActionButtons({
   listingId,
   listing,
   isCurrentUserParticipant = false,
+  eventChatEnabled = false,
   onManage,
   onJoin,
   onLeave
@@ -30,6 +32,14 @@ export default function ListingActionButtons({
 
   const handleGalleryClick = () => {
     router.push(`/listing?id=${listingId}&view=gallery`);
+  };
+
+  const handleEventChatClick = () => {
+    if (listing?.event_chat_id) {
+      // Pass 'from' parameter to return to listing page when back button is clicked
+      const listingUrl = `/listing?id=${listingId}`;
+      router.push(`/chat/individual?chat=${listing.event_chat_id}&from=${encodeURIComponent(listingUrl)}`);
+    }
   };
   // Show participant buttons for both participants and viewers (so viewers can join)
   // Only hide buttons for non-logged-in users (which would be handled by the parent component)
@@ -69,6 +79,8 @@ export default function ListingActionButtons({
   if (userRole === 'participant' || userRole === 'viewer') {
     // Show gallery button only if user is a participant (not viewer) and listing has gallery enabled
     const showGallery = userRole === 'participant' && listing?.has_gallery;
+    // Show event chat button if event chat is enabled (for both participants and viewers)
+    const showEventChat = eventChatEnabled && listing?.event_chat_id;
     
     // Debug logging
     console.log('🎨 ListingActionButtons - Gallery check:', {
@@ -97,6 +109,25 @@ export default function ListingActionButtons({
           </div>
           <span className="text-xs font-medium text-gray-900">{isCurrentUserParticipant ? 'Attending' : 'Join'}</span>
         </button>
+
+        {/* Event Chat Button - Show if event chat is enabled */}
+        {showEventChat && (
+          <button
+            onClick={handleEventChatClick}
+            className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+            style={getButtonStyles(true)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div 
+              className="flex items-center justify-center bg-white"
+              style={getIconContainerStyles()}
+            >
+              <MessageCircle size={24} className="text-gray-900" />
+            </div>
+            <span className="text-xs font-medium text-gray-900">Chat</span>
+          </button>
+        )}
 
         {/* Gallery Button - Only show for participants/hosts when gallery is enabled */}
         {showGallery && (
@@ -145,9 +176,11 @@ export default function ListingActionButtons({
     );
   }
 
-  // Host buttons (3 buttons - removed Chat)
+  // Host buttons
   // Show gallery button only if listing has gallery enabled
   const showGallery = listing?.has_gallery;
+  // Show event chat button if event chat is enabled
+  const showEventChat = eventChatEnabled && listing?.event_chat_id;
   
   return (
     <div className="flex items-center justify-center gap-4 my-6">
@@ -167,6 +200,25 @@ export default function ListingActionButtons({
         </div>
         <span className="text-xs font-medium text-gray-900">Invite</span>
       </button>
+
+      {/* Event Chat Button - Show if event chat is enabled */}
+      {showEventChat && (
+        <button
+          onClick={handleEventChatClick}
+          className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
+          style={getButtonStyles(true)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div 
+            className="flex items-center justify-center bg-white"
+            style={getIconContainerStyles()}
+          >
+            <MessageCircle size={24} className="text-gray-900" />
+          </div>
+          <span className="text-xs font-medium text-gray-900">Chat</span>
+        </button>
+      )}
 
       {/* Gallery Button - Only show for hosts when gallery is enabled */}
       {showGallery && (

@@ -1112,7 +1112,14 @@ export default function IndividualChatPage() {
             console.log('Chat has no messages, deleting before navigating back');
             await chatService.deleteChat(chatId);
           }
-          router.push('/chat');
+          
+          // Check for 'from' parameter to return to previous page (e.g., listing page)
+          const from = searchParams.get('from');
+          if (from) {
+            router.push(from);
+          } else {
+            router.push('/chat');
+          }
         }}
         leftSection={profileCard}
       />
