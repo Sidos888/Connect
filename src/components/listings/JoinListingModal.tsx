@@ -114,6 +114,33 @@ export default function JoinListingModal({ isOpen, onClose, listing }: JoinListi
         return;
       }
 
+      // Check if listing has event_chat_id and add user to that chat
+      if (listing?.id) {
+        const { data: listingData, error: listingError } = await supabase
+          .from('listings')
+          .select('event_chat_id')
+          .eq('id', listing.id)
+          .single();
+
+        if (!listingError && listingData?.event_chat_id) {
+          // Add user to event chat
+          const { error: chatParticipantError } = await supabase
+            .from('chat_participants')
+            .upsert({
+              chat_id: listingData.event_chat_id,
+              user_id: account.id,
+              role: 'member'
+            }, {
+              onConflict: 'chat_id,user_id'
+            });
+
+          if (chatParticipantError) {
+            console.error('Error adding user to event chat:', chatParticipantError);
+            // Don't fail the join operation if chat add fails
+          }
+        }
+      }
+
       // Mark any pending invites for this listing as accepted
       const { error: inviteUpdateError } = await supabase
         .from('listing_invites')
@@ -284,7 +311,7 @@ export default function JoinListingModal({ isOpen, onClose, listing }: JoinListi
 
           {/* Date and Time */}
           <p className="text-sm text-gray-600 text-center mb-8">
-            {formatDateTime(listing.start_date)}
+            {listing.start_date ? formatDateTime(listing.start_date) : 'Date and time'}
           </p>
         </div>
 

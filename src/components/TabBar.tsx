@@ -158,10 +158,10 @@ export default function TabBar({ items }: Props) {
                                  pathname.startsWith("/for-you-listings") ||
                                  pathname.startsWith("/casual-listings") ||
                                  pathname.startsWith("/side-quest-listings");
-  // Only listing category pages use small height, explore page uses full height
-  const shouldUseSmallHeight = isListingCategoryPage;
+  // Explore page and listing category pages use small height for cleaner separation
+  const shouldUseSmallHeight = isExplorePage || isListingCategoryPage;
   
-  // Calculate height: 1/4 smaller on listing pages only (62px * 3/4 = 46.5px)
+  // Calculate height: 1/4 smaller on explore and listing pages (62px * 3/4 = 46.5px)
   const navHeight = shouldUseSmallHeight ? '46.5px' : '62px';
   const searchButtonSize = shouldUseSmallHeight ? '46.5px' : '62px';
   
@@ -285,13 +285,17 @@ export default function TabBar({ items }: Props) {
                 borderRadius: '100px',
                 padding: shouldUseSmallHeight ? '8px' : '12px',
                 boxSizing: 'border-box',
-                ...cardStyle
+                background: 'rgba(255, 255, 255, 0.9)',
+                borderWidth: '0.6px', // Slightly bolder border
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1.5px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.3)' // Slightly bolder shadow
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1.5px rgba(100, 100, 100, 0.35), inset 0 0 2px rgba(27, 27, 27, 0.3)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                e.currentTarget.style.boxShadow = '0 0 1.5px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.3)';
               }}
             >
               <span 

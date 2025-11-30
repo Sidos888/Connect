@@ -1,14 +1,14 @@
 "use client";
 
 import { useRouter, usePathname } from 'next/navigation';
-import { ArrowLeft, Map, Grid3x3, Search, X, MapPin, Clock } from 'lucide-react';
+import { Map, Grid3x3, Search, X, MapPin, Clock } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { listingsService, Listing } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingsSearchModal from "@/components/listings/ListingsSearchModal";
-import { SearchIcon } from "@/components/icons";
+import { SearchIcon, ChevronLeftIcon } from "@/components/icons";
 
 export default function ForYouListingsPage() {
   const router = useRouter();
@@ -149,7 +149,7 @@ export default function ForYouListingsPage() {
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
                 }}
               >
-                <ArrowLeft size={18} className="text-gray-900" />
+                <ChevronLeftIcon className="h-5 w-5 text-gray-900" strokeWidth={2.5} />
               </button>
               <h1 className="text-xl font-semibold text-gray-900">For You</h1>
               {/* Combined Search/Map Button */}
@@ -193,7 +193,7 @@ export default function ForYouListingsPage() {
                   }}
                   className="flex items-center justify-center flex-1 h-full"
               >
-                {showMap ? <Grid3x3 size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
+                {showMap ? <Grid3x3 size={18} className="text-gray-900" strokeWidth={2.5} /> : <Map size={18} className="text-gray-900" strokeWidth={2.5} />}
               </button>
               </div>
             </div>
@@ -382,7 +382,7 @@ export default function ForYouListingsPage() {
                 e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
             >
-              <ArrowLeft size={18} className="text-gray-900" />
+              <ChevronLeftIcon className="h-5 w-5 text-gray-900" strokeWidth={2.5} />
             </button>
 
             {/* Title */}
@@ -452,7 +452,7 @@ export default function ForYouListingsPage() {
                 e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
             >
-              {showMap ? <X size={18} className="text-gray-900" /> : <Map size={18} className="text-gray-900" />}
+              {showMap ? <X size={18} className="text-gray-900" strokeWidth={2.5} /> : <Map size={18} className="text-gray-900" strokeWidth={2.5} />}
             </button>
           </div>
 

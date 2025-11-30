@@ -366,13 +366,12 @@ function MessagesPageContent() {
   };
 
   const handleNewMessageClick = () => {
-    // On mobile, show slide-up modal instead of full page modal
+    // On mobile, navigate to new chat page instead of modal
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
     if (isMobile) {
-      setShowNewChatSlideModal(true);
-      setGroupChatFlowStep('new-chat');
+      router.push('/chat/new');
     } else {
-    setShowNewMessageModal(true);
+      setShowNewMessageModal(true);
     }
   };
 

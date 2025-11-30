@@ -43,6 +43,9 @@ function AppShellContent({ children }: AppShellProps) {
   const isGroupMembersPage = pathname.startsWith('/chat/group-details/members');
   const isGroupSettingsPage = pathname.startsWith('/chat/group-details/settings');
   const isChatEventsPage = pathname.startsWith('/chat/events');
+  const isNewChatPage = pathname.startsWith('/chat/new');
+  const isAddMembersPage = pathname.startsWith('/chat/add-members');
+  const isCreateGroupPage = pathname.startsWith('/chat/create-group');
   const isEventChatPage = pathname.startsWith('/my-life/listing/event-chat');
   const isInvitePage = pathname.startsWith('/listing/invite');
   const isAttendeesPage = pathname.startsWith('/listing/attendees');
@@ -149,7 +152,7 @@ function AppShellContent({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isNewChatPage && !isAddMembersPage && !isCreateGroupPage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -159,8 +162,8 @@ function AppShellContent({ children }: AppShellProps) {
   }
 
   // All other routes require authentication
-  // Exclude chat photos page from chat-specific styling (it uses MobilePage with fixed positioning)
-  if (isChatPage && !isChatPhotosPage) {
+  // Exclude chat photos page and new chat page from chat-specific styling (they use MobilePage with fixed positioning)
+  if (isChatPage && !isChatPhotosPage && !isNewChatPage) {
     return (
       <div className={`h-screen flex flex-col ${(isIndividualChatPage || isDmDetailsPage || isGroupDetailsPage || isGroupMembersPage || isGroupSettingsPage) ? 'bg-transparent' : 'bg-white'}`}>
         {/* Desktop: Top Navigation Bar - Hidden on individual chat pages */}
@@ -184,8 +187,8 @@ function AppShellContent({ children }: AppShellProps) {
           </ProtectedRoute>
         </main>
 
-        {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages, details pages, and group events */}
-        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && !isChatEventsPage && !isEventChatPage && (
+        {/* Mobile: Bottom Navigation Bar - Hidden on individual chat pages, details pages, group events, new chat page, add members, and create group */}
+        {!isIndividualChatPage && !isDmDetailsPage && !isGroupDetailsPage && !isChatEventsPage && !isEventChatPage && !isNewChatPage && !isAddMembersPage && !isCreateGroupPage && (
           <div className="sm:hidden">
             <MobileBottomNavigation />
           </div>
@@ -216,7 +219,7 @@ function AppShellContent({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isEventChatPage && !isInvitePage && !isAttendeesPage && !isSharePage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isEventChatPage && !isInvitePage && !isAttendeesPage && !isSharePage && !isNewChatPage && !isAddMembersPage && !isCreateGroupPage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>

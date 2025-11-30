@@ -557,8 +557,8 @@ export default function CreateListingDetailsPage() {
       sessionStorage.removeItem('listingHasGallery');
       sessionStorage.removeItem('listingEnableEventChat');
       
-      // Navigate back to my-life page
-      router.push('/my-life');
+      // Navigate to the listing view page with from parameter for back navigation
+      router.push(`/listing?id=${listingData.id}&from=${encodeURIComponent('/my-life')}`);
     } catch (error) {
       console.error('Error saving listing:', error);
       alert(`Failed to save listing: ${error instanceof Error ? error.message : 'Unknown error'}`);

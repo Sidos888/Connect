@@ -197,7 +197,7 @@ export default function NewGroupChatSlideModal({
 
       if (chat) {
         // Navigate to the new group chat
-        router.push(`/chat?chat=${chat.id}`);
+        router.push(`/chat/individual?chat=${chat.id}`);
         handleClose();
       }
     } catch (error) {

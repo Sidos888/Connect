@@ -1154,6 +1154,12 @@ export default function Page() {
                 return;
               }
             }
+            // Check for 'from' parameter in URL
+            const from = searchParams?.get('from');
+            if (from) {
+              router.push(from);
+              return;
+            }
             goToView('connections');
           }}
           onOpenFriendRequests={() => setShowFriendRequestsModal(true)}

@@ -824,51 +824,51 @@ export default function ListingPage() {
               // Save button - only show for non-hosts
               if (showSaveButton) {
                 actions.push({
-                  icon: <Bookmark size={20} className={isSaved ? "text-red-600 fill-red-600" : "text-gray-900"} />,
-                  label: isSaved ? 'Saved' : 'Save',
-                  onClick: async () => {
-                    if (!listingId || !account?.id) return;
-                    const supabase = getSupabaseClient();
-                    if (!supabase) return;
+                icon: <Bookmark size={20} className={isSaved ? "text-red-600 fill-red-600" : "text-gray-900"} />,
+                label: isSaved ? 'Saved' : 'Save',
+                onClick: async () => {
+                  if (!listingId || !account?.id) return;
+                  const supabase = getSupabaseClient();
+                  if (!supabase) return;
 
-                    if (isSaved) {
-                      // Unsave listing
-                      const { error } = await supabase
-                        .from('saved_listings')
-                        .delete()
-                        .eq('listing_id', listingId)
-                        .eq('user_id', account.id);
+                  if (isSaved) {
+                    // Unsave listing
+                    const { error } = await supabase
+                      .from('saved_listings')
+                      .delete()
+                      .eq('listing_id', listingId)
+                      .eq('user_id', account.id);
 
-                      if (error) {
-                        console.error('Error unsaving listing:', error);
-                      } else {
-                        refetchSaved();
-                        // Invalidate saved listings cache to update Saved page
-                        queryClient.invalidateQueries({ 
-                          queryKey: ['listings', 'saved', account.id] 
-                        });
-                      }
+                  if (error) {
+                    console.error('Error unsaving listing:', error);
+                  } else {
+                    refetchSaved();
+                    // Invalidate saved listings cache to update Saved page
+                    queryClient.invalidateQueries({ 
+                      queryKey: ['listings', 'saved', account.id] 
+                    });
+                  }
+                  } else {
+                    // Save listing
+                    const { error } = await supabase
+                      .from('saved_listings')
+                      .insert({
+                        listing_id: listingId,
+                        user_id: account.id,
+                        created_at: new Date().toISOString(),
+                      });
+
+                    if (error) {
+                      console.error('Error saving listing:', error);
                     } else {
-                      // Save listing
-                      const { error } = await supabase
-                        .from('saved_listings')
-                        .insert({
-                          listing_id: listingId,
-                          user_id: account.id,
-                          created_at: new Date().toISOString(),
-                        });
-
-                      if (error) {
-                        console.error('Error saving listing:', error);
-                      } else {
-                        refetchSaved();
-                        // Invalidate saved listings cache to update Saved page
-                        queryClient.invalidateQueries({ 
-                          queryKey: ['listings', 'saved', account.id] 
-                        });
-                      }
+                      refetchSaved();
+                      // Invalidate saved listings cache to update Saved page
+                      queryClient.invalidateQueries({ 
+                        queryKey: ['listings', 'saved', account.id] 
+                      });
                     }
                   }
+                }
                 });
               }
               

@@ -116,8 +116,8 @@ export default function Notifications() {
           </div>
         ) : (
           <>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Recent</h3>
-            <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Recent</h3>
+        <div className="space-y-3">
             {invites.map((invite) => {
               if (!invite.listing || !invite.inviter) return null;
 
@@ -240,9 +240,9 @@ export default function Notifications() {
                 </div>
               );
             })}
-          </div>
+                </div>
           </>
-        )}
+                )}
       </div>
     </div>
   );
