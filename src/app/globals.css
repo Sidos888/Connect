@@ -485,6 +485,25 @@ body:has(.modal-open) .tabbar-nav {
   position: relative;
 }
 
+/* Disable text selection on chat messages container and all its children */
+.chat-messages-container,
+.chat-messages-container * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Re-enable text selection for input/textarea (they are outside the messages container) */
+input,
+textarea {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
 /* Keep header absolutely positioned to prevent keyboard interference */
 .chat-mobile-container .absolute.top-0 {
   position: fixed !important;

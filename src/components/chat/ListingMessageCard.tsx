@@ -221,16 +221,22 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
         borderWidth: '0.4px',
         borderColor: '#E5E7EB',
         borderStyle: 'solid',
-        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none',
+        WebkitTouchCallout: 'none'
       }}
     >
       {/* Photo */}
-      <div className="relative w-full" style={{ aspectRatio: '16/9', backgroundColor: '#F3F4F6' }}>
+      <div className="relative w-full" style={{ aspectRatio: '16/9', backgroundColor: '#F3F4F6', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}>
         {thumbnailUrl ? (
           <img
             src={thumbnailUrl}
             alt={listing.title}
             className="w-full h-full object-cover"
+            style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -240,7 +246,7 @@ export default function ListingMessageCard({ listingId, chatId }: ListingMessage
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}>
         {/* Title */}
         <div className="text-base font-semibold text-gray-900 mb-1">
           {listing.title}

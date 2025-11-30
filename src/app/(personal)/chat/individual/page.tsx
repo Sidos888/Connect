@@ -13,6 +13,8 @@ import MediaUploadButton, { UploadedMedia } from "@/components/chat/MediaUploadB
 import MediaPreview from "@/components/chat/MediaPreview";
 import MediaViewer from "@/components/chat/MediaViewer";
 import LoadingMessageCard from "@/components/chat/LoadingMessageCard";
+import MessageReactionCard from "@/components/chat/MessageReactionCard";
+import MessageActionCard from "@/components/chat/MessageActionCard";
 import type { SimpleMessage, MediaAttachment } from "@/lib/types";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from "@/lib/supabaseClient";
@@ -46,6 +48,10 @@ export default function IndividualChatPage() {
   const hasMarkedAsRead = useRef(false);
   const [selectedMessage, setSelectedMessage] = useState<SimpleMessage | null>(null);
   const [selectedMessageElement, setSelectedMessageElement] = useState<HTMLElement | null>(null);
+  const [longPressedMessage, setLongPressedMessage] = useState<SimpleMessage | null>(null);
+  const [longPressedElement, setLongPressedElement] = useState<HTMLElement | null>(null);
+  const [longPressedPosition, setLongPressedPosition] = useState<{ top: number; left: number; right: number; bottom: number; isOwnMessage: boolean } | null>(null);
+  const longPressContainerRef = useRef<HTMLDivElement>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
   const [pendingMedia, setPendingMedia] = useState<UploadedMedia[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<Map<string, { status: 'uploading' | 'uploaded' | 'failed'; fileCount: number }>>(new Map());
@@ -816,7 +822,210 @@ export default function IndividualChatPage() {
   const handleReply = (message: SimpleMessage) => {
     setReplyToMessage(message);
     setSelectedMessage(null);
+    setLongPressedMessage(null);
+    setLongPressedElement(null);
+    setLongPressedPosition(null);
   };
+
+  // Long press handler
+  const handleLongPress = (message: SimpleMessage, element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    const isMe = message.sender_id === account?.id;
+    
+    // DIAGNOSTIC: Log computed styles of the element
+    const computedStyle = window.getComputedStyle(element);
+    console.log('🔍 Long Press Diagnostic - Element Styles:', {
+      element: element.tagName,
+      className: element.className,
+      opacity: computedStyle.opacity,
+      filter: computedStyle.filter,
+      transform: computedStyle.transform,
+      backgroundColor: computedStyle.backgroundColor,
+      zIndex: computedStyle.zIndex,
+      position: computedStyle.position,
+      isolation: computedStyle.isolation,
+      willChange: computedStyle.willChange,
+      parentOpacity: element.parentElement ? window.getComputedStyle(element.parentElement).opacity : 'N/A',
+      parentFilter: element.parentElement ? window.getComputedStyle(element.parentElement).filter : 'N/A',
+      rect: {
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height
+      }
+    });
+    
+    setLongPressedMessage(message);
+    setLongPressedElement(element);
+    setLongPressedPosition({
+      top: rect.top,
+      left: rect.left,
+      right: rect.right,
+      bottom: rect.bottom,
+      isOwnMessage: isMe
+    });
+  };
+
+  // Close long press state
+  const handleCloseLongPress = () => {
+    setLongPressedMessage(null);
+    setLongPressedElement(null);
+    setLongPressedPosition(null);
+  };
+
+  // DIAGNOSTIC: Log all computed styles when long press state changes
+  useEffect(() => {
+    if (longPressedMessage && longPressedElement && longPressedPosition) {
+      // Wait for DOM to update
+      setTimeout(() => {
+        console.log('🔍 ========== COMPREHENSIVE LONG PRESS DIAGNOSTIC ==========');
+        
+        // Check overlay
+        const overlay = document.querySelector('[style*="rgba(0, 0, 0, 0.3)"]') as HTMLElement;
+        if (overlay) {
+          const overlayComputed = window.getComputedStyle(overlay);
+          console.log('🔍 Overlay:', {
+            opacity: overlayComputed.opacity,
+            backgroundColor: overlayComputed.backgroundColor,
+            zIndex: overlayComputed.zIndex,
+            position: overlayComputed.position
+          });
+        }
+        
+        // Check reaction card wrapper
+        const reactionWrapper = document.querySelector('[style*="translateY(-100%)"]') as HTMLElement;
+        if (reactionWrapper) {
+          const reactionComputed = window.getComputedStyle(reactionWrapper);
+          console.log('🔍 Reaction Card Wrapper:', {
+            opacity: reactionComputed.opacity,
+            filter: reactionComputed.filter,
+            transform: reactionComputed.transform,
+            backgroundColor: reactionComputed.backgroundColor,
+            zIndex: reactionComputed.zIndex,
+            position: reactionComputed.position,
+            isolation: reactionComputed.isolation,
+            parentOpacity: reactionWrapper.parentElement ? window.getComputedStyle(reactionWrapper.parentElement).opacity : 'N/A',
+            parentFilter: reactionWrapper.parentElement ? window.getComputedStyle(reactionWrapper.parentElement).filter : 'N/A',
+            actualElement: reactionWrapper
+          });
+          
+          // Check reaction card component inside
+          const reactionCard = reactionWrapper.querySelector('div[class*="bg-white"]') as HTMLElement;
+          if (reactionCard) {
+            const cardComputed = window.getComputedStyle(reactionCard);
+            console.log('🔍 Reaction Card Component:', {
+              opacity: cardComputed.opacity,
+              filter: cardComputed.filter,
+              transform: cardComputed.transform,
+              backgroundColor: cardComputed.backgroundColor
+            });
+          }
+        }
+        
+        // Check message bubble wrapper
+        const messageWrapper = document.querySelector('[style*="zIndex: 102"]') as HTMLElement;
+        if (messageWrapper) {
+          const messageComputed = window.getComputedStyle(messageWrapper);
+          console.log('🔍 Message Bubble Wrapper:', {
+            opacity: messageComputed.opacity,
+            filter: messageComputed.filter,
+            transform: messageComputed.transform,
+            backgroundColor: messageComputed.backgroundColor,
+            zIndex: messageComputed.zIndex,
+            position: messageComputed.position,
+            isolation: messageComputed.isolation,
+            parentOpacity: messageWrapper.parentElement ? window.getComputedStyle(messageWrapper.parentElement).opacity : 'N/A',
+            parentFilter: messageWrapper.parentElement ? window.getComputedStyle(messageWrapper.parentElement).filter : 'N/A'
+          });
+        }
+        
+        // Check action card wrapper
+        const actionWrapper = document.querySelector('[style*="zIndex: 103"]') as HTMLElement;
+        if (actionWrapper && actionWrapper !== reactionWrapper) {
+          const actionComputed = window.getComputedStyle(actionWrapper);
+          console.log('🔍 Action Card Wrapper:', {
+            opacity: actionComputed.opacity,
+            filter: actionComputed.filter,
+            transform: actionComputed.transform,
+            backgroundColor: actionComputed.backgroundColor,
+            zIndex: actionComputed.zIndex,
+            position: actionComputed.position,
+            isolation: actionComputed.isolation,
+            parentOpacity: actionWrapper.parentElement ? window.getComputedStyle(actionWrapper.parentElement).opacity : 'N/A',
+            parentFilter: actionWrapper.parentElement ? window.getComputedStyle(actionWrapper.parentElement).filter : 'N/A'
+          });
+          
+          // Check action card component inside
+          const actionCard = actionWrapper.querySelector('div[class*="bg-white"]') as HTMLElement;
+          if (actionCard) {
+            const cardComputed = window.getComputedStyle(actionCard);
+            console.log('🔍 Action Card Component:', {
+              opacity: cardComputed.opacity,
+              filter: cardComputed.filter,
+              transform: cardComputed.transform,
+              backgroundColor: cardComputed.backgroundColor
+            });
+          }
+        }
+        
+        // Check parent container
+        const parentContainer = longPressedElement.parentElement;
+        if (parentContainer) {
+          const parentComputed = window.getComputedStyle(parentContainer);
+          console.log('🔍 Parent Container:', {
+            opacity: parentComputed.opacity,
+            filter: parentComputed.filter,
+            transform: parentComputed.transform,
+            isolation: parentComputed.isolation,
+            zIndex: parentComputed.zIndex
+          });
+        }
+        
+        // Check messages container
+        if (messagesContainerRef.current) {
+          const containerComputed = window.getComputedStyle(messagesContainerRef.current);
+          console.log('🔍 Messages Container:', {
+            opacity: containerComputed.opacity,
+            filter: containerComputed.filter,
+            transform: containerComputed.transform,
+            contain: containerComputed.contain
+          });
+        }
+        
+        console.log('🔍 ========== END DIAGNOSTIC ==========');
+      }, 100);
+    }
+  }, [longPressedMessage, longPressedElement, longPressedPosition]);
+  
+  // Click outside to close long press state
+  useEffect(() => {
+    if (!longPressedMessage) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      
+      // Don't close if clicking on the cards or the message itself
+      if (
+        longPressContainerRef.current?.contains(target) ||
+        longPressedElement?.contains(target)
+      ) {
+        return;
+      }
+      
+      handleCloseLongPress();
+    };
+
+    // Add listeners for both mouse and touch events
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [longPressedMessage, longPressedElement]);
 
   const handleCopy = (message: SimpleMessage) => {
     navigator.clipboard.writeText(message.text || '');
@@ -1380,7 +1589,7 @@ export default function IndividualChatPage() {
 
       {/* Chat Section - Scrollable messages area - Use paddingTop instead of top offset to avoid white gap */}
       <div 
-        className="px-4 overflow-y-auto"
+        className="px-4 overflow-y-auto chat-messages-container"
         style={{
           height: '100vh', // Full viewport height - input overlays on top
           paddingTop: '160px', // Space for header (110px) + nice spacing before first message (50px)
@@ -1388,7 +1597,12 @@ export default function IndividualChatPage() {
           position: 'relative',
           overflowY: 'scroll',
           WebkitOverflowScrolling: 'touch',
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          zIndex: 1, // Normal z-index, individual messages control their own z-index
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
           // NO top offset - use paddingTop instead to avoid creating white gap
           // Full height with paddingBottom ensures no gap at bottom
         }}
@@ -1432,25 +1646,188 @@ export default function IndividualChatPage() {
           
           // Regular message
           const isMe = message.sender_id === account?.id;
+          const isLongPressed = longPressedMessage?.id === message.id;
+          
           return (
-            <div key={message.id} style={{ marginBottom: index < messages.length - 1 ? '12px' : '12px' }}>
-              <MessageBubble
-                message={message}
-                currentUserId={account?.id || ''}
-                onReactionToggle={(emoji: string, msgId: string) => {
-                  if (msgId === message.id) {
-                    handleReact(message, emoji);
-                  }
-                }}
-                onAttachmentClick={handleAttachmentClick}
-                onReply={handleReply}
-                onDelete={handleDelete}
-              />
+            <div 
+              key={message.id} 
+              style={{ 
+                marginBottom: index < messages.length - 1 ? '12px' : '12px',
+                position: 'relative',
+                zIndex: isLongPressed ? 101 : 1, // Selected message above overlay (98), others below
+                opacity: 1, // No dimming - all messages remain at full brightness
+                pointerEvents: 'auto', // All messages remain interactive
+                isolation: isLongPressed ? 'isolate' : 'auto' // Create new stacking context for selected message to prevent opacity inheritance
+              }}
+            >
+              {/* Regular message display - selected message will be rendered outside container */}
+              <div style={{ 
+                position: 'relative', 
+                zIndex: 1, 
+                opacity: 1 // No dimming - all messages remain at full brightness
+              }}>
+                <MessageBubble
+                  message={message}
+                  currentUserId={account?.id || ''}
+                  onReactionToggle={(emoji: string, msgId: string) => {
+                    if (msgId === message.id) {
+                      handleReact(message, emoji);
+                    }
+                  }}
+                  onAttachmentClick={handleAttachmentClick}
+                  onReply={handleReply}
+                  onDelete={handleDelete}
+                  onLongPress={handleLongPress}
+                />
+              </div>
             </div>
           );
         })}
         <div ref={messagesEndRef} style={{ height: '0px', margin: '0px', padding: '0px' }} />
       </div>
+
+      {/* Blur overlay for long press - blurs entire page except selected message and cards */}
+      {longPressedMessage && (
+        <div
+          ref={(el) => {
+            if (el) {
+              // DIAGNOSTIC: Log overlay styles
+              setTimeout(() => {
+                const computed = window.getComputedStyle(el);
+                console.log('🔍 Overlay - Computed Styles:', {
+                  opacity: computed.opacity,
+                  backgroundColor: computed.backgroundColor,
+                  backdropFilter: computed.backdropFilter,
+                  webkitBackdropFilter: (computed as any).webkitBackdropFilter,
+                  zIndex: computed.zIndex,
+                  position: computed.position
+                });
+              }, 0);
+            }
+          }}
+          onClick={handleCloseLongPress}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.1)', // Slight darkening
+            backdropFilter: 'blur(8px)', // Blur effect
+            // @ts-ignore - WebkitBackdropFilter is valid CSS but not in TypeScript types
+            WebkitBackdropFilter: 'blur(8px)', // Safari support
+            zIndex: 98,
+            pointerEvents: 'auto'
+          }}
+        />
+      )}
+
+      {/* Selected message and cards - rendered OUTSIDE messages container to avoid blur */}
+      {longPressedMessage && longPressedPosition && (
+        <>
+          {/* Reaction card - above message */}
+          <div
+            style={{
+              position: 'fixed',
+              top: longPressedPosition.top - 8, // Position top edge 8px above message
+              left: longPressedPosition.isOwnMessage ? 'auto' : longPressedPosition.left,
+              right: longPressedPosition.isOwnMessage ? window.innerWidth - longPressedPosition.right : 'auto',
+              zIndex: 200, // High z-index to be above blur overlay (98)
+              opacity: 1,
+              pointerEvents: 'auto',
+              transform: 'translateY(-100%) translateZ(0)',
+              filter: 'none',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none' as any,
+              willChange: 'transform',
+              isolation: 'isolate',
+              display: 'flex',
+              justifyContent: longPressedPosition.isOwnMessage ? 'flex-end' : 'flex-start'
+            }}
+          >
+            <MessageReactionCard
+              messageId={longPressedMessage.id}
+              onReactionSelect={(emoji) => {
+                console.log('Reaction selected:', emoji, longPressedMessage.id);
+                handleCloseLongPress();
+              }}
+            />
+          </div>
+
+          {/* Message bubble - selected message */}
+          <div
+            style={{
+              position: 'fixed',
+              top: longPressedPosition.top,
+              left: longPressedPosition.isOwnMessage ? 'auto' : longPressedPosition.left,
+              right: longPressedPosition.isOwnMessage ? window.innerWidth - longPressedPosition.right : 'auto',
+              zIndex: 199, // High z-index to be above blur overlay (98), below cards (200)
+              opacity: 1,
+              pointerEvents: 'auto',
+              transform: 'translateZ(0)',
+              filter: 'none',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none' as any,
+              willChange: 'transform',
+              isolation: 'isolate',
+              width: 'auto',
+              maxWidth: '100%'
+            }}
+          >
+            <MessageBubble
+              message={longPressedMessage}
+              currentUserId={account?.id || ''}
+              onReactionToggle={(emoji: string, msgId: string) => {
+                if (msgId === longPressedMessage.id) {
+                  handleReact(longPressedMessage, emoji);
+                }
+              }}
+              onAttachmentClick={handleAttachmentClick}
+              onReply={handleReply}
+              onDelete={handleDelete}
+              onLongPress={handleLongPress}
+            />
+          </div>
+
+          {/* Action card - below message */}
+          <div
+            style={{
+              position: 'fixed',
+              top: longPressedPosition.bottom + 8, // Position below message
+              left: longPressedPosition.isOwnMessage ? 'auto' : longPressedPosition.left,
+              right: longPressedPosition.isOwnMessage ? window.innerWidth - longPressedPosition.right : 'auto',
+              zIndex: 200, // High z-index to be above blur overlay (98)
+              opacity: 1,
+              pointerEvents: 'auto',
+              transform: 'translateZ(0)',
+              filter: 'none',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none' as any,
+              willChange: 'transform',
+              isolation: 'isolate',
+              display: 'flex',
+              justifyContent: longPressedPosition.isOwnMessage ? 'flex-end' : 'flex-start'
+            }}
+          >
+            <MessageActionCard
+              messageId={longPressedMessage.id}
+              isOwnMessage={longPressedPosition.isOwnMessage}
+              onReply={() => {
+                handleReply(longPressedMessage);
+                handleCloseLongPress();
+              }}
+              onCopy={() => {
+                console.log('Copy message:', longPressedMessage.id);
+                handleCloseLongPress();
+              }}
+              onDelete={() => {
+                handleDelete(longPressedMessage.id);
+                handleCloseLongPress();
+              }}
+            />
+          </div>
+        </>
+      )}
 
       {/* Message Action Modal */}
       <MessageActionModal

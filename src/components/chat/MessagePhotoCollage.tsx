@@ -110,6 +110,7 @@ export default function MessagePhotoCollage({
                   src={firstAttachment.thumbnail_url}
                   alt="Video thumbnail"
                   className="w-full h-full object-cover pointer-events-none"
+                  style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
                 />
                 {/* Play icon overlay */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -129,7 +130,7 @@ export default function MessagePhotoCollage({
             )}
           </div>
         ) : (
-          <div className="w-full h-full relative bg-gray-100">
+          <div className="w-full h-full relative bg-gray-100" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}>
             {imageErrors.has(firstAttachment.file_url) ? (
               <div className="w-full h-full flex items-center justify-center">
                 <ImageIcon className="w-12 h-12 text-gray-400" />
@@ -141,6 +142,7 @@ export default function MessagePhotoCollage({
             className="w-full h-full object-cover pointer-events-none"
                 onError={() => handleImageError(firstAttachment.file_url)}
                 onLoad={() => console.log('MessagePhotoCollage: Image loaded successfully:', firstAttachment.file_url)}
+                style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
           />
             )}
           </div>
@@ -200,6 +202,7 @@ export default function MessagePhotoCollage({
                       src={attachment.thumbnail_url}
                       alt="Video thumbnail"
                       className="w-full h-full object-cover"
+                      style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
                     />
                     {/* Play icon overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -219,7 +222,7 @@ export default function MessagePhotoCollage({
                 )}
               </div>
             ) : (
-              <div className="w-full h-full relative bg-gray-100">
+              <div className="w-full h-full relative bg-gray-100" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}>
                 {imageErrors.has(attachment.file_url) ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <ImageIcon className="w-6 h-6 text-gray-400" />
@@ -231,6 +234,7 @@ export default function MessagePhotoCollage({
                 className="w-full h-full object-cover"
                     onError={() => handleImageError(attachment.file_url)}
                     onLoad={() => console.log('MessagePhotoCollage: Grid image loaded:', attachment.file_url)}
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
               />
                 )}
               </div>
