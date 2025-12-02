@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { SimpleMessage } from '@/lib/types';
-import { X, MoreVertical } from 'lucide-react';
+import { X, MoreVertical, Calendar, Image as ImageIcon } from 'lucide-react';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import Avatar from '@/components/Avatar';
 import MessagePhotoCollage from '@/components/chat/MessagePhotoCollage';
 import ListingMessageCard from '@/components/chat/ListingMessageCard';
@@ -11,24 +12,32 @@ interface MessageBubbleProps {
   message: SimpleMessage;
   currentUserId: string;
   onReactionToggle?: (emoji: string, messageId: string) => void;
+  onReactionClick?: (messageId: string) => void; // NEW: Open reactions modal
   onAttachmentClick?: (message: SimpleMessage) => void;
   onReply?: (message: SimpleMessage) => void;
   onDelete?: (messageId: string) => void;
   showOptions?: boolean;
   showDeliveryStatus?: boolean; // NEW: Optional delivery status ticks (default: false)
   onLongPress?: (message: SimpleMessage, element: HTMLElement) => void; // NEW: Long press handler
+  showReplyCancelButton?: boolean; // NEW: Show X button for reply preview
+  onReplyCancel?: () => void; // NEW: Callback when X button is clicked
+  onReplyCardClick?: (replyToMessageId: string) => void; // NEW: Callback when reply card is clicked
 }
 
 const MessageBubble = React.memo(({ 
   message, 
   currentUserId, 
   onReactionToggle, 
+  onReactionClick, // NEW: Open reactions modal
   onAttachmentClick,
   onReply,
   onDelete,
   showOptions = true,
   showDeliveryStatus = false, // Default: disabled (backwards compatible)
-  onLongPress // NEW: Long press handler
+  onLongPress, // NEW: Long press handler
+  showReplyCancelButton = false, // NEW: Show X button for reply preview
+  onReplyCancel, // NEW: Callback when X button is clicked
+  onReplyCardClick // NEW: Callback when reply card is clicked
 }: MessageBubbleProps) => {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
@@ -80,9 +89,15 @@ const MessageBubble = React.memo(({
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!onLongPress) return;
     
-    longPressTimerRef.current = setTimeout(() => {
+    longPressTimerRef.current = setTimeout(async () => {
       // Use the container element (menuRef) which includes avatar + bubble, not just the bubble
       if (menuRef.current && onLongPress) {
+        // Trigger haptic feedback when long press is activated
+        try {
+          await Haptics.impact({ style: ImpactStyle.Medium });
+        } catch (error) {
+          // Haptics not available (web environment), silently fail
+        }
         onLongPress(message, menuRef.current);
       }
     }, 500); // 500ms for long press
@@ -113,9 +128,15 @@ const MessageBubble = React.memo(({
     
     // Left mouse button - long press detection
     if (onLongPress && e.button === 0) {
-      longPressTimerRef.current = setTimeout(() => {
+      longPressTimerRef.current = setTimeout(async () => {
         // Use the container element (menuRef) which includes avatar + bubble, not just the bubble
         if (menuRef.current && onLongPress) {
+          // Trigger haptic feedback when long press is activated
+          try {
+            await Haptics.impact({ style: ImpactStyle.Medium });
+          } catch (error) {
+            // Haptics not available (web environment), silently fail
+          }
           onLongPress(message, menuRef.current);
         }
       }, 500);
@@ -263,26 +284,19 @@ const MessageBubble = React.memo(({
 
       <div
         ref={contentRef}
-        className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}
-        style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}
+        className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}
+        style={{ 
+          maxWidth: '75%',
+          userSelect: 'none', 
+          WebkitUserSelect: 'none', 
+          MozUserSelect: 'none', 
+          msUserSelect: 'none', 
+          WebkitTouchCallout: 'none' 
+        }}
       >
-        {message.reply_to_message && (
-          <div
-            className={`mb-1 px-3 py-2 rounded-lg text-xs bg-gray-100 text-gray-600 ${isOwnMessage ? 'text-right' : 'text-left'}`}
-            style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}
-          >
-            <div className="text-xs text-gray-600 mb-1">
-              Replying to {message.reply_to_message.sender_name}
-            </div>
-            <div className="text-sm text-gray-800 truncate">
-              {message.reply_to_message.text}
-            </div>
-          </div>
-        )}
-
         {/* Listing message card */}
         {!isDeleted && message.message_type === 'listing' && message.listing_id && (
-          <div className="mb-2 max-w-full">
+          <div className="mb-2 max-w-xs">
             <ListingMessageCard 
               listingId={message.listing_id} 
               chatId={message.chat_id}
@@ -333,7 +347,7 @@ const MessageBubble = React.memo(({
         {!isDeleted && message.message_type !== 'listing' && message.text && (
           <div 
             ref={messageBubbleRef}
-            className="bg-white text-gray-900 rounded-2xl px-4 py-3 cursor-pointer"
+            className={`bg-white text-gray-900 rounded-2xl px-4 py-3 cursor-pointer ${message.reply_to_message ? 'w-full max-w-xs' : ''}`}
             style={{
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
@@ -343,7 +357,15 @@ const MessageBubble = React.memo(({
               WebkitUserSelect: 'none',
               MozUserSelect: 'none',
               msUserSelect: 'none',
-              WebkitTouchCallout: 'none'
+              WebkitTouchCallout: 'none',
+              // Ensure consistent width for replied messages - match reply card width (70vw)
+              ...(message.reply_to_message && {
+                boxSizing: 'border-box',
+                width: '70vw', // Match reply card width
+                maxWidth: '70vw',
+                minWidth: '70vw',
+                overflow: 'hidden' // Prevent content from expanding beyond width
+              })
             }}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
@@ -356,8 +378,219 @@ const MessageBubble = React.memo(({
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchMove}
           >
-            {/* Text content */}
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            {/* Reply card - inside message bubble - Fixed size component */}
+            {message.reply_to_message && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onReplyCardClick && message.reply_to_message_id) {
+                    onReplyCardClick(message.reply_to_message_id);
+                  }
+                }}
+                className="mb-2 rounded-2xl text-xs cursor-pointer transition-opacity hover:opacity-80"
+                style={{ 
+                  userSelect: 'none', 
+                  WebkitUserSelect: 'none', 
+                  MozUserSelect: 'none', 
+                  msUserSelect: 'none', 
+                  WebkitTouchCallout: 'none',
+                  backgroundColor: '#F9FAFB',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxSizing: 'border-box',
+                  // Fill available width inside message bubble (respects bubble's padding)
+                  width: '100%',
+                  maxWidth: '100%',
+                  minWidth: '0',
+                  // Fixed height: name (1 line) + spacing + 2 lines of content
+                  // Name: 12px + margin-bottom: 4px + 2 lines content: 24px (12px each) + padding: 24px (12px top + 12px bottom) = 64px
+                  height: '64px',
+                  minHeight: '64px',
+                  maxHeight: '64px',
+                  // Consistent padding on all sides
+                  paddingTop: '12px',
+                  paddingBottom: '12px',
+                  paddingLeft: '12px',
+                  paddingRight: '12px',
+                  // Overflow handling
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'row', // Changed to row to allow left/right layout
+                  alignItems: 'flex-start',
+                  gap: '8px' // Space between text content and image
+                }}
+              >
+                {/* Left side: Text content */}
+                <div style={{ 
+                  flex: 1,
+                  minWidth: 0, // Allow shrinking
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between', // Push content to top and bottom
+                  height: '100%' // Fill available height
+                }}>
+                  {/* Name - top line */}
+                  <div 
+                    className="text-xs font-semibold text-gray-900" 
+                    style={{ 
+                      fontWeight: 600,
+                      lineHeight: '12px',
+                      height: '12px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {message.reply_to_message.sender_name || 'User'}
+                  </div>
+                  
+                  {/* Bottom section: Icon + Event/Photo text OR message text */}
+                  {(() => {
+                    const hasPhoto = message.reply_to_message.attachments && message.reply_to_message.attachments.length > 0;
+                    const isListing = message.reply_to_message.message_type === 'listing';
+                    
+                    if (hasPhoto || isListing) {
+                      // Show icon + Event/Photo text on line 2 (bottom)
+                      const Icon = isListing ? Calendar : ImageIcon;
+                      const label = isListing ? 'Event' : 'Photo';
+                      
+                      return (
+                        <div 
+                          className="text-sm text-gray-500" 
+                          style={{ 
+                            color: '#6B7280',
+                            lineHeight: '14px',
+                            height: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontWeight: 600, // More bold
+                            marginTop: 'auto' // Push to bottom
+                          }}
+                        >
+                          <Icon size={14} style={{ flexShrink: 0 }} />
+                          <span>{label}</span>
+                        </div>
+                      );
+                    } else {
+                      // Show message text - 2 lines with ellipsis if too long
+                      return (
+                        <div 
+                          className="text-xs text-gray-500" 
+                          style={{ 
+                            color: '#6B7280',
+                            lineHeight: '12px',
+                            height: '24px', // 2 lines: 12px each
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2, // Show 2 lines
+                            WebkitBoxOrient: 'vertical',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
+                            marginTop: 'auto' // Push to bottom
+                          }}
+                        >
+                          {message.reply_to_message.text || 'Message'}
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+                
+                {/* Right side: Photo/Listing thumbnail */}
+                {(() => {
+                  // Check if reply is to a photo
+                  const hasPhoto = message.reply_to_message.attachments && message.reply_to_message.attachments.length > 0;
+                  // Check if reply is to a listing (need to check if listing_id exists and fetch photo_urls)
+                  const isListing = message.reply_to_message.message_type === 'listing';
+                  
+                  if (hasPhoto) {
+                    return (
+                      <div style={{
+                        flexShrink: 0,
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        backgroundColor: '#E5E7EB',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <img
+                          src={message.reply_to_message.attachments[0].thumbnail_url || message.reply_to_message.attachments[0].file_url}
+                          alt="Reply photo"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            // Hide image on error, show placeholder
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+                  
+                  // For listings, check if listing photo_urls are available
+                  if (isListing) {
+                    const listingPhotoUrls = (message.reply_to_message as any).listing_photo_urls;
+                    if (listingPhotoUrls && listingPhotoUrls.length > 0) {
+                      return (
+                        <div style={{
+                          flexShrink: 0,
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          backgroundColor: '#E5E7EB',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <img
+                            src={listingPhotoUrls[0]}
+                            alt="Listing photo"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                            onError={(e) => {
+                              // Hide image on error, show placeholder
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      );
+                    }
+                  }
+                  
+                  return null;
+                })()}
+              </div>
+            )}
+
+            {/* Text content - appears below reply card */}
+            <div 
+              className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+              style={{ 
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                wordWrap: 'break-word',
+                // Ensure text respects parent width constraints
+                ...(message.reply_to_message && {
+                  maxWidth: '100%',
+                  minWidth: '0'
+                })
+              }}
+            >
               {message.text}
             </div>
           </div>
@@ -411,30 +644,116 @@ const MessageBubble = React.memo(({
           </div>
         )}
 
-        {/* Reactions */}
-        {message.reactions && message.reactions.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {message.reactions?.map((reaction: any, index: number) => {
-              const reactions = message.reactions?.filter((r: any) => r.emoji === reaction.emoji) || [];
-              const isUserReacted = reactions.some((r: any) => r.user_id === currentUserId);
+        {/* Reactions - Small pill cards positioned below message */}
+        {message.reactions && message.reactions.length > 0 && (() => {
+          // Group reactions by emoji and count
+          const reactionGroups = new Map<string, { emoji: string; count: number; userReacted: boolean }>();
+          
+          message.reactions.forEach((reaction: any) => {
+            const existing = reactionGroups.get(reaction.emoji);
+            if (existing) {
+              existing.count++;
+              if (reaction.user_id === currentUserId) {
+                existing.userReacted = true;
+              }
+            } else {
+              reactionGroups.set(reaction.emoji, {
+                emoji: reaction.emoji,
+                count: 1,
+                userReacted: reaction.user_id === currentUserId
+              });
+            }
+          });
+
+          const reactionsArray = Array.from(reactionGroups.values());
+          const totalReactions = message.reactions.length;
+          const uniqueEmojiCount = reactionsArray.length;
+
+          // Determine if this message has images or listing cards (for proper spacing)
+          const hasImages = message.attachments && message.attachments.length > 0;
+          const hasListing = message.message_type === 'listing' && message.listing_id;
+          // For image/listing messages, use larger negative margin to overlap slightly into the card
+          // For text messages, -4px creates slight overlap
+          const reactionMarginTop = (hasImages || hasListing) ? '-12px' : '-4px';
+
+          // If 2+ reactions AND multiple different emoji types: show combined pill with up to 3 emojis + total count
+          // If all same emoji (even if 2+): show single emoji + count
+          const shouldShowCombined = totalReactions >= 2 && uniqueEmojiCount > 1;
               
               return (
+            <div 
+              className="flex flex-wrap gap-1.5"
+              style={{
+                justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
+                marginTop: reactionMarginTop, // Overlap slightly into message/image/listing card
+                position: 'relative',
+                zIndex: 10, // Ensure reactions appear in front of images/listing cards
+                // Add slight gap from the edge of the message card
+                marginLeft: isOwnMessage ? '0' : '8px',
+                marginRight: isOwnMessage ? '8px' : '0'
+              }}
+            >
+              {shouldShowCombined ? (
+                // Combined pill: show up to 3 different emojis + total count
                 <button
-                  key={index}
-                  onClick={() => onReactionToggle?.(reaction.emoji, message.id)}
-                  className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 transition-colors ${
-                    isUserReacted 
-                      ? 'bg-blue-100 text-blue-600' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onReactionClick) {
+                      onReactionClick(message.id);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full text-xs cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    borderRadius: '100px',
+                    fontSize: '14px',
+                    lineHeight: '1.2'
+                  }}
                 >
-                  <span>{reaction.emoji}</span>
-                  <span className="text-gray-600">{reactions.length}</span>
+                  {/* Show up to 3 different emojis */}
+                  {reactionsArray.slice(0, 3).map((reactionGroup, index) => (
+                    <span key={`${reactionGroup.emoji}-${index}`}>{reactionGroup.emoji}</span>
+                  ))}
+                  {/* Total count */}
+                  <span style={{ color: '#6B7280', fontSize: '12px', marginLeft: '2px' }}>{totalReactions}</span>
                 </button>
-              );
-            })}
-          </div>
-        )}
+              ) : (
+                // Single or same emoji: show emoji + count (if > 1)
+                reactionsArray.map((reactionGroup, index) => (
+                  <button
+                    key={`${reactionGroup.emoji}-${index}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onReactionClick) {
+                        onReactionClick(message.id);
+                      }
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs cursor-pointer hover:opacity-80 transition-opacity"
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      borderRadius: '100px',
+                      fontSize: '14px',
+                      lineHeight: '1.2'
+                    }}
+                  >
+                    <span>{reactionGroup.emoji}</span>
+                    {reactionGroup.count > 1 && (
+                      <span style={{ color: '#6B7280', fontSize: '12px' }}>{reactionGroup.count}</span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

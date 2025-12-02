@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
@@ -15,6 +15,7 @@ import MediaViewer from "@/components/chat/MediaViewer";
 import LoadingMessageCard from "@/components/chat/LoadingMessageCard";
 import MessageReactionCard from "@/components/chat/MessageReactionCard";
 import MessageActionCard from "@/components/chat/MessageActionCard";
+import ReactionsModal from "@/components/chat/ReactionsModal";
 import type { SimpleMessage, MediaAttachment } from "@/lib/types";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from "@/lib/supabaseClient";
@@ -52,14 +53,39 @@ export default function IndividualChatPage() {
   const [longPressedElement, setLongPressedElement] = useState<HTMLElement | null>(null);
   const [longPressedPosition, setLongPressedPosition] = useState<{ top: number; left: number; right: number; bottom: number; width: number; isOwnMessage: boolean } | null>(null);
   const longPressContainerRef = useRef<HTMLDivElement>(null);
+  const actionCardRef = useRef<HTMLDivElement>(null);
+  const emojiCardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement | null>(null);
   const chatInputRef = useRef<HTMLDivElement | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<SimpleMessage | null>(null);
+  const [replyingMessageElement, setReplyingMessageElement] = useState<HTMLElement | null>(null);
   const [pendingMedia, setPendingMedia] = useState<UploadedMedia[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<Map<string, { status: 'uploading' | 'uploaded' | 'failed'; fileCount: number }>>(new Map());
   const isSendingRef = useRef(false);
   const unsubscribeReactionsRef = useRef<(() => void) | null>(null);
   const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingIndicatorRef = useRef<HTMLDivElement>(null);
+  const [typingAnimationPhase, setTypingAnimationPhase] = useState(0);
+  const [deleteConfirmationMessageId, setDeleteConfirmationMessageId] = useState<string | null>(null);
+  const isUpdatingReactionsRef = useRef(false);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [reactionsModalMessageId, setReactionsModalMessageId] = useState<string | null>(null);
+
+  // Get current auth user ID
+  useEffect(() => {
+    const getCurrentUserId = async () => {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setCurrentUserId(user.id);
+        }
+      }
+    };
+    getCurrentUserId();
+  }, []);
 
   // FIX: Set body background to transparent to prevent white overlay
   useEffect(() => {
@@ -231,8 +257,77 @@ export default function IndividualChatPage() {
 
         setLoading(false);
 
-        // TODO: Add reaction subscriptions when implemented
-        // Reactions feature not yet implemented in ChatService
+        // Subscribe to real-time reactions for this chat
+        if (chatId && chatService && conversation?.id) {
+          const supabase = getSupabaseClient();
+          if (supabase) {
+            // Subscribe to all reactions - we'll filter by refreshing messages
+            // This is simpler than trying to filter by message_id upfront
+            const reactionsChannel = supabase
+              .channel(`chat-reactions-${chatId}`)
+              .on(
+                'postgres_changes',
+                {
+                  event: '*', // Listen to INSERT, UPDATE, DELETE
+                  schema: 'public',
+                  table: 'message_reactions'
+                },
+                async (payload) => {
+                  console.log('Reaction change received:', payload);
+                  
+                  // Set flag to prevent auto-scroll
+                  isUpdatingReactionsRef.current = true;
+                  
+                  // Preserve scroll position before updating messages
+                  const container = messagesContainerRef.current;
+                  let scrollPosition: { top: number; height: number; wasAtBottom: boolean } | null = null;
+                  
+                  if (container) {
+                    const maxScroll = container.scrollHeight - container.clientHeight;
+                    const currentScroll = container.scrollTop;
+                    const threshold = 100;
+                    const wasAtBottom = (maxScroll - currentScroll) <= threshold;
+                    
+                    scrollPosition = {
+                      top: container.scrollTop,
+                      height: container.scrollHeight,
+                      wasAtBottom
+                    };
+                  }
+                  
+                  // Refresh messages to get updated reactions
+                  // We refresh all messages to ensure we have the latest reactions
+                  const { messages: updatedMessages } = await chatService.getChatMessages(conversation.id);
+                  if (updatedMessages) {
+                    setMessages(updatedMessages);
+                    
+                    // Restore scroll position after messages update
+                    if (scrollPosition && container) {
+                      // Use requestAnimationFrame to wait for DOM update
+                      requestAnimationFrame(() => {
+                        if (scrollPosition!.wasAtBottom) {
+                          // If user was at bottom, scroll to new bottom
+                          const maxScroll = container.scrollHeight - container.clientHeight;
+                          container.scrollTop = maxScroll;
+                        } else {
+                          // Otherwise, restore previous position
+                          // Account for any change in scroll height
+                          const heightDiff = container.scrollHeight - scrollPosition!.height;
+                          container.scrollTop = scrollPosition!.top + heightDiff;
+                        }
+                      });
+                    }
+                  }
+                }
+              )
+              .subscribe();
+
+            // Store cleanup function in ref
+            unsubscribeReactionsRef.current = () => {
+              reactionsChannel.unsubscribe();
+            };
+          }
+        }
 
         // Subscribe to real-time messages for this chat
         if (chatId && account?.id && chatService) {
@@ -269,6 +364,18 @@ export default function IndividualChatPage() {
           // Store the unsubscribe function in ref for cleanup
           unsubscribeMessagesRef.current = unsubscribeMessages;
         }
+
+        // Subscribe to typing indicators
+        if (chatService && conversation.id) {
+          const unsubscribeTyping = chatService.subscribeToTyping(conversation.id, (userIds) => {
+            setTypingUsers(userIds);
+          });
+          
+          // Store cleanup function (will be called in useEffect cleanup)
+          return () => {
+            unsubscribeTyping();
+          };
+        }
       } catch (error) {
         console.error('Error loading data:', error);
         setError('Failed to load conversation');
@@ -289,13 +396,19 @@ export default function IndividualChatPage() {
         unsubscribeMessagesRef.current = null;
       }
     };
-  }, [account?.id, chatId]);
+  }, [account?.id, chatId, chatService]);
 
   // Track if we've scrolled to bottom on initial load
   const hasScrolledToBottomRef = useRef(false);
 
   // Scroll to bottom when messages change or when loading completes
   useEffect(() => {
+    // Skip auto-scroll if we're just updating reactions (preserve scroll position)
+    if (isUpdatingReactionsRef.current) {
+      isUpdatingReactionsRef.current = false; // Reset flag
+      return;
+    }
+    
     if (messages.length > 0 && !loading) {
       // Use multiple attempts to ensure scroll happens after DOM is fully rendered
       const scrollToBottom = (force = false) => {
@@ -331,6 +444,62 @@ export default function IndividualChatPage() {
       setTimeout(() => scrollToBottom(true), 500);
     }
   }, [messages, loading]);
+
+  // Helper function to check if user is at/near the bottom of the chat
+  const isAtBottom = useCallback((threshold: number = 100): boolean => {
+    if (!messagesContainerRef.current) return false;
+    const container = messagesContainerRef.current;
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    const currentScroll = container.scrollTop;
+    // Check if within threshold pixels of the bottom
+    return (maxScroll - currentScroll) <= threshold;
+  }, []);
+
+  // Scroll to show typing indicator when it appears - only if user is already at bottom
+  useEffect(() => {
+    if (typingUsers.length > 0 && messagesContainerRef.current) {
+      // Check if user is at the bottom before scrolling
+      if (!isAtBottom(100)) {
+        // User has scrolled up - don't auto-scroll
+        return;
+      }
+
+      const scrollToShowTypingIndicator = () => {
+        if (messagesContainerRef.current) {
+          const container = messagesContainerRef.current;
+          // Only scroll if user is still at bottom (they might have scrolled while this effect runs)
+          if (!isAtBottom(100)) {
+            return;
+          }
+          // Scroll to bottom to show typing indicator above the chat input
+          // The paddingBottom on the container already accounts for the input height
+          const maxScroll = container.scrollHeight - container.clientHeight;
+          container.scrollTo({
+            top: maxScroll,
+            behavior: 'smooth'
+          });
+        }
+      };
+
+      // Only attempt to scroll if user is at bottom
+      requestAnimationFrame(() => {
+        setTimeout(() => scrollToShowTypingIndicator(), 50);
+      });
+      setTimeout(() => scrollToShowTypingIndicator(), 100);
+      setTimeout(() => scrollToShowTypingIndicator(), 200);
+    }
+  }, [typingUsers, pendingMedia.length, isAtBottom]);
+
+  // Animate typing dots - similar to PersonalChatPanel
+  useEffect(() => {
+    if (typingUsers.length === 0) return;
+    
+    const interval = setInterval(() => {
+      setTypingAnimationPhase((prev) => (prev + 1) % 3);
+    }, 500); // 500ms per dot phase
+    
+    return () => clearInterval(interval);
+  }, [typingUsers.length]);
 
   // Ensure textarea autocapitalize is removed on mount and when conversation changes
   useEffect(() => {
@@ -725,13 +894,17 @@ export default function IndividualChatPage() {
         const { message: newMessage, error: messageError } = await chatService.sendMessage(
           conversation.id,
           messageText.trim() || '',
-          attachments.length > 0 ? attachments : undefined
+          attachments.length > 0 ? attachments : undefined,
+          replyToMessage?.id || null
         );
 
         console.log('📬 sendMessage response:', {
           hasMessage: !!newMessage,
           messageId: newMessage?.id,
           hasError: !!messageError,
+          replyToMessageId: replyToMessage?.id,
+          newMessageReplyToId: newMessage?.reply_to_message_id,
+          newMessageReplyToMessage: newMessage?.reply_to_message,
           error: messageError?.message
         });
 
@@ -756,6 +929,15 @@ export default function IndividualChatPage() {
           attachmentCount: newMessage.attachments?.length || 0
         });
 
+        // Stop typing indicator when message is sent
+        if (chatService && conversation?.id) {
+          chatService.sendTypingIndicator(conversation.id, false);
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = null;
+          }
+        }
+
         // Remove optimistic message
         if (optimisticMessageId) {
           setOptimisticMessages(prev => {
@@ -771,6 +953,7 @@ export default function IndividualChatPage() {
         // Clear the form immediately (pendingMedia already cleared above)
         setMessageText("");
         setReplyToMessage(null);
+        setReplyingMessageElement(null);
 
         // Wait a brief moment for the database to be fully updated
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -781,6 +964,16 @@ export default function IndividualChatPage() {
         const { messages: updatedMessages } = await chatService?.getChatMessages(conversation.id);
         if (updatedMessages) {
           console.log('✅ Messages refreshed, count:', updatedMessages.length);
+          // Debug: Check if the new message has reply data
+          const sentMessage = updatedMessages.find(m => m.id === newMessage?.id || m.reply_to_message_id === replyToMessage?.id);
+          if (sentMessage) {
+            console.log('🔍 Sent message found in refreshed messages:', {
+              id: sentMessage.id,
+              reply_to_message_id: sentMessage.reply_to_message_id,
+              has_reply_to_message: !!sentMessage.reply_to_message,
+              reply_to_message: sentMessage.reply_to_message
+            });
+          }
           // Use functional update to ensure we're working with latest state
           setMessages(prev => {
             // Remove any optimistic messages that might still be there
@@ -822,11 +1015,21 @@ export default function IndividualChatPage() {
   };
 
   const handleReply = (message: SimpleMessage) => {
+    // Store the message element for blurring
+    const messageElement = longPressedElement || document.querySelector(`[data-message-id="${message.id}"]`) as HTMLElement;
+    setReplyingMessageElement(messageElement);
     setReplyToMessage(message);
     setSelectedMessage(null);
     setLongPressedMessage(null);
     setLongPressedElement(null);
     setLongPressedPosition(null);
+    
+    // Focus the textarea to open keyboard
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }, 100);
   };
 
   // Long press handler
@@ -876,6 +1079,7 @@ export default function IndividualChatPage() {
     setLongPressedMessage(null);
     setLongPressedElement(null);
     setLongPressedPosition(null);
+    setDeleteConfirmationMessageId(null); // Clear delete confirmation when closing
   };
 
   // Calculate boundaries and constrained positions for cards
@@ -921,7 +1125,11 @@ export default function IndividualChatPage() {
 
     // Estimate card heights (approximate - measured from components)
     const emojiCardHeight = 60; // MessageReactionCard: px-4 py-3 = ~60px total
-    const actionCardHeight = 60; // MessageActionCard: px-4 py-3 = ~60px total
+    // MessageActionCard: vertical card with 3 buttons (Reply, Copy, Delete)
+    // Each button ~44px (py-3 = 12px top + 12px bottom + ~20px content) = ~132px for 3 buttons
+    // Delete confirmation mode: 2 sections (Cancel + Delete button) = ~100px
+    const isDeleteConfirmation = deleteConfirmationMessageId === longPressedMessage.id;
+    const actionCardHeight = isDeleteConfirmation ? 100 : 140; // Shorter when in confirmation mode
 
     // Message dimensions
     const messageHeight = longPressedPosition.bottom - longPressedPosition.top;
@@ -1157,7 +1365,9 @@ export default function IndividualChatPage() {
       // Don't close if clicking on the cards or the message itself
       if (
         longPressContainerRef.current?.contains(target) ||
-        longPressedElement?.contains(target)
+        longPressedElement?.contains(target) ||
+        actionCardRef.current?.contains(target) ||
+        emojiCardRef.current?.contains(target)
       ) {
         return;
       }
@@ -1176,12 +1386,50 @@ export default function IndividualChatPage() {
   }, [longPressedMessage, longPressedElement]);
 
   const handleCopy = (message: SimpleMessage) => {
-    navigator.clipboard.writeText(message.text || '');
+    const textToCopy = message.text || '';
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        console.log('Message copied to clipboard');
+        // TODO: Show success toast/notification
+      }).catch((err) => {
+        console.error('Failed to copy message:', err);
+        // TODO: Show error toast/notification
+      });
+    }
   };
 
   const handleDelete = async (messageId: string) => {
-    // TODO: Implement deleteMessage in ChatService
-    console.log('Delete message not yet implemented:', messageId);
+    // Show delete confirmation instead of deleting immediately
+    setDeleteConfirmationMessageId(messageId);
+  };
+
+  const handleDeleteConfirm = async (messageId: string) => {
+    if (!chatService) {
+      console.error('ChatService not available');
+      return;
+    }
+
+    try {
+      const { error } = await chatService.deleteMessage(messageId);
+      if (error) {
+        console.error('Error deleting message:', error);
+        // TODO: Show error toast/notification
+      } else {
+        // Remove message from local state
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        // Close long press state
+        handleCloseLongPress();
+        // Clear confirmation state
+        setDeleteConfirmationMessageId(null);
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      // TODO: Show error toast/notification
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmationMessageId(null);
   };
 
   const handleDeleteFromModal = async (message: SimpleMessage) => {
@@ -1190,8 +1438,47 @@ export default function IndividualChatPage() {
   };
 
   const handleReact = async (message: SimpleMessage, emoji: string) => {
-    // TODO: Implement addReaction in ChatService
-    console.log('Add reaction not yet implemented:', message.id, emoji);
+    if (!chatService) {
+      console.error('ChatService not available');
+      return;
+    }
+
+    // Get current auth user ID to check if user already reacted
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.error('Supabase client not available');
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    // Check if user already reacted with this emoji
+    const userHasReacted = message.reactions?.some(
+      r => r.user_id === user.id && r.emoji === emoji
+    );
+
+    if (userHasReacted) {
+      // Remove reaction
+      const { error } = await chatService.removeReaction(message.id, emoji);
+      if (error) {
+        console.error('Error removing reaction:', error);
+        return;
+      }
+    } else {
+      // Add reaction
+      const { error } = await chatService.addReaction(message.id, emoji);
+      if (error) {
+        console.error('Error adding reaction:', error);
+        return;
+      }
+    }
+
+    // Don't manually refresh - the real-time subscription will handle updates
+    // This prevents race conditions and duplicate refreshes
   };
 
   const handleMediaSelected = (media: UploadedMedia[]) => {
@@ -1227,6 +1514,43 @@ export default function IndividualChatPage() {
 
   const cancelReply = () => {
     setReplyToMessage(null);
+    setReplyingMessageElement(null);
+  };
+
+  const handleReplyCardClick = (replyToMessageId: string) => {
+    // Find the message element by its ID
+    const messageElement = document.querySelector(`[data-message-id="${replyToMessageId}"]`) as HTMLElement;
+    
+    if (messageElement && messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const messageRect = messageElement.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      // Calculate the scroll position needed to center the message in the viewport
+      const scrollTop = container.scrollTop;
+      const messageTop = messageElement.offsetTop;
+      const containerHeight = container.clientHeight;
+      const messageHeight = messageElement.offsetHeight;
+      
+      // Center the message in the viewport
+      const targetScrollTop = messageTop - (containerHeight / 2) + (messageHeight / 2);
+      
+      // Smooth scroll to the message
+      container.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
+      
+      // Optionally highlight the message briefly
+      messageElement.style.transition = 'background-color 0.3s ease';
+      messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // Light blue highlight
+      setTimeout(() => {
+        messageElement.style.backgroundColor = 'transparent';
+        setTimeout(() => {
+          messageElement.style.transition = '';
+        }, 300);
+      }, 1000);
+    }
   };
 
   const cancelMedia = () => {
@@ -1481,34 +1805,149 @@ export default function IndividualChatPage() {
         leftSection={profileCard}
       />
 
+      {/* Blur overlay when replying */}
+      {replyToMessage && (() => {
+        // Find the message element if we don't have it stored
+        const messageElement = replyingMessageElement || 
+          (replyToMessage ? document.querySelector(`[data-message-id="${replyToMessage.id}"]`) as HTMLElement : null);
+        
+        if (!messageElement) return null;
+        
+        const messageRect = messageElement.getBoundingClientRect();
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        const scrollX = window.scrollX || document.documentElement.scrollLeft;
+        
+        // Get chat input position
+        const chatInputElement = chatInputRef.current;
+        const inputRect = chatInputElement ? chatInputElement.getBoundingClientRect() : null;
+        
+        // Get reply preview position (it's positioned above the input)
+        // The reply preview shows the actual message, so we need to estimate its height
+        const replyPreviewBottom = pendingMedia.length > 0 ? 180 : 100;
+        const replyPreviewHeight = 80; // Approximate height of message with avatar (if other user) or just bubble
+        const replyPreviewTop = window.innerHeight - replyPreviewBottom - replyPreviewHeight;
+        
+        return (
+          <div 
+            className="fixed inset-0 z-40"
+            onClick={cancelReply}
+            style={{
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              pointerEvents: 'auto',
+              cursor: 'pointer'
+            }}
+          >
+            {/* Keep the replying message element visible - create a cutout */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                top: messageRect.top + scrollY,
+                left: messageRect.left + scrollX,
+                width: messageRect.width,
+                height: messageRect.height,
+                pointerEvents: 'auto',
+                zIndex: 50,
+                backgroundColor: 'transparent'
+              }}
+            />
+            
+            {/* Keep the chat input visible - create a cutout */}
+            {inputRect && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'absolute',
+                  top: inputRect.top + scrollY,
+                  left: inputRect.left + scrollX,
+                  width: inputRect.width,
+                  height: inputRect.height,
+                  pointerEvents: 'auto',
+                  zIndex: 50,
+                  backgroundColor: 'transparent'
+                }}
+              />
+            )}
+            
+            {/* Keep the reply preview visible - create a cutout */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                top: replyPreviewTop + scrollY,
+                left: 0,
+                right: 0,
+                height: replyPreviewHeight,
+                pointerEvents: 'auto',
+                zIndex: 50,
+                backgroundColor: 'transparent'
+              }}
+            />
+          </div>
+        );
+      })()}
+
+      {/* X Button - Top Right when replying */}
+      {replyToMessage && (
+        <button
+          onClick={cancelReply}
+          className="fixed flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] z-[60]"
+          style={{
+            top: 'max(env(safe-area-inset-top), 70px)',
+            right: '16px',
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.9)',
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow',
+            pointerEvents: 'auto'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          aria-label="Cancel reply"
+        >
+          <X size={18} className="text-gray-900" strokeWidth={2.5} />
+        </button>
+      )}
+
       {/* Reply Preview - Only show when actually replying */}
       {replyToMessage && (
         <div 
-          className="bg-gray-50 border-t border-gray-200 px-4 fixed left-0 right-0 z-30"
+          className="fixed left-0 right-0 z-50 px-6"
+          onClick={(e) => e.stopPropagation()}
           style={{ 
-            height: '60px', 
-            paddingTop: '8px', 
-            paddingBottom: '8px',
-            bottom: '80px'
+            bottom: pendingMedia.length > 0 ? '180px' : '100px',
+            paddingBottom: '8px'
           }}
         >
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-            <div className="flex-1">
-              <div className="text-xs text-gray-600 mb-1">
-                Replying to {replyToMessage.sender_name || 'Unknown'}
-              </div>
-              <div className="text-sm text-gray-800 truncate">
-                {typeof replyToMessage.text === 'string' ? replyToMessage.text : 'Media message'}
-              </div>
+          <div className="relative">
+            {/* Render the message exactly as it appears in chat */}
+            <div style={{ 
+              opacity: 0.95, // Slightly transparent to indicate it's a preview
+              transform: 'scale(0.98)' // Slightly smaller
+            }}>
+              <MessageBubble
+                message={replyToMessage}
+                currentUserId={currentUserId}
+                showOptions={false}
+                onReactionToggle={undefined}
+                onReactionClick={undefined}
+                onAttachmentClick={undefined}
+                onReply={undefined}
+                onDelete={undefined}
+                onLongPress={undefined}
+              />
             </div>
-            <button
-              onClick={cancelReply}
-              className="ml-3 p-1 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         </div>
       )}
@@ -1516,7 +1955,8 @@ export default function IndividualChatPage() {
       {/* Input Card - Expands when photos are selected */}
       <div 
         ref={chatInputRef}
-        className="fixed z-20"
+        onClick={(e) => e.stopPropagation()}
+        className="fixed z-50"
         style={{ 
           left: '22px',
           right: '22px',
@@ -1622,7 +2062,23 @@ export default function IndividualChatPage() {
             ref={textareaRef}
             data-no-global-input-fix="true"
           value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
+          onChange={(e) => {
+            setMessageText(e.target.value);
+            // Send typing indicator
+            if (chatService && conversation?.id && account?.id) {
+              chatService.sendTypingIndicator(conversation.id, true);
+              // Clear existing timeout
+              if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+              }
+              // Set timeout to stop typing indicator after 3 seconds
+              typingTimeoutRef.current = setTimeout(() => {
+                if (chatService && conversation?.id) {
+                  chatService.sendTypingIndicator(conversation.id, false);
+                }
+              }, 3000);
+            }
+          }}
           placeholder=""
             autoCorrect="off"
             spellCheck={false}
@@ -1797,16 +2253,20 @@ export default function IndividualChatPage() {
           const isMe = message.sender_id === account?.id;
           const isLongPressed = longPressedMessage?.id === message.id;
           
+          // Check if this message is being replied to
+          const isBeingRepliedTo = replyToMessage?.id === message.id;
+          
           return (
             <div 
-              key={message.id} 
+              key={message.id}
+              data-message-id={message.id}
               style={{ 
                 marginBottom: index < messages.length - 1 ? '12px' : '12px',
                 position: 'relative',
-                zIndex: isLongPressed ? 101 : 1, // Selected message above overlay (98), others below
+                zIndex: isLongPressed ? 101 : (isBeingRepliedTo ? 51 : 1), // Message being replied to above blur overlay (40), selected message above overlay (98), others below
                 opacity: 1, // No dimming - all messages remain at full brightness
                 pointerEvents: 'auto', // All messages remain interactive
-                isolation: isLongPressed ? 'isolate' : 'auto' // Create new stacking context for selected message to prevent opacity inheritance
+                isolation: (isLongPressed || isBeingRepliedTo) ? 'isolate' : 'auto' // Create new stacking context for selected/replied-to message to prevent opacity inheritance
               }}
             >
               {/* Regular message display - selected message will be rendered outside container */}
@@ -1817,21 +2277,101 @@ export default function IndividualChatPage() {
               }}>
                 <MessageBubble
                   message={message}
-                  currentUserId={account?.id || ''}
+                  currentUserId={currentUserId}
                   onReactionToggle={(emoji: string, msgId: string) => {
                     if (msgId === message.id) {
                       handleReact(message, emoji);
                     }
                   }}
+                  onReactionClick={(msgId: string) => {
+                    setReactionsModalMessageId(msgId);
+                  }}
                   onAttachmentClick={handleAttachmentClick}
                   onReply={handleReply}
                   onDelete={handleDelete}
                   onLongPress={handleLongPress}
+                  onReplyCardClick={handleReplyCardClick}
                 />
               </div>
             </div>
           );
         })}
+        
+        {/* Typing Indicator - shows as a message-like card */}
+        {typingUsers.length > 0 && typingUsers.map((typingUserId, index) => {
+          const typingUser = participants.find(p => p.id === typingUserId);
+          if (!typingUser || typingUser.id === account?.id) return null;
+          
+          return (
+            <div 
+              key={typingUserId}
+              ref={index === typingUsers.length - 1 ? typingIndicatorRef : null}
+              className="flex items-center gap-2 justify-start"
+              style={{ marginBottom: '12px' }}
+            >
+              {/* Avatar */}
+              <div className="flex-shrink-0" style={{ width: '32px', height: '32px' }}>
+                <Avatar
+                  src={typingUser.profile_pic || undefined}
+                  name={typingUser.name || 'User'}
+                  size={32}
+                />
+              </div>
+              
+              {/* Typing message card - matches message bubble styling exactly */}
+              <div
+                className="bg-white text-gray-900 rounded-2xl px-4 py-3 max-w-[70%]"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  backgroundColor: '#ffffff',
+                  color: '#111827',
+                  minHeight: '47.9px', // Exact height: 0.4px (top border) + 12px (top padding) + 23.1px (14px * 1.65 line-height) + 12px (bottom padding) + 0.4px (bottom border) = 47.9px
+                  height: '47.9px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {/* Match the same text styling as message bubbles for consistent height */}
+                <div className="text-sm leading-relaxed" style={{ lineHeight: '1.65' }}>
+                  <div className="flex space-x-1.5" data-typing-dots="true">
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                      data-typing-dot="true"
+                      style={{
+                        transform: typingAnimationPhase === 0 ? 'translateY(-8px)' : 'translateY(0)',
+                        opacity: typingAnimationPhase === 0 ? 1 : 0.7,
+                        transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out',
+                      } as React.CSSProperties}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                      data-typing-dot="true"
+                      style={{
+                        transform: typingAnimationPhase === 1 ? 'translateY(-8px)' : 'translateY(0)',
+                        opacity: typingAnimationPhase === 1 ? 1 : 0.7,
+                        transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out',
+                      } as React.CSSProperties}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                      data-typing-dot="true"
+                      style={{
+                        transform: typingAnimationPhase === 2 ? 'translateY(-8px)' : 'translateY(0)',
+                        opacity: typingAnimationPhase === 2 ? 1 : 0.7,
+                        transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out',
+                      } as React.CSSProperties}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* Scroll anchor - placed after typing indicator */}
         <div ref={messagesEndRef} style={{ height: '0px', margin: '0px', padding: '0px' }} />
       </div>
 
@@ -1880,6 +2420,7 @@ export default function IndividualChatPage() {
         <>
           {/* Reaction card - above message */}
           <div
+            ref={emojiCardRef}
             style={{
               position: 'fixed',
               top: constrained.emojiTop,
@@ -1901,7 +2442,7 @@ export default function IndividualChatPage() {
             <MessageReactionCard
               messageId={longPressedMessage.id}
               onReactionSelect={(emoji) => {
-                console.log('Reaction selected:', emoji, longPressedMessage.id);
+                handleReact(longPressedMessage, emoji);
                 handleCloseLongPress();
               }}
             />
@@ -1929,7 +2470,7 @@ export default function IndividualChatPage() {
           >
             <MessageBubble
               message={longPressedMessage}
-              currentUserId={account?.id || ''}
+              currentUserId={currentUserId}
               onReactionToggle={(emoji: string, msgId: string) => {
                 if (msgId === longPressedMessage.id) {
                   handleReact(longPressedMessage, emoji);
@@ -1944,6 +2485,7 @@ export default function IndividualChatPage() {
 
           {/* Action card - below message */}
           <div
+            ref={actionCardRef}
             style={{
               position: 'fixed',
               top: constrained.actionTop,
@@ -1965,18 +2507,22 @@ export default function IndividualChatPage() {
             <MessageActionCard
               messageId={longPressedMessage.id}
               isOwnMessage={longPressedPosition.isOwnMessage}
+              showDeleteConfirmation={deleteConfirmationMessageId === longPressedMessage.id}
               onReply={() => {
                 handleReply(longPressedMessage);
                 handleCloseLongPress();
               }}
               onCopy={() => {
-                console.log('Copy message:', longPressedMessage.id);
+                handleCopy(longPressedMessage);
                 handleCloseLongPress();
               }}
               onDelete={() => {
                 handleDelete(longPressedMessage.id);
-                handleCloseLongPress();
               }}
+              onDeleteConfirm={() => {
+                handleDeleteConfirm(longPressedMessage.id);
+              }}
+              onCancel={handleDeleteCancel}
             />
           </div>
         </>
@@ -2006,6 +2552,29 @@ export default function IndividualChatPage() {
         onClose={() => setShowMediaViewer(false)}
       />
 
+      {/* Reactions Modal */}
+      {reactionsModalMessageId && (() => {
+        const message = messages.find(m => m.id === reactionsModalMessageId);
+        if (!message || !message.reactions) return null;
+        
+        return (
+          <ReactionsModal
+            isOpen={!!reactionsModalMessageId}
+            onClose={() => setReactionsModalMessageId(null)}
+            messageId={reactionsModalMessageId}
+            reactions={message.reactions}
+            onReactionRemoved={async () => {
+              // Refresh messages to get updated reactions
+              if (conversation?.id && chatService) {
+                const { messages: updatedMessages } = await chatService.getChatMessages(conversation.id);
+                if (updatedMessages) {
+                  setMessages(updatedMessages);
+                }
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

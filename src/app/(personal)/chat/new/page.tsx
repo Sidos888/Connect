@@ -397,9 +397,9 @@ export default function NewChatPage() {
               onClick={handleBack}
               className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
               style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '100px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
                 background: 'rgba(255, 255, 255, 0.9)',
                 borderWidth: '0.4px',
                 borderColor: '#E5E7EB',

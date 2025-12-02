@@ -17,6 +17,7 @@
     "@capacitor/android": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@capacitor/device": "^7.0.2",
+    "@capacitor/haptics": "^7.0.2",
     "@capacitor/ios": "^7.4.3",
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.56.1",

@@ -297,7 +297,23 @@ export default function ListingMessageCard({ listingId, chatId, onLongPress }: L
             src={thumbnailUrl}
             alt={listing.title}
             className="w-full h-full object-cover"
-            style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            onContextMenu={(e) => e.preventDefault()}
+            onSelectStart={(e) => e.preventDefault()}
+            style={{ 
+              userSelect: 'none', 
+              WebkitUserSelect: 'none', 
+              MozUserSelect: 'none', 
+              msUserSelect: 'none', 
+              WebkitTouchCallout: 'none',
+              pointerEvents: 'auto',
+              WebkitUserDrag: 'none',
+              KhtmlUserDrag: 'none',
+              MozUserDrag: 'none',
+              OUserDrag: 'none',
+              userDrag: 'none'
+            } as React.CSSProperties}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">

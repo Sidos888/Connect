@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense, useRef } from "react";
 import Avatar from "@/components/Avatar";
 import { useAppStore } from "@/lib/store";
 import type { Conversation } from "@/lib/types";
@@ -39,6 +39,10 @@ function MessagesPageContent() {
   // Use React Query to fetch chats
   const { data: chats = [], isLoading, error } = useChats(chatService, user?.id || null);
   
+  // Typing indicator state - must be declared before useMemo that uses it
+  const [typingUsersByChat, setTypingUsersByChat] = useState<Map<string, string[]>>(new Map());
+  const typingUnsubscribesRef = useRef<Map<string, () => void>>(new Map());
+
   // Load user's connections (friends) to filter direct chats
   const { data: connections = [], isLoading: isLoadingConnections } = useQuery({
     queryKey: ['connections', account?.id],
@@ -110,9 +114,19 @@ function MessagesPageContent() {
         const senderName = chat.last_message.sender_name || 'Unknown';
         const messageText = chat.last_message.message_text || '';
         const hasText = messageText.trim().length > 0;
+        const messageType = chat.last_message.message_type;
         
-        // Priority 1: If message has attachments, show attachment count with icon
-        if (attachmentCount > 0 || (!hasText && chat.last_message.message_type === 'image')) {
+        // Priority 1: Listing message
+        if (messageType === 'listing') {
+          if (isFromCurrentUser) {
+            // You sent it: "Sent a listing"
+            lastMessageText = 'Sent a listing';
+          } else {
+            // Someone else sent it: "Name: Sent a listing"
+            lastMessageText = `${senderName}: Sent a listing`;
+          }
+        } else if (attachmentCount > 0 || (!hasText && messageType === 'image')) {
+          // Priority 2: If message has attachments, show attachment count with icon
           const count = attachmentCount > 0 ? attachmentCount : 1; // Default to 1 if message_type is image but no count
           if (isFromCurrentUser) {
             // You sent it: "3 📷 Attachments"
@@ -122,7 +136,7 @@ function MessagesPageContent() {
             lastMessageText = `${senderName} ${count} 📷 Attachment${count > 1 ? 's' : ''}`;
           }
         } else if (hasText) {
-          // Priority 2: Regular text message
+          // Priority 3: Regular text message
           if (isFromCurrentUser) {
             // You sent it: just show the message
             lastMessageText = messageText;
@@ -130,8 +144,8 @@ function MessagesPageContent() {
             // Someone else sent it: "John: Hello whats up?"
             lastMessageText = `${senderName}: ${messageText}`;
           }
-        } else if (chat.last_message.message_type === 'image') {
-          // Priority 3: Legacy image message (no attachment_count)
+        } else if (messageType === 'image') {
+          // Priority 4: Legacy image message (no attachment_count)
           if (isFromCurrentUser) {
           lastMessageText = '📷 Image';
           } else {
@@ -141,6 +155,49 @@ function MessagesPageContent() {
         // If none of the above, lastMessageText remains 'No messages yet'
       }
       
+      // Check if someone is typing - override last message
+      const typingUserIds = typingUsersByChat.get(chat.id) || [];
+      
+      let displayMessage = lastMessageText;
+      if (typingUserIds.length > 0) {
+        // Debug: Log typing state
+        console.log('[Typing Debug] Chat:', chat.id, {
+          typingUserIds,
+          participantCount: chat.participants?.length || 0,
+          participantUserIds: chat.participants?.map((p: any) => p.user_id).filter(Boolean),
+          participantStructure: chat.participants?.map((p: any) => ({
+            user_id: p.user_id,
+            user_name: p.user_name,
+            name: p.name,
+            id: p.id
+          }))
+        });
+        
+        // Find typing user name from chat participants
+        // Match by user_id only (this is the account ID that matches typingUserIds)
+        const typingUser = chat.participants?.find((p: any) => {
+          const matches = p.user_id && typingUserIds.includes(p.user_id);
+          if (matches) {
+            console.log('[Typing Debug] Matched participant:', {
+              user_id: p.user_id,
+              user_name: p.user_name,
+              name: p.name
+            });
+          }
+          return matches;
+        });
+        
+        if (typingUser) {
+          const typingUserName = typingUser.user_name || typingUser.name || (chat.type === 'direct' ? chat.title : 'Someone');
+          displayMessage = `${typingUserName} is typing...`;
+          console.log('[Typing Debug] ✅ Set display message to:', displayMessage);
+        } else {
+          // Still show typing indicator even if we can't find the name
+          displayMessage = 'Someone is typing...';
+          console.log('[Typing Debug] ⚠️ No matching participant found, using fallback');
+        }
+      }
+      
       return {
         id: chat.id,
         title,
@@ -148,12 +205,12 @@ function MessagesPageContent() {
         isGroup: chat.type === 'group',
         isEventChat: chat.is_event_chat || false,
         unreadCount: chat.unread_count || 0,
-        last_message: lastMessageText,
+        last_message: displayMessage,
         last_message_at: chat.last_message_at,
         messages: []
       };
     });
-  }, [chats, account?.id, friendIds]);
+  }, [chats, account?.id, friendIds, typingUsersByChat]);
   
   // Event listing data for event chats
   const [eventListings, setEventListings] = useState<Map<string, {
@@ -213,6 +270,61 @@ function MessagesPageContent() {
     
     fetchEventListings();
   }, [conversations]);
+
+  // Subscribe to typing indicators for all conversations
+  useEffect(() => {
+    if (!chatService || !account?.id) {
+      return;
+    }
+
+    // Subscribe to typing indicators for each conversation
+    chats.forEach((chat) => {
+      // Skip if already subscribed
+      if (typingUnsubscribesRef.current.has(chat.id)) {
+        return;
+      }
+
+      const unsubscribe = chatService.subscribeToTyping(chat.id, (userIds) => {
+        console.log('[Typing Debug] Received typing update for chat', chat.id, {
+          userIds,
+          accountId: account.id,
+          filteredUserIds: userIds.filter(id => id !== account.id)
+        });
+        
+        setTypingUsersByChat((prev) => {
+          const newMap = new Map(prev);
+          // Filter out current user from typing users
+          const filteredUserIds = userIds.filter(id => id !== account.id);
+          
+          if (filteredUserIds.length > 0) {
+            newMap.set(chat.id, filteredUserIds);
+            console.log('[Typing Debug] Setting typing users for chat', chat.id, '=', filteredUserIds);
+          } else {
+            newMap.delete(chat.id);
+            console.log('[Typing Debug] Removing typing users for chat', chat.id);
+          }
+          return newMap;
+        });
+      });
+
+      typingUnsubscribesRef.current.set(chat.id, unsubscribe);
+    });
+
+    // Cleanup: unsubscribe from conversations that no longer exist
+    const currentChatIds = new Set(chats.map((c) => c.id));
+    typingUnsubscribesRef.current.forEach((unsubscribe, chatId) => {
+      if (!currentChatIds.has(chatId)) {
+        unsubscribe();
+        typingUnsubscribesRef.current.delete(chatId);
+      }
+    });
+
+    return () => {
+      // Cleanup on unmount
+      typingUnsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
+      typingUnsubscribesRef.current.clear();
+    };
+  }, [chats, chatService, account?.id]);
   
   // Find the selected conversation
   const selectedConversation = selectedChatId ? conversations.find(c => c.id === selectedChatId) : null;
@@ -857,7 +969,7 @@ function MessagesPageContent() {
                               </div>
                             </div>
                             <p className="text-sm text-gray-500 truncate mt-1 flex items-center gap-1">
-                              <MessageTextWithIcon text={getLastMessage(conversation) || 'No messages yet'} />
+                              <MessageTextWithIcon text={conversation.last_message || 'No messages yet'} />
                             </p>
                           </div>
                         </div>

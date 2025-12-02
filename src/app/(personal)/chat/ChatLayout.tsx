@@ -36,6 +36,8 @@ const ChatLayoutContent = () => {
   type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean; unreadCount: number; messages: Array<{ text: string; createdAt?: string }> } | null;
   type SelectedContact = { id: string; name: string; profile_pic?: string };
   const [selectedContactsForGroup, setSelectedContactsForGroup] = useState<SelectedContact[]>([]);
+  const [typingUsersByChat, setTypingUsersByChat] = useState<Map<string, string[]>>(new Map());
+  const typingUnsubscribesRef = useRef<Map<string, () => void>>(new Map());
 
   // Show empty inbox immediately if not authenticated - no loading screen
   if (!account || !chatService) {
@@ -123,10 +125,91 @@ const ChatLayoutContent = () => {
     return "No messages yet";
   }, []);
 
+  // Subscribe to typing indicators for all conversations
+  useEffect(() => {
+    if (!chatService || !account?.id) return;
+
+    // Subscribe to typing indicators for each conversation
+    chats.forEach((chat) => {
+      // Skip if already subscribed
+      if (typingUnsubscribesRef.current.has(chat.id)) return;
+
+      const unsubscribe = chatService.subscribeToTyping(chat.id, (userIds) => {
+        setTypingUsersByChat((prev) => {
+          const newMap = new Map(prev);
+          if (userIds.length > 0) {
+            newMap.set(chat.id, userIds);
+          } else {
+            newMap.delete(chat.id);
+          }
+          return newMap;
+        });
+      });
+
+      typingUnsubscribesRef.current.set(chat.id, unsubscribe);
+    });
+
+    // Cleanup: unsubscribe from conversations that no longer exist
+    const currentChatIds = new Set(chats.map((c) => c.id));
+    typingUnsubscribesRef.current.forEach((unsubscribe, chatId) => {
+      if (!currentChatIds.has(chatId)) {
+        unsubscribe();
+        typingUnsubscribesRef.current.delete(chatId);
+      }
+    });
+
+    return () => {
+      // Cleanup on unmount
+      typingUnsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
+      typingUnsubscribesRef.current.clear();
+    };
+  }, [chats, chatService, account?.id]);
+
+  // Store chat data with participants for typing names
+  const [chatsWithParticipants, setChatsWithParticipants] = useState<Map<string, any>>(new Map());
+  
+  useEffect(() => {
+    // Store chats with participants for typing name lookup
+    const newMap = new Map();
+    chats.forEach((chat) => {
+      newMap.set(chat.id, chat);
+    });
+    setChatsWithParticipants(newMap);
+  }, [chats]);
+
+  // Get typing user name from chat participants
+  const getTypingUserName = useCallback((chatId: string, typingUserIds: string[]) => {
+    if (typingUserIds.length === 0) return null;
+    
+    const chat = chatsWithParticipants.get(chatId);
+    if (!chat || !chat.participants) return 'Someone';
+    
+    // Find the typing user from participants
+    const typingUser = chat.participants.find((p: any) => typingUserIds.includes(p.user_id || p.id));
+    
+    // Return user name or fallback
+    if (typingUser?.user_name) return typingUser.user_name;
+    if (typingUser?.name) return typingUser.name;
+    
+    // For direct chats, use chat title (other person's name)
+    if (chat.type === 'direct') {
+      return chat.title || 'Someone';
+    }
+    
+    return 'Someone';
+  }, [chatsWithParticipants]);
+
   const getDisplayMessage = useCallback((conversation: Conversation) => {
-    // For now, just show the last message - typing indicators will be added later with React Query
+    // Check if someone is typing
+    const typingUserIds = typingUsersByChat.get(conversation.id) || [];
+    if (typingUserIds.length > 0) {
+      const typingUserName = getTypingUserName(conversation.id, typingUserIds);
+      return `${typingUserName} is typing...`;
+    }
+    
+    // Otherwise show the last message
     return getLastMessage(conversation);
-  }, [getLastMessage]);
+  }, [getLastMessage, typingUsersByChat, getTypingUserName]);
 
   // Helper component to render message with icon instead of emoji
   const MessageTextWithIcon = ({ text }: { text: string }) => {

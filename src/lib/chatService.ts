@@ -67,6 +67,7 @@ export interface Conversation {
 export class ChatService {
   private supabase: SupabaseClient;
   private activeSubscriptions: Map<string, RealtimeChannel> = new Map();
+  private typingChannels: Map<string, RealtimeChannel> = new Map();
 
   constructor(supabase?: SupabaseClient) {
     const client = supabase || getSupabaseClient();
@@ -259,7 +260,7 @@ export class ChatService {
           .from('chat_messages')
           .select(`
             id, chat_id, sender_id, message_text, 
-            created_at, reply_to_message_id,
+            created_at, reply_to_message_id, message_type, listing_id,
             accounts!inner(name, profile_pic)
           `)
           .eq('chat_id', chat.id)
@@ -287,7 +288,9 @@ export class ChatService {
             textLength: lastMessage.message_text?.length || 0,
             attachmentCount: finalAttachmentCount,
             senderId: lastMessage.sender_id,
-            senderName: (lastMessage.accounts as any)?.name
+            senderName: (lastMessage.accounts as any)?.name,
+            messageType: (lastMessage as any).message_type,
+            listingId: (lastMessage as any).listing_id
           });
           
           chat.last_message = {
@@ -295,7 +298,7 @@ export class ChatService {
             chat_id: lastMessage.chat_id,
             sender_id: lastMessage.sender_id,
             message_text: lastMessage.message_text,
-            message_type: 'text', // Default since column doesn't exist
+            message_type: ((lastMessage as any).message_type as 'text' | 'image' | 'file' | 'system' | 'listing') || 'text',
             image_url: null,
             images: null,
             created_at: lastMessage.created_at,
@@ -305,7 +308,8 @@ export class ChatService {
             is_pinned: false,
             sender_name: (lastMessage.accounts as any)?.name,
             sender_profile_pic: (lastMessage.accounts as any)?.profile_pic,
-            attachment_count: finalAttachmentCount // Add attachment count
+            attachment_count: finalAttachmentCount, // Add attachment count
+            listing_id: (lastMessage as any).listing_id || null
           };
         }
 
@@ -418,6 +422,7 @@ export class ChatService {
             });
           });
         }
+
       }
 
       // Transform messages to SimpleMessage format (reverse order for display)
@@ -451,6 +456,128 @@ export class ChatService {
           }
           return simpleMsg;
         });
+
+      // Get reply messages for messages that have reply_to_message_id
+      const replyMessageIds = transformedMessages
+        .filter(msg => msg.reply_to_message_id)
+        .map(msg => msg.reply_to_message_id!)
+        .filter((id, index, self) => self.indexOf(id) === index); // Get unique IDs
+
+      const replyMessagesMap = new Map<string, any>();
+      if (replyMessageIds.length > 0) {
+        const { data: replyMessages } = await this.supabase
+          .from('chat_messages')
+          .select(`
+            id, sender_id, message_text, created_at, message_type, listing_id,
+            accounts!inner(name, profile_pic)
+          `)
+          .in('id', replyMessageIds)
+          .is('deleted_at', null);
+
+        if (replyMessages) {
+          // Get attachments for reply messages
+          const { data: replyAttachments } = await this.supabase
+            .from('attachments')
+            .select('id, message_id, file_url, file_type, thumbnail_url')
+            .in('message_id', replyMessageIds);
+
+          const replyAttachmentsMap = new Map<string, MediaAttachment[]>();
+          if (replyAttachments) {
+            replyAttachments.forEach(att => {
+              if (!replyAttachmentsMap.has(att.message_id)) {
+                replyAttachmentsMap.set(att.message_id, []);
+              }
+              replyAttachmentsMap.get(att.message_id)!.push({
+                id: att.id,
+                file_url: att.file_url,
+                file_type: att.file_type as 'image' | 'video',
+                thumbnail_url: att.thumbnail_url || undefined
+              });
+            });
+          }
+
+          // Get listing IDs for reply messages that are listings
+          const listingReplyIds = replyMessages
+            .filter(msg => msg.message_type === 'listing')
+            .map(msg => (msg as any).listing_id)
+            .filter(id => id);
+
+          const listingPhotoMap = new Map<string, string[]>();
+          if (listingReplyIds.length > 0) {
+            const { data: listings } = await this.supabase
+              .from('listings')
+              .select('id, photo_urls')
+              .in('id', listingReplyIds);
+
+            if (listings) {
+              listings.forEach(listing => {
+                listingPhotoMap.set(listing.id, listing.photo_urls || []);
+              });
+            }
+          }
+
+          replyMessages.forEach(replyMsg => {
+            const listingId = (replyMsg as any).listing_id;
+            const photoUrls = listingId ? listingPhotoMap.get(listingId) : undefined;
+            
+            replyMessagesMap.set(replyMsg.id, {
+              id: replyMsg.id,
+              sender_id: replyMsg.sender_id,
+              sender_name: (replyMsg.accounts as any)?.name || 'Unknown',
+              sender_profile_pic: (replyMsg.accounts as any)?.profile_pic || null,
+              text: replyMsg.message_text,
+              created_at: replyMsg.created_at,
+              message_type: replyMsg.message_type || 'text',
+              attachments: replyAttachmentsMap.get(replyMsg.id) || undefined,
+              listing_id: listingId || undefined,
+              listing_photo_urls: photoUrls || undefined
+            });
+          });
+        }
+      }
+
+      // Add reply messages to transformed messages
+      transformedMessages.forEach(msg => {
+        if (msg.reply_to_message_id && replyMessagesMap.has(msg.reply_to_message_id)) {
+          msg.reply_to_message = replyMessagesMap.get(msg.reply_to_message_id);
+        }
+      });
+
+      // Get reactions for all messages
+      if (messageIds.length > 0) {
+        const { data: reactions } = await this.supabase
+          .from('message_reactions')
+          .select('id, message_id, user_id, emoji, created_at')
+          .in('message_id', messageIds);
+        
+        // Group reactions by message_id
+        const reactionsMap: Map<string, Array<{ id: string; user_id: string; emoji: string; created_at: string }>> = new Map();
+        if (reactions) {
+          reactions.forEach(reaction => {
+            if (!reactionsMap.has(reaction.message_id)) {
+              reactionsMap.set(reaction.message_id, []);
+            }
+            reactionsMap.get(reaction.message_id)!.push({
+              id: reaction.id,
+              user_id: reaction.user_id,
+              emoji: reaction.emoji,
+              created_at: reaction.created_at
+            });
+          });
+        }
+
+        // Add reactions to messages
+        transformedMessages.forEach(msg => {
+          const messageReactions = reactionsMap.get(msg.id) || [];
+          msg.reactions = messageReactions.map(r => ({
+            id: r.id,
+            message_id: msg.id,
+            user_id: r.user_id,
+            emoji: r.emoji,
+            created_at: r.created_at
+          }));
+        });
+      }
 
       // Mark messages as read for this user
       if (userId) {
@@ -548,10 +675,11 @@ export class ChatService {
   async sendMessage(
     chatId: string, 
     content: string, 
-    attachments?: MediaAttachment[]
+    attachments?: MediaAttachment[],
+    replyToMessageId?: string | null
   ): Promise<{ message: SimpleMessage | null; error: Error | null }> {
     try {
-      console.log('ChatService: Sending message to chat:', chatId, 'content:', content.substring(0, 50));
+      console.log('ChatService: Sending message to chat:', chatId, 'content:', content.substring(0, 50), 'replyTo:', replyToMessageId);
       
       // Get current user ID
       const { data: { user } } = await this.supabase.auth.getUser();
@@ -570,6 +698,7 @@ export class ChatService {
           chat_id: chatId,
           sender_id: senderId,
           message_text: content,
+          reply_to_message_id: replyToMessageId || null,
           // Only use columns that exist in database
         })
           .select(`
@@ -1447,7 +1576,7 @@ export class ChatService {
             .from('chat_messages')
           .select(`
             id, chat_id, sender_id, message_text, 
-            created_at, reply_to_message_id,
+            created_at, reply_to_message_id, message_type, listing_id,
             accounts!inner(name, profile_pic)
           `)
             .eq('id', payload.new.id)
@@ -1460,12 +1589,66 @@ export class ChatService {
               .select('id, message_id, file_url, file_type, thumbnail_url')
               .eq('message_id', message.id);
 
+            // Fetch reply message if reply_to_message_id exists
+            let replyMessage: any = null;
+            if (message.reply_to_message_id) {
+              const { data: replyMsg } = await this.supabase
+                .from('chat_messages')
+                .select(`
+                  id, sender_id, message_text, created_at, message_type, listing_id,
+                  accounts!inner(name, profile_pic)
+                `)
+                .eq('id', message.reply_to_message_id)
+                .is('deleted_at', null)
+                .single();
+
+              if (replyMsg) {
+                // Get attachments for reply message
+                const { data: replyAttachments } = await this.supabase
+                  .from('attachments')
+                  .select('id, message_id, file_url, file_type, thumbnail_url')
+                  .eq('message_id', replyMsg.id);
+
+                // Get listing photo_urls if it's a listing
+                let listingPhotoUrls: string[] | undefined = undefined;
+                if (replyMsg.message_type === 'listing' && (replyMsg as any).listing_id) {
+                  const { data: listing } = await this.supabase
+                    .from('listings')
+                    .select('photo_urls')
+                    .eq('id', (replyMsg as any).listing_id)
+                    .single();
+                  
+                  if (listing) {
+                    listingPhotoUrls = listing.photo_urls || [];
+                  }
+                }
+
+                replyMessage = {
+                  id: replyMsg.id,
+                  sender_id: replyMsg.sender_id,
+                  sender_name: (replyMsg.accounts as any)?.name || 'Unknown',
+                  sender_profile_pic: (replyMsg.accounts as any)?.profile_pic || null,
+                  text: replyMsg.message_text,
+                  created_at: replyMsg.created_at,
+                  message_type: replyMsg.message_type || 'text',
+                  attachments: (replyAttachments || []).map(att => ({
+                    id: att.id,
+                    file_url: att.file_url,
+                    file_type: att.file_type as 'image' | 'video',
+                    thumbnail_url: att.thumbnail_url || undefined
+                  })),
+                  listing_id: (replyMsg as any).listing_id || undefined,
+                  listing_photo_urls: listingPhotoUrls
+                };
+              }
+            }
+
             const chatMsg: ChatMessage = {
               id: message.id,
               chat_id: message.chat_id,
               sender_id: message.sender_id,
               message_text: message.message_text,
-          message_type: 'text', // Default since column doesn't exist
+          message_type: (message.message_type as 'text' | 'image' | 'poll' | 'listing') || 'text',
           image_url: null,
           images: null,
           created_at: message.created_at,
@@ -1474,7 +1657,8 @@ export class ChatService {
           reply_to_message_id: message.reply_to_message_id || null,
           is_pinned: false,
               sender_name: (message.accounts as any)?.name,
-              sender_profile_pic: (message.accounts as any)?.profile_pic
+              sender_profile_pic: (message.accounts as any)?.profile_pic,
+              listing_id: message.listing_id || null
             };
 
             const simpleMessage = this.convertToSimpleMessage(
@@ -1486,6 +1670,19 @@ export class ChatService {
                 thumbnail_url: att.thumbnail_url || undefined
               }))
             );
+
+            // Add reply message data if it exists
+            if (replyMessage) {
+              simpleMessage.reply_to_message = replyMessage;
+            }
+
+            // Add message_type and listing_id if present
+            if (message.message_type) {
+              simpleMessage.message_type = message.message_type as 'text' | 'image' | 'file' | 'system' | 'listing';
+            }
+            if (message.listing_id) {
+              simpleMessage.listing_id = message.listing_id;
+            }
 
             onNewMessage(simpleMessage);
           }
@@ -1573,23 +1770,154 @@ export class ChatService {
     }
   }
 
+  // Subscribe to typing indicators
+  subscribeToTyping(chatId: string, onTyping: (userIds: string[]) => void): () => void {
+    console.log('🔍 ChatService: subscribeToTyping called for chat', chatId);
+    
+    // Cleanup existing subscription if any
+    const existingChannel = this.typingChannels.get(chatId);
+    if (existingChannel) {
+      console.log('🔍 ChatService: Cleaning up existing channel for chat', chatId);
+      existingChannel.unsubscribe();
+      this.typingChannels.delete(chatId);
+    }
+
+    // Get current user and create channel
+    this.supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        console.log('🔍 ChatService: No user found, cannot subscribe to typing');
+        return;
+      }
+
+      console.log('🔍 ChatService: Creating typing channel for chat', chatId, 'user', user.id);
+
+      // Create presence channel for typing indicators
+      const channel = this.supabase.channel(`typing:${chatId}`, {
+        config: { presence: { key: user.id } }
+      });
+
+      // Helper function to extract typing users from presence state
+      const extractTypingUsers = () => {
+        const state = channel.presenceState();
+        console.log('🔍 ChatService: Presence state for chat', chatId, ':', state);
+        
+        const typingUserIds: string[] = Object.values(state)
+          .flat()
+          .map((presence: any) => {
+            console.log('🔍 ChatService: Checking presence:', presence);
+            // Only include users who are actively typing
+            if (presence.typing === true && presence.user_id && presence.user_id !== user.id) {
+              console.log('🔍 ChatService: Found typing user:', presence.user_id);
+              return presence.user_id;
+            }
+            return null;
+          })
+          .filter((id: string | null): id is string => id !== null);
+        
+        console.log('🔍 ChatService: Extracted typing userIds for chat', chatId, ':', typingUserIds);
+        return typingUserIds;
+      };
+
+      // Listen for presence sync events
+      channel.on('presence', { event: 'sync' }, () => {
+        console.log('🔍 ChatService: Presence sync event for chat', chatId);
+        const typingUserIds = extractTypingUsers();
+        console.log('🔍 ChatService: Calling onTyping callback with userIds:', typingUserIds);
+        onTyping(typingUserIds);
+      });
+
+      // Also listen for join/leave events to catch typing changes
+      channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('🔍 ChatService: Presence join event for chat', chatId, 'key:', key, 'newPresences:', newPresences);
+        const typingUserIds = extractTypingUsers();
+        onTyping(typingUserIds);
+      });
+
+      channel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('🔍 ChatService: Presence leave event for chat', chatId, 'key:', key, 'leftPresences:', leftPresences);
+        const typingUserIds = extractTypingUsers();
+        onTyping(typingUserIds);
+      });
+
+      // Subscribe and track initial presence
+      channel.subscribe(async (status) => {
+        console.log('🔍 ChatService: Channel subscription status for chat', chatId, ':', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('🔍 ChatService: Channel subscribed, tracking initial presence for chat', chatId);
+          await channel.track({ 
+            user_id: user.id, 
+            typing: false, 
+            at: new Date().toISOString() 
+          });
+          console.log('🔍 ChatService: Initial presence tracked for chat', chatId);
+        }
+      });
+
+      this.typingChannels.set(chatId, channel);
+      console.log('🔍 ChatService: Typing channel stored for chat', chatId);
+    });
+
+    // Return cleanup function
+    return () => {
+      console.log('🔍 ChatService: Cleaning up typing subscription for chat', chatId);
+      const channel = this.typingChannels.get(chatId);
+      if (channel) {
+        channel.unsubscribe();
+        this.typingChannels.delete(chatId);
+        console.log('🔍 ChatService: Typing channel unsubscribed and removed for chat', chatId);
+      }
+    };
+  }
+
   // Send typing indicator
   async sendTypingIndicator(chatId: string, isTyping: boolean): Promise<void> {
     try {
-      const { data: { user } } = await this.supabase.auth.getUser();
-      if (!user) return;
-
-      const channel = this.supabase.channel(`typing:${chatId}`);
+      console.log('🔍 ChatService: sendTypingIndicator called for chat', chatId, 'isTyping:', isTyping);
       
-      if (isTyping) {
-        channel.send({
-          type: 'broadcast',
-          event: 'typing',
-          payload: { user_id: user.id, is_typing: true }
-        });
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        console.log('🔍 ChatService: No user found, cannot send typing indicator');
+        return;
       }
+
+      // Get or create typing channel
+      let channel = this.typingChannels.get(chatId);
+      if (!channel) {
+        console.log('🔍 ChatService: Creating new typing channel for sendTypingIndicator, chat', chatId);
+        // Create channel if it doesn't exist
+        channel = this.supabase.channel(`typing:${chatId}`, {
+          config: { presence: { key: user.id } }
+        });
+        
+        channel.subscribe(async (status) => {
+          console.log('🔍 ChatService: Channel subscription status (sendTypingIndicator) for chat', chatId, ':', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('🔍 ChatService: Channel subscribed, tracking typing status, chat', chatId, 'isTyping:', isTyping);
+            await channel.track({ 
+              user_id: user.id, 
+              typing: isTyping, 
+              at: new Date().toISOString() 
+            });
+            console.log('🔍 ChatService: Typing status tracked, chat', chatId);
+          }
+        });
+
+        this.typingChannels.set(chatId, channel);
+        
+        // Wait a bit for subscription to be ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Update presence with typing status
+      console.log('🔍 ChatService: Tracking typing status update, chat', chatId, 'isTyping:', isTyping);
+      await channel.track({ 
+        user_id: user.id, 
+        typing: isTyping, 
+        at: new Date().toISOString() 
+      });
+      console.log('🔍 ChatService: Typing indicator sent successfully, chat', chatId, 'isTyping:', isTyping);
     } catch (error) {
-      console.error('Error sending typing indicator:', error);
+      console.error('🔍 ChatService: Error sending typing indicator:', error);
     }
   }
 
@@ -1627,6 +1955,107 @@ export class ChatService {
       return { media, error: null };
     } catch (error) {
       return { media: [], error: error as Error };
+    }
+  }
+
+  // Add a reaction to a message
+  async addReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
+    try {
+      console.log('ChatService: Adding reaction:', { messageId, emoji });
+      
+      // Get current user ID
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { error: new Error('User not authenticated') };
+      }
+      
+      // Insert reaction (UNIQUE constraint will prevent duplicates)
+      const { error } = await this.supabase
+        .from('message_reactions')
+        .insert({
+          message_id: messageId,
+          user_id: user.id,
+          emoji: emoji
+        });
+      
+      if (error) {
+        // If it's a unique constraint error, that's okay (user already reacted with this emoji)
+        if (error.code === '23505') {
+          console.log('Reaction already exists, ignoring');
+          return { error: null };
+        }
+        console.error('Error adding reaction:', error);
+        return { error };
+      }
+      
+      console.log('Successfully added reaction');
+      return { error: null };
+    } catch (error) {
+      console.error('Error in addReaction:', error);
+      return { error: error as Error };
+    }
+  }
+
+  // Remove a reaction from a message
+  async removeReaction(messageId: string, emoji: string): Promise<{ error: Error | null }> {
+    try {
+      console.log('ChatService: Removing reaction:', { messageId, emoji });
+      
+      // Get current user ID
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { error: new Error('User not authenticated') };
+      }
+      
+      // Delete reaction
+      const { error } = await this.supabase
+        .from('message_reactions')
+        .delete()
+        .eq('message_id', messageId)
+        .eq('user_id', user.id)
+        .eq('emoji', emoji);
+      
+      if (error) {
+        console.error('Error removing reaction:', error);
+        return { error };
+      }
+      
+      console.log('Successfully removed reaction');
+      return { error: null };
+    } catch (error) {
+      console.error('Error in removeReaction:', error);
+      return { error: error as Error };
+    }
+  }
+
+  // Delete a message (soft delete)
+  async deleteMessage(messageId: string): Promise<{ error: Error | null }> {
+    try {
+      console.log('ChatService: Deleting message:', messageId);
+      
+      // Get current user ID
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (!user) {
+        return { error: new Error('User not authenticated') };
+      }
+      
+      // Soft delete the message (set deleted_at timestamp)
+      const { error } = await this.supabase
+        .from('chat_messages')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', messageId)
+        .eq('sender_id', user.id); // Only allow deleting own messages
+      
+      if (error) {
+        console.error('Error deleting message:', error);
+        return { error };
+      }
+      
+      console.log('Successfully deleted message:', messageId);
+      return { error: null };
+    } catch (error) {
+      console.error('Error in deleteMessage:', error);
+      return { error: error as Error };
     }
   }
 

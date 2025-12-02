@@ -25,12 +25,14 @@ export default function Avatar({ src, name = "?", size = 32, className }: Props)
   
   return (
     <div
-      className={`rounded-full overflow-hidden ${src && !imageError ? 'bg-neutral-200 text-neutral-700' : 'border-dashed border-gray-400 bg-transparent text-gray-400'} flex items-center justify-center ${className ?? ""}`}
+      className={`rounded-full ${src && !imageError ? 'bg-neutral-200 text-neutral-700' : 'border-dashed border-gray-400 bg-transparent text-gray-400'} flex items-center justify-center ${className ?? ""}`}
       style={{ 
         width: size, 
         height: size,
         borderWidth: src && !imageError ? '0' : borderWidth,
-        borderStyle: src && !imageError ? 'none' : 'dashed'
+        borderStyle: src && !imageError ? 'none' : 'dashed',
+        overflow: 'hidden',
+        position: 'relative'
       }}
       aria-label={name}
     >
@@ -39,7 +41,11 @@ export default function Avatar({ src, name = "?", size = 32, className }: Props)
         <img 
           src={src} 
           alt={name} 
-          className="w-full h-full object-cover rounded-full" 
+          className="w-full h-full object-cover" 
+          style={{
+            borderRadius: '50%',
+            display: 'block'
+          }}
           onError={(e) => {
             console.error('Avatar image failed to load:', src, e);
             setImageError(true);

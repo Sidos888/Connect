@@ -94,6 +94,14 @@ export type Conversation = {
 };
 
 // Chat service types
+export type MessageReaction = {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+};
+
 export type SimpleMessage = {
   id: string;
   chat_id: string;
@@ -103,10 +111,23 @@ export type SimpleMessage = {
   text: string;
   created_at: string;
   reply_to_message_id?: string | null;
+  reply_to_message?: {
+    id: string;
+    sender_id: string;
+    sender_name: string;
+    sender_profile_pic?: string;
+    text: string;
+    created_at: string;
+    message_type?: 'text' | 'image' | 'file' | 'system' | 'listing';
+    attachments?: MediaAttachment[];
+    listing_id?: string;
+    listing_photo_urls?: string[];
+  } | null;
   attachments?: MediaAttachment[];
   deleted_at?: string | null;
   message_type?: 'text' | 'image' | 'file' | 'system' | 'listing';
   listing_id?: string | null;
+  reactions?: MessageReaction[];
 };
 
 export type MediaAttachment = {

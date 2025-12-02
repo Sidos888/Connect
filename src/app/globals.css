@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Reactions Modal - Remove drag handles and fix styling */
+.reactions-modal::before,
+.reactions-modal::after {
+  display: none !important;
+}
+
+.reactions-modal::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --background: #ffffff; /* Hard white base */
   --foreground: #111827; /* Neutral-900 */
@@ -23,9 +33,33 @@
 @keyframes typingBounce {
   0%, 60%, 100% {
     transform: translateY(0) !important;
+    opacity: 0.7;
   }
   30% {
-    transform: translateY(-10px) !important;
+    transform: translateY(-8px) !important;
+    opacity: 1;
+  }
+}
+
+@-webkit-keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0) !important;
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-8px) !important;
+    opacity: 1;
+  }
+}
+
+@-moz-keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0) !important;
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-8px) !important;
+    opacity: 1;
   }
 }
 
@@ -294,12 +328,18 @@ body {
 /* Force Vercel rebuild - working version */
 
 /* Disable all transitions and animations on chat components */
+/* Exclude typing dots using attribute selector */
 .chat-container,
-.chat-container *,
-[class*="chat"],
-[class*="Chat"],
-div[class*="chat"],
-div[class*="Chat"],
+.chat-container *:not([data-typing-dot]),
+.chat-container *:not([data-typing-dots]),
+[class*="chat"] *:not([data-typing-dot]),
+[class*="chat"] *:not([data-typing-dots]),
+[class*="Chat"] *:not([data-typing-dot]),
+[class*="Chat"] *:not([data-typing-dots]),
+div[class*="chat"] *:not([data-typing-dot]),
+div[class*="chat"] *:not([data-typing-dots]),
+div[class*="Chat"] *:not([data-typing-dot]),
+div[class*="Chat"] *:not([data-typing-dots]),
 button[class*="chat"],
 button[class*="Chat"] {
   transition: none !important;
@@ -319,6 +359,24 @@ button[class*="Chat"] {
 /* Re-enable specific animations we want to keep */
 .chat-container .animate-fade-in {
   animation: fadeIn 0.3s ease-in-out !important;
+}
+
+/* Re-enable typing indicator animations - Allow transitions and transforms */
+/* This MUST come after the chat disable rule and have higher specificity */
+[data-typing-dot],
+div.chat-messages-container [data-typing-dot],
+div[class*="chat"] [data-typing-dot] {
+  /* Allow transitions for JavaScript-based transform animations */
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
+  -webkit-transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
+  -moz-transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
+  -o-transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out !important;
+  /* Critical: Override transform: none to allow inline transforms */
+  /* Inline styles need this rule to not interfere */
+  transform: initial !important;
+  -webkit-transform: initial !important;
+  -moz-transform: initial !important;
+  -o-transform: initial !important;
 }
 
 .chat-container .transition-all {
