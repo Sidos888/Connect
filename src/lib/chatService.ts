@@ -43,6 +43,7 @@ export interface Chat {
   updated_at: string;
   last_message_at: string;
   is_event_chat?: boolean;
+  is_archived?: boolean;
   participants?: ChatParticipant[];
   last_message?: ChatMessage;
   unread_count?: number;
@@ -147,8 +148,7 @@ export class ChatService {
           id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat, is_archived
         `)
         .in('id', chatIds)
-        // Show chats that are not explicitly archived. Old rows may have is_archived = null.
-        .or('is_archived.is.null,is_archived.eq.false')
+        // Fetch all chats including archived ones
         .order('last_message_at', { ascending: false, nullsFirst: false });
       
       // Log any missing chats (participant exists but chat not returned)
@@ -1512,6 +1512,7 @@ export class ChatService {
         name: chat.name || '',
         photo: (chat as any).photo || undefined, // Group chat photo from chats table
         is_event_chat: (chat as any).is_event_chat || false,
+        is_archived: (chat as any).is_archived || false,
         participants: chat.chat_participants.map((p: any) => ({
           id: p.user_id,
           name: (p.accounts as any)?.name || 'Unknown User',
@@ -1772,12 +1773,9 @@ export class ChatService {
 
   // Subscribe to typing indicators
   subscribeToTyping(chatId: string, onTyping: (userIds: string[]) => void): () => void {
-    console.log('🔍 ChatService: subscribeToTyping called for chat', chatId);
-    
     // Cleanup existing subscription if any
     const existingChannel = this.typingChannels.get(chatId);
     if (existingChannel) {
-      console.log('🔍 ChatService: Cleaning up existing channel for chat', chatId);
       existingChannel.unsubscribe();
       this.typingChannels.delete(chatId);
     }
@@ -1785,11 +1783,8 @@ export class ChatService {
     // Get current user and create channel
     this.supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
-        console.log('🔍 ChatService: No user found, cannot subscribe to typing');
         return;
       }
-
-      console.log('🔍 ChatService: Creating typing channel for chat', chatId, 'user', user.id);
 
       // Create presence channel for typing indicators
       const channel = this.supabase.channel(`typing:${chatId}`, {
@@ -1799,72 +1794,58 @@ export class ChatService {
       // Helper function to extract typing users from presence state
       const extractTypingUsers = () => {
         const state = channel.presenceState();
-        console.log('🔍 ChatService: Presence state for chat', chatId, ':', state);
         
         const typingUserIds: string[] = Object.values(state)
           .flat()
           .map((presence: any) => {
-            console.log('🔍 ChatService: Checking presence:', presence);
             // Only include users who are actively typing
             if (presence.typing === true && presence.user_id && presence.user_id !== user.id) {
-              console.log('🔍 ChatService: Found typing user:', presence.user_id);
               return presence.user_id;
             }
             return null;
           })
           .filter((id: string | null): id is string => id !== null);
         
-        console.log('🔍 ChatService: Extracted typing userIds for chat', chatId, ':', typingUserIds);
         return typingUserIds;
       };
 
       // Listen for presence sync events
       channel.on('presence', { event: 'sync' }, () => {
-        console.log('🔍 ChatService: Presence sync event for chat', chatId);
         const typingUserIds = extractTypingUsers();
-        console.log('🔍 ChatService: Calling onTyping callback with userIds:', typingUserIds);
         onTyping(typingUserIds);
       });
 
       // Also listen for join/leave events to catch typing changes
       channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('🔍 ChatService: Presence join event for chat', chatId, 'key:', key, 'newPresences:', newPresences);
         const typingUserIds = extractTypingUsers();
         onTyping(typingUserIds);
       });
 
       channel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('🔍 ChatService: Presence leave event for chat', chatId, 'key:', key, 'leftPresences:', leftPresences);
         const typingUserIds = extractTypingUsers();
         onTyping(typingUserIds);
       });
 
       // Subscribe and track initial presence
       channel.subscribe(async (status) => {
-        console.log('🔍 ChatService: Channel subscription status for chat', chatId, ':', status);
         if (status === 'SUBSCRIBED') {
-          console.log('🔍 ChatService: Channel subscribed, tracking initial presence for chat', chatId);
           await channel.track({ 
             user_id: user.id, 
             typing: false, 
             at: new Date().toISOString() 
           });
-          console.log('🔍 ChatService: Initial presence tracked for chat', chatId);
         }
       });
 
       this.typingChannels.set(chatId, channel);
-      console.log('🔍 ChatService: Typing channel stored for chat', chatId);
     });
 
     // Return cleanup function
     return () => {
-      console.log('🔍 ChatService: Cleaning up typing subscription for chat', chatId);
       const channel = this.typingChannels.get(chatId);
       if (channel) {
         channel.unsubscribe();
         this.typingChannels.delete(chatId);
-        console.log('🔍 ChatService: Typing channel unsubscribed and removed for chat', chatId);
       }
     };
   }
@@ -1872,33 +1853,26 @@ export class ChatService {
   // Send typing indicator
   async sendTypingIndicator(chatId: string, isTyping: boolean): Promise<void> {
     try {
-      console.log('🔍 ChatService: sendTypingIndicator called for chat', chatId, 'isTyping:', isTyping);
-      
       const { data: { user } } = await this.supabase.auth.getUser();
       if (!user) {
-        console.log('🔍 ChatService: No user found, cannot send typing indicator');
         return;
       }
 
       // Get or create typing channel
       let channel = this.typingChannels.get(chatId);
       if (!channel) {
-        console.log('🔍 ChatService: Creating new typing channel for sendTypingIndicator, chat', chatId);
         // Create channel if it doesn't exist
         channel = this.supabase.channel(`typing:${chatId}`, {
           config: { presence: { key: user.id } }
         });
         
         channel.subscribe(async (status) => {
-          console.log('🔍 ChatService: Channel subscription status (sendTypingIndicator) for chat', chatId, ':', status);
           if (status === 'SUBSCRIBED') {
-            console.log('🔍 ChatService: Channel subscribed, tracking typing status, chat', chatId, 'isTyping:', isTyping);
             await channel.track({ 
               user_id: user.id, 
               typing: isTyping, 
               at: new Date().toISOString() 
             });
-            console.log('🔍 ChatService: Typing status tracked, chat', chatId);
           }
         });
 
@@ -1909,15 +1883,13 @@ export class ChatService {
       }
 
       // Update presence with typing status
-      console.log('🔍 ChatService: Tracking typing status update, chat', chatId, 'isTyping:', isTyping);
       await channel.track({ 
         user_id: user.id, 
         typing: isTyping, 
         at: new Date().toISOString() 
       });
-      console.log('🔍 ChatService: Typing indicator sent successfully, chat', chatId, 'isTyping:', isTyping);
     } catch (error) {
-      console.error('🔍 ChatService: Error sending typing indicator:', error);
+      console.error('Error sending typing indicator:', error);
     }
   }
 

@@ -30,7 +30,9 @@ export default function Memories() {
         if (error) {
           console.error('Error loading galleries:', error);
         } else {
-          setGalleries(galleryData);
+          // Filter to only show galleries with at least one photo
+          const galleriesWithPhotos = galleryData.filter(g => g.photo_count > 0);
+          setGalleries(galleriesWithPhotos);
         }
       } catch (error) {
         console.error('Error loading galleries:', error);
@@ -64,7 +66,7 @@ export default function Memories() {
   };
 
   const handleGalleryClick = (listingId: string) => {
-    router.push(`/listing?id=${listingId}&view=gallery`);
+    router.push(`/listing?id=${listingId}&view=gallery&from=${encodeURIComponent('/memories')}`);
   };
 
   if (loading) {
@@ -155,19 +157,31 @@ export default function Memories() {
                   <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
                     {/* People Count */}
                     <div 
-                      className="bg-white/90 backdrop-blur-sm px-2 py-1 flex items-center gap-1"
-                      style={{ borderRadius: '60px' }}
+                      className="bg-white/90 backdrop-blur-sm flex items-center gap-1.5"
+                      style={{ 
+                        borderRadius: '60px',
+                        paddingLeft: '10px',
+                        paddingRight: '10px',
+                        paddingTop: '6px',
+                        paddingBottom: '6px'
+                      }}
                     >
-                      <Users size={12} className="text-gray-900" />
-                      <span className="text-xs font-medium text-gray-900">{gallery.people_count}</span>
+                      <Users size={14} className="text-gray-900" strokeWidth={2.5} />
+                      <span className="text-sm font-semibold text-gray-900">{gallery.people_count}</span>
                     </div>
                     {/* Photo Count */}
                     <div 
-                      className="bg-white/90 backdrop-blur-sm px-2 py-1 flex items-center gap-1"
-                      style={{ borderRadius: '60px' }}
+                      className="bg-white/90 backdrop-blur-sm flex items-center gap-1.5"
+                      style={{ 
+                        borderRadius: '60px',
+                        paddingLeft: '10px',
+                        paddingRight: '10px',
+                        paddingTop: '6px',
+                        paddingBottom: '6px'
+                      }}
                     >
-                      <ImageIcon size={12} className="text-gray-900" />
-                      <span className="text-xs font-medium text-gray-900">{gallery.photo_count}</span>
+                      <ImageIcon size={14} className="text-gray-900" strokeWidth={2.5} />
+                      <span className="text-sm font-semibold text-gray-900">{gallery.photo_count}</span>
                     </div>
                   </div>
                 </button>

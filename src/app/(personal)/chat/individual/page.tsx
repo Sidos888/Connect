@@ -11,7 +11,9 @@ import MessageBubble from "@/components/chat/MessageBubble";
 import MessageActionModal from "@/components/chat/MessageActionModal";
 import MediaUploadButton, { UploadedMedia } from "@/components/chat/MediaUploadButton";
 import MediaPreview from "@/components/chat/MediaPreview";
-import MediaViewer from "@/components/chat/MediaViewer";
+import ChatPhotoViewer from "@/components/chat/ChatPhotoViewer";
+import ChatPhotosGridModal from "@/components/chat/ChatPhotosGridModal";
+import ProfileModal from "@/components/chat/ProfileModal";
 import LoadingMessageCard from "@/components/chat/LoadingMessageCard";
 import MessageReactionCard from "@/components/chat/MessageReactionCard";
 import MessageActionCard from "@/components/chat/MessageActionCard";
@@ -104,11 +106,20 @@ export default function IndividualChatPage() {
     };
   }, []);
   
-  // Media viewer states (kept for potential future use)
+  // Media viewer states
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
   const [viewerMedia, setViewerMedia] = useState<MediaAttachment[]>([]); // Only media from clicked message
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0); // Index of selected media in viewer
   const [allChatMedia, setAllChatMedia] = useState<MediaAttachment[]>([]); // All chat media (for future use)
+  
+  // Grid modal state
+  const [showGridModal, setShowGridModal] = useState(false);
+  const [gridModalAttachments, setGridModalAttachments] = useState<MediaAttachment[]>([]);
+  
+  // Profile modal state
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
   const [eventListing, setEventListing] = useState<{
     id: string;
     title: string;
@@ -569,6 +580,7 @@ export default function IndividualChatPage() {
       hasMarkedAsRead.current = true;
     }
   }, [conversation, chatId, account?.id, chatService]);
+
 
 
   // Helper function to upload file to Supabase Storage (iOS-compatible)
@@ -1497,18 +1509,30 @@ export default function IndividualChatPage() {
       }))
     });
     setPendingMedia(media);
-    console.log('✅ pendingMedia state updated - files ready for upload on send');
   };
 
   const handleRemoveMedia = (index: number) => {
     setPendingMedia(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleAttachmentClick = (message: SimpleMessage) => {
-    // Navigate to chat photos page instead of opening modal
+  const handleAttachmentClick = (message: SimpleMessage, index?: number) => {
     if (message.attachments && message.attachments.length > 0) {
-      router.push(`/chat/photos?messageId=${message.id}`);
+      if (index !== undefined) {
+        // Direct image click - open viewer at that index
+        setViewerMedia(message.attachments);
+        setSelectedMediaIndex(index);
+        setShowMediaViewer(true);
+      } else {
+        // Grid/badge click - show grid modal (no navigation needed!)
+        setGridModalAttachments(message.attachments);
+        setShowGridModal(true);
     }
+    }
+  };
+
+  const handleProfileClick = (userId: string) => {
+    setProfileModalUserId(userId);
+    setShowProfileModal(true);
   };
 
 
@@ -1541,13 +1565,17 @@ export default function IndividualChatPage() {
         behavior: 'smooth'
       });
       
-      // Optionally highlight the message briefly
-      messageElement.style.transition = 'background-color 0.3s ease';
-      messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // Light blue highlight
+      // Find the message content div (excludes reaction badges which are rendered below)
+      const messageContent = messageElement.querySelector('[data-message-content="true"]') as HTMLElement;
+      const targetElement = messageContent || messageElement;
+      
+      // Highlight the message content (excluding reactions) with soft yellow
+      targetElement.style.transition = 'background-color 0.3s ease';
+      targetElement.style.backgroundColor = 'rgba(252, 211, 77, 0.3)'; // Soft yellow highlight
       setTimeout(() => {
-        messageElement.style.backgroundColor = 'transparent';
+        targetElement.style.backgroundColor = '';
         setTimeout(() => {
-          messageElement.style.transition = '';
+          targetElement.style.transition = '';
         }, 300);
       }, 1000);
     }
@@ -1831,14 +1859,14 @@ export default function IndividualChatPage() {
           <div 
             className="fixed inset-0 z-40"
             onClick={cancelReply}
-            style={{
+          style={{ 
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               backgroundColor: 'rgba(0, 0, 0, 0.3)',
               pointerEvents: 'auto',
               cursor: 'pointer'
-            }}
-          >
+          }}
+        >
             {/* Keep the replying message element visible - create a cutout */}
             <div
               onClick={(e) => e.stopPropagation()}
@@ -1885,14 +1913,14 @@ export default function IndividualChatPage() {
                 backgroundColor: 'transparent'
               }}
             />
-          </div>
+              </div>
         );
       })()}
 
       {/* X Button - Top Right when replying */}
       {replyToMessage && (
-        <button
-          onClick={cancelReply}
+            <button
+              onClick={cancelReply}
           className="fixed flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] z-[60]"
           style={{
             top: 'max(env(safe-area-inset-top), 70px)',
@@ -1917,7 +1945,7 @@ export default function IndividualChatPage() {
           aria-label="Cancel reply"
         >
           <X size={18} className="text-gray-900" strokeWidth={2.5} />
-        </button>
+            </button>
       )}
 
       {/* Reply Preview - Only show when actually replying */}
@@ -2211,6 +2239,7 @@ export default function IndividualChatPage() {
           // NO top offset - use paddingTop instead to avoid creating white gap
           // Full height with paddingBottom ensures no gap at bottom
         }}
+        data-messages-container="true"
         ref={(el) => {
           messagesContainerRef.current = el;
           if (el) {
@@ -2258,7 +2287,7 @@ export default function IndividualChatPage() {
           
           return (
             <div 
-              key={message.id}
+              key={message.id} 
               data-message-id={message.id}
               style={{ 
                 marginBottom: index < messages.length - 1 ? '12px' : '12px',
@@ -2291,6 +2320,7 @@ export default function IndividualChatPage() {
                   onDelete={handleDelete}
                   onLongPress={handleLongPress}
                   onReplyCardClick={handleReplyCardClick}
+                  onProfileClick={handleProfileClick}
                 />
               </div>
             </div>
@@ -2544,13 +2574,40 @@ export default function IndividualChatPage() {
         isMe={selectedMessage?.sender_id === account?.id}
       />
 
-      {/* Media Viewer */}
-      <MediaViewer
-        isOpen={showMediaViewer}
-        allMedia={viewerMedia}
-        initialIndex={viewerStartIndex}
-        onClose={() => setShowMediaViewer(false)}
+      {/* Chat Photos Grid Modal */}
+      {showGridModal && gridModalAttachments.length > 0 && (
+        <ChatPhotosGridModal
+          isOpen={showGridModal}
+          attachments={gridModalAttachments}
+          onClose={() => {
+            setShowGridModal(false);
+            setGridModalAttachments([]);
+          }}
+        />
+      )}
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        userId={profileModalUserId}
+        onClose={() => {
+          setShowProfileModal(false);
+          setProfileModalUserId(null);
+        }}
       />
+
+      {/* Chat Photo Viewer - For direct image clicks */}
+      {showMediaViewer && viewerMedia.length > 0 && (
+        <ChatPhotoViewer
+        isOpen={showMediaViewer}
+          attachments={viewerMedia}
+          initialIndex={selectedMediaIndex}
+          onClose={() => {
+            setShowMediaViewer(false);
+            setViewerMedia([]);
+          }}
+      />
+      )}
 
       {/* Reactions Modal */}
       {reactionsModalMessageId && (() => {

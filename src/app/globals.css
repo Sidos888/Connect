@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Photo badge button - Remove tap highlight */
+.photo-badge-button {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.photo-badge-button:active,
+.photo-badge-button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
 /* Reactions Modal - Remove drag handles and fix styling */
 .reactions-modal::before,
 .reactions-modal::after {

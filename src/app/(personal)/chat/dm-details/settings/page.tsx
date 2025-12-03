@@ -18,17 +18,9 @@ export default function DmSettingsPage() {
   const [otherParticipantName, setOtherParticipantName] = useState<string | null>(null);
   const [otherParticipantId, setOtherParticipantId] = useState<string | null>(null);
 
-  // Top settings cards
-  const topCards = [
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'clear-chat', label: 'Clear Chat' },
-  ];
-
   // Bottom settings cards (dangerous actions with red text)
   const bottomCards = [
     { id: 'remove-friend', label: 'Remove Friend' },
-    { id: 'block-user', label: 'Block User' },
-    { id: 'report-user', label: 'Report User' },
   ];
 
   // Load conversation data to get other participant info
@@ -122,11 +114,6 @@ export default function DmSettingsPage() {
             msOverflowStyle: 'none'
           }}
         >
-          {/* Top Cards */}
-          <div className="space-y-4 pt-6">
-            {topCards.map((card) => renderCard(card, false))}
-          </div>
-
           {/* Bottom Cards - Pushed to bottom */}
           <div className="space-y-4 mt-auto pb-12 pt-6">
             {bottomCards.map((card) => renderCard(card, true))}

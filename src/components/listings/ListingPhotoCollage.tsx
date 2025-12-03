@@ -4,13 +4,15 @@ import { Image as ImageIcon } from 'lucide-react';
 
 interface ListingPhotoCollageProps {
   photos: string[];
-  onPhotoClick?: () => void; // Optional click handler for preview page or viewing photos
+  onPhotoClick?: (index?: number) => void; // Click handler - if index provided, opens viewer at that photo
+  onGridClick?: () => void; // Click handler for photo count badge to open grid view
   editable?: boolean; // If true, shows clickable buttons (for preview page)
 }
 
 export default function ListingPhotoCollage({ 
   photos, 
   onPhotoClick,
+  onGridClick,
   editable = false 
 }: ListingPhotoCollageProps) {
   if (photos.length === 0) {
@@ -125,9 +127,11 @@ export default function ListingPhotoCollage({
         <img 
           src={photos[0]} 
           alt="Listing" 
-          className="w-full h-full object-cover pointer-events-none"
+          className="w-full h-full object-cover"
+          onClick={() => onPhotoClick && onPhotoClick(0)}
+          style={{ cursor: onPhotoClick ? 'pointer' : 'default' }}
         />
-        {photos.length > 0 && onPhotoClick && <PhotoCountBadge count={photos.length} onClick={onPhotoClick} />}
+        {photos.length > 1 && (onGridClick || onPhotoClick) && <PhotoCountBadge count={photos.length} onClick={onGridClick || onPhotoClick} />}
       </>
     );
 
@@ -198,18 +202,23 @@ export default function ListingPhotoCollage({
   // 4+ photos: show grid with first 4
   const gridContent = (
     <>
-      <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0 pointer-events-none">
+      <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0">
         {photos.slice(0, 4).map((photo, index) => (
-          <div key={index} className="w-full h-full overflow-hidden">
+          <div 
+            key={index} 
+            className="w-full h-full overflow-hidden"
+            onClick={() => onPhotoClick && onPhotoClick(index)}
+            style={{ cursor: onPhotoClick ? 'pointer' : 'default' }}
+          >
             <img 
               src={photo} 
               alt={`Listing photo ${index + 1}`} 
-              className="w-full h-full object-cover pointer-events-none"
+              className="w-full h-full object-cover"
             />
           </div>
         ))}
       </div>
-      {onPhotoClick && <PhotoCountBadge count={photos.length} onClick={onPhotoClick} />}
+      {(onGridClick || onPhotoClick) && <PhotoCountBadge count={photos.length} onClick={onGridClick || onPhotoClick} />}
     </>
   );
 

@@ -6,11 +6,13 @@ import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface ListingMessageCardProps {
   listingId: string;
   chatId: string;
   onLongPress?: (element: HTMLElement) => void;
+  onPhotoClick?: (photoUrls: string[], index: number) => void; // Click handler for photos
 }
 
 interface ListingData {
@@ -27,7 +29,7 @@ interface ParticipantStatus {
   isLoading: boolean;
 }
 
-export default function ListingMessageCard({ listingId, chatId, onLongPress }: ListingMessageCardProps) {
+export default function ListingMessageCard({ listingId, chatId, onLongPress, onPhotoClick }: ListingMessageCardProps) {
   const router = useRouter();
   const { account } = useAuth();
   const queryClient = useQueryClient();
@@ -198,45 +200,150 @@ export default function ListingMessageCard({ listingId, chatId, onLongPress }: L
   };
 
   // Long press detection
+  const isLongPressRef = useRef(false);
+  const touchStartTimeRef = useRef<number>(0);
+  const touchStartPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const hasMovedRef = useRef(false);
+
   const handleTouchStart = (e: React.TouchEvent) => {
+    isLongPressRef.current = false;
+    hasMovedRef.current = false;
+    touchStartTimeRef.current = Date.now();
+    
+    // Store touch position to detect if user moved (scrolling)
+    const touch = e.touches[0];
+    touchStartPositionRef.current = { x: touch.clientX, y: touch.clientY };
+    
     if (!onLongPress) return;
     
-    longPressTimerRef.current = setTimeout(() => {
-      if (containerRef.current && onLongPress) {
-        onLongPress(containerRef.current);
+    longPressTimerRef.current = setTimeout(async () => {
+      // Only trigger long press if user hasn't moved
+      if (!hasMovedRef.current) {
+        isLongPressRef.current = true;
+        // Trigger haptic feedback
+        try {
+          await Haptics.impact({ style: ImpactStyle.Medium });
+        } catch (error) {
+          // Haptics not available, silently fail
+        }
+        if (containerRef.current && onLongPress) {
+          onLongPress(containerRef.current);
+        }
       }
     }, 500); // 500ms for long press
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchDuration = Date.now() - touchStartTimeRef.current;
+    
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+
+    // Calculate movement distance
+    let touchEndPosition = { x: 0, y: 0 };
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      const touch = e.changedTouches[0];
+      touchEndPosition = { x: touch.clientX, y: touch.clientY };
+    }
+
+    const movementDistance = touchStartPositionRef.current
+      ? Math.sqrt(
+          Math.pow(touchEndPosition.x - touchStartPositionRef.current.x, 2) +
+          Math.pow(touchEndPosition.y - touchStartPositionRef.current.y, 2)
+        )
+      : 0;
+
+    // Only trigger click if it was a valid tap (quick, minimal movement)
+    const isValidTap = touchDuration < 500 && !isLongPressRef.current && movementDistance < 10 && !hasMovedRef.current;
+
+    if (isValidTap && onPhotoClick) {
+      const target = e.target as HTMLElement;
+      // Check if the tap was on a photo
+      const photoElement = target.closest('[data-listing-photo-index]') as HTMLElement;
+      if (photoElement && listing?.photo_urls) {
+        const index = parseInt(photoElement.getAttribute('data-listing-photo-index') || '0', 10);
+        onPhotoClick(listing.photo_urls, index);
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
+
+    // If it was a long press, prevent any click
+    if (isLongPressRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
-  const handleTouchMove = () => {
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Calculate movement distance
+    if (touchStartPositionRef.current && e.touches && e.touches.length > 0) {
+      const touch = e.touches[0];
+      const movementDistance = Math.sqrt(
+        Math.pow(touch.clientX - touchStartPositionRef.current.x, 2) +
+        Math.pow(touch.clientY - touchStartPositionRef.current.y, 2)
+      );
+
+      // If user moved more than 10px, mark as moved (scrolling)
+      if (movementDistance > 10) {
+        hasMovedRef.current = true;
+      }
+    }
+
     // Cancel long press if user moves finger
-    if (longPressTimerRef.current) {
+    if (longPressTimerRef.current && hasMovedRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+    }
+    
+    if (hasMovedRef.current) {
+      isLongPressRef.current = false;
     }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!onLongPress || e.button !== 0) return;
+    if (e.button !== 0) return; // Only handle left click
     
-    longPressTimerRef.current = setTimeout(() => {
-      if (containerRef.current && onLongPress) {
-        onLongPress(containerRef.current);
+    isLongPressRef.current = false;
+    touchStartTimeRef.current = Date.now();
+    
+    if (!onLongPress) return;
+    
+    longPressTimerRef.current = setTimeout(async () => {
+      if (!hasMovedRef.current) {
+        isLongPressRef.current = true;
+        // Trigger haptic feedback
+        try {
+          await Haptics.impact({ style: ImpactStyle.Medium });
+        } catch (error) {
+          // Haptics not available, silently fail
+        }
+        if (containerRef.current && onLongPress) {
+          onLongPress(containerRef.current);
+        }
       }
     }, 500);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
+    const clickDuration = Date.now() - touchStartTimeRef.current;
+    
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+    }
+
+    // For desktop: trigger click on quick mouse up (< 500ms, not a long press)
+    if (clickDuration < 500 && !isLongPressRef.current && onPhotoClick && listing?.photo_urls) {
+      const target = e.target as HTMLElement;
+      const photoElement = target.closest('[data-listing-photo-index]') as HTMLElement;
+      if (photoElement) {
+        const index = parseInt(photoElement.getAttribute('data-listing-photo-index') || '0', 10);
+        onPhotoClick(listing.photo_urls, index);
+      }
     }
   };
 
@@ -261,13 +368,89 @@ export default function ListingMessageCard({ listingId, chatId, onLongPress }: L
     );
   }
 
-  const thumbnailUrl = listing.photo_urls && listing.photo_urls.length > 0 
-    ? listing.photo_urls[0] 
-    : null;
-
   const dateTimeText = listing.end_date 
     ? `${formatDateTime(listing.start_date)} - ${formatDateTime(listing.end_date)}`
     : formatDateTime(listing.start_date);
+
+  // Render photo section based on number of photos
+  const renderPhotoSection = () => {
+    const photoUrls = listing.photo_urls || [];
+    
+    if (photoUrls.length === 0) {
+      return (
+        <div className="w-full h-full flex items-center justify-center text-gray-400">
+          No photo
+        </div>
+      );
+    }
+
+    // Single photo (1-3 photos)
+    if (photoUrls.length <= 3) {
+      return (
+        <img
+          data-listing-photo-index={0}
+          src={photoUrls[0]}
+          alt={listing.title}
+          className="w-full h-full object-cover"
+          draggable={false}
+          onDragStart={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
+          onSelectStart={(e) => e.preventDefault()}
+          style={{ 
+            userSelect: 'none', 
+            WebkitUserSelect: 'none', 
+            MozUserSelect: 'none', 
+            msUserSelect: 'none', 
+            WebkitTouchCallout: 'none',
+            pointerEvents: 'auto',
+            WebkitUserDrag: 'none',
+            KhtmlUserDrag: 'none',
+            MozUserDrag: 'none',
+            OUserDrag: 'none',
+            userDrag: 'none',
+            cursor: onPhotoClick ? 'pointer' : 'default'
+          } as React.CSSProperties}
+        />
+      );
+    }
+
+    // 2x2 grid (4+ photos)
+    return (
+      <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0">
+        {photoUrls.slice(0, 4).map((photoUrl, index) => (
+          <div
+            key={index}
+            data-listing-photo-index={index}
+            className="w-full h-full overflow-hidden"
+            style={{ cursor: onPhotoClick ? 'pointer' : 'default' }}
+          >
+            <img
+              src={photoUrl}
+              alt={`${listing.title} ${index + 1}`}
+              className="w-full h-full object-cover"
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+              onContextMenu={(e) => e.preventDefault()}
+              onSelectStart={(e) => e.preventDefault()}
+              style={{ 
+                userSelect: 'none', 
+                WebkitUserSelect: 'none', 
+                MozUserSelect: 'none', 
+                msUserSelect: 'none', 
+                WebkitTouchCallout: 'none',
+                pointerEvents: 'auto',
+                WebkitUserDrag: 'none',
+                KhtmlUserDrag: 'none',
+                MozUserDrag: 'none',
+                OUserDrag: 'none',
+                userDrag: 'none'
+              } as React.CSSProperties}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div 
@@ -292,34 +475,7 @@ export default function ListingMessageCard({ listingId, chatId, onLongPress }: L
     >
       {/* Photo */}
       <div className="relative w-full" style={{ aspectRatio: '16/9', backgroundColor: '#F3F4F6', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none', WebkitTouchCallout: 'none' }}>
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={listing.title}
-            className="w-full h-full object-cover"
-            draggable={false}
-            onDragStart={(e) => e.preventDefault()}
-            onContextMenu={(e) => e.preventDefault()}
-            onSelectStart={(e) => e.preventDefault()}
-            style={{ 
-              userSelect: 'none', 
-              WebkitUserSelect: 'none', 
-              MozUserSelect: 'none', 
-              msUserSelect: 'none', 
-              WebkitTouchCallout: 'none',
-              pointerEvents: 'auto',
-              WebkitUserDrag: 'none',
-              KhtmlUserDrag: 'none',
-              MozUserDrag: 'none',
-              OUserDrag: 'none',
-              userDrag: 'none'
-            } as React.CSSProperties}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            No photo
-          </div>
-        )}
+        {renderPhotoSection()}
       </div>
 
       {/* Content */}

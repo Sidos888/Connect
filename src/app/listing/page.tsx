@@ -10,6 +10,7 @@ import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
 import ListingHeader from '@/components/listings/ListingHeader';
 import ListingActionButtons from '@/components/listings/ListingActionButtons';
 import ListingInfoCards from '@/components/listings/ListingInfoCards';
+import ItineraryViewer from '@/components/listings/ItineraryViewer';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
@@ -66,6 +67,9 @@ export default function ListingPage() {
   
   // Attendees modal state
   const [showAttendeesModal, setShowAttendeesModal] = useState(false);
+  
+  // Itinerary viewer state
+  const [showItineraryViewer, setShowItineraryViewer] = useState(false);
   
   // Photo viewer state (for viewing listing photos)
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -274,6 +278,21 @@ export default function ListingPage() {
 
   // Smart back button - returns to source context
   const handleBack = () => {
+    // Check if we came from gallery view (stored in sessionStorage)
+    const galleryReturnUrl = sessionStorage.getItem('gallery_return_url');
+    if (galleryReturnUrl && view === 'detail') {
+      // Clear the flag and return to gallery
+      sessionStorage.removeItem('gallery_return_url');
+      // Extract the path from the full URL
+      try {
+        const url = new URL(galleryReturnUrl);
+        router.push(url.pathname + url.search);
+        return;
+      } catch {
+        // If URL parsing fails, fallback to normal navigation
+      }
+    }
+
     if (view === 'manage-photos') {
       // If in manage-photos, go back based on manageFrom
       if (manageFrom === 'edit-details') {
@@ -678,8 +697,12 @@ export default function ListingPage() {
               <ListingPhotoCollage 
                 photos={listing.photo_urls || []}
                 editable={false}
-                onPhotoClick={() => {
-                  // Navigate to photos view (grid page) instead of opening PhotoViewer directly
+                onPhotoClick={(index = 0) => {
+                  // Direct image click - open photo viewer at that index
+                  setSelectedPhotoIndex(index);
+                }}
+                onGridClick={() => {
+                  // Photo count badge click - navigate to grid view
                   const params = new URLSearchParams();
                   params.set('id', listingId || '');
                   params.set('view', 'photos');
@@ -692,6 +715,7 @@ export default function ListingPage() {
               <ListingHeader 
                 title={listing.title}
                 date={listing.start_date}
+                endDate={listing.end_date}
                 summary={listing.summary}
               />
 
@@ -723,6 +747,7 @@ export default function ListingPage() {
                   name: hostAccount.name,
                   profile_pic: hostAccount.profile_pic || null
                 } : null}
+                itinerary={listing.itinerary}
                 userRole={userRole}
                 isCurrentUserParticipant={isCurrentUserParticipant ?? false}
                 attendeeCount={attendeeCount ?? null}
@@ -734,6 +759,9 @@ export default function ListingPage() {
                 }}
                 onViewingClick={() => {
                   setShowAttendeesModal(true);
+                }}
+                onItineraryClick={() => {
+                  setShowItineraryViewer(true);
                 }}
               />
             </div>
@@ -881,6 +909,15 @@ export default function ListingPage() {
         />
       )}
 
+      {/* Itinerary Viewer */}
+      {listing && listing.itinerary && (
+        <ItineraryViewer
+          isOpen={showItineraryViewer}
+          itinerary={listing.itinerary}
+          onClose={() => setShowItineraryViewer(false)}
+        />
+      )}
+
       {/* PhotoViewer for listing detail view */}
       {view === 'detail' && listing && listing.photo_urls && listing.photo_urls.length > 0 && (
         <PhotoViewer
@@ -939,7 +976,7 @@ function EventGalleryViewWrapper({
   if (!gallery) {
     return (
       <div className="px-4 py-8 text-center text-gray-500">
-        Gallery not found
+        Unable to load gallery
       </div>
     );
   }

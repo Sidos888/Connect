@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserPlus, MessageCircle, Settings, MoreHorizontal, Users, Camera } from 'lucide-react';
-import { Listing } from '@/lib/listingsService';
+import { Listing, listingsService } from '@/lib/listingsService';
 import { useRouter } from 'next/navigation';
 import MoreOptionsModal from './MoreOptionsModal';
 
@@ -29,6 +29,17 @@ export default function ListingActionButtons({
 }: ListingActionButtonsProps) {
   const router = useRouter();
   const [showMoreModal, setShowMoreModal] = useState(false);
+  const [hasGallery, setHasGallery] = useState(false);
+
+  // Check if gallery exists
+  useEffect(() => {
+    const checkGallery = async () => {
+      if (!listingId) return;
+      const { gallery } = await listingsService.getEventGallery(listingId);
+      setHasGallery(!!gallery);
+    };
+    checkGallery();
+  }, [listingId]);
 
   const handleGalleryClick = () => {
     router.push(`/listing?id=${listingId}&view=gallery`);
@@ -77,8 +88,8 @@ export default function ListingActionButtons({
 
   // Participant buttons - shown for both participants and viewers
   if (userRole === 'participant' || userRole === 'viewer') {
-    // Show gallery button only if user is a participant (not viewer) and listing has gallery enabled
-    const showGallery = userRole === 'participant' && listing?.has_gallery;
+    // Show gallery button only if user is a participant (not viewer) and gallery exists
+    const showGallery = userRole === 'participant' && hasGallery;
     // Show event chat button if event chat is enabled (for both participants and viewers)
     const showEventChat = eventChatEnabled && listing?.event_chat_id;
     
@@ -177,8 +188,8 @@ export default function ListingActionButtons({
   }
 
   // Host buttons
-  // Show gallery button only if listing has gallery enabled
-  const showGallery = listing?.has_gallery;
+  // Show gallery button only if gallery exists
+  const showGallery = hasGallery;
   // Show event chat button if event chat is enabled
   const showEventChat = eventChatEnabled && listing?.event_chat_id;
   

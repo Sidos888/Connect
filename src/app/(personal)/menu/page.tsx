@@ -19,6 +19,7 @@ import ProfileModal from "@/components/profile/ProfileModal";
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
+import HappeningNowBanner from "@/components/HappeningNowBanner";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ProfilePage from "@/components/profile/ProfilePage";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
@@ -1454,7 +1455,7 @@ export default function Page() {
         onShareProfile={() => goToView('share-profile', 'menu')}
         onAddBusiness={() => router.push('/create-business')}
       />
-
+      <HappeningNowBanner />
     </ProtectedRoute>
   );
 }

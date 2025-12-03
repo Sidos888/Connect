@@ -13,7 +13,7 @@ interface MessageBubbleProps {
   currentUserId: string;
   onReactionToggle?: (emoji: string, messageId: string) => void;
   onReactionClick?: (messageId: string) => void; // NEW: Open reactions modal
-  onAttachmentClick?: (message: SimpleMessage) => void;
+  onAttachmentClick?: (message: SimpleMessage, index?: number) => void; // Updated to accept optional index
   onReply?: (message: SimpleMessage) => void;
   onDelete?: (messageId: string) => void;
   showOptions?: boolean;
@@ -22,6 +22,7 @@ interface MessageBubbleProps {
   showReplyCancelButton?: boolean; // NEW: Show X button for reply preview
   onReplyCancel?: () => void; // NEW: Callback when X button is clicked
   onReplyCardClick?: (replyToMessageId: string) => void; // NEW: Callback when reply card is clicked
+  onProfileClick?: (userId: string) => void; // NEW: Callback when profile avatar is clicked
 }
 
 const MessageBubble = React.memo(({ 
@@ -37,7 +38,8 @@ const MessageBubble = React.memo(({
   onLongPress, // NEW: Long press handler
   showReplyCancelButton = false, // NEW: Show X button for reply preview
   onReplyCancel, // NEW: Callback when X button is clicked
-  onReplyCardClick // NEW: Callback when reply card is clicked
+  onReplyCardClick, // NEW: Callback when reply card is clicked
+  onProfileClick // NEW: Callback when profile avatar is clicked
 }: MessageBubbleProps) => {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
@@ -267,11 +269,24 @@ const MessageBubble = React.memo(({
           }}
         >
           <button
-            onClick={() => {
-              // Navigate to profile page - use query parameter route for static export compatibility
-              router.push(`/profile?id=${message.sender_id}`);
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent event from bubbling to message container
+              // Call the profile click handler if provided
+              if (onProfileClick) {
+                onProfileClick(message.sender_id);
+              }
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation(); // Prevent long-press handler from triggering
+            }}
+            onTouchEnd={(e) => {
+              e.stopPropagation(); // Prevent long-press handler from triggering
             }}
             className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded-full hover:opacity-80 transition-opacity"
+            style={{
+              WebkitTapHighlightColor: 'transparent',
+              cursor: 'pointer'
+            }}
           >
             <Avatar 
               className="w-8 h-8" 
@@ -284,6 +299,7 @@ const MessageBubble = React.memo(({
 
       <div
         ref={contentRef}
+        data-message-content="true"
         className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}
         style={{ 
           maxWidth: '75%',
@@ -306,6 +322,25 @@ const MessageBubble = React.memo(({
                   onLongPress(message, menuRef.current);
                 }
               }}
+              onPhotoClick={(photoUrls, index) => {
+                // Convert photo URLs to MediaAttachment objects and call onAttachmentClick
+                if (onAttachmentClick) {
+                  const attachments = photoUrls.map((url, i) => ({
+                    id: `listing-photo-${i}`,
+                    file_url: url,
+                    file_type: 'image' as const,
+                    thumbnail_url: url
+                  }));
+                  
+                  // Create a temporary message object with these attachments
+                  const tempMessage = {
+                    ...message,
+                    attachments
+                  };
+                  
+                  onAttachmentClick(tempMessage, index);
+                }
+              }}
             />
           </div>
         )}
@@ -315,7 +350,8 @@ const MessageBubble = React.memo(({
           <div className="mb-2">
             <MessagePhotoCollage
               attachments={message.attachments}
-              onPhotoClick={() => onAttachmentClick?.(message)}
+              onPhotoClick={(index) => onAttachmentClick?.(message, index)}
+              onGridClick={() => onAttachmentClick?.(message)}
               onLongPress={(element) => {
                 // Use the entire message container (menuRef) for positioning, not just the image card
                 if (onLongPress && menuRef.current) {

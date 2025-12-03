@@ -144,6 +144,7 @@ export type SimpleChat = {
   photo?: string;
   last_message_at?: string | null;
   is_event_chat?: boolean;
+  is_archived?: boolean;
   participants: Array<{
     id: string;
     name: string;

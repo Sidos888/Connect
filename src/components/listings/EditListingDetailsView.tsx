@@ -37,7 +37,7 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
   const [locationSearchLoading, setLocationSearchLoading] = useState(false);
   const locationInputRef = useRef<HTMLInputElement>(null);
   const [isComposing, setIsComposing] = useState(false);
-  const [includeEndTime, setIncludeEndTime] = useState(!!listing.end_date);
+  const [includeEndTime, setIncludeEndTime] = useState(true); // Always true - end time is compulsory
   const [titleFocused, setTitleFocused] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [summaryFocused, setSummaryFocused] = useState(false);
@@ -138,14 +138,14 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
     }
   }, [listingTitle, summary, location, startDate, endDate, includeEndTime, photos, originalValues, onHasChanges]);
 
-  // Update end date when start date changes
+  // Update end date when start date changes (set to 2 hours later by default)
   useEffect(() => {
-    if (includeEndTime) {
+    if (!endDate || endDate <= startDate) {
       const newEndDate = new Date(startDate);
-      newEndDate.setHours(newEndDate.getHours() + 1);
+      newEndDate.setHours(newEndDate.getHours() + 2); // 2 hours later
       setEndDate(newEndDate);
     }
-  }, [startDate, includeEndTime]);
+  }, [startDate, endDate]);
 
   // Mapbox Geocoding API functions
   const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiY29ubmVjdC1sb2NhdGlvbiIsImEiOiJjbWkzdG5pcDgxNGh6MmlvZWdtbWxmMnVmIn0.9aWRKS5gofTwZCSSdRAX9g';
@@ -231,9 +231,10 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
     const newDate = new Date(e.target.value);
     setStartDate(newDate);
     
-    if (includeEndTime && endDate <= newDate) {
+    // If end time is before or equal to new start time, update it to 1 minute after start
+    if (endDate <= newDate) {
       const newEndDate = new Date(newDate);
-      newEndDate.setHours(newEndDate.getHours() + 1);
+      newEndDate.setMinutes(newEndDate.getMinutes() + 1);
       setEndDate(newEndDate);
     }
   };
@@ -251,9 +252,10 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
   const handleEndDateTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = new Date(e.target.value);
     
+    // Ensure end time is after start time (even 1 minute is fine)
     if (newDate <= startDate) {
       const adjustedEndDate = new Date(startDate);
-      adjustedEndDate.setHours(adjustedEndDate.getHours() + 1);
+      adjustedEndDate.setMinutes(adjustedEndDate.getMinutes() + 1);
       setEndDate(adjustedEndDate);
     } else {
       setEndDate(newDate);
@@ -676,7 +678,7 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
         summary: summary.trim() || null,
         location: location.trim() || null,
         start_date: startDate.toISOString(),
-        end_date: includeEndTime ? endDate.toISOString() : null,
+        end_date: endDate.toISOString(), // Always include end_date (compulsory)
         photo_urls: finalPhotoUrls,
         updated_at: new Date().toISOString()
       };
@@ -890,98 +892,76 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
           {/* Row 1: Starts */}
           <div className="flex items-center justify-between">
             <span className="text-base font-semibold text-gray-900">Starts</span>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={handleDateTimeClick}
-                className="relative cursor-pointer focus:outline-none"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.8';
+            <button
+              type="button"
+              onClick={handleDateTimeClick}
+              className="relative cursor-pointer focus:outline-none"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              <span className="text-sm font-medium text-gray-700">
+                {formatDateTime(startDate)}
+              </span>
+              <input
+                ref={dateTimeInputRef}
+                type="datetime-local"
+                value={startDate.toISOString().slice(0, 16)}
+                onChange={handleDateTimeChange}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                style={{ 
+                  position: 'absolute',
+                  left: '-50%',
+                  right: '-50%',
+                  width: '200%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer'
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <span className="text-sm font-medium text-gray-700">
-                  {formatDateTime(startDate)}
-                </span>
-                <input
-                  ref={dateTimeInputRef}
-                  type="datetime-local"
-                  value={startDate.toISOString().slice(0, 16)}
-                  onChange={handleDateTimeChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  style={{ 
-                    position: 'absolute',
-                    left: '-50%',
-                    right: '-50%',
-                    width: '200%',
-                    height: '100%',
-                    opacity: 0,
-                    cursor: 'pointer'
-                  }}
-                />
-              </button>
-              <div className="w-11" style={{ width: '44px' }}></div>
-            </div>
+              />
+            </button>
           </div>
 
-          {/* Row 2: End Time / Ends */}
+          {/* Row 2: Ends (compulsory) */}
           <div className="flex items-center justify-between">
             <span className="text-base font-semibold text-gray-900">
-              {includeEndTime ? 'Ends' : 'End Time'}
+              Ends
             </span>
-            <div className="flex items-center gap-4">
-              {includeEndTime && (
-                <button
-                  type="button"
-                  onClick={handleEndDateTimeClick}
-                  className="relative cursor-pointer focus:outline-none"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <span className="text-sm font-medium text-gray-700">
-                    {formatDateTime(endDate)}
-                  </span>
-                  <input
-                    ref={endDateTimeInputRef}
-                    type="datetime-local"
-                    value={endDate.toISOString().slice(0, 16)}
-                    min={startDate.toISOString().slice(0, 16)}
-                    onChange={handleEndDateTimeChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    style={{ 
-                      position: 'absolute',
-                      left: '-50%',
-                      right: '-50%',
-                      width: '200%',
-                      height: '100%',
-                      opacity: 0,
-                      cursor: 'pointer'
-                    }}
-                  />
-                </button>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIncludeEndTime(!includeEndTime);
+            <button
+              type="button"
+              onClick={handleEndDateTimeClick}
+              className="relative cursor-pointer focus:outline-none"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              <span className="text-sm font-medium text-gray-700">
+                {formatDateTime(endDate)}
+              </span>
+              <input
+                ref={endDateTimeInputRef}
+                type="datetime-local"
+                value={endDate.toISOString().slice(0, 16)}
+                min={startDate.toISOString().slice(0, 16)}
+                onChange={handleEndDateTimeChange}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                style={{ 
+                  position: 'absolute',
+                  left: '-50%',
+                  right: '-50%',
+                  width: '200%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer'
                 }}
-                className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
-                  includeEndTime ? 'bg-[#FF6600]' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 ${
-                    includeEndTime ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
         </div>
 

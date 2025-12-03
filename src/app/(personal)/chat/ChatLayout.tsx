@@ -16,6 +16,7 @@ import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus, Image as ImageIcon } from "lucide-react";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
+import HappeningNowBanner from "@/components/HappeningNowBanner";
 
 const ChatLayoutContent = () => {
   const { account, user } = useAuth();
@@ -70,13 +71,6 @@ const ChatLayoutContent = () => {
   }
 
   // React Query handles loading automatically - no manual useEffect needed!
-  console.log('🔬 ChatLayout: React Query state:', {
-    isLoading,
-    hasError: !!error,
-    chatCount: chats.length,
-    hasAccount: !!account,
-    hasChatService: !!chatService
-  });
 
   // Handle mobile redirect
   useEffect(() => {
@@ -91,23 +85,15 @@ const ChatLayoutContent = () => {
   // Using the new intuitive time formatting utility
   // Memoize helper functions to prevent recreation on every render
   const getLastMessage = useCallback((conversation: Conversation) => {
-    console.log('ChatLayout.getLastMessage: Called for conversation', conversation.id, {
-      hasLastMessage: !!conversation.last_message,
-      lastMessageType: typeof conversation.last_message,
-      lastMessageValue: conversation.last_message,
-      hasMessages: !!(conversation.messages && conversation.messages.length > 0)
-    });
     
     // Use last_message string if available (new format)
     if (conversation.last_message && typeof conversation.last_message === 'string') {
       const trimmed = conversation.last_message.trim();
       if (trimmed) {
-        console.log('ChatLayout.getLastMessage: Returning string last_message:', trimmed);
         return trimmed;
       }
       // Special case: if last_message is exactly "..." (failed attachment), show it
       if (conversation.last_message === "...") {
-        console.log('ChatLayout.getLastMessage: Returning "..." (failed attachment)');
         return "...";
       }
     }
@@ -116,12 +102,10 @@ const ChatLayoutContent = () => {
     if (conversation.messages && conversation.messages.length > 0) {
       const lastMessage = conversation.messages[conversation.messages.length - 1];
       if (lastMessage.text && lastMessage.text.trim()) {
-        console.log('ChatLayout.getLastMessage: Returning message text:', lastMessage.text);
         return lastMessage.text;
       }
     }
     
-    console.log('ChatLayout.getLastMessage: Returning default "No messages yet"');
     return "No messages yet";
   }, []);
 
@@ -181,27 +165,46 @@ const ChatLayoutContent = () => {
   const getTypingUserName = useCallback((chatId: string, typingUserIds: string[]) => {
     if (typingUserIds.length === 0) return null;
     
+    // Filter out current user from typing users
+    const otherTypingUserIds = typingUserIds.filter(id => id !== account?.id);
+    
+    if (otherTypingUserIds.length === 0) return null;
+    
     const chat = chatsWithParticipants.get(chatId);
+    
     if (!chat || !chat.participants) return 'Someone';
     
-    // Find the typing user from participants
-    const typingUser = chat.participants.find((p: any) => typingUserIds.includes(p.user_id || p.id));
+    // Find the typing user from participants - check all possible ID fields
+    const typingUserId = otherTypingUserIds[0];
+    const typingUser = chat.participants.find((p: any) => 
+      p.user_id === typingUserId || 
+      p.id === typingUserId ||
+      p.accounts?.id === typingUserId
+    );
     
-    // Return user name or fallback
-    if (typingUser?.user_name) return typingUser.user_name;
-    if (typingUser?.name) return typingUser.name;
-    
-    // For direct chats, use chat title (other person's name)
-    if (chat.type === 'direct') {
-      return chat.title || 'Someone';
+    // Get full name and extract first name only
+    let fullName = '';
+    if (typingUser?.user_name) {
+      fullName = typingUser.user_name;
+    } else if (typingUser?.name) {
+      fullName = typingUser.name;
+    } else if (typingUser?.accounts?.name) {
+      fullName = typingUser.accounts.name;
+    } else if (chat.type === 'direct') {
+      // For direct chats, use the chat title (which is the other person's name)
+      fullName = chat.title || 'Someone';
+    } else {
+      fullName = 'Someone';
     }
     
-    return 'Someone';
-  }, [chatsWithParticipants]);
+    // Extract first name only
+    return fullName.split(' ')[0];
+  }, [chatsWithParticipants, account?.id]);
 
   const getDisplayMessage = useCallback((conversation: Conversation) => {
     // Check if someone is typing
     const typingUserIds = typingUsersByChat.get(conversation.id) || [];
+    
     if (typingUserIds.length > 0) {
       const typingUserName = getTypingUserName(conversation.id, typingUserIds);
       return `${typingUserName} is typing...`;
@@ -256,24 +259,24 @@ const ChatLayoutContent = () => {
         // Get attachment count - check both the field and query if needed
         const attachmentCount = chat.last_message.attachment_count ?? 0;
         const isFromCurrentUser = chat.last_message.sender_id === account.id;
-        const senderName = chat.last_message.sender_name || 'Unknown';
+        const fullName = chat.last_message.sender_name || 'Unknown';
+        // Extract first name only
+        const senderName = fullName.split(' ')[0];
         const messageText = chat.last_message.message_text || '';
         const hasText = messageText.trim().length > 0;
+        const messageType = chat.last_message.message_type;
         
-        console.log('ChatLayout: Formatting last message for chat', chat.id, {
-          attachmentCount,
-          attachmentCountType: typeof attachmentCount,
-          isFromCurrentUser,
-          senderName,
-          hasText,
-          messageText: messageText.substring(0, 20) || 'empty',
-          messageType: chat.last_message.message_type,
-          lastMessageObject: chat.last_message
-        });
-        
-        // Priority 1: If message has attachments, show attachment count with icon
-        // Check both attachment_count and message_type as fallback
-        if (attachmentCount > 0 || (!hasText && chat.last_message.message_type === 'image')) {
+        // Priority 1: Listing message
+        if (messageType === 'listing') {
+          if (isFromCurrentUser) {
+            // You sent it: "Sent a listing"
+            lastMessageText = 'Sent a listing';
+          } else {
+            // Someone else sent it: "Name: Sent a listing"
+            lastMessageText = `${senderName}: Sent a listing`;
+          }
+        } else if (attachmentCount > 0 || (!hasText && messageType === 'image')) {
+          // Priority 2: If message has attachments, show attachment count with icon
           const count = attachmentCount > 0 ? attachmentCount : 1; // Default to 1 if message_type is image but no count
           if (isFromCurrentUser) {
             // You sent it: "3 📷 Attachments"
@@ -282,9 +285,8 @@ const ChatLayoutContent = () => {
             // Someone else sent it: "John 3 📷 Attachments"
             lastMessageText = `${senderName} ${count} 📷 Attachment${count > 1 ? 's' : ''}`;
           }
-          console.log('ChatLayout: ✅ Set attachment message:', lastMessageText);
         } else if (hasText) {
-          // Priority 2: Regular text message
+          // Priority 3: Regular text message
           if (isFromCurrentUser) {
             // You sent it: just show the message
             lastMessageText = messageText;
@@ -292,29 +294,22 @@ const ChatLayoutContent = () => {
             // Someone else sent it: "John: Hello whats up?"
             lastMessageText = `${senderName}: ${messageText}`;
           }
-          console.log('ChatLayout: ✅ Set text message:', lastMessageText);
-        } else if (chat.last_message.message_type === 'image') {
-          // Priority 3: Legacy image message (no attachment_count)
+        } else if (messageType === 'image') {
+          // Priority 4: Legacy image message (no attachment_count)
           if (isFromCurrentUser) {
           lastMessageText = '📷 Image';
           } else {
             lastMessageText = `${senderName} 📷 Image`;
           }
-          console.log('ChatLayout: ✅ Set legacy image message:', lastMessageText);
-        } else {
-          console.log('ChatLayout: ⚠️ No condition matched, keeping default "No messages yet"');
         }
-      } else {
-        console.log('ChatLayout: ⚠️ No last_message for chat', chat.id);
       }
-      
-      console.log('ChatLayout: Final lastMessageText for chat', chat.id, ':', lastMessageText);
       
       return {
         id: chat.id,
         title,
         avatarUrl,
         isGroup: chat.type === 'group',
+        isArchived: chat.is_archived || false,
         unreadCount: chat.unread_count || 0,
         last_message: lastMessageText,
         last_message_at: chat.last_message_at,
@@ -331,23 +326,27 @@ const ChatLayoutContent = () => {
 
     switch (activeCategory) {
       case "unread":
-        return filtered.filter((conv: any) => conv.unreadCount > 0);
+        return filtered.filter((conv: any) => conv.unreadCount > 0 && !conv.isArchived);
       case "dm":
-        return filtered.filter((conv: any) => !conv.isGroup);
+        return filtered.filter((conv: any) => !conv.isGroup && !conv.isArchived);
       case "group":
-        return filtered.filter((conv: any) => conv.isGroup);
+        return filtered.filter((conv: any) => conv.isGroup && !conv.isArchived);
+      case "archived":
+        return filtered.filter((conv: any) => conv.isArchived);
       default:
-        return filtered;
+        // "all" shows only non-archived chats
+        return filtered.filter((conv: any) => !conv.isArchived);
     }
   }, [conversations, searchQuery, activeCategory]);
 
   // Memoize category counts
-  const { unreadCount, dmCount, groupCount } = useMemo(() => {
-    const unreadCount = conversations.filter((conv: any) => conv.unreadCount > 0).length;
-    const dmCount = conversations.filter((conv: any) => !conv.isGroup).length;
-    const groupCount = conversations.filter((conv: any) => conv.isGroup).length;
+  const { unreadCount, dmCount, groupCount, archivedCount } = useMemo(() => {
+    const unreadCount = conversations.filter((conv: any) => conv.unreadCount > 0 && !conv.isArchived).length;
+    const dmCount = conversations.filter((conv: any) => !conv.isGroup && !conv.isArchived).length;
+    const groupCount = conversations.filter((conv: any) => conv.isGroup && !conv.isArchived).length;
+    const archivedCount = conversations.filter((conv: any) => conv.isArchived).length;
     
-    return { unreadCount, dmCount, groupCount };
+    return { unreadCount, dmCount, groupCount, archivedCount };
   }, [conversations]);
 
   // Fetch selected conversation from simple chat service
@@ -362,12 +361,7 @@ const ChatLayoutContent = () => {
   useEffect(() => {
     const fetchSelectedConversation = async () => {
       if (selectedChatId && chatService) {
-        console.log('🔬 ChatLayout: Fetching selected conversation for chatId:', selectedChatId);
-        console.log('🔬 ChatLayout: chatService available:', !!chatService);
-        console.log('🔬 ChatLayout: account available:', !!account);
         const result = await chatService.getChatById(selectedChatId);
-        console.log('🔬 ChatLayout: getChatById result:', { result, hasChat: !!result?.chat, hasError: !!result?.error });
-        console.log('🔬 ChatLayout: Full result object:', result);
         if (!result) return;
         
         const { chat, error } = result;
@@ -377,13 +371,6 @@ const ChatLayoutContent = () => {
           return;
         }
         if (chat && account?.id) {
-          console.log('🔬 ChatLayout: Chat data received:', chat);
-          console.log('🔬 ChatLayout: Chat participants:', chat.participants);
-          console.log('🔬 ChatLayout: Chat name:', chat.name);
-          console.log('🔬 ChatLayout: Chat photo:', chat.photo);
-          console.log('🔬 ChatLayout: Chat type:', chat.type);
-          console.log('🔬 ChatLayout: Account ID:', account.id);
-          
           // Store minimal data to prevent unnecessary re-renders
           const conversationData = {
             id: chat.id,
@@ -392,20 +379,14 @@ const ChatLayoutContent = () => {
             isGroup: chat.type === 'group',
           };
           
-          console.log('🔬 ChatLayout: Conversation data created:', conversationData);
-          
           // Only update if data actually changed
           setSelectedConversationData(prev => {
-            console.log('🔬 ChatLayout: Previous conversation data:', prev);
             if (!prev || prev.id !== conversationData.id) {
-              console.log('🔬 ChatLayout: Updating conversation data');
               return conversationData;
             }
-            console.log('🔬 ChatLayout: No update needed');
             return prev;
           });
         } else {
-          console.log('🔬 ChatLayout: No chat or account, setting conversation data to null');
           setSelectedConversationData(null);
         }
       } else {
@@ -418,9 +399,7 @@ const ChatLayoutContent = () => {
   
   // Create a STABLE conversation object reference using useMemo
   const stableSelectedConversation = useMemo(() => {
-    console.log('🔬 ChatLayout: Creating stable conversation from data:', selectedConversationData);
     if (!selectedConversationData) {
-      console.log('🔬 ChatLayout: No conversation data, returning null');
       return null;
     }
     
@@ -433,7 +412,6 @@ const ChatLayoutContent = () => {
       messages: []
     };
     
-    console.log('🔬 ChatLayout: Stable conversation created:', stable);
     return stable;
   }, [selectedConversationData?.id, selectedConversationData?.title, selectedConversationData?.avatarUrl, selectedConversationData?.isGroup]);
   
@@ -475,8 +453,6 @@ const ChatLayoutContent = () => {
   };
 
   const handleSelectChat = (chatId: string, e?: React.MouseEvent | React.TouchEvent) => {
-    console.log('🔬 ChatLayout: handleSelectChat called with chatId:', chatId);
-    
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -484,15 +460,12 @@ const ChatLayoutContent = () => {
     
     // Check if we're on mobile (screen width < 640px which is sm breakpoint)
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    console.log('🔬 ChatLayout: isMobile:', isMobile);
     
     if (isMobile) {
       // On mobile, navigate to the individual chat page
-      console.log('🔬 ChatLayout: Navigating to mobile chat page:', `/chat/individual?chat=${chatId}`);
       router.push(`/chat/individual?chat=${chatId}`);
     } else {
       // On desktop, stay on the main chat page with selected chat
-      console.log('🔬 ChatLayout: Navigating to desktop chat:', `/chat?chat=${chatId}`);
       router.push(`/chat?chat=${chatId}`);
     }
   };
@@ -502,6 +475,7 @@ const ChatLayoutContent = () => {
     ...(unreadCount > 0 ? [{ id: "unread", label: "Unread", count: unreadCount }] : []),
     { id: "dm", label: "DM", count: dmCount },
     { id: "group", label: "Groups", count: groupCount },
+    { id: "archived", label: "Archived", count: archivedCount },
   ];
 
   
@@ -736,6 +710,7 @@ const ChatLayout = () => {
       </div>
     }>
       <ChatLayoutContent />
+      <HappeningNowBanner />
     </Suspense>
   );
 };

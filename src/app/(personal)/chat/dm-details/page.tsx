@@ -317,49 +317,6 @@ function DmDetailsContent() {
               <ChevronRight size={20} className="text-gray-400" />
             </div>
           </button>
-
-          {/* Events Section */}
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Events</h2>
-            
-            {/* Event Card */}
-            <div
-              className="bg-white rounded-2xl p-4 flex items-center gap-3"
-              style={{
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                borderStyle: 'solid',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              }}
-            >
-              {/* Event Placeholder Image */}
-              <div
-                className="flex-shrink-0 w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                }}
-              >
-                <div className="text-gray-400 text-xs">Event</div>
-              </div>
-
-              {/* Event Details */}
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-gray-900 mb-1 truncate">
-                  Event Name
-                </div>
-                <div className="text-sm text-gray-500 truncate">
-                  Date and Time
-                </div>
-              </div>
-
-              {/* Navigation Arrow */}
-              <div className="flex-shrink-0">
-                <ChevronRight size={20} className="text-gray-400" />
-              </div>
-            </div>
-          </div>
         </div>
         </PageContent>
       </MobilePage>

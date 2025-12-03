@@ -12,6 +12,7 @@ export interface Listing {
   is_public: boolean;
   photo_urls: string[] | null;
   has_gallery?: boolean;
+  itinerary?: any[] | null;
   event_chat_id?: string | null;
   created_at: string;
   updated_at: string;
@@ -111,6 +112,14 @@ export class ListingsService {
           if (!listing.start_date) return true;
           const listingDate = new Date(listing.start_date);
           return listingDate > now;
+        })
+        .sort((a: any, b: any) => {
+          // Sort by start_date ascending (soonest/most recent first)
+          if (!a.start_date) return 1;
+          if (!b.start_date) return -1;
+          const dateA = new Date(a.start_date).getTime();
+          const dateB = new Date(b.start_date).getTime();
+          return dateA - dateB;
         });
 
       return { listings, error: null };
@@ -174,6 +183,14 @@ export class ListingsService {
           if (!listing.start_date) return true;
           const listingDate = new Date(listing.start_date);
           return listingDate > now;
+        })
+        .sort((a: any, b: any) => {
+          // Sort by start_date ascending (soonest first)
+          if (!a.start_date) return 1;
+          if (!b.start_date) return -1;
+          const dateA = new Date(a.start_date).getTime();
+          const dateB = new Date(b.start_date).getTime();
+          return dateA - dateB;
         });
 
       return { listings, error: null };
@@ -184,10 +201,9 @@ export class ListingsService {
   }
 
   /**
-   * Get past/completed listings for a user (where start_date < now)
-   * Includes all listings the user has hosted or attended that have completed
+   * Get current/happening now listings for a user (events currently in progress)
    */
-  async getHistoryListings(userId: string): Promise<{ listings: Listing[]; error: Error | null }> {
+  async getCurrentListings(userId: string): Promise<{ listings: Listing[]; error: Error | null }> {
     if (!this.supabase) {
       return { listings: [], error: new Error('Supabase client not available') };
     }
@@ -218,6 +234,69 @@ export class ListingsService {
         .order('created_at', { foreignTable: 'listings', ascending: false });
 
       if (error) {
+        console.error('Error fetching current listings:', error);
+        return { listings: [], error };
+      }
+
+      const now = new Date();
+      const listings: Listing[] = (data || [])
+        .map((item: any) => ({
+          ...item.listings,
+          role: item.role,
+          status: item.status,
+        }))
+        .filter((listing: any) => {
+          // Filter out null listings
+          if (!listing.id) return false;
+          // Only show listings that are currently happening (start_date <= now <= end_date)
+          if (!listing.start_date || !listing.end_date) return false;
+          const startDate = new Date(listing.start_date);
+          const endDate = new Date(listing.end_date);
+          return startDate <= now && now <= endDate;
+        });
+
+      return { listings, error: null };
+    } catch (error) {
+      console.error('Error in getCurrentListings:', error);
+      return { listings: [], error: error as Error };
+    }
+  }
+
+  /**
+   * Get past/completed listings for a user (where end_date < now)
+   * Includes all listings the user has hosted or attended that have ended
+   */
+  async getHistoryListings(userId: string): Promise<{ listings: Listing[]; error: Error | null }> {
+    if (!this.supabase) {
+      return { listings: [], error: new Error('Supabase client not available') };
+    }
+
+    try {
+      const { data, error } = await this.supabase
+        .from('listing_participants')
+        .select(`
+          listing_id,
+          role,
+          status,
+          listings (
+            id,
+            host_id,
+            title,
+            summary,
+            location,
+            start_date,
+            end_date,
+            capacity,
+            is_public,
+            photo_urls,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', userId)
+        .order('end_date', { foreignTable: 'listings', ascending: false }); // Order by end_date to show most recently ended first
+
+      if (error) {
         console.error('Error fetching history listings:', error);
         return { listings: [], error };
       }
@@ -232,10 +311,16 @@ export class ListingsService {
         .filter((listing: any) => {
           // Filter out null listings
           if (!listing.id) return false;
-          // Only show listings that have completed (start_date < now)
-          if (!listing.start_date) return false;
-          const listingDate = new Date(listing.start_date);
-          return listingDate < now;
+          // Only show listings that have ended (end_date < now)
+          if (!listing.end_date) return false;
+          const endDate = new Date(listing.end_date);
+          return endDate < now;
+        })
+        .sort((a: any, b: any) => {
+          // Sort by end_date descending (most recently ended first)
+          const dateA = new Date(a.end_date).getTime();
+          const dateB = new Date(b.end_date).getTime();
+          return dateB - dateA;
         });
 
       return { listings, error: null };

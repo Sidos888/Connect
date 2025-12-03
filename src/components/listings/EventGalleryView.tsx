@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
-import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
+import { Plus, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { PageContent } from "@/components/layout/PageSystem";
 import PhotoViewer from "@/components/listings/PhotoViewer";
 import { listingsService, EventGalleryItem } from '@/lib/listingsService';
 import { getSupabaseClient } from '@/lib/supabaseClient';
@@ -28,12 +28,28 @@ export default function EventGalleryView({
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [listing, setListing] = useState<any>(null);
 
-  // Load gallery photos
+  // Load listing data and gallery photos
   useEffect(() => {
-    const loadGalleryPhotos = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
+        // Load listing
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data: listingData } = await supabase
+            .from('listings')
+            .select('id, title, photo_urls')
+            .eq('id', listingId)
+            .single();
+          
+          if (listingData) {
+            setListing(listingData);
+          }
+        }
+
+        // Load gallery photos
         const { items, error } = await listingsService.getEventGalleryItems(galleryId);
         if (error) {
           console.error('Error loading gallery photos:', error);
@@ -41,16 +57,16 @@ export default function EventGalleryView({
           setPhotos(items.map(item => item.photo_url));
         }
       } catch (error) {
-        console.error('Error loading gallery photos:', error);
+        console.error('Error loading gallery data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (galleryId) {
-      loadGalleryPhotos();
+    if (galleryId && listingId) {
+      loadData();
     }
-  }, [galleryId]);
+  }, [galleryId, listingId]);
 
   const handlePhotoClick = (index: number) => {
     setSelectedPhotoIndex(index);
@@ -58,6 +74,13 @@ export default function EventGalleryView({
 
   const handleClosePhotoViewer = () => {
     setSelectedPhotoIndex(null);
+  };
+
+  const handleListingCardClick = () => {
+    // Store current URL in sessionStorage so listing page can return here
+    sessionStorage.setItem('gallery_return_url', window.location.href);
+    // Navigate to listing detail view
+    router.push(`/listing?id=${listingId}`);
   };
 
   const handleAddPhotoClick = () => {
@@ -78,130 +101,46 @@ export default function EventGalleryView({
       }
 
       try {
-        // Compress and upload files in parallel for speed
-        const uploadPromises = Array.from(files).map(async (file, i) => {
-          // Validate file size (10MB limit)
-          const maxSize = 10 * 1024 * 1024; // 10MB
-          if (file.size > maxSize) {
-            throw new Error(`Photo ${i + 1} is too large (${Math.round(file.size / 1024)}KB). Maximum size is 10MB.`);
-          }
+        const newPhotoUrls: string[] = [];
 
-          // Compress image if it's large (>1MB or likely to be large)
-          // This significantly reduces upload time
-          let fileToUpload: File = file;
-          if (file.size > 1024 * 1024 || file.type.startsWith('image/')) {
-            try {
-              fileToUpload = await compressImageFile(file, 1920, 1920, 0.85);
-              console.log(`Compressed photo ${i + 1}: ${Math.round(file.size / 1024)}KB → ${Math.round(fileToUpload.size / 1024)}KB`);
-            } catch (compressError) {
-              console.warn(`Failed to compress photo ${i + 1}, uploading original:`, compressError);
-              // Continue with original file if compression fails
-            }
-          }
+        for (const file of Array.from(files)) {
+          const fileExt = 'jpg';
+          const fileName = `galleries/${listingId}/${account.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-          // Generate unique filename
-          const timestamp = Date.now();
-          const randomStr = Math.random().toString(36).substring(2, 11);
-          const fileExt = 'jpg'; // Always use jpg after compression
-          const fileName = `${galleryId}/${timestamp}_${i}_${randomStr}.${fileExt}`;
-          
-          console.log(`Uploading gallery photo ${i + 1}/${files.length}: ${fileName} (${Math.round(fileToUpload.size / 1024)}KB)`);
-          
-          // Upload with minimal retry (faster)
-          let uploadData;
-          let uploadError;
-          const maxRetries = 2; // Reduced from 3
-          let retryCount = 0;
-          
-          while (retryCount < maxRetries) {
-            try {
-              const uploadPromise = supabase.storage
-                .from('event-galleries')
-                .upload(fileName, fileToUpload, {
-                  cacheControl: '3600',
-                  upsert: false,
-                  contentType: 'image/jpeg'
-                });
-              
-              // Shorter timeout (20 seconds)
-              const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Upload timeout')), 20000)
-              );
-              
-              const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
-              uploadData = result.data;
-              uploadError = result.error;
-              
-              if (!uploadError) {
-                break; // Success
-              }
-              
-              // Quick retry for network errors only
-              if (retryCount < maxRetries - 1 && (
-                uploadError.message?.includes('network') || 
-                uploadError.message?.includes('timeout') ||
-                uploadError.message?.includes('Load failed') ||
-                uploadError.name === 'StorageUnknownError'
-              )) {
-                retryCount++;
-                // Shorter delay (500ms instead of exponential)
-                await new Promise(resolve => setTimeout(resolve, 500));
-                continue;
-              }
-              
-              break;
-            } catch (timeoutError) {
-              if (retryCount < maxRetries - 1) {
-                retryCount++;
-                await new Promise(resolve => setTimeout(resolve, 500));
-                continue;
-              }
-              uploadError = timeoutError as any;
-              break;
-            }
-          }
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('listing-photos')
+            .upload(fileName, file);
 
           if (uploadError) {
-            throw new Error(`Failed to upload photo ${i + 1}: ${uploadError.message || 'Unknown error'}`);
+            console.error('Error uploading photo:', uploadError);
+            continue;
           }
 
-          if (!uploadData || !uploadData.path) {
-            throw new Error(`Upload succeeded but no path returned for photo ${i + 1}`);
-          }
-
-          // Get public URL
           const { data: { publicUrl } } = supabase.storage
-            .from('event-galleries')
-            .getPublicUrl(uploadData.path);
+            .from('listing-photos')
+            .getPublicUrl(fileName);
 
-          if (!publicUrl) {
-            throw new Error(`Failed to get public URL for photo ${i + 1}`);
-          }
-
-          // Add to gallery items
-          const { item, error: itemError } = await listingsService.addGalleryPhoto(
-            galleryId,
-            account.id,
-            publicUrl
-          );
+          // Add to event_gallery_items
+          const { error: itemError } = await supabase
+            .from('event_gallery_items')
+            .insert({
+              gallery_id: galleryId,
+              user_id: account.id,
+              photo_url: publicUrl
+            });
 
           if (itemError) {
-            throw new Error(`Failed to add photo ${i + 1} to gallery: ${itemError.message}`);
+            console.error('Error adding photo to gallery:', itemError);
+          } else {
+            newPhotoUrls.push(publicUrl);
           }
+        }
 
-          return publicUrl;
-        });
-
-        // Upload all files in parallel
-        const uploadedUrls = await Promise.all(uploadPromises);
-        
-        // Add all to local state at once
-        setPhotos(prev => [...prev, ...uploadedUrls]);
-        
-        console.log(`✅ All ${uploadedUrls.length} gallery photos uploaded successfully`);
+        // Update local state
+        setPhotos(prev => [...prev, ...newPhotoUrls]);
       } catch (error) {
         console.error('Error uploading photos:', error);
-        alert(`Failed to upload photos: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        alert('Failed to upload photos. Please try again.');
       } finally {
         setUploading(false);
       }
@@ -209,159 +148,171 @@ export default function EventGalleryView({
     input.click();
   };
 
-  // Compress image file (returns File, not base64 - faster and more efficient)
-  const compressImageFile = (file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.85): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-
-          // Calculate new dimensions maintaining aspect ratio
-          if (width > height) {
-            if (width > maxWidth) {
-              height = (height * maxWidth) / width;
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = (width * maxHeight) / height;
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                reject(new Error('Failed to compress image'));
-                return;
-              }
-              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            },
-            'image/jpeg',
-            quality
-          );
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="lg:hidden" style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
-        <MobilePage>
-          <PageHeader
-            title="Gallery"
-            backButton
-            onBack={onBack}
-          />
-          <PageContent>
-            <div className="px-4 py-8 text-center text-gray-500">
-              Loading gallery...
-            </div>
-          </PageContent>
-        </MobilePage>
-      </div>
-    );
-  }
+  const mainPhoto = listing?.photo_urls && listing.photo_urls.length > 0 
+    ? listing.photo_urls[0] 
+    : null;
 
   return (
-    <div className="lg:hidden" style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
-      <MobilePage>
-        <PageHeader
-          title={title}
-          subtitle={`${photos.length} ${photos.length === 1 ? 'Item' : 'Items'}`}
-          backButton
-          onBack={onBack}
-          customActions={
+    <div className="lg:hidden">
+      {/* Custom Header with Listing Card */}
+      <div className="fixed top-0 left-0 right-0 z-[60] bg-white"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top), 70px)',
+          paddingBottom: '16px',
+          paddingLeft: '16px',
+          paddingRight: '16px',
+        }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          {/* Back Button - chevron only */}
+          <button
+            onClick={onBack}
+            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '100px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 18L9 12L15 6" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {/* Listing Card with Photo and Title */}
+          {!loading && listing && (
             <button
-              onClick={handleAddPhotoClick}
-              disabled={uploading}
-              className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleListingCardClick}
+              className="flex-1 bg-white rounded-xl p-3 flex items-center gap-3 text-left cursor-pointer transition-all duration-200 hover:-translate-y-[1px] min-w-0"
               style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '100px',
-                background: 'rgba(255, 255, 255, 0.9)',
                 borderWidth: '0.4px',
                 borderColor: '#E5E7EB',
                 borderStyle: 'solid',
                 boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                willChange: 'transform, box-shadow'
+                willChange: 'transform, box-shadow',
+                maxWidth: '100%',
+                overflow: 'hidden'
               }}
               onMouseEnter={(e) => {
-                if (!uploading) {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
             >
-              <Plus size={18} className="text-gray-900" />
-            </button>
-          }
-        />
+              {/* Listing Photo */}
+              {mainPhoto && (
+                <div 
+                  className="flex-shrink-0 rounded-lg overflow-hidden"
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                  }}
+                >
+                  <img
+                    src={mainPhoto}
+                    alt={listing.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
 
-        <PageContent>
-          <div 
-            className="px-4 pb-8" 
-            style={{ 
-              paddingTop: 'var(--saved-content-padding-top, 180px)',
+              {/* Listing Title (no date/time) */}
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="text-base font-semibold text-gray-900 truncate" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {listing.title}
+                </div>
+              </div>
+            </button>
+          )}
+
+          {/* Add Photo Button */}
+          <button
+            onClick={handleAddPhotoClick}
+            disabled={uploading}
+            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '100px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow'
+            }}
+            onMouseEnter={(e) => {
+              if (!uploading) {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
             }}
           >
-            {photos.length === 0 ? (
-              <div className="grid grid-cols-4 gap-4 relative overflow-visible">
-                {/* Empty state - just show empty grid, users can use + button to add photos */}
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 gap-4 relative overflow-visible">
-                {photos.map((photo, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handlePhotoClick(index)}
-                    className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    }}
-                  >
-                    <img
-                      src={photo}
-                      alt={`Gallery photo ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </PageContent>
-      </MobilePage>
+            <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* Photo Count - Below header like Page 2/2 */}
+        <div className="flex justify-center mt-4 items-center gap-1.5">
+          <ImageIcon size={16} className="text-gray-500" />
+          <span className="text-sm font-medium text-gray-500">{photos.length} {photos.length === 1 ? 'Item' : 'Items'}</span>
+        </div>
+      </div>
+
+      <PageContent>
+        <div 
+          className="px-4 pb-8" 
+          style={{ 
+            paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 16px + 76px + 16px + 28px + 24px)', // Header height + padding + card height + spacing + count height + extra spacing
+          }}
+        >
+          {photos.length === 0 ? (
+            <div className="grid grid-cols-4 gap-4 relative overflow-visible">
+              {/* Empty state - just show empty grid, users can use + button to add photos */}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-4 relative overflow-visible">
+              {photos.map((photo, index) => (
+                <button
+                  key={index}
+                  onClick={() => handlePhotoClick(index)}
+                  className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }}
+                >
+                  <img
+                    src={photo}
+                    alt={`Gallery photo ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </PageContent>
 
       {selectedPhotoIndex !== null && (
         <PhotoViewer
@@ -374,4 +325,3 @@ export default function EventGalleryView({
     </div>
   );
 }
-

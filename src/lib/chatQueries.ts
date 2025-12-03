@@ -34,21 +34,15 @@ export function useChats(chatService: ChatService | null, userId: string | null)
     queryFn: async () => {
       if (!chatService) throw new Error('Chat service not available');
       if (!userId) throw new Error('User ID not available');
-      console.log('📡 useChats: Fetching chats from database...');
       const result = await chatService.getUserChats(userId);
       if (result.error) throw result.error;
-      console.log('📡 useChats: Received chats:', result.chats.length, 'chats');
-      // Log timestamps for debugging
-      result.chats.forEach(chat => {
-        console.log(`  - Chat ${chat.id}: last_message_at = ${chat.last_message_at}`);
-      });
       return result.chats;
     },
     enabled: !!chatService && !!userId,
-    staleTime: 0, // Always consider data stale - refetch on every invalidation
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes in cache
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loops
+    refetchOnMount: false, // Don't refetch on mount to prevent loops
   });
 }
 
@@ -93,11 +87,6 @@ export function useSendMessage(chatService: ChatService | null) {
       
       // Invalidate and refetch messages for this chat
       queryClient.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
-      
-      console.log('✅ Message sent, cache updated');
-    },
-    onError: (error) => {
-      console.error('❌ Failed to send message:', error);
     },
   });
 }
@@ -119,10 +108,6 @@ export function useCreateGroupChat(chatService: ChatService | null) {
     onSuccess: () => {
       // Refresh chat list to show the new group
       queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
-      console.log('✅ Group chat created, cache updated');
-    },
-    onError: (error) => {
-      console.error('❌ Failed to create group chat:', error);
     },
   });
 }
@@ -135,22 +120,13 @@ export function useRefreshChats() {
   const queryClient = useQueryClient();
 
   return async () => {
-    console.log('🔄 Starting chat list refresh...');
     // Invalidate queries first (marks them as stale)
     queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
     
     // Force immediate refetch (bypasses cache)
-    const result = await queryClient.refetchQueries({ 
+    await queryClient.refetchQueries({ 
       queryKey: chatKeys.lists(),
       type: 'active' // Only refetch active queries
-    });
-    
-    console.log('✅ Chat list refresh complete:', {
-      refetched: result.length,
-      queries: result.map(r => ({ 
-        state: r.state.status,
-        dataUpdatedAt: r.dataUpdatedAt 
-      }))
     });
   };
 }

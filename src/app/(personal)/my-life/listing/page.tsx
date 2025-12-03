@@ -217,6 +217,7 @@ export default function ListingPage() {
               <ListingHeader 
                 title={listing.title}
                 date={listing.start_date}
+                endDate={listing.end_date}
                 summary={listing.summary}
               />
 

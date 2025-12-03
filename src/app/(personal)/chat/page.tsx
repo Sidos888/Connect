@@ -11,6 +11,8 @@ import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
 import { useChats } from "@/lib/chatQueries";
 import { useModal } from "@/lib/modalContext";
+import HappeningNowBanner from "@/components/HappeningNowBanner";
+import { useHappeningNow } from "@/hooks/useHappeningNow";
 import { useQuery } from "@tanstack/react-query";
 import { connectionsService } from "@/lib/connectionsService";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -29,6 +31,7 @@ function MessagesPageContent() {
   const { isHydrated } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
+  const hasActiveEvents = useHappeningNow();
   const { account, user } = useAuth();
   const chatService = useChatService();
   const { showAddFriend } = useModal();
@@ -42,13 +45,12 @@ function MessagesPageContent() {
   // Typing indicator state - must be declared before useMemo that uses it
   const [typingUsersByChat, setTypingUsersByChat] = useState<Map<string, string[]>>(new Map());
   const typingUnsubscribesRef = useRef<Map<string, () => void>>(new Map());
-
+  
   // Load user's connections (friends) to filter direct chats
   const { data: connections = [], isLoading: isLoadingConnections } = useQuery({
     queryKey: ['connections', account?.id],
     queryFn: async () => {
       if (!account?.id) return [];
-      console.log('Inbox: Loading connections for filtering...');
       const { connections, error } = await connectionsService.getConnections(account.id);
       if (error) {
         console.error('Error loading connections for inbox filtering:', error);
@@ -73,7 +75,6 @@ function MessagesPageContent() {
         ids.add(conn.user1_id);
       }
     });
-    console.log('Inbox: friendIds Set created with', ids.size, 'friends:', Array.from(ids));
     return ids;
   }, [connections, account?.id]);
   
@@ -111,7 +112,9 @@ function MessagesPageContent() {
       if (chat.last_message) {
         const attachmentCount = chat.last_message.attachment_count ?? 0;
         const isFromCurrentUser = chat.last_message.sender_id === account.id;
-        const senderName = chat.last_message.sender_name || 'Unknown';
+        const fullName = chat.last_message.sender_name || 'Unknown';
+        // Extract first name only
+        const senderName = fullName.split(' ')[0];
         const messageText = chat.last_message.message_text || '';
         const hasText = messageText.trim().length > 0;
         const messageType = chat.last_message.message_type;
@@ -188,7 +191,9 @@ function MessagesPageContent() {
         });
         
         if (typingUser) {
-          const typingUserName = typingUser.user_name || typingUser.name || (chat.type === 'direct' ? chat.title : 'Someone');
+          const fullName = typingUser.user_name || typingUser.name || (chat.type === 'direct' ? chat.title : 'Someone');
+          // Extract first name only
+          const typingUserName = fullName.split(' ')[0];
           displayMessage = `${typingUserName} is typing...`;
           console.log('[Typing Debug] ✅ Set display message to:', displayMessage);
         } else {
@@ -456,12 +461,6 @@ function MessagesPageContent() {
     }
   }, []);
 
-  // Add another effect to log when chats change
-  useEffect(() => {
-    console.log('MessagesPage: chats changed:', chats);
-  }, [chats]);
-
-
   // Modal handlers
   const handleNewMessageComplete = (chatId: string) => {
     setShowNewMessageModal(false);
@@ -561,17 +560,19 @@ function MessagesPageContent() {
         const mediaType = attachment.file_type === 'video' ? 'video' : 'photo';
         const mediaIcon = attachment.file_type === 'video' ? '🎥' : '📷';
         
-        // For group chats, include sender name
+        // For group chats, include sender name (first name only)
         if (conversation.isGroup && lastMessage.senderName) {
-          return `${lastMessage.senderName}: ${mediaIcon} ${mediaType}`;
+          const firstName = lastMessage.senderName.split(' ')[0];
+          return `${firstName}: ${mediaIcon} ${mediaType}`;
         }
         
         return `${mediaIcon} ${mediaType}`;
       }
       
-      // For text messages in group chats, include sender name
+      // For text messages in group chats, include sender name (first name only)
       if (conversation.isGroup && lastMessage.senderName && lastMessage.text) {
-        return `${lastMessage.senderName}: ${lastMessage.text}`;
+        const firstName = lastMessage.senderName.split(' ')[0];
+        return `${firstName}: ${lastMessage.text}`;
       }
       
       // If message has text, show it
@@ -792,7 +793,10 @@ function MessagesPageContent() {
               className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide"
               style={{
                 paddingTop: 'var(--saved-content-padding-top, 140px)',
-                paddingBottom: 'max(env(safe-area-inset-bottom), 120px)', // Ensure cards rest above bottom nav (96px nav + 24px spacing)
+                // Always use larger padding initially to prevent jump, then adjust once we know
+                paddingBottom: hasActiveEvents === false
+                  ? 'max(env(safe-area-inset-bottom), 120px)' // Without banner: 96px nav + 24px spacing
+                  : 'max(env(safe-area-inset-bottom), 194px)', // With banner or loading: 96px nav + 12px gap + 62px banner + 24px spacing
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
                 WebkitOverflowScrolling: 'touch'
@@ -980,6 +984,9 @@ function MessagesPageContent() {
             </div>
           </MobilePage>
         </div>
+
+        {/* Happening Now Banner - Outside layout wrapper for proper fixed positioning */}
+        <HappeningNowBanner />
 
         {/* Modals */}
         <NewMessageModal

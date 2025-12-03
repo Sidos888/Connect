@@ -81,6 +81,17 @@ export default function MyLifeLayout(): React.JSX.Element {
     staleTime: 30 * 1000,
   });
 
+  const { data: currentData } = useQuery({
+    queryKey: ['listings', 'current', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return { listings: [], error: null };
+      return await listingsService.getCurrentListings(account.id);
+    },
+    enabled: !!account?.id,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000, // Refresh every minute to catch status changes
+  });
+
   const { data: historyData } = useQuery({
     queryKey: ['listings', 'history', account?.id],
     queryFn: async () => {
@@ -93,34 +104,50 @@ export default function MyLifeLayout(): React.JSX.Element {
 
   const upcomingListings = upcomingData?.listings || [];
   const hostingListings = hostingData?.listings || [];
+  const currentHappeningListings = currentData?.listings || [];
   const historyListings = historyData?.listings || [];
 
   // Determine which pills to show based on content
-  // Always show Upcoming first (default), then Hosting, then Past
+  // Priority: Current (if any), then Upcoming, then Hosting, then Past
   const availablePills: Array<{ id: string; label: string }> = [];
+  
+  if (currentHappeningListings.length > 0) {
+    availablePills.push({ id: 'current', label: 'Current' });
+  }
   // Always include 'upcoming' pill (even if empty) - it's the default
   availablePills.push({ id: 'upcoming', label: 'Upcoming' });
   if (hostingListings.length > 0) availablePills.push({ id: 'hosting', label: 'Hosting' });
   if (historyListings.length > 0) availablePills.push({ id: 'history', label: 'Past' });
 
-  // Set default tab to 'upcoming' - always prioritize upcoming events
-  const [mobileTab, setMobileTab] = React.useState<'upcoming' | 'hosting' | 'history'>('upcoming');
+  const [mobileTab, setMobileTab] = React.useState<'current' | 'upcoming' | 'hosting' | 'history'>('upcoming');
+  const [hasAutoSwitched, setHasAutoSwitched] = React.useState(false);
 
-  // Ensure 'upcoming' is always selected by default when component mounts or data loads
+  // Auto-switch to 'current' tab when current events first become available
   useEffect(() => {
-    // Always default to 'upcoming' if it's available in pills (which it always is now)
-    if (availablePills.find(p => p.id === 'upcoming')) {
-      // Only change if current tab doesn't exist in available pills
+    // Only auto-switch once when current events first appear and user hasn't manually changed tabs
+    if (currentHappeningListings.length > 0 && mobileTab === 'upcoming' && !hasAutoSwitched) {
+      setMobileTab('current');
+      setHasAutoSwitched(true);
+    }
+    // If current tab doesn't exist in available pills anymore, switch to default
+    else {
       const currentTabExists = availablePills.find(p => p.id === mobileTab);
       if (!currentTabExists) {
-        setMobileTab('upcoming');
+        // Prioritize 'current' if available, otherwise 'upcoming'
+        if (currentHappeningListings.length > 0) {
+          setMobileTab('current');
+        } else {
+          setMobileTab('upcoming');
+        }
       }
     }
-  }, [availablePills.length, mobileTab]);
+  }, [currentHappeningListings.length, availablePills.length, mobileTab, hasAutoSwitched]);
 
   // Get current listings based on active tab
-  const getCurrentListings = (): Listing[] => {
+  const getDisplayListings = (): Listing[] => {
     switch (mobileTab) {
+      case 'current':
+        return currentHappeningListings;
       case 'upcoming':
         return upcomingListings;
       case 'hosting':
@@ -132,7 +159,7 @@ export default function MyLifeLayout(): React.JSX.Element {
     }
   };
 
-  const currentListings = getCurrentListings();
+  const displayListings = getDisplayListings();
 
   // Lock body scroll on desktop
   useEffect(() => {
@@ -389,9 +416,9 @@ export default function MyLifeLayout(): React.JSX.Element {
             )}
 
             {/* Listings Grid */}
-            {currentListings.length > 0 ? (
+            {displayListings.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
-                {currentListings.map((listing) => (
+                {displayListings.map((listing) => (
                   <ListingCard 
                     key={listing.id}
                     listing={listing}

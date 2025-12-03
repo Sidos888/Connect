@@ -21,6 +21,7 @@ export default function CreateListingPreviewPage() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [capacity, setCapacity] = useState(1);
   const [capacityUnlimited, setCapacityUnlimited] = useState(true);
+  const [itineraryItems, setItineraryItems] = useState<any[]>([]);
 
 
   // Load data from sessionStorage
@@ -35,6 +36,7 @@ export default function CreateListingPreviewPage() {
       const storedCapacity = sessionStorage.getItem('listingCapacity');
       const storedCapacityUnlimited = sessionStorage.getItem('listingCapacityUnlimited');
       const storedPhotos = sessionStorage.getItem('listingPhotos');
+      const storedItinerary = sessionStorage.getItem('listingItinerary');
 
       if (storedTitle) setListingTitle(storedTitle);
       if (storedSummary) setSummary(storedSummary);
@@ -52,6 +54,16 @@ export default function CreateListingPreviewPage() {
           }
         } catch (e) {
           console.error('Error parsing photos:', e);
+        }
+      }
+      if (storedItinerary) {
+        try {
+          const parsed = JSON.parse(storedItinerary);
+          if (Array.isArray(parsed)) {
+            setItineraryItems(parsed);
+          }
+        } catch (e) {
+          console.error('Error parsing itinerary:', e);
         }
       }
     } catch (e) {
@@ -112,6 +124,7 @@ export default function CreateListingPreviewPage() {
               <ListingHeader 
                 title={listingTitle || 'Untitled Listing'}
                 date={startDate ? startDate.toISOString() : null}
+                endDate={endDate ? endDate.toISOString() : null}
                 summary={summary}
               />
 
@@ -125,6 +138,7 @@ export default function CreateListingPreviewPage() {
                   name: account.name,
                   profile_pic: account.profile_pic || null
                 } : null}
+                itinerary={itineraryItems.length > 0 ? itineraryItems : null}
               />
             </div>
           </div>

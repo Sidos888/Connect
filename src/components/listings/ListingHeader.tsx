@@ -3,19 +3,20 @@
 interface ListingHeaderProps {
   title: string;
   date: string | null;
+  endDate?: string | null;
   summary?: string | null;
 }
 
-export default function ListingHeader({ title, date, summary }: ListingHeaderProps) {
-  // Format date as "January 15th • 10:15am"
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'Date TBD';
+export default function ListingHeader({ title, date, endDate, summary }: ListingHeaderProps) {
+  // Format date as "December 1st • 5:10pm-5:20pm"
+  const formatDate = (startDateString: string | null, endDateString?: string | null): string => {
+    if (!startDateString) return 'Date TBD';
     try {
-      const date = new Date(dateString);
+      const startDate = new Date(startDateString);
       const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
       
-      const month = months[date.getMonth()];
-      const day = date.getDate();
+      const month = months[startDate.getMonth()];
+      const day = startDate.getDate();
       
       // Add ordinal suffix
       const getOrdinal = (n: number) => {
@@ -25,14 +26,29 @@ export default function ListingHeader({ title, date, summary }: ListingHeaderPro
         return n + 'th';
       };
       
-      let hours = date.getHours();
-      const minutes = date.getMinutes();
-      const ampm = hours >= 12 ? 'pm' : 'am';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      const minutesStr = minutes < 10 ? `0${minutes}` : minutes.toString();
+      // Format start time
+      let startHours = startDate.getHours();
+      const startMinutes = startDate.getMinutes();
+      const startAmpm = startHours >= 12 ? 'pm' : 'am';
+      startHours = startHours % 12;
+      startHours = startHours ? startHours : 12;
+      const startMinutesStr = startMinutes < 10 ? `0${startMinutes}` : startMinutes.toString();
       
-      return `${month} ${getOrdinal(day)} • ${hours}:${minutesStr}${ampm}`;
+      // If end date exists, format it too
+      if (endDateString) {
+        const endDate = new Date(endDateString);
+        let endHours = endDate.getHours();
+        const endMinutes = endDate.getMinutes();
+        const endAmpm = endHours >= 12 ? 'pm' : 'am';
+        endHours = endHours % 12;
+        endHours = endHours ? endHours : 12;
+        const endMinutesStr = endMinutes < 10 ? `0${endMinutes}` : endMinutes.toString();
+        
+        return `${month} ${getOrdinal(day)} • ${startHours}:${startMinutesStr}${startAmpm}-${endHours}:${endMinutesStr}${endAmpm}`;
+      }
+      
+      // No end date - just show start time
+      return `${month} ${getOrdinal(day)} • ${startHours}:${startMinutesStr}${startAmpm}`;
     } catch {
       return 'Date TBD';
     }
@@ -47,7 +63,7 @@ export default function ListingHeader({ title, date, summary }: ListingHeaderPro
         </h1>
         {date && (
           <p className="text-base font-normal text-gray-500">
-            {formatDate(date)}
+            {formatDate(date, endDate)}
           </p>
         )}
       </div>

@@ -212,7 +212,7 @@ export default function ChatPhotoViewer({ isOpen, attachments, initialIndex, onC
       style={{ 
         backgroundColor: '#000000',
         pointerEvents: isVisible ? 'auto' : 'none',
-        zIndex: 110 // Higher than ChatAttachmentGalleryView (z-[100])
+        zIndex: 10000 // Higher than ChatPhotosGridModal (z-[9999])
       }}
       onClick={handleBackdropClick}
       onTouchStart={handleTouchStart}

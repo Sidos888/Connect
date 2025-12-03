@@ -33,8 +33,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -45,5 +43,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Connect needs access to your camera to take photos for listings and chats.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Connect needs access to your photo library to select photos for listings and chats.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Connect needs access to save photos to your photo library.</string>
 </dict>
 </plist>

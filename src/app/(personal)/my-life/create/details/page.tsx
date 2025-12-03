@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Calendar, Clock } from 'lucide-react';
 import { MobilePage, PageContent } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
@@ -30,10 +30,11 @@ export default function CreateListingDetailsPage() {
   const [capacityUnlimited, setCapacityUnlimited] = useState(true);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [includeEndTime, setIncludeEndTime] = useState(false);
+  const [includeEndTime, setIncludeEndTime] = useState(true); // Always true - end time is compulsory
   const [photos, setPhotos] = useState<string[]>([]);
   const [hasGallery, setHasGallery] = useState(false);
   const [enableEventChat, setEnableEventChat] = useState(false);
+  const [itineraryItems, setItineraryItems] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Fetch group chat info if group context
@@ -135,6 +136,18 @@ export default function CreateListingDetailsPage() {
       }
       if (storedHasGallery !== null) setHasGallery(storedHasGallery === 'true');
       if (storedEnableEventChat !== null) setEnableEventChat(storedEnableEventChat === 'true');
+      
+      const storedItinerary = sessionStorage.getItem('listingItinerary');
+      if (storedItinerary) {
+        try {
+          const parsed = JSON.parse(storedItinerary);
+          if (Array.isArray(parsed)) {
+            setItineraryItems(parsed);
+          }
+        } catch (e) {
+          console.error('Error parsing itinerary from sessionStorage:', e);
+        }
+      }
     } catch (e) {
       console.error('Error loading listing data:', e);
     }
@@ -150,9 +163,18 @@ export default function CreateListingDetailsPage() {
     sessionStorage.setItem('listingEnableEventChat', enableEventChat.toString());
   }, [enableEventChat]);
 
+  // Automatically set end date to 2 hours after start date
+  useEffect(() => {
+    if (startDate && !endDate) {
+      const defaultEndDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+      setEndDate(defaultEndDate);
+    }
+  }, [startDate, endDate]);
+
   const getDisplayDate = (): string => {
     if (!startDate) return 'Date and time';
-    if (includeEndTime && endDate) {
+    // Always show end time since it's compulsory
+    if (endDate) {
       return `${formatDateTime(startDate)} - ${formatDateTime(endDate)}`;
     }
     return formatDateTime(startDate);
@@ -491,11 +513,12 @@ export default function CreateListingDetailsPage() {
           summary: summary.trim() || null,
           location: location.trim() || null,
           start_date: startDate?.toISOString() || null,
-          end_date: includeEndTime && endDate ? endDate.toISOString() : null,
+          end_date: endDate?.toISOString() || null, // Always include end_date (compulsory)
           capacity: capacityUnlimited ? null : capacity,
           is_public: groupChatId ? false : isPublic, // Group events are always private to the group
           photo_urls: photoUrls.length > 0 ? photoUrls : null,
           has_gallery: hasGallery,
+          itinerary: itineraryItems.length > 0 ? itineraryItems : null,
           group_chat_id: groupChatId || null,
           event_chat_id: eventChatId,
           created_at: new Date().toISOString(),
@@ -556,6 +579,7 @@ export default function CreateListingDetailsPage() {
       sessionStorage.removeItem('listingPhotos');
       sessionStorage.removeItem('listingHasGallery');
       sessionStorage.removeItem('listingEnableEventChat');
+      sessionStorage.removeItem('listingItinerary');
       
       // Navigate to the listing view page with from parameter for back navigation
       router.push(`/listing?id=${listingData.id}&from=${encodeURIComponent('/my-life')}`);
@@ -885,6 +909,92 @@ export default function CreateListingDetailsPage() {
                   }`}
                 />
               </button>
+            </div>
+
+            {/* Itinerary Card */}
+            <div 
+              className="w-full bg-white rounded-xl p-4 transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+            >
+              <div className={`flex items-center justify-between ${itineraryItems.length > 0 ? 'mb-3' : ''}`}>
+                <span className="text-base font-medium text-gray-900">Itinerary</span>
+                <button
+                  onClick={() => {
+                    // Save current state to sessionStorage
+                    sessionStorage.setItem('listingItinerary', JSON.stringify(itineraryItems));
+                    router.push('/my-life/create/itinerary');
+                  }}
+                  className="flex items-center justify-center transition-all"
+                >
+                  <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
+                </button>
+              </div>
+
+              {/* Itinerary Items */}
+              {itineraryItems.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {itineraryItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white transition-all duration-200 hover:-translate-y-[1px]"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        willChange: 'transform, box-shadow',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                    >
+                      {/* Image - Small square */}
+                      <div
+                        className="flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden"
+                        style={{ width: '44px', height: '44px' }}
+                      >
+                        {item.photo ? (
+                          <img
+                            src={item.photo}
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200" />
+                        )}
+                      </div>
+                      
+                      {/* Title - Center, bold */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{item.title}</p>
+                      </div>
+                      
+                      {/* Date/Time - Right side */}
+                      <div className="flex-shrink-0 text-xs font-medium text-gray-500">
+                        {item.startDate && new Date(item.startDate).toLocaleTimeString('en-US', { 
+                          hour: 'numeric', 
+                          minute: '2-digit',
+                          hour12: true 
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </PageContent>

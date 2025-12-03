@@ -13,12 +13,24 @@ import { CalendarIcon, PlusIcon } from "@/components/icons";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import MyLifeLayout from "./MyLifeLayout";
 import { Suspense } from "react";
+import { useCompletedListings } from "@/hooks/useCompletedListings";
+import HappeningNowBanner from "@/components/HappeningNowBanner";
 
 export default function Page() {
   const { personalProfile, context } = useAppStore();
+  const { checking } = useCompletedListings();
   
   console.log('My Life page - personalProfile:', personalProfile);
   console.log('My Life page - avatarUrl:', personalProfile?.avatarUrl);
+
+  // Show loading while checking for completed listings
+  if (checking) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   const upcoming = [
     { title: "Minion Sailing Comp", dateTime: "Jan 15 • 10:15am", thumbnail: "⛵" },
@@ -110,6 +122,7 @@ export default function Page() {
     <ProtectedRoute title="My Life" description="Log in / sign up to view your personal events and activities" buttonText="Log in">
       <Suspense fallback={<div className="flex items-center justify-center h-64">Loading...</div>}>
         <MyLifeLayout />
+        <HappeningNowBanner />
       </Suspense>
     </ProtectedRoute>
   );

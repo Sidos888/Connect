@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { useChatService } from '@/lib/chatProvider';
 import { getSupabaseClient } from '@/lib/supabaseClient';
+import { connectionsService } from '@/lib/connectionsService';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronRight } from 'lucide-react';
 import { MobilePage, PageContent } from '@/components/layout/PageSystem';
@@ -38,11 +39,14 @@ export default function ShareListingPage() {
   const chatService = useChatService();
   const queryClient = useQueryClient();
   const [listing, setListing] = useState<any>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]); // Recent chats (DMs)
   const [groups, setGroups] = useState<Group[]>([]);
+  const [allContacts, setAllContacts] = useState<Contact[]>([]); // All connections
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [filteredGroups, setFilteredGroups] = useState<Group[]>([]);
-  const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set()); // Store chat IDs
+  const [filteredAllContacts, setFilteredAllContacts] = useState<Contact[]>([]);
+  const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set()); // Store chat IDs for existing chats
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set()); // Store user IDs for contacts without chats
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -116,6 +120,7 @@ export default function ShareListingPage() {
         // Separate DMs and groups
         const dmChats: Contact[] = [];
         const groupChats: Group[] = [];
+        const dmChatUserIds = new Set<string>(); // Track users with existing DM chats
 
         for (const chat of chats) {
           if (chat.type === 'group') {
@@ -129,6 +134,7 @@ export default function ShareListingPage() {
             // For DMs, find the other participant
             const otherParticipant = chat.participants.find(p => p.user_id !== user.id);
             if (otherParticipant) {
+              dmChatUserIds.add(otherParticipant.user_id);
               dmChats.push({
                 id: otherParticipant.user_id,
                 name: otherParticipant.user_name || 'Unknown',
@@ -140,8 +146,39 @@ export default function ShareListingPage() {
           }
         }
 
+        // Load all connections (friends)
+        const { connections, error: connectionsError } = await connectionsService.getConnections(user.id);
+        if (connectionsError) {
+          console.error('Error loading connections:', connectionsError);
+        }
+
+        // Map connections to contacts, excluding those already in recent chats
+        const allConnectionContacts: Contact[] = [];
+        if (connections) {
+          for (const conn of connections) {
+            const friendId = conn.user1_id === user.id ? conn.user2_id : conn.user1_id;
+            const friendData = conn.user1_id === user.id ? conn.user2 : conn.user1;
+            
+            // Skip if already in recent chats
+            if (dmChatUserIds.has(friendId)) {
+              continue;
+            }
+            
+            if (friendData) {
+              allConnectionContacts.push({
+                id: friendId,
+                name: friendData.name || 'Unknown',
+                profile_pic: friendData.profile_pic,
+                type: 'person',
+                // No chatId yet - will need to create chat when selected
+              });
+            }
+          }
+        }
+
         setContacts(dmChats);
         setGroups(groupChats);
+        setAllContacts(allConnectionContacts);
 
         setLoading(false);
       } catch (err) {
@@ -154,26 +191,59 @@ export default function ShareListingPage() {
     loadData();
   }, [account?.id, chatService, listingId]);
 
-  // Filter contacts and groups based on search
+  // Filter contacts, groups, and all contacts based on search and hide selected items
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredContacts(contacts);
-      setFilteredGroups(groups);
-      return;
-    }
-
     const query = searchQuery.toLowerCase();
-    setFilteredContacts(
-      contacts.filter(contact =>
-        contact.name.toLowerCase().includes(query)
-      )
-    );
-    setFilteredGroups(
-      groups.filter(group =>
-        group.name.toLowerCase().includes(query)
-      )
-    );
-  }, [searchQuery, contacts, groups]);
+    
+    // Filter recent chats: exclude selected ones and apply search
+    const filteredContactsList = contacts.filter(contact => {
+      // Hide if selected (check both chatId and userId)
+      if (contact.chatId && selectedChats.has(contact.chatId)) {
+        return false;
+      }
+      if (selectedUsers.has(contact.id)) {
+        return false;
+      }
+      // Apply search filter if query exists
+      if (searchQuery.trim()) {
+        return contact.name.toLowerCase().includes(query);
+      }
+      return true;
+    });
+    
+    // Filter groups: exclude selected ones and apply search
+    const filteredGroupsList = groups.filter(group => {
+      // Hide if selected
+      if (selectedChats.has(group.chatId)) {
+        return false;
+      }
+      // Apply search filter if query exists
+      if (searchQuery.trim()) {
+        return group.name.toLowerCase().includes(query);
+      }
+      return true;
+    });
+    
+    // Filter all contacts: exclude selected ones and apply search
+    const filteredAllContactsList = allContacts.filter(contact => {
+      // Hide if selected (check both chatId and userId)
+      if (contact.chatId && selectedChats.has(contact.chatId)) {
+        return false;
+      }
+      if (selectedUsers.has(contact.id)) {
+        return false;
+      }
+      // Apply search filter if query exists
+      if (searchQuery.trim()) {
+        return contact.name.toLowerCase().includes(query);
+      }
+      return true;
+    });
+    
+    setFilteredContacts(filteredContactsList);
+    setFilteredGroups(filteredGroupsList);
+    setFilteredAllContacts(filteredAllContactsList);
+  }, [searchQuery, contacts, groups, allContacts, selectedChats, selectedUsers]);
 
   const handleBack = () => {
     if (listingId) {
@@ -183,31 +253,66 @@ export default function ShareListingPage() {
     }
   };
 
-  const toggleChatSelection = (chatId: string) => {
-    setSelectedChats(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(chatId)) {
-        newSet.delete(chatId);
-      } else {
-        newSet.add(chatId);
-      }
-      return newSet;
-    });
+  const toggleChatSelection = (chatId: string | undefined, userId?: string) => {
+    // If contact has a chatId (existing chat), toggle in selectedChats
+    if (chatId) {
+      setSelectedChats(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(chatId)) {
+          newSet.delete(chatId);
+        } else {
+          newSet.add(chatId);
+        }
+        return newSet;
+      });
+    }
+    // If no chatId but we have userId (new contact), toggle in selectedUsers
+    else if (userId) {
+      setSelectedUsers(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(userId)) {
+          newSet.delete(userId);
+        } else {
+          newSet.add(userId);
+        }
+        return newSet;
+      });
+    }
   };
 
   const handleSend = async () => {
-    if (!listingId || selectedChats.size === 0 || !chatService || sending) return;
+    if (!listingId || (selectedChats.size === 0 && selectedUsers.size === 0) || !chatService || sending) return;
 
     setSending(true);
     setError(null);
 
     try {
-      // Send listing to each selected chat
-      const sendPromises = Array.from(selectedChats).map(chatId =>
-        chatService.sendListingMessage(chatId, listingId)
-      );
+      const allSendPromises: Promise<any>[] = [];
 
-      const results = await Promise.all(sendPromises);
+      // Send to existing chats
+      for (const chatId of Array.from(selectedChats)) {
+        allSendPromises.push(
+          chatService.sendListingMessage(chatId, listingId)
+        );
+      }
+
+      // Create chats for new users and send
+      for (const userId of Array.from(selectedUsers)) {
+        allSendPromises.push(
+          (async () => {
+            // Create chat first
+            const { chat, error: chatError } = await chatService.createDirectChat(userId);
+            if (chatError || !chat) {
+              console.error('Error creating chat for user:', userId, chatError);
+              return { error: chatError };
+            }
+            // Then send listing
+            return await chatService.sendListingMessage(chat.id, listingId);
+          })()
+        );
+      }
+
+      const results = await Promise.all(allSendPromises);
       const errors = results.filter(r => r.error);
 
       if (errors.length > 0) {
@@ -245,7 +350,7 @@ export default function ShareListingPage() {
     }
   };
 
-  const hasSelectedChats = selectedChats.size > 0;
+  const hasSelectedChats = selectedChats.size > 0 || selectedUsers.size > 0;
 
   // Custom actions for the tick button (matching create listing page)
   const customActions = (
@@ -500,10 +605,11 @@ export default function ShareListingPage() {
         }}>
 
           {/* Selected Section */}
-          {selectedChats.size > 0 && (
+          {(selectedChats.size > 0 || selectedUsers.size > 0) && (
             <div className="mb-6">
               <div className="text-xs text-gray-500 mb-2 px-1">Selected</div>
               <div className="space-y-2">
+                {/* Selected chats (existing chats) */}
                 {Array.from(selectedChats).map(chatId => {
                   // Find contact or group for this chat
                   const contact = contacts.find(c => c.chatId === chatId);
@@ -514,7 +620,7 @@ export default function ShareListingPage() {
 
                   return (
                     <div
-                      key={chatId}
+                      key={`chat-${chatId}`}
                       onClick={() => toggleChatSelection(chatId)}
                       className="bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
                       style={{
@@ -540,6 +646,56 @@ export default function ShareListingPage() {
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-gray-900 truncate">
                             {item.name}
+                          </div>
+                        </div>
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{
+                            backgroundColor: '#FF6600'
+                          }}
+                        >
+                          <Check size={12} className="text-white" strokeWidth={3} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Selected users (new contacts without chats) */}
+                {Array.from(selectedUsers).map(userId => {
+                  // Find contact from allContacts
+                  const contact = allContacts.find(c => c.id === userId);
+                  
+                  if (!contact) return null;
+
+                  return (
+                    <div
+                      key={`user-${userId}`}
+                      onClick={() => toggleChatSelection(undefined, userId)}
+                      className="bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        willChange: 'transform, box-shadow'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={contact.profile_pic || contact.profilePic}
+                          name={contact.name}
+                          size={40}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate">
+                            {contact.name}
                           </div>
                         </div>
                         <div
@@ -652,6 +808,63 @@ export default function ShareListingPage() {
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-gray-900 truncate">
                             {group.name}
+                          </div>
+                        </div>
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2"
+                          style={{
+                            borderColor: isSelected ? '#FF6600' : '#E5E7EB',
+                            backgroundColor: isSelected ? '#FF6600' : 'transparent'
+                          }}
+                        >
+                          {isSelected && (
+                            <Check size={12} className="text-white" strokeWidth={3} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* All Contacts Section */}
+          {filteredAllContacts.length > 0 && (
+            <div className="mb-6">
+              <div className="text-xs text-gray-500 mb-2 px-1">All Contacts</div>
+              <div className="space-y-2">
+                {filteredAllContacts.map((contact) => {
+                  const isSelected = contact.chatId ? selectedChats.has(contact.chatId) : false;
+                  
+                  return (
+                    <div
+                      key={contact.id}
+                      onClick={() => toggleChatSelection(contact.chatId, contact.id)}
+                      className="bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        willChange: 'transform, box-shadow'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={contact.profile_pic || contact.profilePic}
+                          name={contact.name}
+                          size={40}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate">
+                            {contact.name}
                           </div>
                         </div>
                         <div
