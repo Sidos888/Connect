@@ -161,13 +161,16 @@ export default function Page() {
   }, [currentView]);
 
   // Helper to update URL to a view on /menu (keeps transitions smooth)
-  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections', from?: string) => {
-    console.log('🔷 goToView called:', { view, from });
+  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections', from?: string, userId?: string) => {
+    console.log('🔷 goToView called:', { view, from, userId });
     
     if (view === 'menu') {
       router.push('/menu');
     } else {
-      const url = from ? `/menu?view=${view}&from=${from}` : `/menu?view=${view}`;
+      let url = `/menu?view=${view}`;
+      if (from) url += `&from=${from}`;
+      if (userId) url += `&userId=${userId}`;
+      
       console.log('🔷 goToView navigating to:', url);
       router.push(url);
     }
@@ -1034,7 +1037,7 @@ export default function Page() {
           if (from === 'friend-connections' && connectionsContextUser) {
             console.log('🔵 FriendProfileView: Restoring connections context:', connectionsContextUser.name);
             setSelectedFriend(connectionsContextUser); // Restore the context user
-            goToView('friend-connections');
+            goToView('friend-connections', undefined, connectionsContextUser.id); // Pass userId!
           } else {
             // Otherwise go to your own connections
             goToView('connections');
