@@ -1,7 +1,7 @@
 "use client";
 
 import Avatar from "@/components/Avatar";
-import { Pencil, Settings, MoreVertical } from "lucide-react";
+import { Pencil, Settings, MoreVertical, Users, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageSystem";
 import { useEffect, useState, useRef } from "react";
 
@@ -10,6 +10,8 @@ type Profile = {
   name?: string;
   avatarUrl?: string;
   bio?: string;
+  friendsCount?: number;
+  followingCount?: number;
 };
 
 export default function ProfilePage({
@@ -105,113 +107,103 @@ export default function ProfilePage({
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}>
-        {/* Profile Header - Centered */}
-        <div className="text-center mb-4">
-          <div className="h-[40px] lg:h-0" />
-          <div className="relative inline-block mb-3">
-            <Avatar src={profile?.avatarUrl ?? undefined} name={profile?.name ?? 'User'} size={140} />
+        <div className="max-w-md mx-auto">
+          {/* Profile Picture - Top Left Aligned */}
+          <div className="flex justify-start mb-4 mt-8">
+            <Avatar src={profile?.avatarUrl ?? undefined} name={profile?.name ?? 'User'} size={96} />
           </div>
-          <button
-            onClick={onShare || (() => {})}
-            className="block mx-auto mb-1 transition-all duration-200 hover:-translate-y-[1px]"
-            style={{
-              borderRadius: '16px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              padding: '8px 14px',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            aria-label="Open share profile"
-            disabled={!onShare}
-          >
-            <span className="text-2xl font-bold text-gray-900">{profile?.name ?? (isOwnProfile ? 'Your Name' : 'User')}</span>
-          </button>
-          {profile?.bio ? <p className="text-gray-600 text-base mb-0">{profile.bio}</p> : null}
-        </div>
 
-        {/* Grid of 4 Boxes */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          <button 
-            onClick={onOpenTimeline || (() => {})}
-            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] h-28 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:-translate-y-[1px]"
-            style={{ 
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            disabled={!onOpenTimeline}
+          {/* Name */}
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {profile?.name ?? (isOwnProfile ? 'Your Name' : 'User')}
+          </h1>
+
+          {/* Bio */}
+          {profile?.bio && (
+            <p className="text-base text-gray-600 mb-4">{profile.bio}</p>
+          )}
+
+          {/* Friends • Following */}
+          <button
+            onClick={onOpenConnections}
+            className="mb-6 text-sm text-gray-600"
           >
-            <div className="text-4xl">🧭</div>
-            <span className="text-sm font-semibold text-neutral-900 text-center leading-tight">Timeline</span>
+            <span className="font-semibold">{profile?.friendsCount ?? 0} Friends</span>
+            <span className="mx-2">•</span>
+            <span className="font-semibold">{profile?.followingCount ?? 0} Following</span>
           </button>
-          <button 
-            onClick={onOpenHighlights || (() => {})}
-            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] h-28 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:-translate-y-[1px]"
-            style={{ 
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            disabled={!onOpenHighlights}
-          >
-            <div className="text-4xl">🌟</div>
-            <span className="text-sm font-semibold text-neutral-900 text-center leading-tight">Highlights</span>
-          </button>
-          <button 
-            onClick={onOpenBadges || (() => {})}
-            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] h-28 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:-translate-y-[1px]"
-            style={{ 
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            disabled={!onOpenBadges}
-          >
-            <div className="text-4xl">🏆</div>
-            <span className="text-sm font-semibold text-neutral-900 text-center leading-tight">Badges</span>
-          </button>
-          <button 
-            onClick={onOpenConnections || (() => {})}
-            className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] h-28 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:-translate-y-[1px]"
-            style={{ 
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            disabled={!onOpenConnections}
-          >
-            <div className="text-4xl">👬</div>
-            <span className="text-sm font-semibold text-neutral-900 text-center leading-tight">Connections</span>
-          </button>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 mb-6">
+            <button
+              className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-medium text-gray-900 transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+            >
+              Button 1
+            </button>
+            <button
+              className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-medium text-gray-900 transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+            >
+              Button 2
+            </button>
+            <button
+              className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-medium text-gray-900 transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+            >
+              Button 3
+            </button>
+          </div>
+
+          {/* Grey Line Separator */}
+          <div className="h-[0.4px] bg-gray-300 mb-6" />
+
+          {/* Pills - Life, Highlights, Badges */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={onOpenTimeline}
+              className="flex items-center gap-1.5 bg-white rounded-full border-[0.4px] border-[#E5E7EB] py-2 px-4 transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+            >
+              <span className="text-sm font-semibold text-gray-900">Life</span>
+              <span className="text-xs text-gray-500">10</span>
+            </button>
+
+            <button
+              onClick={onOpenHighlights}
+              className="flex items-center gap-1.5 bg-white rounded-full border-[0.4px] border-[#E5E7EB] py-2 px-4 transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+            >
+              <span className="text-sm font-semibold text-gray-900">Highlights</span>
+              <span className="text-xs text-gray-500">10</span>
+            </button>
+
+            <button
+              onClick={onOpenBadges}
+              className="flex items-center gap-1.5 bg-white rounded-full border-[0.4px] border-[#E5E7EB] py-2 px-4 transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              }}
+            >
+              <span className="text-sm font-semibold text-gray-900">Badges</span>
+              <span className="text-xs text-gray-500">10</span>
+            </button>
+          </div>
+
+          {/* Placeholder Content */}
+          <div className="space-y-4">
+            <p className="text-gray-400 text-sm">Content will appear here...</p>
+          </div>
         </div>
       </div>
 
