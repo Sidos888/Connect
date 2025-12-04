@@ -51,6 +51,7 @@ export default function ProfilePage({
   const [connectionStats, setConnectionStats] = useState({ friends: 0, following: 0, mutuals: 0 });
   const [areFriends, setAreFriends] = useState(false);
   const [mutualFriendsCount, setMutualFriendsCount] = useState(0);
+  const [mutualsForFriends, setMutualsForFriends] = useState(0);
   const [friendshipStatus, setFriendshipStatus] = useState<'none' | 'pending' | 'friends'>('none');
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -230,15 +231,31 @@ export default function ProfilePage({
 
         const stats = statsData?.[0] || { friends_count: 0, following_count: 0, mutuals_count: 0 };
 
+        // Fetch mutuals count if viewing another user's profile
+        let mutualsCount = 0;
+        if (!isOwnProfile && currentUserId && profile.id) {
+          const { data: mutualsData, error: mutualsError } = await supabase
+            .rpc('get_mutual_connections_count', { 
+              p_user1_id: currentUserId, 
+              p_user2_id: profile.id 
+            });
+
+          if (!mutualsError && mutualsData !== null) {
+            mutualsCount = mutualsData;
+            setMutualsForFriends(mutualsData);
+          }
+        }
+
         console.log('🔍 ProfilePage: Setting connection stats:', {
           friends: stats.friends_count,
-          following: stats.following_count
+          following: stats.following_count,
+          mutuals: mutualsCount
         });
 
         setConnectionStats({
           friends: stats.friends_count || 0,
           following: stats.following_count || 0,
-          mutuals: 0 // Will be calculated separately for non-friends
+          mutuals: mutualsCount
         });
       } catch (error) {
         console.error('🔍 ProfilePage: Error fetching connection stats:', error);
@@ -394,7 +411,7 @@ export default function ProfilePage({
             <p className="text-base text-gray-600 mb-4">{profile.bio}</p>
           )}
 
-          {/* Friends • Following OR Mutuals for private non-friends */}
+          {/* Friends • Following • Mutuals OR Mutuals only for non-friends */}
           {showFullProfile ? (
             <button
               onClick={onOpenConnections}
@@ -405,12 +422,22 @@ export default function ProfilePage({
               <span className="mx-2 text-gray-500">•</span>
               <span className="font-bold text-gray-900">{connectionStats.following}</span>
               <span className="text-gray-500"> Following</span>
+              {!isOwnProfile && connectionStats.mutuals > 0 && (
+                <>
+                  <span className="mx-2 text-gray-500">•</span>
+                  <span className="font-bold text-gray-900">{connectionStats.mutuals}</span>
+                  <span className="text-gray-500"> Mutuals</span>
+                </>
+              )}
             </button>
           ) : (
-            <div className="mb-6 text-sm cursor-default">
+            <button
+              onClick={onOpenConnections}
+              className="mb-6 text-sm"
+            >
               <span className="font-bold text-gray-900">{mutualFriendsCount}</span>
               <span className="text-gray-500"> Mutuals</span>
-            </div>
+            </button>
           )}
 
           {/* Action Buttons */}

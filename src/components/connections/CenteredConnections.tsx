@@ -12,6 +12,7 @@ export default function CenteredConnections({
   fromProfile = false,
   showAddPersonButton = true,
   userId,
+  showOnlyMutuals = false,
 }: {
   onBack: () => void;
   onAddPerson?: () => void;
@@ -19,12 +20,14 @@ export default function CenteredConnections({
   fromProfile?: boolean;
   showAddPersonButton?: boolean;
   userId?: string; // Optional: view another user's connections
+  showOnlyMutuals?: boolean; // Only show mutuals tab
 }) {
   console.log('🟣 CenteredConnections: Modal rendered', {
     fromProfile,
     showAddPersonButton,
     hasOnFriendClick: !!onFriendClick,
     userId,
+    showOnlyMutuals,
     timestamp: new Date().toISOString()
   });
 
@@ -56,7 +59,7 @@ export default function CenteredConnections({
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}>
-        <Connections onFriendClick={onFriendClick} userId={userId} />
+        <Connections onFriendClick={onFriendClick} userId={userId} showOnlyMutuals={showOnlyMutuals} />
       </div>
 
       {/* Bottom Blur */}

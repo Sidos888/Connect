@@ -1046,7 +1046,12 @@ export default function Page() {
         onOpenConnections={() => {
           console.log('🔵 FriendProfileView: onOpenConnections called, switching to friend-connections');
           setConnectionsContextUser(friend); // Store whose connections we're viewing
-          goToView('friend-connections', 'friend-profile');
+          
+          // Check if we're friends with this person
+          const isFriendWithUser = friendshipStatus === 'friends';
+          
+          // If friends, show full connections; if not friends, show mutuals only
+          goToView('friend-connections', 'friend-profile', friend.id);
         }}
         />
     );
@@ -1054,10 +1059,25 @@ export default function Page() {
 
   // Friend Connections View - Show friend's connections list (no + button)
   const FriendConnectionsView = ({ friend }: { friend: ConnectionUser }) => {
+    const [areFriends, setAreFriends] = React.useState(false);
+    
+    // Check if we're friends with this user
+    React.useEffect(() => {
+      const checkFriendship = async () => {
+        if (!account?.id || !friend.id) return;
+        
+        const { connected } = await connectionsService.areConnected(account.id, friend.id);
+        setAreFriends(connected);
+      };
+      
+      checkFriendship();
+    }, [friend.id, account?.id]);
+    
     console.log('🟢 FriendConnectionsView: Rendering', { 
       friendId: friend.id, 
       friendName: friend.name,
-      connectionsContextUser: connectionsContextUser?.name 
+      connectionsContextUser: connectionsContextUser?.name,
+      areFriends
     });
     
     return (
@@ -1070,6 +1090,7 @@ export default function Page() {
         }}
         showAddPersonButton={false}
         userId={friend.id}
+        showOnlyMutuals={!areFriends} // Show only mutuals if not friends
         onFriendClick={(clickedFriend) => {
           console.log('🟢 FriendConnectionsView: Friend clicked', { clickedFriendId: clickedFriend.id });
           // Keep the connections context, but update selected friend for profile view
