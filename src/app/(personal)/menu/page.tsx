@@ -65,8 +65,8 @@ export default function Page() {
   const [connectionsSearchQuery, setConnectionsSearchQuery] = React.useState('');
 
   // Helper to load a friend's profile by userId
-  const loadFriendProfile = React.useCallback(async (userId: string) => {
-    console.log('🔷 Menu page: Loading friend profile for userId:', userId);
+  const loadFriendProfile = React.useCallback(async (userId: string, setAsConnectionsContext = false) => {
+    console.log('🔷 Menu page: Loading friend profile for userId:', userId, 'setAsConnectionsContext:', setAsConnectionsContext);
     
     try {
       const { data, error } = await supabaseClient
@@ -93,6 +93,12 @@ export default function Page() {
         
         console.log('🔷 Menu page: Friend profile loaded:', friendUser);
         setSelectedFriend(friendUser);
+        
+        // If this is for viewing connections, also set as context
+        if (setAsConnectionsContext) {
+          console.log('🔷 Menu page: Setting as connections context user');
+          setConnectionsContextUser(friendUser);
+        }
       }
     } catch (error) {
       console.error('🔷 Menu page: Error in loadFriendProfile:', error);
@@ -132,8 +138,8 @@ export default function Page() {
       console.log('🔶 Menu page: Setting currentView to friend-connections, loading friend:', userId);
       setCurrentView('friend-connections');
       
-      // Load the friend's profile from userId
-      loadFriendProfile(userId);
+      // Load the friend's profile and set as connections context
+      loadFriendProfile(userId, true); // true = set as connections context user
     }
     else if (!view) setCurrentView('menu');
   }, [searchParams]);
