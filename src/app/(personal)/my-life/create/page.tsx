@@ -28,7 +28,9 @@ function CreateListingPageContent() {
   const [capacity, setCapacity] = useState(1);
   const [capacityUnlimited, setCapacityUnlimited] = useState(true);
   const [showVisibilityModal, setShowVisibilityModal] = useState(false);
+  const [visibilityModalVisible, setVisibilityModalVisible] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
+  const [capacityModalVisible, setCapacityModalVisible] = useState(false);
   const [location, setLocation] = useState<string>("");
   const [locationFocused, setLocationFocused] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -76,6 +78,24 @@ function CreateListingPageContent() {
       setIsSlidingUp(false);
     };
   }, []);
+
+  // Visibility modal animation
+  useEffect(() => {
+    if (showVisibilityModal) {
+      setTimeout(() => setVisibilityModalVisible(true), 10);
+    } else {
+      setVisibilityModalVisible(false);
+    }
+  }, [showVisibilityModal]);
+
+  // Capacity modal animation
+  useEffect(() => {
+    if (showCapacityModal) {
+      setTimeout(() => setCapacityModalVisible(true), 10);
+    } else {
+      setCapacityModalVisible(false);
+    }
+  }, [showCapacityModal]);
 
   // Handle close with slide down animation
   const handleClose = () => {
@@ -1190,14 +1210,25 @@ function CreateListingPageContent() {
       {showVisibilityModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden"
-          onClick={() => setShowVisibilityModal(false)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowVisibilityModal(false);
+            }
+          }}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div 
+            className="absolute inset-0 transition-opacity duration-300 ease-out"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              opacity: visibilityModalVisible ? 1 : 0
+            }}
+            onClick={() => setShowVisibilityModal(false)}
+          />
           
           {/* Modal - with padding from sides and bottom */}
           <div 
-            className="relative bg-white overflow-hidden flex flex-col"
+            className="relative bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: 'calc(100% - 16px)',
@@ -1213,6 +1244,7 @@ function CreateListingPageContent() {
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              transform: visibilityModalVisible ? 'translateY(0)' : 'translateY(100%)',
             }}
           >
             {/* Header */}
@@ -1381,14 +1413,25 @@ function CreateListingPageContent() {
       {showCapacityModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden"
-          onClick={() => setShowCapacityModal(false)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCapacityModal(false);
+            }
+          }}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div 
+            className="absolute inset-0 transition-opacity duration-300 ease-out"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              opacity: capacityModalVisible ? 1 : 0
+            }}
+            onClick={() => setShowCapacityModal(false)}
+          />
           
           {/* Modal */}
           <div 
-            className="relative bg-white overflow-hidden flex flex-col"
+            className="relative bg-white overflow-hidden flex flex-col transition-transform duration-300 ease-out"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: 'calc(100% - 16px)',
@@ -1404,6 +1447,7 @@ function CreateListingPageContent() {
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              transform: capacityModalVisible ? 'translateY(0)' : 'translateY(100%)',
             }}
           >
             {/* Header */}

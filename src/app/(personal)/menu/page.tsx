@@ -31,6 +31,7 @@ import Highlights from "@/components/highlights/Highlights";
 import Timeline from "@/components/timeline/Timeline";
 import Achievements from "@/components/achievements/Achievements";
 import Connections from "@/components/connections/Connections";
+import CenteredConnections from "@/components/connections/CenteredConnections";
 import AddPage from "@/components/connections/AddPage";
 import FriendRequestsModal from "@/components/connections/FriendRequestsModal";
 import ConnectionsSearchModal from "@/components/connections/ConnectionsSearchModal";
@@ -54,7 +55,7 @@ export default function Page() {
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings'>('menu');
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings'>('menu');
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [selectedFriend, setSelectedFriend] = React.useState<ConnectionUser | null>(null);
   const [showCenteredProfile, setShowCenteredProfile] = React.useState(false);
@@ -62,11 +63,49 @@ export default function Page() {
   const [isConnectionsSearchOpen, setIsConnectionsSearchOpen] = React.useState(false);
   const [connectionsSearchQuery, setConnectionsSearchQuery] = React.useState('');
 
+  // Helper to load a friend's profile by userId
+  const loadFriendProfile = React.useCallback(async (userId: string) => {
+    console.log('🔷 Menu page: Loading friend profile for userId:', userId);
+    
+    try {
+      const { data, error } = await supabaseClient
+        .from('accounts')
+        .select('id, name, profile_pic, bio, profile_visibility')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('🔷 Menu page: Error loading friend profile:', error);
+        return;
+      }
+
+      if (data) {
+        const friendUser: ConnectionUser = {
+          id: data.id,
+          name: data.name,
+          bio: data.bio,
+          profile_pic: data.profile_pic,
+          connect_id: '',
+          created_at: '',
+          profile_visibility: data.profile_visibility
+        };
+        
+        console.log('🔷 Menu page: Friend profile loaded:', friendUser);
+        setSelectedFriend(friendUser);
+      }
+    } catch (error) {
+      console.error('🔷 Menu page: Error in loadFriendProfile:', error);
+    }
+  }, []);
+
   // Drive currentView from URL query (?view=...)
   const searchParams = useSearchParams();
   React.useEffect(() => {
     const view = searchParams?.get('view');
-    console.log('Menu page: view parameter:', view, 'currentView:', currentView);
+    const userId = searchParams?.get('userId');
+    
+    console.log('🔶 Menu page: URL params:', { view, userId, currentView });
+    
     if (view === 'profile') setCurrentView('profile');
     else if (view === 'highlights') setCurrentView('highlights');
     else if (view === 'timeline') setCurrentView('timeline');
@@ -83,6 +122,18 @@ export default function Page() {
     else if (view === 'share-profile') setCurrentView('share-profile');
     else if (view === 'account-settings') setCurrentView('account-settings');
     else if (view === 'add-person' || view === 'add-friends') setCurrentView('add-person');
+    else if (view === 'friend-requests') setCurrentView('friend-requests');
+    else if (view === 'friend-profile') {
+      console.log('🔶 Menu page: Setting currentView to friend-profile');
+      setCurrentView('friend-profile');
+    }
+    else if (view === 'friend-connections' && userId) {
+      console.log('🔶 Menu page: Setting currentView to friend-connections, loading friend:', userId);
+      setCurrentView('friend-connections');
+      
+      // Load the friend's profile from userId
+      loadFriendProfile(userId);
+    }
     else if (!view) setCurrentView('menu');
   }, [searchParams]);
 
@@ -103,11 +154,14 @@ export default function Page() {
   }, [currentView]);
 
   // Helper to update URL to a view on /menu (keeps transitions smooth)
-  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile', from?: string) => {
+  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections', from?: string) => {
+    console.log('🔷 goToView called:', { view, from });
+    
     if (view === 'menu') {
       router.push('/menu');
     } else {
       const url = from ? `/menu?view=${view}&from=${from}` : `/menu?view=${view}`;
+      console.log('🔷 goToView navigating to:', url);
       router.push(url);
     }
   };
@@ -925,7 +979,7 @@ export default function Page() {
     return (
         <ProfilePage
           profile={{
-            id: currentAccount?.id,
+            id: account?.id || personalProfile?.id,
             name: currentAccount?.name,
             avatarUrl: currentAccount?.avatarUrl,
             bio: currentAccount?.bio
@@ -946,18 +1000,55 @@ export default function Page() {
 
   // Friend Profile Component
   const FriendProfileView = ({ friend }: { friend: ConnectionUser }) => {
+    console.log('🔵 FriendProfileView: Rendering', { 
+      friendId: friend.id, 
+      friendName: friend.name,
+      profileVisibility: friend.profile_visibility 
+    });
+    
     return (
         <ProfilePage
           profile={{
             id: friend.id,
             name: friend.name,
             avatarUrl: friend.profile_pic,
-            bio: friend.bio
+            bio: friend.bio,
+            profile_visibility: friend.profile_visibility
           }}
           isOwnProfile={false}
           showBackButton={true}
-        onClose={() => goToView('connections')}
+        onClose={() => {
+          console.log('🔵 FriendProfileView: onClose called');
+          goToView('connections');
+        }}
+        onOpenConnections={() => {
+          console.log('🔵 FriendProfileView: onOpenConnections called, switching to friend-connections');
+          goToView('friend-connections', 'friend-profile');
+        }}
         />
+    );
+  };
+
+  // Friend Connections View - Show friend's connections list (no + button)
+  const FriendConnectionsView = ({ friend }: { friend: ConnectionUser }) => {
+    console.log('🟢 FriendConnectionsView: Rendering', { friendId: friend.id, friendName: friend.name });
+    
+    return (
+      <MobilePage>
+        <CenteredConnections
+          onBack={() => {
+            console.log('🟢 FriendConnectionsView: onBack called');
+            goToView('friend-profile');
+          }}
+          showAddPersonButton={false}
+          userId={friend.id}
+          onFriendClick={(clickedFriend) => {
+            console.log('🟢 FriendConnectionsView: Friend clicked', { clickedFriendId: clickedFriend.id });
+            setSelectedFriend(clickedFriend);
+            goToView('friend-profile', 'friend-connections');
+          }}
+        />
+      </MobilePage>
     );
   };
 
@@ -1175,6 +1266,8 @@ export default function Page() {
         <FriendRequestsView />
       ) : currentView === 'friend-profile' && selectedFriend ? (
         <FriendProfileView friend={selectedFriend} />
+      ) : currentView === 'friend-connections' && selectedFriend ? (
+        <FriendConnectionsView friend={selectedFriend} />
       ) : currentView === 'profile' ? (
         <ProfileView />
       ) : currentView === 'edit-profile' ? (

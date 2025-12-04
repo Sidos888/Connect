@@ -11,17 +11,20 @@ export default function CenteredConnections({
   onFriendClick,
   fromProfile = false,
   showAddPersonButton = true,
+  userId,
 }: {
   onBack: () => void;
   onAddPerson?: () => void;
   onFriendClick?: (friend: ConnectionUser) => void;
   fromProfile?: boolean;
   showAddPersonButton?: boolean;
+  userId?: string; // Optional: view another user's connections
 }) {
   console.log('🟣 CenteredConnections: Modal rendered', {
     fromProfile,
     showAddPersonButton,
     hasOnFriendClick: !!onFriendClick,
+    userId,
     timestamp: new Date().toISOString()
   });
 
@@ -52,7 +55,7 @@ export default function CenteredConnections({
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}>
-        <Connections onFriendClick={onFriendClick} />
+        <Connections onFriendClick={onFriendClick} userId={userId} />
       </div>
 
       {/* Bottom Blur */}

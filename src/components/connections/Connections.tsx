@@ -8,27 +8,32 @@ import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 
 export default function Connections({
   onFriendClick,
+  userId,
 }: {
   onFriendClick?: (friend: ConnectionUser) => void;
+  userId?: string; // Optional: view another user's connections
 }) {
   const [activeTab, setActiveTab] = useState<'friends' | 'following'>('friends');
   const { account, loading: authLoading } = useAuth();
+  
+  // Use provided userId or fall back to current user
+  const targetUserId = userId || account?.id;
 
   // Use React Query for caching and deduplication
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['connections', account?.id],
+    queryKey: ['connections', targetUserId],
     queryFn: async () => {
-      if (!account?.id) return [];
+      if (!targetUserId) return [];
 
       // Small delay to let Supabase client stabilize after auth refresh
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      const { connections, error } = await connectionsService.getConnections(account.id);
+      const { connections, error } = await connectionsService.getConnections(targetUserId);
       
       if (error) throw error;
       return connections || [];
     },
-    enabled: !authLoading && !!account?.id,
+    enabled: !authLoading && !!targetUserId,
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     retry: 2, // Retry failed requests twice

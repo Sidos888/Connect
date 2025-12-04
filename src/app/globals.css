@@ -647,6 +647,15 @@ textarea:focus {
   /* Allow Tailwind shadow classes to work */
 }
 
+/* Override for edit profile bio - keep transparent */
+textarea.edit-profile-bio,
+textarea.edit-profile-bio:focus {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* Web-specific fixes for keyboard behavior - only apply to individual chat page */
 @media (min-width: 769px) {
   .chat-mobile-container {

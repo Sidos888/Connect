@@ -8,6 +8,7 @@ export interface User {
   profile_pic?: string;
   connect_id?: string;
   created_at: string;
+  profile_visibility?: 'public' | 'private';
 }
 
 export interface FriendRequest {
@@ -60,7 +61,7 @@ export class ConnectionsService {
       // Build query - search by name and exclude current user
       let queryBuilder = this.supabase
         .from('accounts')
-        .select('id, name, bio, profile_pic, connect_id, created_at')
+        .select('id, name, bio, profile_pic, connect_id, created_at, profile_visibility')
         .ilike('name', `%${query.trim()}%`)
         .limit(50); // Increased limit for better search results
 
@@ -149,7 +150,7 @@ export class ConnectionsService {
       // Build query - exclude current user and already connected users
       let queryBuilder = this.supabase
         .from('accounts')
-        .select('id, name, bio, profile_pic, connect_id, created_at')
+        .select('id, name, bio, profile_pic, connect_id, created_at, profile_visibility')
         .order('created_at', { ascending: false })
         .limit(50); // Increased limit to get more suggestions
 
@@ -499,7 +500,7 @@ export class ConnectionsService {
 
       const { data: accounts, error: accError } = await this.supabase
         .from('accounts')
-        .select('id, name, bio, profile_pic')
+        .select('id, name, bio, profile_pic, profile_visibility')
         .in('id', userIds);
 
       if (accError) {

@@ -48,7 +48,7 @@ export default function ProfileModal({ isOpen, userId, onClose }: ProfileModalPr
         // Fetch profile data (same fields as profile page)
         const { data, error } = await supabase
           .from('accounts')
-          .select('id, name, profile_pic, bio')
+          .select('id, name, profile_pic, bio, profile_visibility')
           .eq('id', userId)
           .single();
 
@@ -63,7 +63,8 @@ export default function ProfileModal({ isOpen, userId, onClose }: ProfileModalPr
             id: data.id,
             name: data.name || undefined,
             avatarUrl: data.profile_pic || undefined,
-            bio: data.bio || undefined
+            bio: data.bio || undefined,
+            profile_visibility: data.profile_visibility || 'private'
           });
         }
       } catch (error) {

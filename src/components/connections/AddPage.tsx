@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/authContext";
 import { connectionsService, FriendRequest, User as ConnectionUser } from "@/lib/connectionsService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
+import { UserPlus, Clock } from "lucide-react";
 
 interface AddPageProps {
   onBack: () => void;
@@ -19,7 +20,7 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
   const queryClient = useQueryClient();
   const [connectionStatuses, setConnectionStatuses] = useState<Record<string, 'none' | 'pending_sent' | 'pending_received' | 'connected'>>({});
 
-  // Fetch friend requests
+  // Fetch friend requests (incoming)
   const { data: friendRequests = [], isLoading: isLoadingRequests, refetch: refetchRequests } = useQuery({
     queryKey: ['friend-requests', account?.id],
     queryFn: async () => {
@@ -33,6 +34,22 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
     },
     enabled: !!account?.id,
     staleTime: 0, // Always refetch
+  });
+
+  // Fetch sent requests (outgoing/pending)
+  const { data: sentRequests = [], isLoading: isLoadingSentRequests } = useQuery({
+    queryKey: ['sent-requests', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return [];
+      const { requests, error } = await connectionsService.getSentRequests(account.id);
+      if (error) {
+        console.error('Error loading sent requests:', error);
+        return [];
+      }
+      return requests || [];
+    },
+    enabled: !!account?.id,
+    staleTime: 0,
   });
 
   // Fetch suggested friends (all accounts user is not friends with)
@@ -126,11 +143,17 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
   const handleSendFriendRequest = async (userId: string) => {
     if (!account?.id) return;
 
+    // Optimistically update UI immediately for smooth animation
+    setConnectionStatuses(prev => ({ ...prev, [userId]: 'pending_sent' }));
+
     try {
       console.log('Sending friend request to user:', userId);
       const { error } = await connectionsService.sendFriendRequest(account.id, userId);
       if (error) {
         console.error('Error sending friend request:', error);
+        // Revert optimistic update on error
+        setConnectionStatuses(prev => ({ ...prev, [userId]: 'none' }));
+        
         // Show user-friendly error message
         if (error.message?.includes('already friends')) {
           alert('You are already friends with this person');
@@ -142,30 +165,42 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
         return;
       }
 
-      // Update connection status
-      setConnectionStatuses(prev => ({ ...prev, [userId]: 'pending_sent' }));
       console.log('Friend request sent successfully to user:', userId);
+      
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['sent-requests', account.id] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-friends', account.id] });
     } catch (error) {
       console.error('Error in handleSendFriendRequest:', error);
+      // Revert optimistic update on error
+      setConnectionStatuses(prev => ({ ...prev, [userId]: 'none' }));
       alert('Failed to send friend request. Please try again.');
     }
   };
 
-  // Cancel friend request
+  // Cancel friend request (direct, no modal)
   const handleCancelFriendRequest = async (userId: string) => {
     if (!account?.id) return;
+
+    // Optimistically update UI immediately for smooth animation
+    setConnectionStatuses(prev => ({ ...prev, [userId]: 'none' }));
 
     try {
       const { error } = await connectionsService.cancelFriendRequest(account.id, userId);
       if (error) {
         console.error('Error cancelling friend request:', error);
+        // Revert optimistic update on error
+        setConnectionStatuses(prev => ({ ...prev, [userId]: 'pending_sent' }));
         return;
       }
-
-      // Update connection status
-      setConnectionStatuses(prev => ({ ...prev, [userId]: 'none' }));
+      
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['sent-requests', account.id] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-friends', account.id] });
     } catch (error) {
       console.error('Error in handleCancelFriendRequest:', error);
+      // Revert optimistic update on error
+      setConnectionStatuses(prev => ({ ...prev, [userId]: 'pending_sent' }));
     }
   };
 
@@ -295,6 +330,90 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
         </div>
       )}
 
+      {/* Pending Requests Section (Outgoing) */}
+      {sentRequests.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">Pending</h2>
+          
+          {isLoadingSentRequests ? (
+            <div className="flex items-center justify-center py-8">
+              <ThreeDotLoadingBounce />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sentRequests.map((request) => {
+                const receiver = request.receiver;
+                if (!receiver) return null;
+
+                return (
+                  <div
+                    key={request.id}
+                    className="bg-white rounded-2xl p-4 min-h-[70px] transition-all duration-200 hover:-translate-y-[1px] cursor-pointer w-full"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onClick={() => {
+                      if (receiver.id) {
+                        router.push(`/profile?id=${receiver.id}&from=add-person`);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Profile Picture */}
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {receiver.profile_pic ? (
+                          <Image
+                            src={receiver.profile_pic}
+                            alt={receiver.name || 'User'}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-gray-500 text-sm font-medium">
+                            {receiver.name?.charAt(0).toUpperCase() || 'U'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Name */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                          {receiver.name || 'Unknown User'}
+                        </h3>
+                      </div>
+
+                      {/* Pending Button */}
+                      <div className="flex items-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleCancelFriendRequest(receiver.id)}
+                          className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-2 px-3 text-sm font-semibold text-gray-600 transition-all duration-200 hover:-translate-y-[1px] flex items-center justify-center gap-2"
+                          style={{
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          }}
+                        >
+                          <Clock size={16} className="text-gray-600" strokeWidth={2.5} />
+                          <span>Pending</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Suggested Friends Section */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">Suggested Friends</h2>
@@ -350,29 +469,33 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
                     </h3>
                   </div>
 
-                  {/* Add/Added Button */}
+                  {/* Add Friend/Pending Button */}
                   <div className="flex items-center flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     {(() => {
                       const status = connectionStatuses[user.id] || 'none';
-                      const isAdded = status === 'pending_sent';
+                      const isPending = status === 'pending_sent';
                       
-                      return (
+                      return isPending ? (
                         <button
-                          onClick={() => {
-                            if (isAdded) {
-                              handleCancelFriendRequest(user.id);
-                            } else {
-                              handleSendFriendRequest(user.id);
-                            }
-                          }}
-                          className="px-4 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors border border-gray-200"
+                          onClick={() => handleCancelFriendRequest(user.id)}
+                          className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-2 px-3 text-sm font-semibold text-gray-600 transition-all duration-200 hover:-translate-y-[1px] flex items-center justify-center gap-2"
                           style={{
-                            borderWidth: '0.4px',
-                            borderColor: '#E5E7EB',
-                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                           }}
                         >
-                          {isAdded ? 'Added' : 'Add'}
+                          <Clock size={16} className="text-gray-600" strokeWidth={2.5} />
+                          <span>Pending</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleSendFriendRequest(user.id)}
+                          className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-2 px-3 text-sm font-semibold text-gray-900 transition-all duration-200 hover:-translate-y-[1px] flex items-center justify-center gap-2"
+                          style={{
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          }}
+                        >
+                          <UserPlus size={16} className="text-gray-900" strokeWidth={2.5} />
+                          <span>Add Friend</span>
                         </button>
                       );
                     })()}
@@ -383,6 +506,7 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
           </div>
         )}
       </div>
+
     </div>
   );
 }
