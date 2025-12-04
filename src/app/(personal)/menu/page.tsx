@@ -58,6 +58,7 @@ export default function Page() {
   const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings'>('menu');
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [selectedFriend, setSelectedFriend] = React.useState<ConnectionUser | null>(null);
+  const [connectionsContextUser, setConnectionsContextUser] = React.useState<ConnectionUser | null>(null); // Track whose connections we're viewing
   const [showCenteredProfile, setShowCenteredProfile] = React.useState(false);
   const [showFriendRequestsModal, setShowFriendRequestsModal] = React.useState(false);
   const [isConnectionsSearchOpen, setIsConnectionsSearchOpen] = React.useState(false);
@@ -1000,10 +1001,13 @@ export default function Page() {
 
   // Friend Profile Component
   const FriendProfileView = ({ friend }: { friend: ConnectionUser }) => {
+    const from = searchParams?.get('from');
+    
     console.log('🔵 FriendProfileView: Rendering', { 
       friendId: friend.id, 
       friendName: friend.name,
-      profileVisibility: friend.profile_visibility 
+      profileVisibility: friend.profile_visibility,
+      from
     });
     
     return (
@@ -1018,11 +1022,21 @@ export default function Page() {
           isOwnProfile={false}
           showBackButton={true}
         onClose={() => {
-          console.log('🔵 FriendProfileView: onClose called');
-          goToView('connections');
+          console.log('🔵 FriendProfileView: onClose called, from:', from);
+          
+          // If we came from friend-connections, restore the context and go back there
+          if (from === 'friend-connections' && connectionsContextUser) {
+            console.log('🔵 FriendProfileView: Restoring connections context:', connectionsContextUser.name);
+            setSelectedFriend(connectionsContextUser); // Restore the context user
+            goToView('friend-connections');
+          } else {
+            // Otherwise go to your own connections
+            goToView('connections');
+          }
         }}
         onOpenConnections={() => {
           console.log('🔵 FriendProfileView: onOpenConnections called, switching to friend-connections');
+          setConnectionsContextUser(friend); // Store whose connections we're viewing
           goToView('friend-connections', 'friend-profile');
         }}
         />
@@ -1031,18 +1045,25 @@ export default function Page() {
 
   // Friend Connections View - Show friend's connections list (no + button)
   const FriendConnectionsView = ({ friend }: { friend: ConnectionUser }) => {
-    console.log('🟢 FriendConnectionsView: Rendering', { friendId: friend.id, friendName: friend.name });
+    console.log('🟢 FriendConnectionsView: Rendering', { 
+      friendId: friend.id, 
+      friendName: friend.name,
+      connectionsContextUser: connectionsContextUser?.name 
+    });
     
     return (
       <CenteredConnections
         onBack={() => {
           console.log('🟢 FriendConnectionsView: onBack called');
+          // Restore the friend whose connections we were viewing
+          setSelectedFriend(friend);
           goToView('friend-profile');
         }}
         showAddPersonButton={false}
         userId={friend.id}
         onFriendClick={(clickedFriend) => {
           console.log('🟢 FriendConnectionsView: Friend clicked', { clickedFriendId: clickedFriend.id });
+          // Keep the connections context, but update selected friend for profile view
           setSelectedFriend(clickedFriend);
           goToView('friend-profile', 'friend-connections');
         }}
@@ -1264,8 +1285,8 @@ export default function Page() {
         <FriendRequestsView />
       ) : currentView === 'friend-profile' && selectedFriend ? (
         <FriendProfileView friend={selectedFriend} />
-      ) : currentView === 'friend-connections' && selectedFriend ? (
-        <FriendConnectionsView friend={selectedFriend} />
+      ) : currentView === 'friend-connections' && connectionsContextUser ? (
+        <FriendConnectionsView friend={connectionsContextUser} />
       ) : currentView === 'profile' ? (
         <ProfileView />
       ) : currentView === 'edit-profile' ? (
