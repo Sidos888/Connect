@@ -137,9 +137,9 @@ export default function Page() {
     else if (!view) setCurrentView('menu');
   }, [searchParams]);
 
-  // Hide bottom nav when on add-person view - use CSS class like connections view does
+  // Hide bottom nav when on add-person or friend-connections view
   React.useEffect(() => {
-    if (currentView === 'add-person') {
+    if (currentView === 'add-person' || currentView === 'friend-connections') {
       document.body.classList.add('connections-mode');
       document.body.classList.add('no-scroll');
     } else {
@@ -1034,21 +1034,19 @@ export default function Page() {
     console.log('🟢 FriendConnectionsView: Rendering', { friendId: friend.id, friendName: friend.name });
     
     return (
-      <MobilePage>
-        <CenteredConnections
-          onBack={() => {
-            console.log('🟢 FriendConnectionsView: onBack called');
-            goToView('friend-profile');
-          }}
-          showAddPersonButton={false}
-          userId={friend.id}
-          onFriendClick={(clickedFriend) => {
-            console.log('🟢 FriendConnectionsView: Friend clicked', { clickedFriendId: clickedFriend.id });
-            setSelectedFriend(clickedFriend);
-            goToView('friend-profile', 'friend-connections');
-          }}
-        />
-      </MobilePage>
+      <CenteredConnections
+        onBack={() => {
+          console.log('🟢 FriendConnectionsView: onBack called');
+          goToView('friend-profile');
+        }}
+        showAddPersonButton={false}
+        userId={friend.id}
+        onFriendClick={(clickedFriend) => {
+          console.log('🟢 FriendConnectionsView: Friend clicked', { clickedFriendId: clickedFriend.id });
+          setSelectedFriend(clickedFriend);
+          goToView('friend-profile', 'friend-connections');
+        }}
+      />
     );
   };
 

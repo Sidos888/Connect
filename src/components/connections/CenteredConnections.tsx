@@ -30,9 +30,10 @@ export default function CenteredConnections({
 
   return (
     <div 
-      className="bg-white rounded-3xl w-full max-w-[680px] md:w-[680px] h-[620px] overflow-hidden flex flex-col shadow-2xl transform transition-all duration-300 ease-out scale-100 relative"
+      className="fixed inset-0 lg:relative lg:inset-auto bg-white lg:rounded-3xl w-full lg:max-w-[680px] lg:w-[680px] h-screen lg:h-[620px] overflow-hidden flex flex-col lg:shadow-2xl transform transition-all duration-300 ease-out scale-100"
       style={{ 
-        '--saved-content-padding-top': '104px'
+        '--saved-content-padding-top': '104px',
+        zIndex: 50
       } as React.CSSProperties}
     >
       <PageHeader

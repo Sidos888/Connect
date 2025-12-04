@@ -18,6 +18,12 @@ export default function Connections({
   
   // Use provided userId or fall back to current user
   const targetUserId = userId || account?.id;
+  
+  console.log('🔍 Connections: Component state', {
+    targetUserId,
+    accountId: account?.id,
+    isViewingOthers: !!userId && userId !== account?.id
+  });
 
   // Use React Query for caching and deduplication
   const { data, isLoading, isError } = useQuery({
@@ -123,7 +129,8 @@ export default function Connections({
           </div>
         ) : activeTab === 'friends' ? (
           peopleConnections.length > 0 ? peopleConnections.map((connection: any) => {
-            const friend = connection.user1?.id === account?.id ? connection.user2 : connection.user1;
+            // When viewing another user's connections, filter out the target user
+            const friend = connection.user1?.id === targetUserId ? connection.user2 : connection.user1;
             if (!friend) return null;
             return (
               <div 
