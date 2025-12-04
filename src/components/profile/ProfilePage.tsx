@@ -213,36 +213,32 @@ export default function ProfilePage({
           }
         }
 
-        // Get friends count (all connections - bidirectional)
-        // Note: connections table does NOT have a status column
-        // Connections can be in either direction: user1_id or user2_id
-        console.log('🔍 ProfilePage: Querying connections for user:', profile.id);
+        // Get connection stats using SECURITY DEFINER function (bypasses RLS)
+        console.log('🔍 ProfilePage: Fetching connection stats for user:', profile.id);
         
-        const { count: friendsCount, error: friendsError, data: debugData } = await supabase
-          .from('connections')
-          .select('id', { count: 'exact', head: true })
-          .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`);
+        const { data: statsData, error: statsError } = await supabase
+          .rpc('get_public_connection_stats', { target_user_id: profile.id });
 
-        console.log('🔍 ProfilePage: Query result:', {
-          count: friendsCount,
-          error: friendsError,
-          debugData,
-          queryUsed: `user1_id.eq.${profile.id},user2_id.eq.${profile.id}`
+        console.log('🔍 ProfilePage: Stats result:', {
+          data: statsData,
+          error: statsError
         });
 
-        // Following count - placeholder for now (not implemented yet)
-        const followingCount = 0;
+        if (statsError) {
+          console.error('🔍 ProfilePage: Error fetching stats:', statsError);
+        }
+
+        const stats = statsData?.[0] || { friends_count: 0, following_count: 0, mutuals_count: 0 };
 
         console.log('🔍 ProfilePage: Setting connection stats:', {
-          friends: friendsCount || 0,
-          following: followingCount,
-          hasError: !!friendsError
+          friends: stats.friends_count,
+          following: stats.following_count
         });
 
         setConnectionStats({
-          friends: friendsCount || 0,
-          following: followingCount,
-          mutuals: 0 // Not used for personal profile
+          friends: stats.friends_count || 0,
+          following: stats.following_count || 0,
+          mutuals: 0 // Will be calculated separately for non-friends
         });
       } catch (error) {
         console.error('🔍 ProfilePage: Error fetching connection stats:', error);
@@ -296,22 +292,22 @@ export default function ProfilePage({
           }
         }
 
-        // Get mutual friends count for private non-friend profiles
-        if (!friends) {
-          const { data: userConnections } = await supabase
-            .from('connections')
-            .select('user2_id')
-            .eq('user1_id', user.id);
+        // Get mutual friends count for non-friend profiles
+        if (!friends && !isOwnProfile) {
+          console.log('🔍 ProfilePage: Fetching mutuals count');
+          const { data: mutualsData, error: mutualsError } = await supabase
+            .rpc('get_mutual_connections_count', { 
+              user1_id: user.id, 
+              user2_id: profile.id 
+            });
 
-          if (userConnections && userConnections.length > 0) {
-            const friendIds = userConnections.map(c => c.user2_id);
-            const { count: mutualsCount } = await supabase
-              .from('connections')
-              .select('id', { count: 'exact', head: true })
-              .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
-              .in('user2_id', friendIds);
-            
-            setMutualFriendsCount(mutualsCount || 0);
+          console.log('🔍 ProfilePage: Mutuals result:', {
+            data: mutualsData,
+            error: mutualsError
+          });
+
+          if (!mutualsError && mutualsData !== null) {
+            setMutualFriendsCount(mutualsData);
           }
         }
       } catch (error) {
@@ -411,7 +407,7 @@ export default function ProfilePage({
               <span className="text-gray-500"> Following</span>
             </button>
           ) : (
-            <div className="mb-6 text-sm">
+            <div className="mb-6 text-sm cursor-default">
               <span className="font-bold text-gray-900">{mutualFriendsCount}</span>
               <span className="text-gray-500"> Mutuals</span>
             </div>
