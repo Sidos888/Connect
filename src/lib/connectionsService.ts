@@ -9,6 +9,7 @@ export interface User {
   connect_id?: string;
   created_at: string;
   profile_visibility?: 'public' | 'private';
+  dob?: string;
 }
 
 export interface FriendRequest {

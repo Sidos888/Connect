@@ -71,7 +71,7 @@ export default function Page() {
     try {
       const { data, error } = await supabaseClient
         .from('accounts')
-        .select('id, name, profile_pic, bio, profile_visibility')
+        .select('id, name, profile_pic, bio, profile_visibility, dob')
         .eq('id', userId)
         .single();
 
@@ -88,7 +88,8 @@ export default function Page() {
           profile_pic: data.profile_pic,
           connect_id: '',
           created_at: '',
-          profile_visibility: data.profile_visibility
+          profile_visibility: data.profile_visibility,
+          dob: data.dob
         };
         
         console.log('🔷 Menu page: Friend profile loaded:', friendUser);
@@ -992,7 +993,8 @@ export default function Page() {
             id: account?.id || personalProfile?.id,
             name: currentAccount?.name,
             avatarUrl: currentAccount?.avatarUrl,
-            bio: currentAccount?.bio
+            bio: currentAccount?.bio,
+            dateOfBirth: personalProfile?.dateOfBirth
           }}
           isOwnProfile={true}
           showBackButton={true}
@@ -1026,7 +1028,8 @@ export default function Page() {
             name: friend.name,
             avatarUrl: friend.profile_pic,
             bio: friend.bio,
-            profile_visibility: friend.profile_visibility
+            profile_visibility: friend.profile_visibility,
+            dateOfBirth: friend.dob
           }}
           isOwnProfile={false}
           showBackButton={true}
