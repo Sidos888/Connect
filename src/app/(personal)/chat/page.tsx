@@ -217,36 +217,19 @@ function MessagesPageContent() {
     });
   }, [chats, account?.id, friendIds, typingUsersByChat]);
   
-  // Event listing data for event chats
-  const [eventListings, setEventListings] = useState<Map<string, {
-    id: string;
-    title: string;
-    start_date: string | null;
-    end_date: string | null;
-    photo_urls: string[] | null;
-  }>>(new Map());
+  // Event listing data for event chats - using React Query for caching
+  const eventChatIds = conversations.filter(conv => conv.isEventChat).map(conv => conv.id);
   
-  // Fetch event listing data for event chats
-  useEffect(() => {
-    const fetchEventListings = async () => {
+  const { data: eventListingsArray = [] } = useQuery({
+    queryKey: ['event-listings', eventChatIds.sort().join(',')],
+    queryFn: async () => {
       const eventChats = conversations.filter(conv => conv.isEventChat);
-      if (eventChats.length === 0) {
-        setEventListings(new Map());
-        return;
-      }
+      if (eventChats.length === 0) return [];
       
       const supabase = getSupabaseClient();
-      if (!supabase) return;
+      if (!supabase) return [];
       
-      const newEventListings = new Map<string, {
-        id: string;
-        title: string;
-        start_date: string | null;
-        end_date: string | null;
-        photo_urls: string[] | null;
-      }>();
-      
-      await Promise.all(
+      const listings = await Promise.all(
         eventChats.map(async (conv) => {
           try {
             const { data: listing, error } = await supabase
@@ -256,25 +239,56 @@ function MessagesPageContent() {
               .maybeSingle();
             
             if (!error && listing) {
-              newEventListings.set(conv.id, {
-                id: listing.id,
-                title: listing.title,
-                start_date: listing.start_date,
-                end_date: listing.end_date,
-                photo_urls: listing.photo_urls || null
-              });
+              return {
+                chatId: conv.id,
+                listing: {
+                  id: listing.id,
+                  title: listing.title,
+                  start_date: listing.start_date,
+                  end_date: listing.end_date,
+                  photo_urls: listing.photo_urls || null
+                }
+              };
             }
           } catch (err) {
             console.error('Error fetching event listing for chat:', conv.id, err);
           }
+          return null;
         })
       );
       
-      setEventListings(newEventListings);
-    };
+      return listings.filter(Boolean) as Array<{
+        chatId: string;
+        listing: {
+          id: string;
+          title: string;
+          start_date: string | null;
+          end_date: string | null;
+          photo_urls: string[] | null;
+        };
+      }>;
+    },
+    enabled: eventChatIds.length > 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+  });
+  
+  // Convert array to Map for easy lookup
+  const eventListings = useMemo(() => {
+    const map = new Map<string, {
+      id: string;
+      title: string;
+      start_date: string | null;
+      end_date: string | null;
+      photo_urls: string[] | null;
+    }>();
     
-    fetchEventListings();
-  }, [conversations]);
+    eventListingsArray.forEach(item => {
+      map.set(item.chatId, item.listing);
+    });
+    
+    return map;
+  }, [eventListingsArray]);
 
   // Subscribe to typing indicators for all conversations
   useEffect(() => {
