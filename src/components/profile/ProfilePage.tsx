@@ -600,20 +600,22 @@ export default function ProfilePage({
               <div className="flex items-center gap-3">
                 {/* Circular Date Badge */}
                 <div 
-                  className="w-16 h-16 bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                  className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
                   style={{
+                    width: '56px',
+                    height: '56px',
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   }}
                 >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '11px', lineHeight: '14px' }}>
+                  <div className="text-xs text-gray-900" style={{ fontSize: '10px', lineHeight: '12px' }}>
                     {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short' })}
                   </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '20px', lineHeight: '24px', marginTop: '-2px', marginBottom: '-2px' }}>
+                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '22px', marginTop: '-1px', marginBottom: '-1px' }}>
                     {new Date(profile.dateOfBirth).getDate()}
                   </div>
-                  <div className="text-xs text-gray-500" style={{ fontSize: '10px', lineHeight: '12px' }}>
+                  <div className="text-xs text-gray-500" style={{ fontSize: '9px', lineHeight: '11px' }}>
                     {new Date(profile.dateOfBirth).getFullYear()}
                   </div>
                 </div>
