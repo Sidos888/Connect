@@ -20,10 +20,12 @@ export default function Connections({
   
   // Use provided userId or fall back to current user
   const targetUserId = userId || account?.id;
+  const isViewingOwnProfile = !userId || userId === account?.id;
   
   console.log('🔍 Connections: Component state', {
     targetUserId,
     accountId: account?.id,
+    isViewingOwnProfile,
     isViewingOthers: !!userId && userId !== account?.id,
     showOnlyMutuals
   });
@@ -59,8 +61,8 @@ export default function Connections({
       const supabase = getSupabaseClient();
       
       const { data, error } = await supabase.rpc('get_mutual_connections', {
-        user1_id: account.id,
-        user2_id: targetUserId,
+        p_user1_id: account.id,
+        p_user2_id: targetUserId,
         limit_count: 100
       });
       
@@ -71,7 +73,7 @@ export default function Connections({
       
       return data || [];
     },
-    enabled: !authLoading && !!account?.id && !!targetUserId && (showOnlyMutuals || activeTab === 'mutuals'),
+    enabled: !authLoading && !!account?.id && !!targetUserId && !isViewingOwnProfile && (showOnlyMutuals || activeTab === 'mutuals'),
     staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
@@ -89,6 +91,11 @@ export default function Connections({
   // Categories for pills - matching chat page structure
   const categories = showOnlyMutuals 
     ? [{ id: 'mutuals', label: 'Mutuals', count: mutualsCount }]
+    : isViewingOwnProfile
+    ? [
+        { id: 'friends', label: 'Friends', count: friendsCount },
+        { id: 'following', label: 'Following', count: followingCount },
+      ]
     : [
         { id: 'friends', label: 'Friends', count: friendsCount },
         { id: 'following', label: 'Following', count: followingCount },

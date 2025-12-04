@@ -53,7 +53,7 @@ export default function CenteredConnections({
         ] : []}
       />
       
-      <div className="flex-1 px-8 overflow-y-auto scrollbar-hide" style={{
+      <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
         paddingTop: '140px',
         paddingBottom: '32px',
         scrollbarWidth: 'none',
