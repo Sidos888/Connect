@@ -910,8 +910,8 @@ function MessagesPageContent() {
                         }}
                       >
                         <div className="flex items-center space-x-3">
-                          {conversation.isEventChat && eventListings.has(conversation.id) ? (
-                            // Event chat: squared image
+                          {conversation.isEventChat ? (
+                            // Event chat: squared image (shows immediately based on isEventChat flag)
                             <div 
                               className="w-12 h-12 bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 rounded-md"
                               style={{
@@ -920,7 +920,7 @@ function MessagesPageContent() {
                                 borderColor: 'rgba(0, 0, 0, 0.08)'
                               }}
                             >
-                              {eventListings.get(conversation.id)?.photo_urls && eventListings.get(conversation.id)!.photo_urls!.length > 0 ? (
+                              {eventListings.get(conversation.id)?.photo_urls && eventListings.get(conversation.id)!.photo_urls!.length > 0 && (
                                 <Image
                                   src={eventListings.get(conversation.id)!.photo_urls![0]}
                                   alt={eventListings.get(conversation.id)!.title}
@@ -928,10 +928,6 @@ function MessagesPageContent() {
                                   height={48}
                                   className="w-full h-full object-cover"
                                 />
-                              ) : (
-                                <div className="text-gray-400 text-sm font-semibold">
-                                  {eventListings.get(conversation.id)?.title.charAt(0).toUpperCase() || 'E'}
-                                </div>
                               )}
                             </div>
                           ) : (
