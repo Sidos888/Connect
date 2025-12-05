@@ -19,7 +19,7 @@ export default function LifePage({ profile, onBack }: LifePageProps) {
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
-          title="Life"
+          title="Timeline"
           backButton
           onBack={onBack}
         />

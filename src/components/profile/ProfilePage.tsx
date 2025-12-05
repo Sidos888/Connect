@@ -546,11 +546,20 @@ export default function ProfilePage({
           {/* Show full profile content only for public/friends */}
           {showFullProfile && (
             <>
-          {/* Pills - Life, Highlights, Badges */}
+          {/* Pills - Timeline, Highlights, Badges */}
           <div className="mb-6">
             <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
               {[
-                { id: 'life' as const, label: 'Life', count: 10 },
+                { 
+                  id: 'life' as const, 
+                  label: 'Timeline', 
+                  count: (() => {
+                    let count = 1; // Today always exists
+                    if (profile?.createdAt) count++;
+                    if (profile?.dateOfBirth) count++;
+                    return count;
+                  })()
+                },
                 { id: 'highlights' as const, label: 'Highlights', count: 10 },
                 { id: 'badges' as const, label: 'Badges', count: 10 }
               ].map((pill) => {
