@@ -1,7 +1,8 @@
 "use client";
 
 import Avatar from "@/components/Avatar";
-import { Pencil, Settings, MoreVertical, Users, UserPlus, Link2, Check, MessageCircle, Clock, X, Cake, ChevronRight, Calendar, UserCheck } from "lucide-react";
+import { Pencil, Settings, MoreVertical, Users, UserPlus, Link2, Check, MessageCircle, Clock, X, Cake, ChevronRight, Calendar, UserCheck, GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal } from "lucide-react";
+import Image from "next/image";
 import { PageHeader } from "@/components/layout/PageSystem";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,53 @@ type Profile = {
   profile_visibility?: 'public' | 'private';
   dateOfBirth?: string;
   createdAt?: string;
+};
+
+// Helper to get category icon
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'education':
+      return <GraduationCap size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'career':
+      return <Briefcase size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'relationships':
+      return <Heart size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'life-changes':
+      return <Home size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'experiences':
+      return <Sparkles size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    default:
+      return <MoreHorizontal size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+  }
+};
+
+// Helper to get moment type label
+const getMomentTypeLabel = (momentType: string): string => {
+  const labelMap: Record<string, string> = {
+    'preschool': 'Preschool',
+    'primary-school': 'Primary School',
+    'high-school': 'High School',
+    'university-tafe': 'University/Tafe',
+    'course-certificate': 'Course / Certificate',
+    'first-job': 'First Job',
+    'new-job': 'New Job',
+    'promotion': 'Promotion',
+    'business-started': 'Business Started',
+    'relationship-started': 'Relationship Started',
+    'engagement': 'Engagement',
+    'marriage': 'Marriage',
+    'child-born': 'Child Born',
+    'moved-house': 'Moved House',
+    'bought-home': 'Bought a Home',
+    'major-transition': 'Major Transition',
+    'major-trip': 'Major Trip',
+    'big-achievement': 'Big Achievement',
+    'important-memory': 'Important Memory',
+    'personal-milestone': 'Personal Milestone',
+    'custom-moment': 'Custom Moment'
+  };
+  
+  return labelMap[momentType] || momentType;
 };
 
 export default function ProfilePage({
@@ -58,24 +106,38 @@ export default function ProfilePage({
   // Selected pill state
   const [selectedPill, setSelectedPill] = useState<'life' | 'highlights' | 'badges'>('life');
   const [customMomentsCount, setCustomMomentsCount] = useState(0);
+  const [customMomentsPreview, setCustomMomentsPreview] = useState<any[]>([]);
+  const [loadingMoments, setLoadingMoments] = useState(true);
 
-  // Fetch custom moments count
+  // Fetch custom moments for preview and count
   useEffect(() => {
-    const fetchMomentsCount = async () => {
-      if (!profile?.id) return;
+    const fetchMoments = async () => {
+      if (!profile?.id) {
+        setLoadingMoments(false);
+        return;
+      }
       
       const supabase = await import('@/lib/supabaseClient').then(m => m.getSupabaseClient());
-      const { count, error } = await supabase
+      
+      // Fetch all moments for count and preview
+      const { data, error, count } = await supabase
         .from('user_moments')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', profile.id);
+        .select('*', { count: 'exact' })
+        .eq('user_id', profile.id)
+        .order('start_date', { ascending: false })
+        .limit(10); // Fetch more than we need for preview
 
-      if (!error && count !== null) {
-        setCustomMomentsCount(count);
+      if (!error) {
+        if (count !== null) {
+          setCustomMomentsCount(count);
+        }
+        setCustomMomentsPreview(data || []);
       }
+      
+      setLoadingMoments(false);
     };
 
-    fetchMomentsCount();
+    fetchMoments();
   }, [profile?.id]);
   // Platform detection for responsive padding
   const [isMobile, setIsMobile] = useState(false);
@@ -651,13 +713,13 @@ export default function ProfilePage({
           {selectedPill === 'life' && (
             <div className="space-y-3">
               {/* Moments Title */}
-          <button 
+              <button 
                 onClick={onOpenFullLife}
                 className="flex items-center gap-1 mb-4"
               >
                 <h3 className="text-base font-semibold text-gray-900">
                   {(() => {
-                    let count = 1; // Today always exists
+                    let count = isOwnProfile ? 1 : 0; // Today only for own profile
                     if (profile?.createdAt) count++;
                     if (profile?.dateOfBirth) count++;
                     count += customMomentsCount; // Add custom moments
@@ -667,138 +729,269 @@ export default function ProfilePage({
                 <ChevronRight size={20} className="text-gray-400" strokeWidth={2} />
               </button>
 
-              {/* Today Moment Component */}
-              <div className="flex items-center gap-3">
-                {/* Circular Date Badge - Day/Month only */}
-                <div 
-                  className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    padding: '4px',
-                    gap: '1px',
-                  }}
-                >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
-                    {new Date().toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
-                  </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
-                    {new Date().getDate()}
-                  </div>
-                </div>
-
-                {/* Today Card with full date below */}
-                <div 
-                  className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    minHeight: '80px',
-                  }}
-                >
-                  <Calendar size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-900">Today</span>
-                    <span className="text-xs text-gray-500 mt-0.5">
-                      {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Joined Connect Moment Component */}
-              {profile?.createdAt && (
-              <div className="flex items-center gap-3">
-                {/* Circular Date Badge - Day/Month only */}
-                <div 
-                  className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    padding: '4px',
-                    gap: '1px',
-                  }}
-                >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
-                    {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
-                  </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
-                    {new Date(profile.createdAt).getDate()}
-                  </div>
-                </div>
-
-                {/* Joined Connect Card with full date below */}
-                <div 
-                  className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
-            style={{ 
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    minHeight: '80px',
-                  }}
-                >
-                  <UserCheck size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-900">Joined Connect</span>
-                    <span className="text-xs text-gray-500 mt-0.5">
-                      {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              )}
-
-              {/* Born Moment Component */}
-              {profile?.dateOfBirth && (
-              <div className="flex items-center gap-3">
-                {/* Circular Date Badge - Day/Month only */}
-                <div 
-                  className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    padding: '4px',
-                    gap: '1px',
-                  }}
-                >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
-                    {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
-                  </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
-                    {new Date(profile.dateOfBirth).getDate()}
-                  </div>
-                </div>
-
-                {/* Born Card with full date below */}
-                <div 
-                  className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    minHeight: '80px',
-                  }}
-                >
-                  <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-900">Born</span>
-                    <span className="text-xs text-gray-500 mt-0.5">
-                      {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              )}
+              {/* Moments Preview (Max 5) */}
+              {(() => {
+                // Group all moments
+                const allMoments: Array<{ date: Date; type: string; data: any }> = [];
+                
+                // Add Today only for own profile
+                if (isOwnProfile) {
+                  allMoments.push({ 
+                    date: new Date(), 
+                    type: 'today', 
+                    data: null 
+                  });
+                }
+                
+                // Add custom moments
+                customMomentsPreview.forEach(moment => {
+                  allMoments.push({
+                    date: new Date(moment.start_date),
+                    type: 'custom',
+                    data: moment
+                  });
+                });
+                
+                // Add Joined Connect
+                if (profile?.createdAt) {
+                  allMoments.push({
+                    date: new Date(profile.createdAt),
+                    type: 'joined',
+                    data: null
+                  });
+                }
+                
+                // Add Born
+                if (profile?.dateOfBirth) {
+                  allMoments.push({
+                    date: new Date(profile.dateOfBirth),
+                    type: 'born',
+                    data: null
+                  });
+                }
+                
+                // Sort by date (newest first) and take first 5
+                allMoments.sort((a, b) => b.date.getTime() - a.date.getTime());
+                const previewMoments = allMoments.slice(0, 5);
+                
+                return previewMoments.map((moment, index) => {
+                  const momentDate = moment.date;
+                  
+                  if (moment.type === 'today') {
+                    // Today Moment
+                    return (
+                      <div key="today" className="flex items-center gap-3">
+                        <div 
+                          className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            padding: '4px',
+                            gap: '1px',
+                          }}
+                        >
+                          <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
+                            {momentDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                          </div>
+                          <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
+                            {momentDate.getDate()}
+                          </div>
+                        </div>
+                        <div 
+                          className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            minHeight: '80px',
+                          }}
+                        >
+                          <Calendar size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">Today</span>
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {momentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  if (moment.type === 'joined') {
+                    // Joined Connect Moment
+                    return (
+                      <div key="joined" className="flex items-center gap-3">
+                        <div 
+                          className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            padding: '4px',
+                            gap: '1px',
+                          }}
+                        >
+                          <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
+                            {momentDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                          </div>
+                          <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
+                            {momentDate.getDate()}
+                          </div>
+                        </div>
+                        <div 
+                          className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            minHeight: '80px',
+                          }}
+                        >
+                          <UserCheck size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">Joined Connect</span>
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {momentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  if (moment.type === 'born') {
+                    // Born Moment
+                    return (
+                      <div key="born" className="flex items-center gap-3">
+                        <div 
+                          className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            padding: '4px',
+                            gap: '1px',
+                          }}
+                        >
+                          <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
+                            {momentDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                          </div>
+                          <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
+                            {momentDate.getDate()}
+                          </div>
+                        </div>
+                        <div 
+                          className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                            minHeight: '80px',
+                          }}
+                        >
+                          <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">Born</span>
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {momentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Custom Moment
+                  const customData = moment.data;
+                  return (
+                    <div key={`custom-${index}`} className="flex items-center gap-3">
+                      <div 
+                        className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          padding: '4px',
+                          gap: '1px',
+                        }}
+                      >
+                        <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
+                          {momentDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                        </div>
+                        <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
+                          {momentDate.getDate()}
+                        </div>
+                      </div>
+                      <div 
+                        className="flex-1 bg-white rounded-xl px-4 py-3"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          minHeight: '80px',
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              {getCategoryIcon(customData.category)}
+                              <span className="text-xs text-gray-500">
+                                {getMomentTypeLabel(customData.moment_type)}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-medium text-gray-900 mb-1">
+                              {customData.title}
+                            </h4>
+                            <p className="text-xs text-gray-500">
+                              {momentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {customData.end_date && ` - ${new Date(customData.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                            </p>
+                          </div>
+                          {customData.photos && customData.photos.length > 0 && (
+                            <div className="flex-shrink-0">
+                              {customData.photos.length === 1 ? (
+                                <div className="w-16 h-16 rounded-lg overflow-hidden">
+                                  <Image
+                                    src={customData.photos[0]}
+                                    alt=""
+                                    width={64}
+                                    height={64}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-0.5 w-16 h-16 rounded-lg overflow-hidden">
+                                  {customData.photos.slice(0, 4).map((photo: string, photoIndex: number) => (
+                                    <div key={photoIndex} className="w-full h-full">
+                                      <Image
+                                        src={photo}
+                                        alt=""
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           )}
 
