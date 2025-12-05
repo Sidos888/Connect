@@ -72,7 +72,7 @@ export default function Page() {
     try {
       const { data, error } = await supabaseClient
         .from('accounts')
-        .select('id, name, profile_pic, bio, profile_visibility, dob')
+        .select('id, name, profile_pic, bio, profile_visibility, dob, created_at')
         .eq('id', userId)
         .single();
 
@@ -88,7 +88,7 @@ export default function Page() {
           bio: data.bio,
           profile_pic: data.profile_pic,
           connect_id: '',
-          created_at: '',
+          created_at: data.created_at || '',
           profile_visibility: data.profile_visibility,
           dob: data.dob
         };
