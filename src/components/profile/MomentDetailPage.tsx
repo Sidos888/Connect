@@ -148,9 +148,10 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
 
   if (loading || !moment) {
     return (
-      <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
           <PageHeader
+            title=""
             backButton
             onBack={onBack}
           />
@@ -235,23 +236,47 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
     // TODO: Implement edit functionality
   };
 
+  const showEditButton = moment.user_id && account?.id && moment.user_id === account.id && 
+    moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born';
+  
+  // Detect mobile for consistent sizing
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  const buttonSize = isMobile ? '44px' : '40px';
+
   return (
-    <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
+    <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
+          title=""  // Empty title
+          subtitle={
+            <div className="flex items-center justify-center gap-2 mt-1">
+              {getMomentIcon()}
+              <span className="text-sm text-gray-600">{subcategoryLabel}</span>
+            </div>
+          }
           backButton
           onBack={onBack}
-          actions={
-            // Show edit button for custom moments owned by current user
-            moment.user_id && account?.id && moment.user_id === account.id && 
-            moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born' ? (
+          customActions={
+            showEditButton ? (
               <button
                 onClick={handleEdit}
-                className="w-11 h-11 rounded-full bg-white flex items-center justify-center"
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
+                  width: buttonSize,
+                  height: buttonSize,
+                  borderRadius: '100px',
+                  background: 'rgba(255, 255, 255, 0.9)',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3)',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
                 aria-label="Edit moment"
               >
@@ -262,18 +287,12 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
         />
         
         <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
-          paddingTop: 'var(--saved-content-padding-top, 104px)',
+          paddingTop: 'var(--saved-content-padding-top, 140px)',
           paddingBottom: '32px',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
         }}>
           <div className="space-y-6">
-            {/* Category Icon + Subcategory Label - TOP COMPONENT */}
-            <div className="flex items-center justify-center gap-2 pt-4">
-              {getMomentIcon()}
-              <span className="text-sm text-gray-600">{subcategoryLabel}</span>
-            </div>
-
             {/* Photo Section with # icon if photos exist */}
             {hasPhotos && (
               <div className="relative">
