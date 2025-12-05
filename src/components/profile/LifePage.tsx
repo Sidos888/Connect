@@ -26,7 +26,7 @@ export default function LifePage({ profile, onBack, onAddMoment, isOwnTimeline =
           onBack={onBack}
           actions={isOwnTimeline && onAddMoment ? [
             {
-              icon: <Plus size={20} strokeWidth={2} />,
+              icon: <Plus size={20} strokeWidth={2.5} />,
               onClick: onAddMoment,
               ariaLabel: "Add moment"
             }

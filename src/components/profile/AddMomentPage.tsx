@@ -110,7 +110,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
                       borderWidth: '0.4px',
                       borderColor: '#E5E7EB',
                       boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      height: '52px',
+                      height: '60px',
                       willChange: 'transform, box-shadow'
                     }}
                     onMouseEnter={(e) => {
@@ -123,7 +123,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
                     }}
                   >
                     <span className="text-sm font-medium text-gray-900">{option.label}</span>
-                    <Plus size={20} className="text-gray-400 flex-shrink-0" strokeWidth={2} />
+                    <Plus size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2.5} />
                   </button>
                 ))}
               </div>
