@@ -501,7 +501,7 @@ export class ConnectionsService {
 
       const { data: accounts, error: accError } = await this.supabase
         .from('accounts')
-        .select('id, name, bio, profile_pic, profile_visibility')
+        .select('id, name, bio, profile_pic, profile_visibility, created_at, dob')
         .in('id', userIds);
 
       if (accError) {
@@ -517,7 +517,9 @@ export class ConnectionsService {
           bio: acc.bio,
           profile_pic: acc.profile_pic || undefined,
           connect_id: undefined,
-          created_at: ''
+          created_at: acc.created_at || '',
+          dob: acc.dob,
+          profile_visibility: acc.profile_visibility
         } as User;
       });
 
