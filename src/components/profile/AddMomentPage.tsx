@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 
 interface MomentOption {
@@ -10,6 +10,7 @@ interface MomentOption {
 
 interface MomentCategory {
   title: string;
+  icon: React.ReactNode;
   options: MomentOption[];
 }
 
@@ -22,6 +23,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
   const categories: MomentCategory[] = [
     {
       title: "Education",
+      icon: <GraduationCap size={18} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "preschool", label: "Preschool" },
         { id: "primary-school", label: "Primary School" },
@@ -32,6 +34,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Career",
+      icon: <Briefcase size={18} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "first-job", label: "First Job" },
         { id: "new-job", label: "New Job" },
@@ -41,6 +44,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Relationships",
+      icon: <Heart size={18} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "relationship-started", label: "Relationship Started" },
         { id: "engagement", label: "Engagement" },
@@ -50,6 +54,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Life Changes",
+      icon: <Home size={18} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "moved-house", label: "Moved House" },
         { id: "bought-home", label: "Bought a Home" },
@@ -58,6 +63,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Experiences",
+      icon: <Sparkles size={18} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "major-trip", label: "Major Trip" },
         { id: "big-achievement", label: "Big Achievement" },
@@ -67,6 +73,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Other",
+      icon: <MoreHorizontal size={18} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "custom-moment", label: "Custom Moment" }
       ]
@@ -90,8 +97,11 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
         }}>
           {categories.map((category, index) => (
             <div key={category.title} className={index > 0 ? 'mt-6' : ''}>
-              {/* Category Title */}
-              <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">{category.title}</h3>
+              {/* Category Title with Icon */}
+              <div className="flex items-center gap-2 mb-3 px-1">
+                {category.icon}
+                <h3 className="text-sm font-semibold text-gray-900">{category.title}</h3>
+              </div>
               
               {/* Options */}
               <div className="space-y-2">
