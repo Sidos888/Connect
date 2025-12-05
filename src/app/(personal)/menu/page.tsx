@@ -1022,6 +1022,8 @@ export default function Page() {
       friendId: friend.id, 
       friendName: friend.name,
       profileVisibility: friend.profile_visibility,
+      dateOfBirth: friend.dob,
+      createdAt: friend.created_at,
       from
     });
     
@@ -1060,6 +1062,12 @@ export default function Page() {
           
           // If friends, show full connections; if not friends, show mutuals only
           goToView('friend-connections', 'friend-profile', friend.id);
+        }}
+        onOpenFullLife={() => {
+          console.log('🔵 FriendProfileView: onOpenFullLife called for friend:', friend.name);
+          // For now, we can reuse the life view logic or create a friend-specific one
+          // Let's just add a console log to confirm it's being called
+          alert(`Timeline for ${friend.name} - Feature coming soon!`);
         }}
         />
     );
