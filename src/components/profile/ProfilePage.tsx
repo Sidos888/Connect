@@ -602,20 +602,20 @@ export default function ProfilePage({
                 <div 
                   className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
                   style={{
-                    width: '56px',
-                    height: '56px',
+                    width: '48px',
+                    height: '48px',
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   }}
                 >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '10px', lineHeight: '12px' }}>
+                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '10px', marginBottom: '1px' }}>
                     {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short' })}
                   </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '22px', marginTop: '-1px', marginBottom: '-1px' }}>
+                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '16px', lineHeight: '18px', margin: '1px 0' }}>
                     {new Date(profile.dateOfBirth).getDate()}
                   </div>
-                  <div className="text-xs text-gray-500" style={{ fontSize: '9px', lineHeight: '11px' }}>
+                  <div className="text-xs text-gray-500" style={{ fontSize: '8px', lineHeight: '9px', marginTop: '1px' }}>
                     {new Date(profile.dateOfBirth).getFullYear()}
                   </div>
                 </div>
