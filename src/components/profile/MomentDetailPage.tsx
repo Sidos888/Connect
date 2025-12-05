@@ -151,7 +151,7 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
 
   if (loading || !moment) {
     return (
-      <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
+      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
           {/* Simple header with just back button */}
           <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
@@ -268,7 +268,7 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
     moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born';
 
   return (
-    <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
+    <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
       <MobilePage>
         {/* Custom Header - Back button + Category + Edit button */}
         <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
@@ -357,7 +357,7 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
         </div>
         
         <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
-          paddingTop: 'var(--saved-content-padding-top, 104px)',
+          paddingTop: 'var(--saved-content-padding-top, 140px)',
           paddingBottom: '32px',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
