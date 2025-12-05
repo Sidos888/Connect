@@ -353,24 +353,19 @@ export default function Page() {
     );
   };
 
-  // Timeline View Component
+  // Timeline View Component - Now using LifePage with moments
   const TimelineView = () => {
-    const from = searchParams?.get('from') || 'menu';
+    const from = searchParams?.get('from') || 'profile';
     return (
-      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-        <MobilePage>
-          <PageHeader
-            title="Timeline"
-            backButton
-            onBack={() => goToView(from as any)}
-          />
-          <Timeline />
-          {/* Bottom Blur */}
-          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
-            <div className="h-32 bg-gradient-to-t from-white via-white/95 to-transparent"></div>
-          </div>
-        </MobilePage>
-      </div>
+      <LifePage 
+        profile={{
+          id: account?.id || personalProfile?.id,
+          name: currentAccount?.name,
+          dateOfBirth: personalProfile?.dateOfBirth,
+          createdAt: account?.createdAt || personalProfile?.createdAt
+        }}
+        onBack={() => goToView(from as any)}
+      />
     );
   };
 
@@ -1012,7 +1007,7 @@ export default function Page() {
         onEdit={() => goToView('edit-profile', 'profile')}
           onSettings={() => goToView('settings', 'profile')}
         onShare={() => goToView('share-profile', 'profile')}
-          onOpenTimeline={() => goToView('timeline', 'profile')}
+          onOpenTimeline={() => goToView('life', 'profile')}
         onOpenHighlights={() => goToView('highlights', 'profile')}
         onOpenBadges={() => goToView('achievements', 'profile')}
         onOpenFullLife={() => goToView('life', 'profile')}
