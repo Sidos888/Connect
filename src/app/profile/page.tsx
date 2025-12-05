@@ -18,6 +18,9 @@ export default function ProfileRoute() {
     name?: string;
     avatarUrl?: string;
     bio?: string;
+    dateOfBirth?: string;
+    createdAt?: string;
+    profile_visibility?: 'public' | 'private';
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false); // Start as false - load in background
 
@@ -37,7 +40,7 @@ export default function ProfileRoute() {
         // Fetch account data in background (no loading state)
         const { data, error } = await supabase
           .from('accounts')
-          .select('id, name, profile_pic, bio')
+          .select('id, name, profile_pic, bio, dob, created_at, profile_visibility')
           .eq('id', userId)
           .single();
 
@@ -47,11 +50,22 @@ export default function ProfileRoute() {
         }
 
         if (data) {
+          console.log('🔵 ProfileRoute: Loaded profile data:', {
+            userId: data.id,
+            name: data.name,
+            dob: data.dob,
+            created_at: data.created_at,
+            profile_visibility: data.profile_visibility
+          });
+          
           setProfileData({
             id: data.id,
             name: data.name || undefined,
             avatarUrl: data.profile_pic || undefined,
-            bio: data.bio || undefined
+            bio: data.bio || undefined,
+            dateOfBirth: data.dob || undefined,
+            createdAt: data.created_at || undefined,
+            profile_visibility: data.profile_visibility
           });
         }
       } catch (error) {
@@ -101,7 +115,10 @@ export default function ProfileRoute() {
     id: userId,
     name: undefined,
     avatarUrl: undefined,
-    bio: undefined
+    bio: undefined,
+    dateOfBirth: undefined,
+    createdAt: undefined,
+    profile_visibility: undefined
   };
 
   return (
@@ -118,6 +135,7 @@ export default function ProfileRoute() {
         onOpenHighlights={() => router.push(`/highlights?userId=${userId}`)}
         onOpenBadges={() => router.push(`/achievements?userId=${userId}`)}
         onOpenConnections={() => router.push(`/connections?userId=${userId}`)}
+        onOpenFullLife={() => router.push(`/menu?view=life&userId=${userId}&from=profile`)}
       />
     </ProtectedRoute>
   );
