@@ -1,7 +1,7 @@
 "use client";
 
 import Avatar from "@/components/Avatar";
-import { Pencil, Settings, MoreVertical, Users, UserPlus, Link2, Check, MessageCircle, Clock, X, Cake } from "lucide-react";
+import { Pencil, Settings, MoreVertical, Users, UserPlus, Link2, Check, MessageCircle, Clock, X, Cake, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageSystem";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -28,6 +28,7 @@ export default function ProfilePage({
   onOpenHighlights,
   onOpenBadges,
   onOpenConnections,
+  onOpenFullLife,
   onThreeDotsMenu,
   showBackButton = false,
 }: {
@@ -41,6 +42,7 @@ export default function ProfilePage({
   onOpenHighlights?: () => void;
   onOpenBadges?: () => void;
   onOpenConnections?: () => void;
+  onOpenFullLife?: () => void;
   onThreeDotsMenu?: () => void;
   showBackButton?: boolean;
 }) {
@@ -609,6 +611,15 @@ export default function ProfilePage({
           {/* Life Section Content */}
           {selectedPill === 'life' && profile?.dateOfBirth && (
             <div className="space-y-3">
+              {/* Moments Title */}
+              <button 
+                onClick={onOpenFullLife}
+                className="flex items-center justify-between w-full mb-4"
+              >
+                <h3 className="text-base font-semibold text-gray-900">10 Moments</h3>
+                <ChevronRight size={20} className="text-gray-400" strokeWidth={2} />
+              </button>
+
               {/* Born Component */}
               <div className="flex items-center gap-3">
                 {/* Circular Date Badge */}
