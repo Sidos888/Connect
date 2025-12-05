@@ -57,6 +57,26 @@ export default function ProfilePage({
 
   // Selected pill state
   const [selectedPill, setSelectedPill] = useState<'life' | 'highlights' | 'badges'>('life');
+  const [customMomentsCount, setCustomMomentsCount] = useState(0);
+
+  // Fetch custom moments count
+  useEffect(() => {
+    const fetchMomentsCount = async () => {
+      if (!profile?.id) return;
+      
+      const supabase = await import('@/lib/supabaseClient').then(m => m.getSupabaseClient());
+      const { count, error } = await supabase
+        .from('user_moments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id);
+
+      if (!error && count !== null) {
+        setCustomMomentsCount(count);
+      }
+    };
+
+    fetchMomentsCount();
+  }, [profile?.id]);
   // Platform detection for responsive padding
   const [isMobile, setIsMobile] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -565,6 +585,7 @@ export default function ProfilePage({
                     let count = 1; // Today always exists
                     if (profile?.createdAt) count++;
                     if (profile?.dateOfBirth) count++;
+                    count += customMomentsCount; // Add custom moments
                     return count;
                   })()
                 },
@@ -639,6 +660,7 @@ export default function ProfilePage({
                     let count = 1; // Today always exists
                     if (profile?.createdAt) count++;
                     if (profile?.dateOfBirth) count++;
+                    count += customMomentsCount; // Add custom moments
                     return count;
                   })()} Moments
                 </h3>

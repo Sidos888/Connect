@@ -25,6 +25,7 @@ import ProfilePage from "@/components/profile/ProfilePage";
 import LifePage from "@/components/profile/LifePage";
 import AddMomentPage from "@/components/profile/AddMomentPage";
 import AddMomentForm from "@/components/profile/AddMomentForm";
+import MomentDetailPage from "@/components/profile/MomentDetailPage";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import MenuTopActions from "@/components/layout/MenuTopActions";
@@ -58,8 +59,9 @@ export default function Page() {
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings' | 'life' | 'add-moment' | 'add-moment-form'>('menu');
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail'>('menu');
   const [selectedMomentType, setSelectedMomentType] = React.useState<{ id: string; label: string; category: string } | null>(null);
+  const [selectedMomentId, setSelectedMomentId] = React.useState<string | null>(null);
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [selectedFriend, setSelectedFriend] = React.useState<ConnectionUser | null>(null);
   const [connectionsContextUser, setConnectionsContextUser] = React.useState<ConnectionUser | null>(null); // Track whose connections we're viewing
@@ -143,6 +145,7 @@ export default function Page() {
     else if (view === 'account-settings') setCurrentView('account-settings');
     else if (view === 'add-moment') setCurrentView('add-moment');
     else if (view === 'add-moment-form') setCurrentView('add-moment-form');
+    else if (view === 'moment-detail') setCurrentView('moment-detail');
     else if (view === 'add-person' || view === 'add-friends') setCurrentView('add-person');
     else if (view === 'friend-requests') setCurrentView('friend-requests');
     else if (view === 'friend-profile') {
@@ -176,7 +179,7 @@ export default function Page() {
   }, [currentView]);
 
   // Helper to update URL to a view on /menu (keeps transitions smooth)
-  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections' | 'life' | 'add-moment' | 'add-moment-form', from?: string, userId?: string) => {
+  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail', from?: string, userId?: string) => {
     console.log('🔷 goToView called:', { view, from, userId });
     
     if (view === 'menu') {
@@ -235,7 +238,7 @@ export default function Page() {
       document.body.style.paddingBottom = '';
     };
     
-    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile' || currentView === 'highlights' || currentView === 'timeline' || currentView === 'achievements' || currentView === 'life' || currentView === 'add-moment' || currentView === 'add-moment-form' || currentView === 'connections' || currentView === 'settings' || currentView === 'notifications' || currentView === 'memories' || currentView === 'saved' || currentView === 'share-profile' || currentView === 'account-settings') {
+    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile' || currentView === 'highlights' || currentView === 'timeline' || currentView === 'achievements' || currentView === 'life' || currentView === 'add-moment' || currentView === 'add-moment-form' || currentView === 'moment-detail' || currentView === 'connections' || currentView === 'settings' || currentView === 'notifications' || currentView === 'memories' || currentView === 'saved' || currentView === 'share-profile' || currentView === 'account-settings') {
       hideBottomNav();
     } else {
       showBottomNav();
@@ -371,6 +374,10 @@ export default function Page() {
         }}
         onBack={() => goToView(from as any)}
         onAddMoment={() => goToView('add-moment', 'life')}
+        onOpenMomentDetail={(momentId) => {
+          setSelectedMomentId(momentId);
+          goToView('moment-detail', 'life');
+        }}
         isOwnTimeline={true}
       />
     );
@@ -1305,7 +1312,7 @@ export default function Page() {
 
   return (
     <ProtectedRoute
-      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'life' ? "Timeline" : currentView === 'add-moment' ? "Add" : currentView === 'add-moment-form' ? (selectedMomentType?.label || "Add Moment") : currentView === 'achievements' ? "Achievements" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'share-profile' ? "Share Profile" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
+      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'life' ? "Timeline" : currentView === 'add-moment' ? "Add" : currentView === 'add-moment-form' ? (selectedMomentType?.label || "Add Moment") : currentView === 'moment-detail' ? "Moment" : currentView === 'achievements' ? "Achievements" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'share-profile' ? "Share Profile" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
       description="Log in / sign up to access your account settings and preferences"
       buttonText="Log in"
     >
@@ -1372,6 +1379,10 @@ export default function Page() {
                   // Go back in browser history (returns to profile)
                   router.back();
                 }}
+                onOpenMomentDetail={(momentId) => {
+                  setSelectedMomentId(momentId);
+                  goToView('moment-detail', 'life');
+                }}
                 isOwnTimeline={false}
               />
             );
@@ -1388,6 +1399,10 @@ export default function Page() {
               }}
               onBack={() => goToView('profile')}
               onAddMoment={() => goToView('add-moment', 'life')}
+              onOpenMomentDetail={(momentId) => {
+                setSelectedMomentId(momentId);
+                goToView('moment-detail', 'life');
+              }}
               isOwnTimeline={true}
             />
           );
@@ -1470,6 +1485,18 @@ export default function Page() {
               console.error('Error in onSave:', error);
               alert('Error saving moment. Please try again.');
             }
+          }}
+        />
+      ) : currentView === 'moment-detail' && selectedMomentId ? (
+        <MomentDetailPage
+          momentId={selectedMomentId}
+          onBack={() => {
+            const from = searchParams?.get('from') || 'life';
+            goToView(from as any);
+          }}
+          onOpenPhotoGrid={(photos, initialIndex) => {
+            console.log('Open photo grid:', photos.length, 'photos, starting at', initialIndex);
+            // TODO: Implement photo grid modal
           }}
         />
       ) : currentView === 'achievements' ? (

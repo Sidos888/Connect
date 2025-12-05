@@ -15,6 +15,7 @@ interface LifePageProps {
   };
   onBack: () => void;
   onAddMoment?: () => void;
+  onOpenMomentDetail?: (momentId: string) => void;
   isOwnTimeline?: boolean;
 }
 
@@ -36,7 +37,7 @@ const getCategoryIcon = (category: string) => {
   }
 };
 
-export default function LifePage({ profile, onBack, onAddMoment, isOwnTimeline = true }: LifePageProps) {
+export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDetail, isOwnTimeline = true }: LifePageProps) {
   const supabase = getSupabaseClient();
   const [customMoments, setCustomMoments] = useState<any[]>([]);
   const [loadingMoments, setLoadingMoments] = useState(true);
@@ -183,8 +184,9 @@ export default function LifePage({ profile, onBack, onAddMoment, isOwnTimeline =
                   {/* Moment Card with photo/date */}
                   <button
                     onClick={() => {
-                      console.log('Moment clicked:', moment.id);
-                      // TODO: Open moment detail view
+                      if (onOpenMomentDetail) {
+                        onOpenMomentDetail(moment.id);
+                      }
                     }}
                     className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
                     style={{
