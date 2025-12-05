@@ -6,6 +6,7 @@ import { GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, MapPin
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Image from "next/image";
 import { useAuth } from "@/lib/authContext";
+import EditMomentPage from "./EditMomentPage";
 
 interface MomentDetailPageProps {
   momentId: string;
@@ -74,6 +75,7 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
   const { account } = useAuth();
   const [moment, setMoment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showEditPage, setShowEditPage] = useState(false);
 
   useEffect(() => {
     const fetchMoment = async () => {
@@ -258,14 +260,51 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
   
   const dateTimeDisplay = formatDateTime(startDate, endDate);
   
-  // Handle edit button click (placeholder)
+  // Handle edit button click
   const handleEdit = () => {
-    console.log('Edit moment:', momentId);
-    // TODO: Implement edit functionality
+    setShowEditPage(true);
+  };
+
+  // Handle edit save
+  const handleEditSave = async () => {
+    // Refetch moment data
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_moments')
+        .select('*')
+        .eq('id', momentId)
+        .single();
+
+      if (!error && data) {
+        setMoment(data);
+      }
+    } catch (error) {
+      console.error('Error refetching moment:', error);
+    } finally {
+      setLoading(false);
+      setShowEditPage(false);
+    }
+  };
+
+  // Handle edit cancel
+  const handleEditCancel = () => {
+    setShowEditPage(false);
   };
 
   const showEditButton = moment.user_id && account?.id && moment.user_id === account.id && 
     moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born';
+
+  // Show edit page if requested
+  if (showEditPage && moment) {
+    return (
+      <EditMomentPage
+        moment={moment}
+        onBack={handleEditCancel}
+        onSave={handleEditSave}
+      />
+    );
+  }
 
   return (
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
