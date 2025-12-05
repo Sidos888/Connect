@@ -10,19 +10,21 @@ interface MomentOption {
 
 interface MomentCategory {
   title: string;
+  category: string;
   icon: React.ReactNode;
   options: MomentOption[];
 }
 
 interface AddMomentPageProps {
   onBack: () => void;
-  onSelectMoment?: (momentId: string) => void;
+  onSelectMoment?: (momentId: string, momentLabel: string, category: string) => void;
 }
 
 export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageProps) {
   const categories: MomentCategory[] = [
     {
       title: "Education",
+      category: "education",
       icon: <GraduationCap size={22} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "preschool", label: "Preschool" },
@@ -34,6 +36,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Career",
+      category: "career",
       icon: <Briefcase size={22} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "first-job", label: "First Job" },
@@ -44,6 +47,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Relationships",
+      category: "relationships",
       icon: <Heart size={22} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "relationship-started", label: "Relationship Started" },
@@ -54,6 +58,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Life Changes",
+      category: "life-changes",
       icon: <Home size={22} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "moved-house", label: "Moved House" },
@@ -63,6 +68,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Experiences",
+      category: "experiences",
       icon: <Sparkles size={22} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "major-trip", label: "Major Trip" },
@@ -73,6 +79,7 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
     },
     {
       title: "Other",
+      category: "other",
       icon: <MoreHorizontal size={22} className="text-gray-900" strokeWidth={2} />,
       options: [
         { id: "custom-moment", label: "Custom Moment" }
@@ -109,10 +116,9 @@ export default function AddMomentPage({ onBack, onSelectMoment }: AddMomentPageP
                   <button
                     key={option.id}
                     onClick={() => {
-                      console.log('Moment option clicked:', option.id);
-                      // Placeholder for now
+                      console.log('Moment option clicked:', option.id, option.label, category.category);
                       if (onSelectMoment) {
-                        onSelectMoment(option.id);
+                        onSelectMoment(option.id, option.label, category.category);
                       }
                     }}
                     className="w-full bg-white rounded-xl px-4 py-3 flex items-center justify-between"
