@@ -67,25 +67,44 @@ const getMomentTypeLabel = (momentType: string): string => {
 };
 
 export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDetail, isOwnTimeline = true }: LifePageProps) {
+  console.log('🔵 LifePage: Component rendering', { 
+    profileId: profile?.id, 
+    profileName: profile?.name,
+    isOwnTimeline 
+  });
+
   const supabase = getSupabaseClient();
   const [customMoments, setCustomMoments] = useState<any[]>([]);
   const [loadingMoments, setLoadingMoments] = useState(true);
 
   // Immediately clear body padding on mount to prevent whitespace issues
   useEffect(() => {
+    console.log('🔵 LifePage: Clearing body padding');
+    const beforePadding = document.body.style.paddingBottom;
+    console.log('🔵 LifePage: Body padding before clear:', beforePadding);
+    
     document.body.style.paddingBottom = '0';
+    
+    const afterPadding = document.body.style.paddingBottom;
+    console.log('🔵 LifePage: Body padding after clear:', afterPadding);
+    
     return () => {
-      // Cleanup will be handled by parent component
+      console.log('🔵 LifePage: Cleanup - body padding effect');
     };
   }, []);
 
   // Fetch custom moments from database
   useEffect(() => {
+    console.log('🔵 LifePage: Fetch moments useEffect triggered', { profileId: profile?.id });
+    
     const fetchMoments = async () => {
       if (!profile?.id) {
+        console.log('🔵 LifePage: No profile ID, skipping fetch');
         setLoadingMoments(false);
         return;
       }
+
+      console.log('🔵 LifePage: Fetching moments from database for user:', profile.id);
 
       try {
         const { data, error } = await supabase
@@ -94,17 +113,25 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
           .eq('user_id', profile.id)
           .order('start_date', { ascending: false });
 
+        console.log('🔵 LifePage: Moments fetch result:', { 
+          momentsCount: data?.length || 0, 
+          error: error?.message,
+          momentTypes: data?.map(m => m.moment_type)
+        });
+
         if (error) {
-          console.error('Error fetching moments:', error);
+          console.error('🔵 LifePage: Error fetching moments:', error);
           setCustomMoments([]);
         } else {
           setCustomMoments(data || []);
+          console.log('🔵 LifePage: Custom moments set:', data?.length || 0);
         }
       } catch (error) {
-        console.error('Error in fetchMoments:', error);
+        console.error('🔵 LifePage: Error in fetchMoments:', error);
         setCustomMoments([]);
       } finally {
         setLoadingMoments(false);
+        console.log('🔵 LifePage: Loading moments complete');
       }
     };
 
@@ -113,6 +140,12 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
 
   // Group all moments by year for display with separators
   const groupedMoments = () => {
+    console.log('🔵 LifePage: groupedMoments() called', {
+      customMomentsCount: customMoments.length,
+      hasCreatedAt: !!profile?.createdAt,
+      hasDateOfBirth: !!profile?.dateOfBirth
+    });
+
     const allMoments: Array<{ date: Date; type: string; data: any }> = [];
     
     // Add Today
@@ -149,6 +182,8 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
       });
     }
     
+    console.log('🔵 LifePage: Total moments before grouping:', allMoments.length);
+    
     // Sort by date (newest first)
     allMoments.sort((a, b) => b.date.getTime() - a.date.getTime());
     
@@ -162,10 +197,14 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
       grouped[year].push(moment);
     });
     
+    const years = Object.keys(grouped).map(Number);
+    console.log('🔵 LifePage: Grouped by years:', years, 'Total groups:', years.length);
+    
     return grouped;
   };
 
   const momentsByYear = groupedMoments();
+  console.log('🔵 LifePage: About to render with momentsByYear:', Object.keys(momentsByYear));
 
   // Helper to render a moment card
   const renderMomentCard = (momentItem: { date: Date; type: string; data: any }) => {
