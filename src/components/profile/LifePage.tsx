@@ -37,6 +37,35 @@ const getCategoryIcon = (category: string) => {
   }
 };
 
+// Helper to get moment type label
+const getMomentTypeLabel = (momentType: string): string => {
+  const labelMap: Record<string, string> = {
+    'preschool': 'Preschool',
+    'primary-school': 'Primary School',
+    'high-school': 'High School',
+    'university-tafe': 'University/Tafe',
+    'course-certificate': 'Course / Certificate',
+    'first-job': 'First Job',
+    'new-job': 'New Job',
+    'promotion': 'Promotion',
+    'business-started': 'Business Started',
+    'relationship-started': 'Relationship Started',
+    'engagement': 'Engagement',
+    'marriage': 'Marriage',
+    'child-born': 'Child Born',
+    'moved-house': 'Moved House',
+    'bought-home': 'Bought a Home',
+    'major-transition': 'Major Transition',
+    'major-trip': 'Major Trip',
+    'big-achievement': 'Big Achievement',
+    'important-memory': 'Important Memory',
+    'personal-milestone': 'Personal Milestone',
+    'custom-moment': 'Custom Moment'
+  };
+  
+  return labelMap[momentType] || momentType;
+};
+
 export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDetail, isOwnTimeline = true }: LifePageProps) {
   const supabase = getSupabaseClient();
   const [customMoments, setCustomMoments] = useState<any[]>([]);
@@ -186,7 +215,7 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                     </div>
                   </div>
 
-                  {/* Moment Card with photo/date */}
+                  {/* Moment Card with subcategory, title, date, and photo */}
                   <button
                     onClick={() => {
                       if (onOpenMomentDetail) {
@@ -198,15 +227,23 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                       borderWidth: '0.4px',
                       borderColor: '#E5E7EB',
                       boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      height: '64px',
+                      minHeight: '80px',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
                     }}
                   >
                     {getCategoryIcon(moment.category)}
-                    <div className="flex flex-col flex-1 min-w-0 items-start">
-                      <span className="text-sm font-medium text-gray-900 truncate w-full text-left">{moment.title}</span>
+                    <div className="flex flex-col flex-1 min-w-0 items-start justify-center">
+                      {/* Subcategory label (e.g., "Primary School") */}
+                      <span className="text-xs text-gray-600 text-left">
+                        {getMomentTypeLabel(moment.moment_type)}
+                      </span>
+                      {/* User's custom title (e.g., "Goodwood Primary") */}
+                      <span className="text-sm font-semibold text-gray-900 truncate w-full text-left mt-0.5">
+                        {moment.title}
+                      </span>
+                      {/* Date range */}
                       <span className="text-xs text-gray-500 mt-0.5 text-left">
                         {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         {endDate && ` - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
@@ -214,7 +251,7 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                       </span>
                     </div>
                     
-                    {/* Photo display on right - absolute positioned */}
+                    {/* Photo display on right */}
                     {photoUrls.length > 0 && (
                       <div className="flex-shrink-0 ml-auto">
                         {photoUrls.length <= 3 ? (
