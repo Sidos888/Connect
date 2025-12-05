@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
-import { GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, MapPin, Hash, Calendar, UserCheck, Cake } from "lucide-react";
+import { GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, MapPin, Hash, Calendar, UserCheck, Cake, Pencil } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Image from "next/image";
+import { useAuth } from "@/lib/authContext";
 
 interface MomentDetailPageProps {
   momentId: string;
@@ -70,8 +71,12 @@ const getMomentTypeLabel = (momentType: string): string => {
 
 export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhotoGrid }: MomentDetailPageProps) {
   const supabase = getSupabaseClient();
+  const { account } = useAuth();
   const [moment, setMoment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Check if this is the user's own moment
+  const isOwnMoment = profile?.id === account?.id;
 
   useEffect(() => {
     const fetchMoment = async () => {
@@ -167,41 +172,96 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
   const hasPhotos = photoUrls.length > 0;
   
   // Get display label for moment type (e.g., "Primary School" not "GOODWOOD PRIMARY")
-  const displayTitle = getMomentTypeLabel(moment.moment_type);
+  const subcategoryLabel = getMomentTypeLabel(moment.moment_type);
   
   // Get icon for system moments or category icon for custom moments
   const getMomentIcon = () => {
     if (moment.moment_type === 'today') {
-      return <Calendar size={24} className="text-gray-900" strokeWidth={2} />;
+      return <Calendar size={20} className="text-gray-900" strokeWidth={2} />;
     }
     if (moment.moment_type === 'joined-connect') {
-      return <UserCheck size={24} className="text-gray-900" strokeWidth={2} />;
+      return <UserCheck size={20} className="text-gray-900" strokeWidth={2} />;
     }
     if (moment.moment_type === 'born') {
-      return <Cake size={24} className="text-gray-900" strokeWidth={2} />;
+      return <Cake size={20} className="text-gray-900" strokeWidth={2} />;
     }
-    return getCategoryIcon(moment.category);
+    return getCategoryIcon(moment.category, 20);
   };
 
-  // Calculate duration
-  let durationText = '';
-  if (endDate) {
-    const years = endDate.getFullYear() - startDate.getFullYear();
-    const months = endDate.getMonth() - startDate.getMonth() + (years * 12);
-    if (years > 0) {
-      durationText = ` (${years} year${years > 1 ? 's' : ''})`;
-    } else if (months > 0) {
-      durationText = ` (${months} month${months > 1 ? 's' : ''})`;
+  // Format date similar to listing page: "December 1st • 5:10pm-5:20pm" or just date if no time
+  const formatDateTime = (startDate: Date, endDate: Date | null): string => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const month = months[startDate.getMonth()];
+    const day = startDate.getDate();
+    
+    // Add ordinal suffix
+    const getOrdinal = (n: number) => {
+      if (n % 10 === 1 && n % 100 !== 11) return n + 'st';
+      if (n % 10 === 2 && n % 100 !== 12) return n + 'nd';
+      if (n % 10 === 3 && n % 100 !== 13) return n + 'rd';
+      return n + 'th';
+    };
+    
+    const year = startDate.getFullYear();
+    
+    // If end date exists, show date range with duration
+    if (endDate) {
+      const endMonth = months[endDate.getMonth()];
+      const endDay = endDate.getDate();
+      const endYear = endDate.getFullYear();
+      
+      // Calculate duration
+      const years = endDate.getFullYear() - startDate.getFullYear();
+      const months = endDate.getMonth() - startDate.getMonth() + (years * 12);
+      let durationText = '';
+      
+      if (years > 0) {
+        durationText = ` • ${years} year${years > 1 ? 's' : ''}`;
+      } else if (months > 0) {
+        durationText = ` • ${months} month${months > 1 ? 's' : ''}`;
+      }
+      
+      if (year === endYear) {
+        return `${month} ${getOrdinal(day)} - ${endMonth} ${getOrdinal(endDay)}, ${year}${durationText}`;
+      }
+      return `${month} ${getOrdinal(day)}, ${year} - ${endMonth} ${getOrdinal(endDay)}, ${endYear}${durationText}`;
     }
-  }
+    
+    // Single date
+    return `${month} ${getOrdinal(day)}, ${year}`;
+  };
+  
+  const dateTimeDisplay = formatDateTime(startDate, endDate);
+  
+  // Handle edit button click (placeholder)
+  const handleEdit = () => {
+    console.log('Edit moment:', momentId);
+    // TODO: Implement edit functionality
+  };
 
   return (
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
-          title={displayTitle}
+          title="Moment"
           backButton
           onBack={onBack}
+          actions={
+            isOwnMoment && moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born' ? (
+              <button
+                onClick={handleEdit}
+                className="w-11 h-11 rounded-full bg-white flex items-center justify-center"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3)',
+                }}
+                aria-label="Edit moment"
+              >
+                <Pencil size={18} className="text-gray-900" strokeWidth={2.5} />
+              </button>
+            ) : undefined
+          }
         />
         
         <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
@@ -210,7 +270,13 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
         }}>
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Category Icon + Subcategory Label */}
+            <div className="flex items-center justify-center gap-2">
+              {getMomentIcon()}
+              <span className="text-sm text-gray-600">{subcategoryLabel}</span>
+            </div>
+
             {/* Photo Section with # icon if photos exist */}
             {hasPhotos && (
               <div className="relative">
@@ -279,28 +345,20 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
               </div>
             )}
 
-            {/* Category Icon + Title + Date */}
-            <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center flex-shrink-0"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              >
-                {getMomentIcon()}
+            {/* Centered Title (User's input title for custom moments) */}
+            {moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born' && moment.title && (
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {moment.title}
+                </h1>
               </div>
-              <div className="flex-1">
-                {/* For custom moments, show user's title. For system moments, don't repeat the label */}
-                {moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born' && (
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">{moment.title}</h2>
-                )}
-                <p className="text-sm text-gray-600">
-                  {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {endDate && ` - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-                  {durationText}
-                </p>
-              </div>
+            )}
+
+            {/* Centered Date/Time */}
+            <div className="text-center">
+              <p className="text-base font-normal text-gray-500">
+                {dateTimeDisplay}
+              </p>
             </div>
 
             {/* Summary Card */}
