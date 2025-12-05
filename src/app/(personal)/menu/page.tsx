@@ -1490,6 +1490,12 @@ export default function Page() {
       ) : currentView === 'moment-detail' && selectedMomentId ? (
         <MomentDetailPage
           momentId={selectedMomentId}
+          profile={{
+            id: account?.id || personalProfile?.id,
+            name: currentAccount?.name,
+            dateOfBirth: personalProfile?.dateOfBirth,
+            createdAt: account?.createdAt || personalProfile?.createdAt
+          }}
           onBack={() => {
             const from = searchParams?.get('from') || 'life';
             goToView(from as any);

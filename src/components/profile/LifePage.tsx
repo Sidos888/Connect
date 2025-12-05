@@ -121,7 +121,12 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
               </div>
 
               {/* Today Card with full date below */}
-              <div 
+              <button
+                onClick={() => {
+                  if (onOpenMomentDetail) {
+                    onOpenMomentDetail('today');
+                  }
+                }}
                 className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
                 style={{
                   borderWidth: '0.4px',
@@ -131,13 +136,13 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                 }}
               >
                 <Calendar size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                <div className="flex flex-col">
+                <div className="flex flex-col items-start">
                   <span className="text-sm font-medium text-gray-900">Today</span>
                   <span className="text-xs text-gray-500 mt-0.5">
                     {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Custom Moments - Sorted newest first */}
@@ -188,27 +193,30 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                         onOpenMomentDetail(moment.id);
                       }
                     }}
-                    className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
+                    className="flex-1 bg-white rounded-xl px-4 py-3"
                     style={{
                       borderWidth: '0.4px',
                       borderColor: '#E5E7EB',
                       boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                       height: '64px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
                     }}
                   >
                     {getCategoryIcon(moment.category)}
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 truncate">{moment.title}</span>
-                      <span className="text-xs text-gray-500 mt-0.5">
+                    <div className="flex flex-col flex-1 min-w-0 items-start">
+                      <span className="text-sm font-medium text-gray-900 truncate w-full text-left">{moment.title}</span>
+                      <span className="text-xs text-gray-500 mt-0.5 text-left">
                         {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         {endDate && ` - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                         {durationText}
                       </span>
                     </div>
                     
-                    {/* Photo display on right */}
+                    {/* Photo display on right - absolute positioned */}
                     {photoUrls.length > 0 && (
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0 ml-auto">
                         {photoUrls.length <= 3 ? (
                           // Single image
                           <div 
@@ -281,7 +289,12 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                 </div>
 
                 {/* Joined Connect Card with full date below */}
-                <div 
+                <button
+                  onClick={() => {
+                    if (onOpenMomentDetail) {
+                      onOpenMomentDetail('joined-connect');
+                    }
+                  }}
                   className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
                   style={{
                     borderWidth: '0.4px',
@@ -291,13 +304,13 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                   }}
                 >
                   <UserCheck size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-start">
                     <span className="text-sm font-medium text-gray-900">Joined Connect</span>
                     <span className="text-xs text-gray-500 mt-0.5">
                       {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
-                </div>
+                </button>
               </div>
             )}
 
@@ -326,7 +339,12 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                 </div>
 
                 {/* Born Card with full date below */}
-                <div 
+                <button
+                  onClick={() => {
+                    if (onOpenMomentDetail) {
+                      onOpenMomentDetail('born');
+                    }
+                  }}
                   className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
                   style={{
                     borderWidth: '0.4px',
@@ -336,13 +354,13 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                   }}
                 >
                   <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-start">
                     <span className="text-sm font-medium text-gray-900">Born</span>
                     <span className="text-xs text-gray-500 mt-0.5">
                       {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
-                </div>
+                </button>
               </div>
             )}
           </div>

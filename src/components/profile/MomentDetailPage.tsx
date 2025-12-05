@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
-import { GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, MapPin, Hash } from "lucide-react";
+import { GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, MapPin, Hash, Calendar, UserCheck, Cake } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Image from "next/image";
 
 interface MomentDetailPageProps {
   momentId: string;
+  profile?: {
+    id?: string;
+    name?: string;
+    dateOfBirth?: string;
+    createdAt?: string;
+  };
   onBack: () => void;
   onOpenPhotoGrid?: (photos: string[], initialIndex: number) => void;
 }
@@ -33,13 +39,89 @@ const getCategoryIcon = (category: string, size = 24) => {
   }
 };
 
-export default function MomentDetailPage({ momentId, onBack, onOpenPhotoGrid }: MomentDetailPageProps) {
+// Helper to map moment_type to display label
+const getMomentTypeLabel = (momentType: string): string => {
+  const labelMap: Record<string, string> = {
+    'preschool': 'Preschool',
+    'primary-school': 'Primary School',
+    'high-school': 'High School',
+    'university-tafe': 'University/Tafe',
+    'course-certificate': 'Course / Certificate',
+    'first-job': 'First Job',
+    'new-job': 'New Job',
+    'promotion': 'Promotion',
+    'business-started': 'Business Started',
+    'relationship-started': 'Relationship Started',
+    'engagement': 'Engagement',
+    'marriage': 'Marriage',
+    'child-born': 'Child Born',
+    'moved-house': 'Moved House',
+    'bought-home': 'Bought a Home',
+    'major-transition': 'Major Transition',
+    'major-trip': 'Major Trip',
+    'big-achievement': 'Big Achievement',
+    'important-memory': 'Important Memory',
+    'personal-milestone': 'Personal Milestone',
+    'custom-moment': 'Custom Moment'
+  };
+  
+  return labelMap[momentType] || momentType;
+};
+
+export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhotoGrid }: MomentDetailPageProps) {
   const supabase = getSupabaseClient();
   const [moment, setMoment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMoment = async () => {
+      // Handle built-in moments
+      if (momentId === 'today') {
+        setMoment({
+          id: 'today',
+          moment_type: 'today',
+          category: 'system',
+          title: 'Today',
+          start_date: new Date().toISOString(),
+          summary: null,
+          location: null,
+          photo_urls: []
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (momentId === 'joined-connect' && profile?.createdAt) {
+        setMoment({
+          id: 'joined-connect',
+          moment_type: 'joined-connect',
+          category: 'system',
+          title: 'Joined Connect',
+          start_date: profile.createdAt,
+          summary: null,
+          location: null,
+          photo_urls: []
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (momentId === 'born' && profile?.dateOfBirth) {
+        setMoment({
+          id: 'born',
+          moment_type: 'born',
+          category: 'system',
+          title: 'Born',
+          start_date: profile.dateOfBirth,
+          summary: null,
+          location: null,
+          photo_urls: []
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Fetch custom moments from database
       try {
         const { data, error } = await supabase
           .from('user_moments')
@@ -60,7 +142,7 @@ export default function MomentDetailPage({ momentId, onBack, onOpenPhotoGrid }: 
     };
 
     fetchMoment();
-  }, [momentId, supabase]);
+  }, [momentId, profile, supabase]);
 
   if (loading || !moment) {
     return (
@@ -83,6 +165,23 @@ export default function MomentDetailPage({ momentId, onBack, onOpenPhotoGrid }: 
   const endDate = moment.end_date ? new Date(moment.end_date) : null;
   const photoUrls = moment.photo_urls || [];
   const hasPhotos = photoUrls.length > 0;
+  
+  // Get display label for moment type (e.g., "Primary School" not "GOODWOOD PRIMARY")
+  const displayTitle = getMomentTypeLabel(moment.moment_type);
+  
+  // Get icon for system moments or category icon for custom moments
+  const getMomentIcon = () => {
+    if (moment.moment_type === 'today') {
+      return <Calendar size={24} className="text-gray-900" strokeWidth={2} />;
+    }
+    if (moment.moment_type === 'joined-connect') {
+      return <UserCheck size={24} className="text-gray-900" strokeWidth={2} />;
+    }
+    if (moment.moment_type === 'born') {
+      return <Cake size={24} className="text-gray-900" strokeWidth={2} />;
+    }
+    return getCategoryIcon(moment.category);
+  };
 
   // Calculate duration
   let durationText = '';
@@ -100,7 +199,7 @@ export default function MomentDetailPage({ momentId, onBack, onOpenPhotoGrid }: 
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
-          title={moment.title}
+          title={displayTitle}
           backButton
           onBack={onBack}
         />
@@ -189,10 +288,13 @@ export default function MomentDetailPage({ momentId, onBack, onOpenPhotoGrid }: 
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                 }}
               >
-                {getCategoryIcon(moment.category)}
+                {getMomentIcon()}
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-gray-900 mb-1">{moment.title}</h2>
+                {/* For custom moments, show user's title. For system moments, don't repeat the label */}
+                {moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born' && (
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">{moment.title}</h2>
+                )}
                 <p className="text-sm text-gray-600">
                   {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   {endDate && ` - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
