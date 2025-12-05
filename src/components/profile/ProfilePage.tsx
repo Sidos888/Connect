@@ -614,7 +614,7 @@ export default function ProfilePage({
               {/* Moments Title */}
               <button 
                 onClick={onOpenFullLife}
-                className="flex items-center justify-between w-full mb-4"
+                className="flex items-center gap-1 mb-4"
               >
                 <h3 className="text-base font-semibold text-gray-900">10 Moments</h3>
                 <ChevronRight size={20} className="text-gray-400" strokeWidth={2} />

@@ -13,42 +13,6 @@ interface LifePageProps {
 }
 
 export default function LifePage({ profile, onBack }: LifePageProps) {
-  // Calculate moments (for now, just showing Born)
-  const moments = [];
-  
-  if (profile.dateOfBirth) {
-    moments.push({
-      id: 'born',
-      title: 'Born',
-      date: profile.dateOfBirth,
-      icon: <Cake size={20} className="text-gray-900" strokeWidth={2} />
-    });
-  }
-  
-  // Add Joined Connect moment (placeholder - would come from profile.createdAt)
-  moments.push({
-    id: 'joined',
-    title: 'Joined Connect',
-    date: '2025-01-10', // Placeholder
-    icon: <div className="w-5 h-5 bg-gray-200 rounded-full" /> // Placeholder icon
-  });
-  
-  // Add Today moment (placeholder)
-  moments.push({
-    id: 'today',
-    title: 'Today',
-    date: new Date().toISOString(),
-    icon: <div className="w-5 h-5 bg-gray-200 rounded-full" /> // Placeholder icon
-  });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      day: 'numeric',
-      month: 'long', 
-      year: 'numeric' 
-    });
-  };
 
   return (
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
@@ -65,21 +29,48 @@ export default function LifePage({ profile, onBack }: LifePageProps) {
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
         }}>
-          <div className="space-y-4">
-            {moments.map((moment) => (
-              <div key={moment.id} className="flex items-start gap-4">
-                {/* Icon Circle */}
-                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  {moment.icon}
+          <div className="space-y-3">
+            {profile.dateOfBirth && (
+              <div className="flex items-center gap-3">
+                {/* Circular Date Badge */}
+                <div 
+                  className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    padding: '4px',
+                    gap: '0px',
+                  }}
+                >
+                  <div className="text-xs text-gray-900" style={{ fontSize: '8px', lineHeight: '9px', fontWeight: 500 }}>
+                    {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                  </div>
+                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '15px', lineHeight: '17px', fontWeight: 700 }}>
+                    {new Date(profile.dateOfBirth).getDate()}
+                  </div>
+                  <div className="text-xs text-gray-500" style={{ fontSize: '7px', lineHeight: '8px', fontWeight: 400 }}>
+                    {new Date(profile.dateOfBirth).getFullYear()}
+                  </div>
                 </div>
-                
-                {/* Content */}
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">{moment.title}</h3>
-                  <p className="text-sm text-gray-600">{formatDate(moment.date)}</p>
+
+                {/* Born Card */}
+                <div 
+                  className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    height: '64px',
+                  }}
+                >
+                  <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
+                  <span className="text-sm font-medium text-gray-900">Born</span>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
