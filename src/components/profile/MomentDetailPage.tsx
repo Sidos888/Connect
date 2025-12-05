@@ -74,9 +74,6 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
   const { account } = useAuth();
   const [moment, setMoment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Check if this is the user's own moment
-  const isOwnMoment = profile?.id === account?.id;
 
   useEffect(() => {
     const fetchMoment = async () => {
@@ -151,10 +148,9 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
 
   if (loading || !moment) {
     return (
-      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+      <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
         <MobilePage>
           <PageHeader
-            title="Moment"
             backButton
             onBack={onBack}
           />
@@ -240,14 +236,15 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
   };
 
   return (
-    <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+    <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
       <MobilePage>
         <PageHeader
-          title="Moment"
           backButton
           onBack={onBack}
           actions={
-            isOwnMoment && moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born' ? (
+            // Show edit button for custom moments owned by current user
+            moment.user_id && account?.id && moment.user_id === account.id && 
+            moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born' ? (
               <button
                 onClick={handleEdit}
                 className="w-11 h-11 rounded-full bg-white flex items-center justify-center"
@@ -265,14 +262,14 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
         />
         
         <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
-          paddingTop: 'var(--saved-content-padding-top, 140px)',
+          paddingTop: 'var(--saved-content-padding-top, 104px)',
           paddingBottom: '32px',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
         }}>
           <div className="space-y-6">
-            {/* Category Icon + Subcategory Label */}
-            <div className="flex items-center justify-center gap-2">
+            {/* Category Icon + Subcategory Label - TOP COMPONENT */}
+            <div className="flex items-center justify-center gap-2 pt-4">
               {getMomentIcon()}
               <span className="text-sm text-gray-600">{subcategoryLabel}</span>
             </div>
