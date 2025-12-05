@@ -607,15 +607,17 @@ export default function ProfilePage({
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    padding: '4px',
+                    gap: '0px',
                   }}
                 >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '10px', marginBottom: '1px' }}>
-                    {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short' })}
+                  <div className="text-xs text-gray-900" style={{ fontSize: '8px', lineHeight: '9px', fontWeight: 500 }}>
+                    {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                   </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '16px', lineHeight: '18px', margin: '1px 0' }}>
+                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '15px', lineHeight: '17px', fontWeight: 700 }}>
                     {new Date(profile.dateOfBirth).getDate()}
                   </div>
-                  <div className="text-xs text-gray-500" style={{ fontSize: '8px', lineHeight: '9px', marginTop: '1px' }}>
+                  <div className="text-xs text-gray-500" style={{ fontSize: '7px', lineHeight: '8px', fontWeight: 400 }}>
                     {new Date(profile.dateOfBirth).getFullYear()}
                   </div>
                 </div>
