@@ -1,6 +1,6 @@
 "use client";
 
-import { Cake, Calendar, UserCheck } from "lucide-react";
+import { Cake, Calendar, UserCheck, Plus } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 
 interface LifePageProps {
@@ -11,9 +11,11 @@ interface LifePageProps {
     createdAt?: string;
   };
   onBack: () => void;
+  onAddMoment?: () => void;
+  isOwnTimeline?: boolean;
 }
 
-export default function LifePage({ profile, onBack }: LifePageProps) {
+export default function LifePage({ profile, onBack, onAddMoment, isOwnTimeline = true }: LifePageProps) {
 
   return (
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
@@ -22,6 +24,13 @@ export default function LifePage({ profile, onBack }: LifePageProps) {
           title="Timeline"
           backButton
           onBack={onBack}
+          actions={isOwnTimeline && onAddMoment ? [
+            {
+              icon: <Plus size={20} strokeWidth={2} />,
+              onClick: onAddMoment,
+              ariaLabel: "Add moment"
+            }
+          ] : undefined}
         />
         
         <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
