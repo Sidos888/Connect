@@ -101,7 +101,7 @@ export default function ProfilePage({
     };
     getCurrentUser();
   }, []);
-
+  
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -475,11 +475,11 @@ export default function ProfilePage({
           {/* Action Buttons */}
           {isOwnProfile ? (
             <div className="flex gap-2 mb-6">
-              <button
+          <button
                 onClick={onEdit}
                 className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-medium text-gray-900 transition-all duration-200 hover:-translate-y-[1px]"
-                style={{
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            style={{
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                 }}
               >
                 Edit Profile
@@ -492,16 +492,16 @@ export default function ProfilePage({
                 }}
               >
                 Share Profile
-              </button>
-            </div>
+          </button>
+        </div>
           ) : (
             <div className="flex gap-2 mb-6">
               {/* Status Button (Add Friend/Pending/Friends) - Always same width */}
               {friendshipStatus === 'friends' ? (
-                <button
+          <button 
                   className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-semibold text-gray-900 transition-all duration-200 flex items-center justify-center gap-2"
-                  style={{
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            style={{ 
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   }}
                 >
                   <Check size={16} className="text-gray-900" strokeWidth={2.5} />
@@ -529,27 +529,27 @@ export default function ProfilePage({
                 >
                   <UserPlus size={16} className="text-gray-900" strokeWidth={2.5} />
                   <span>{isSendingRequest ? 'Sending...' : 'Add Friend'}</span>
-                </button>
+          </button>
               )}
 
               {/* Message + More buttons - only show if friends or public */}
               {showFullProfile ? (
                 <>
-                  <button
+          <button 
                     onClick={handleMessageClick}
                     className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-semibold text-gray-900 transition-all duration-200 hover:-translate-y-[1px] flex items-center justify-center gap-2"
-                    style={{
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            style={{ 
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     }}
                   >
                     <MessageCircle size={16} className="text-gray-900" strokeWidth={2.5} />
                     <span>Message</span>
-                  </button>
+          </button>
 
-                  <button
+          <button 
                     className="bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-3 text-sm font-semibold text-gray-900 transition-all duration-200 hover:-translate-y-[1px] flex items-center justify-center"
-                    style={{
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            style={{ 
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                       width: '48px',
                     }}
                   >
@@ -620,13 +620,13 @@ export default function ProfilePage({
                         color: isActive ? '#111827' : '#6B7280',
                         willChange: 'transform, box-shadow',
                         transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                         e.currentTarget.style.transform = isActive ? 'scale(1.05) translateY(-1px)' : 'scale(1) translateY(-1px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                         e.currentTarget.style.transform = isActive ? 'scale(1.05)' : 'scale(1)';
                       }}
                     >
@@ -640,7 +640,7 @@ export default function ProfilePage({
                           {pill.count}
                         </span>
                       )}
-                    </button>
+          </button>
                   </div>
                 );
               })}
@@ -651,7 +651,7 @@ export default function ProfilePage({
           {selectedPill === 'life' && (
             <div className="space-y-3">
               {/* Moments Title */}
-              <button 
+          <button 
                 onClick={onOpenFullLife}
                 className="flex items-center gap-1 mb-4"
               >
@@ -697,7 +697,7 @@ export default function ProfilePage({
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    height: '64px',
+                    minHeight: '80px',
                   }}
                 >
                   <Calendar size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
@@ -737,11 +737,11 @@ export default function ProfilePage({
                 {/* Joined Connect Card with full date below */}
                 <div 
                   className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
-                  style={{
+            style={{ 
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    height: '64px',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    minHeight: '80px',
                   }}
                 >
                   <UserCheck size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
@@ -786,7 +786,7 @@ export default function ProfilePage({
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    height: '64px',
+                    minHeight: '80px',
                   }}
                 >
                   <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />

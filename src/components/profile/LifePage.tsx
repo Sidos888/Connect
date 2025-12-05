@@ -161,7 +161,7 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  height: '64px',
+                  minHeight: '80px',
                 }}
               >
                 <Calendar size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
@@ -337,7 +337,7 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    height: '64px',
+                    minHeight: '80px',
                   }}
                 >
                   <UserCheck size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
@@ -387,7 +387,7 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    height: '64px',
+                    minHeight: '80px',
                   }}
                 >
                   <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
