@@ -996,7 +996,8 @@ export default function Page() {
             name: currentAccount?.name,
             avatarUrl: currentAccount?.avatarUrl,
             bio: currentAccount?.bio,
-            dateOfBirth: personalProfile?.dateOfBirth
+            dateOfBirth: personalProfile?.dateOfBirth,
+            createdAt: account?.createdAt || personalProfile?.createdAt
           }}
           isOwnProfile={true}
           showBackButton={true}
@@ -1032,7 +1033,8 @@ export default function Page() {
             avatarUrl: friend.profile_pic,
             bio: friend.bio,
             profile_visibility: friend.profile_visibility,
-            dateOfBirth: friend.dob
+            dateOfBirth: friend.dob,
+            createdAt: friend.created_at
           }}
           isOwnProfile={false}
           showBackButton={true}
@@ -1336,7 +1338,8 @@ export default function Page() {
           profile={{
             id: account?.id || personalProfile?.id,
             name: currentAccount?.name,
-            dateOfBirth: personalProfile?.dateOfBirth
+            dateOfBirth: personalProfile?.dateOfBirth,
+            createdAt: account?.createdAt || personalProfile?.createdAt
           }}
           onBack={() => goToView('profile')}
         />
