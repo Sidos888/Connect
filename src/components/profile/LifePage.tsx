@@ -71,6 +71,14 @@ export default function LifePage({ profile, onBack, onAddMoment, onOpenMomentDet
   const [customMoments, setCustomMoments] = useState<any[]>([]);
   const [loadingMoments, setLoadingMoments] = useState(true);
 
+  // Immediately clear body padding on mount to prevent whitespace issues
+  useEffect(() => {
+    document.body.style.paddingBottom = '0';
+    return () => {
+      // Cleanup will be handled by parent component
+    };
+  }, []);
+
   // Fetch custom moments from database
   useEffect(() => {
     const fetchMoments = async () => {
