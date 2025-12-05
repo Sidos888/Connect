@@ -1412,10 +1412,64 @@ export default function Page() {
           category={selectedMomentType.category}
           onBack={() => goToView('add-moment', 'life')}
           onSave={async (momentData) => {
-            console.log('Saving moment:', momentData);
-            // TODO: Implement moment creation
-            // For now, just go back to timeline
-            goToView('life');
+            if (!account?.id) {
+              console.error('No account ID');
+              return;
+            }
+
+            try {
+              // Upload photos to storage first
+              const photoUrls: string[] = [];
+              for (const photoData of momentData.photo_urls) {
+                const response = await fetch(photoData);
+                const blob = await response.blob();
+                
+                const fileExt = 'jpg';
+                const fileName = `moments/${account.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+                const { error: uploadError } = await supabaseClient.storage
+                  .from('listing-photos')
+                  .upload(fileName, blob);
+
+                if (uploadError) {
+                  console.error('Error uploading photo:', uploadError);
+                  continue;
+                }
+
+                const { data: { publicUrl } } = supabaseClient.storage
+                  .from('listing-photos')
+                  .getPublicUrl(fileName);
+
+                photoUrls.push(publicUrl);
+              }
+
+              // Insert moment into database
+              const { error } = await supabaseClient
+                .from('user_moments')
+                .insert({
+                  user_id: account.id,
+                  moment_type: selectedMomentType.id,
+                  category: selectedMomentType.category,
+                  title: momentData.title,
+                  summary: momentData.summary || null,
+                  start_date: momentData.start_date.toISOString(),
+                  end_date: momentData.end_date ? momentData.end_date.toISOString() : null,
+                  location: momentData.location || null,
+                  photo_urls: photoUrls.length > 0 ? photoUrls : null
+                });
+
+              if (error) {
+                console.error('Error saving moment:', error);
+                alert('Error saving moment. Please try again.');
+                return;
+              }
+
+              console.log('Moment saved successfully!');
+              goToView('life');
+            } catch (error) {
+              console.error('Error in onSave:', error);
+              alert('Error saving moment. Please try again.');
+            }
           }}
         />
       ) : currentView === 'achievements' ? (
