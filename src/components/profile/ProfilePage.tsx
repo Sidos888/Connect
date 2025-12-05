@@ -47,6 +47,14 @@ export default function ProfilePage({
   onThreeDotsMenu?: () => void;
   showBackButton?: boolean;
 }) {
+  // Immediately clear body padding on mount to prevent whitespace issues
+  useEffect(() => {
+    document.body.style.paddingBottom = '0';
+    return () => {
+      // Cleanup will be handled by parent component
+    };
+  }, []);
+
   // Selected pill state
   const [selectedPill, setSelectedPill] = useState<'life' | 'highlights' | 'badges'>('life');
   // Platform detection for responsive padding
