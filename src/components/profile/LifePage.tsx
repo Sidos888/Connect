@@ -1,6 +1,6 @@
 "use client";
 
-import { Cake } from "lucide-react";
+import { Cake, Calendar } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 
 interface LifePageProps {
@@ -30,6 +30,48 @@ export default function LifePage({ profile, onBack }: LifePageProps) {
           msOverflowStyle: 'none'
         }}>
           <div className="space-y-3">
+            {/* Today Moment - Always displayed */}
+            <div className="flex items-center gap-3">
+              {/* Circular Date Badge */}
+              <div 
+                className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  padding: '4px',
+                  gap: '0px',
+                }}
+              >
+                <div className="text-xs text-gray-900" style={{ fontSize: '8px', lineHeight: '9px', fontWeight: 500 }}>
+                  {new Date().toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                </div>
+                <div className="text-xl font-bold text-gray-900" style={{ fontSize: '15px', lineHeight: '17px', fontWeight: 700 }}>
+                  {new Date().getDate()}
+                </div>
+                <div className="text-xs text-gray-500" style={{ fontSize: '7px', lineHeight: '8px', fontWeight: 400 }}>
+                  {new Date().getFullYear()}
+                </div>
+              </div>
+
+              {/* Today Card */}
+              <div 
+                className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  height: '64px',
+                }}
+              >
+                <Calendar size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
+                <span className="text-sm font-medium text-gray-900">Today</span>
+              </div>
+            </div>
+
+            {/* Born Moment */}
             {profile.dateOfBirth && (
               <div className="flex items-center gap-3">
                 {/* Circular Date Badge */}
