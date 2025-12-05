@@ -119,7 +119,14 @@ export default function Page() {
     else if (view === 'highlights') setCurrentView('highlights');
     else if (view === 'timeline') setCurrentView('timeline');
     else if (view === 'achievements') setCurrentView('achievements');
-    else if (view === 'life') setCurrentView('life');
+    else if (view === 'life') {
+      setCurrentView('life');
+      // If viewing another user's timeline, load their data
+      if (userId && userId !== account?.id) {
+        console.log('🔶 Menu page: Loading friend profile for timeline:', userId);
+        loadFriendProfile(userId, false);
+      }
+    }
     else if (view === 'connections') setCurrentView('connections');
     else if (view === 'settings') setCurrentView('settings');
     else if (view === 'notifications') setCurrentView('notifications');
@@ -145,7 +152,7 @@ export default function Page() {
       loadFriendProfile(userId, true); // true = set as connections context user
     }
     else if (!view) setCurrentView('menu');
-  }, [searchParams]);
+  }, [searchParams, loadFriendProfile, account?.id]);
 
   // Hide bottom nav when on add-person or friend-connections view
   React.useEffect(() => {
@@ -1342,15 +1349,45 @@ export default function Page() {
       ) : currentView === 'timeline' ? (
         <TimelineView />
       ) : currentView === 'life' ? (
-        <LifePage 
-          profile={{
-            id: account?.id || personalProfile?.id,
-            name: currentAccount?.name,
-            dateOfBirth: personalProfile?.dateOfBirth,
-            createdAt: account?.createdAt || personalProfile?.createdAt
-          }}
-          onBack={() => goToView('profile')}
-        />
+        (() => {
+          const lifeUserId = searchParams?.get('userId');
+          const lifeFrom = searchParams?.get('from');
+          
+          // If viewing another user's timeline
+          if (lifeUserId && lifeUserId !== account?.id) {
+            // Check if we have the friend data loaded
+            const friendData = selectedFriend?.id === lifeUserId ? selectedFriend : null;
+            
+            return (
+              <LifePage 
+                profile={{
+                  id: friendData?.id || lifeUserId,
+                  name: friendData?.name,
+                  dateOfBirth: friendData?.dob,
+                  createdAt: friendData?.created_at
+                }}
+                onBack={() => {
+                  // Go back to that friend's profile
+                  router.push(`/profile?id=${lifeUserId}&from=${lifeFrom || 'connections'}`);
+                }}
+              />
+            );
+          }
+          
+          // Otherwise show own timeline
+          return (
+            <LifePage 
+              profile={{
+                id: account?.id || personalProfile?.id,
+                name: currentAccount?.name,
+                dateOfBirth: personalProfile?.dateOfBirth,
+                createdAt: account?.createdAt || personalProfile?.createdAt
+              }}
+              onBack={() => goToView('profile')}
+            />
+          );
+        })()
+      
       ) : currentView === 'achievements' ? (
         <AchievementsView />
       ) : currentView === 'connections' ? (
