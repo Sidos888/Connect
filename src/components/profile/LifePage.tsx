@@ -1,7 +1,10 @@
 "use client";
 
-import { Cake, Calendar, UserCheck, Plus } from "lucide-react";
+import { Cake, Calendar, UserCheck, Plus, GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal } from "lucide-react";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import { useState, useEffect } from "react";
+import { getSupabaseClient } from "@/lib/supabaseClient";
+import Image from "next/image";
 
 interface LifePageProps {
   profile: {
@@ -15,7 +18,60 @@ interface LifePageProps {
   isOwnTimeline?: boolean;
 }
 
+// Helper to get category icon
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'education':
+      return <GraduationCap size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'career':
+      return <Briefcase size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'relationships':
+      return <Heart size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'life-changes':
+      return <Home size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    case 'experiences':
+      return <Sparkles size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+    default:
+      return <MoreHorizontal size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />;
+  }
+};
+
 export default function LifePage({ profile, onBack, onAddMoment, isOwnTimeline = true }: LifePageProps) {
+  const supabase = getSupabaseClient();
+  const [customMoments, setCustomMoments] = useState<any[]>([]);
+  const [loadingMoments, setLoadingMoments] = useState(true);
+
+  // Fetch custom moments from database
+  useEffect(() => {
+    const fetchMoments = async () => {
+      if (!profile?.id) {
+        setLoadingMoments(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_moments')
+          .select('*')
+          .eq('user_id', profile.id)
+          .order('start_date', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching moments:', error);
+          setCustomMoments([]);
+        } else {
+          setCustomMoments(data || []);
+        }
+      } catch (error) {
+        console.error('Error in fetchMoments:', error);
+        setCustomMoments([]);
+      } finally {
+        setLoadingMoments(false);
+      }
+    };
+
+    fetchMoments();
+  }, [profile?.id, supabase]);
 
   return (
     <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
@@ -82,6 +138,121 @@ export default function LifePage({ profile, onBack, onAddMoment, isOwnTimeline =
                 </div>
               </div>
             </div>
+
+            {/* Custom Moments - Sorted newest first */}
+            {customMoments.map((moment) => {
+              const startDate = new Date(moment.start_date);
+              const endDate = moment.end_date ? new Date(moment.end_date) : null;
+              const photoUrls = moment.photo_urls || [];
+              
+              // Calculate duration if end date exists
+              let durationText = '';
+              if (endDate) {
+                const years = endDate.getFullYear() - startDate.getFullYear();
+                const months = endDate.getMonth() - startDate.getMonth() + (years * 12);
+                if (years > 0) {
+                  durationText = ` (${years} year${years > 1 ? 's' : ''})`;
+                } else if (months > 0) {
+                  durationText = ` (${months} month${months > 1 ? 's' : ''})`;
+                }
+              }
+
+              return (
+                <div key={moment.id} className="flex items-center gap-3">
+                  {/* Circular Date Badge - Day/Month only */}
+                  <div 
+                    className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      padding: '4px',
+                      gap: '1px',
+                    }}
+                  >
+                    <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
+                      {startDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                    </div>
+                    <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
+                      {startDate.getDate()}
+                    </div>
+                  </div>
+
+                  {/* Moment Card with photo/date */}
+                  <button
+                    onClick={() => {
+                      console.log('Moment clicked:', moment.id);
+                      // TODO: Open moment detail view
+                    }}
+                    className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      height: '64px',
+                    }}
+                  >
+                    {getCategoryIcon(moment.category)}
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 truncate">{moment.title}</span>
+                      <span className="text-xs text-gray-500 mt-0.5">
+                        {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {endDate && ` - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                        {durationText}
+                      </span>
+                    </div>
+                    
+                    {/* Photo display on right */}
+                    {photoUrls.length > 0 && (
+                      <div className="flex-shrink-0">
+                        {photoUrls.length <= 3 ? (
+                          // Single image
+                          <div 
+                            className="w-12 h-12 rounded-lg overflow-hidden"
+                            style={{
+                              borderWidth: '0.4px',
+                              borderColor: '#E5E7EB',
+                            }}
+                          >
+                            <Image
+                              src={photoUrls[0]}
+                              alt={moment.title}
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          // 2x2 grid
+                          <div className="w-12 h-12 grid grid-cols-2 gap-0.5">
+                            {photoUrls.slice(0, 4).map((url: string, i: number) => (
+                              <div
+                                key={i}
+                                className="rounded-sm overflow-hidden"
+                                style={{
+                                  borderWidth: '0.2px',
+                                  borderColor: '#E5E7EB',
+                                }}
+                              >
+                                <Image
+                                  src={url}
+                                  alt={`${moment.title} ${i + 1}`}
+                                  width={24}
+                                  height={24}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
 
             {/* Joined Connect Moment */}
             {profile.createdAt && (
