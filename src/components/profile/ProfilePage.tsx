@@ -627,12 +627,10 @@ export default function ProfilePage({
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    minHeight: '56px',
+                    height: '64px',
                   }}
                 >
-                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Cake size={16} className="text-gray-600" strokeWidth={2} />
-                  </div>
+                  <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
                   <span className="text-sm font-medium text-gray-900">Born</span>
                 </div>
               </div>
