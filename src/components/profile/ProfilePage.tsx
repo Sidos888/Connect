@@ -647,7 +647,7 @@ export default function ProfilePage({
 
               {/* Today Moment Component */}
               <div className="flex items-center gap-3">
-                {/* Circular Date Badge */}
+                {/* Circular Date Badge - Day/Month only */}
                 <div 
                   className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
                   style={{
@@ -657,21 +657,18 @@ export default function ProfilePage({
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     padding: '4px',
-                    gap: '0px',
+                    gap: '1px',
                   }}
                 >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '8px', lineHeight: '9px', fontWeight: 500 }}>
+                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
                     {new Date().toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                   </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '15px', lineHeight: '17px', fontWeight: 700 }}>
+                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
                     {new Date().getDate()}
-                  </div>
-                  <div className="text-xs text-gray-500" style={{ fontSize: '7px', lineHeight: '8px', fontWeight: 400 }}>
-                    {new Date().getFullYear()}
                   </div>
                 </div>
 
-                {/* Today Card */}
+                {/* Today Card with full date below */}
                 <div 
                   className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
                   style={{
@@ -682,14 +679,19 @@ export default function ProfilePage({
                   }}
                 >
                   <Calendar size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-sm font-medium text-gray-900">Today</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900">Today</span>
+                    <span className="text-xs text-gray-500 mt-0.5">
+                      {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Joined Connect Moment Component */}
               {profile?.createdAt && (
               <div className="flex items-center gap-3">
-                {/* Circular Date Badge */}
+                {/* Circular Date Badge - Day/Month only */}
                 <div 
                   className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
                   style={{
@@ -699,21 +701,18 @@ export default function ProfilePage({
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     padding: '4px',
-                    gap: '0px',
+                    gap: '1px',
                   }}
                 >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '8px', lineHeight: '9px', fontWeight: 500 }}>
+                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
                     {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                   </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '15px', lineHeight: '17px', fontWeight: 700 }}>
+                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
                     {new Date(profile.createdAt).getDate()}
-                  </div>
-                  <div className="text-xs text-gray-500" style={{ fontSize: '7px', lineHeight: '8px', fontWeight: 400 }}>
-                    {new Date(profile.createdAt).getFullYear()}
                   </div>
                 </div>
 
-                {/* Joined Connect Card */}
+                {/* Joined Connect Card with full date below */}
                 <div 
                   className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
                   style={{
@@ -724,7 +723,12 @@ export default function ProfilePage({
                   }}
                 >
                   <UserCheck size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-sm font-medium text-gray-900">Joined Connect</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900">Joined Connect</span>
+                    <span className="text-xs text-gray-500 mt-0.5">
+                      {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               </div>
               )}
@@ -732,7 +736,7 @@ export default function ProfilePage({
               {/* Born Moment Component */}
               {profile?.dateOfBirth && (
               <div className="flex items-center gap-3">
-                {/* Circular Date Badge */}
+                {/* Circular Date Badge - Day/Month only */}
                 <div 
                   className="bg-white rounded-full flex flex-col items-center justify-center flex-shrink-0"
                   style={{
@@ -742,21 +746,18 @@ export default function ProfilePage({
                     borderColor: '#E5E7EB',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     padding: '4px',
-                    gap: '0px',
+                    gap: '1px',
                   }}
                 >
-                  <div className="text-xs text-gray-900" style={{ fontSize: '8px', lineHeight: '9px', fontWeight: 500 }}>
+                  <div className="text-xs text-gray-900" style={{ fontSize: '9px', lineHeight: '11px', fontWeight: 500 }}>
                     {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                   </div>
-                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '15px', lineHeight: '17px', fontWeight: 700 }}>
+                  <div className="text-xl font-bold text-gray-900" style={{ fontSize: '18px', lineHeight: '20px', fontWeight: 700 }}>
                     {new Date(profile.dateOfBirth).getDate()}
-                  </div>
-                  <div className="text-xs text-gray-500" style={{ fontSize: '7px', lineHeight: '8px', fontWeight: 400 }}>
-                    {new Date(profile.dateOfBirth).getFullYear()}
                   </div>
                 </div>
 
-                {/* Born Card */}
+                {/* Born Card with full date below */}
                 <div 
                   className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
                   style={{
@@ -767,7 +768,12 @@ export default function ProfilePage({
                   }}
                 >
                   <Cake size={20} className="text-gray-900 flex-shrink-0" strokeWidth={2} />
-                  <span className="text-sm font-medium text-gray-900">Born</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900">Born</span>
+                    <span className="text-xs text-gray-500 mt-0.5">
+                      {new Date(profile.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               </div>
               )}
