@@ -77,22 +77,9 @@ export default function ProfileRoute() {
   }, [userId]);
 
   const handleBack = () => {
-    if (from) {
-      // Handle different from values
-      if (from === 'connections') {
-        router.push('/menu?view=connections');
-      } else if (from === 'add-person') {
-        router.push('/menu?view=add-person');
-      } else if (from.startsWith('/')) {
-        // If from is a full path, use it directly
-      router.push(from);
-      } else {
-        // Default: go back in history
-        router.back();
-      }
-    } else {
-      router.back();
-    }
+    // Always use router.back() to maintain proper history
+    // This ensures we go to the actual previous page in browser history
+    router.back();
   };
 
   const isOwnProfile = account?.id === userId;
@@ -135,7 +122,7 @@ export default function ProfileRoute() {
         onOpenHighlights={() => router.push(`/highlights?userId=${userId}`)}
         onOpenBadges={() => router.push(`/achievements?userId=${userId}`)}
         onOpenConnections={() => router.push(`/connections?userId=${userId}`)}
-        onOpenFullLife={() => router.push(`/menu?view=life&userId=${userId}&from=profile`)}
+        onOpenFullLife={() => router.push(`/menu?view=life&userId=${userId}&from=${from || 'profile'}`)}
       />
     </ProtectedRoute>
   );

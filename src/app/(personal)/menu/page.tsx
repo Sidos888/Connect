@@ -1367,8 +1367,8 @@ export default function Page() {
                   createdAt: friendData?.created_at
                 }}
                 onBack={() => {
-                  // Go back to that friend's profile
-                  router.push(`/profile?id=${lifeUserId}&from=${lifeFrom || 'connections'}`);
+                  // Go back in browser history (returns to profile)
+                  router.back();
                 }}
               />
             );
