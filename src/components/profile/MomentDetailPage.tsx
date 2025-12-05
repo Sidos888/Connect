@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import { MobilePage } from "@/components/layout/PageSystem";
 import { GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, MapPin, Hash, Calendar, UserCheck, Cake, Pencil } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Image from "next/image";
@@ -146,15 +146,43 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
     fetchMoment();
   }, [momentId, profile, supabase]);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  const buttonSize = isMobile ? '44px' : '40px';
+
   if (loading || !moment) {
     return (
-      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+      <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
         <MobilePage>
-          <PageHeader
-            title=""
-            backButton
-            onBack={onBack}
-          />
+          {/* Simple header with just back button */}
+          <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+            <div className="px-4 lg:px-8" style={{ 
+              paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
+              paddingBottom: '16px',
+              position: 'relative',
+              zIndex: 10,
+              pointerEvents: 'auto'
+            }}>
+              <button
+                onClick={onBack}
+                className="flex items-center justify-center transition-all duration-200"
+                style={{
+                  width: buttonSize,
+                  height: buttonSize,
+                  borderRadius: '100px',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                }}
+                aria-label="Back"
+              >
+                <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
           <div className="flex-1 flex items-center justify-center">
             <div className="text-gray-500">Loading...</div>
           </div>
@@ -238,30 +266,72 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
 
   const showEditButton = moment.user_id && account?.id && moment.user_id === account.id && 
     moment.moment_type !== 'today' && moment.moment_type !== 'joined-connect' && moment.moment_type !== 'born';
-  
-  // Detect mobile for consistent sizing
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-  const buttonSize = isMobile ? '44px' : '40px';
 
   return (
-    <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+    <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
       <MobilePage>
-        <PageHeader
-          title=""  // Empty title
-          subtitle={
-            <div className="flex items-center justify-center gap-2 mt-1">
+        {/* Custom Header - Back button + Category + Edit button */}
+        <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+          {/* Blur layers */}
+          <div className="absolute top-0 left-0 right-0" style={{
+            height: isMobile ? '135px' : '100px',
+            background: isMobile 
+              ? 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.62) 60%, rgba(255,255,255,0.58) 80%, rgba(255,255,255,0.3) 100%)'
+              : 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0.25) 80%, rgba(255,255,255,0.05) 100%)'
+          }} />
+          
+          {/* Header content */}
+          <div className="px-4 lg:px-8" style={{ 
+            paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
+            paddingBottom: '16px',
+            position: 'relative',
+            zIndex: 10,
+            pointerEvents: 'auto'
+          }}>
+            {/* Back button */}
+            <button
+              onClick={onBack}
+              className="absolute left-4 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                top: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
+                width: buttonSize,
+                height: buttonSize,
+                borderRadius: '100px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              aria-label="Back"
+            >
+              <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Category icon + subcategory (centered) */}
+            <div className="flex items-center justify-center gap-2" style={{
+              height: buttonSize
+            }}>
               {getMomentIcon()}
               <span className="text-sm text-gray-600">{subcategoryLabel}</span>
             </div>
-          }
-          backButton
-          onBack={onBack}
-          customActions={
-            showEditButton ? (
+
+            {/* Edit button */}
+            {showEditButton && (
               <button
                 onClick={handleEdit}
-                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                className="absolute right-4 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
+                  top: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
                   width: buttonSize,
                   height: buttonSize,
                   borderRadius: '100px',
@@ -282,12 +352,12 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
               >
                 <Pencil size={18} className="text-gray-900" strokeWidth={2.5} />
               </button>
-            ) : undefined
-          }
-        />
+            )}
+          </div>
+        </div>
         
         <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
-          paddingTop: 'var(--saved-content-padding-top, 140px)',
+          paddingTop: 'var(--saved-content-padding-top, 104px)',
           paddingBottom: '32px',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
