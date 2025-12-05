@@ -544,53 +544,66 @@ export default function ProfilePage({
           {showFullProfile && (
             <>
           {/* Pills - Life, Highlights, Badges */}
-          <div className="flex items-center gap-2 mb-6">
-            {[
-              { id: 'life' as const, label: 'Life', count: 10 },
-              { id: 'highlights' as const, label: 'Highlights', count: 10 },
-              { id: 'badges' as const, label: 'Badges', count: 10 }
-            ].map((pill) => {
-              const isActive = selectedPill === pill.id;
-              return (
-                <button
-                  key={pill.id}
-                  onClick={() => setSelectedPill(pill.id)}
-                  className="bg-white rounded-full transition-all duration-200"
-                  style={{
-                    paddingLeft: isActive ? '20px' : '18px',
-                    paddingRight: isActive ? '20px' : '18px',
-                    paddingTop: isActive ? '12px' : '10px',
-                    paddingBottom: isActive ? '12px' : '10px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    color: isActive ? '#111827' : '#6B7280',
-                    willChange: 'transform, box-shadow',
-                    transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                >
-                  <span 
-                    className="font-medium leading-none"
+          <div className="mb-6">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
+              {[
+                { id: 'life' as const, label: 'Life', count: 10 },
+                { id: 'highlights' as const, label: 'Highlights', count: 10 },
+                { id: 'badges' as const, label: 'Badges', count: 10 }
+              ].map((pill) => {
+                const isActive = selectedPill === pill.id;
+                return (
+                  <div
+                    key={pill.id}
+                    className="flex-shrink-0"
                     style={{
-                      fontSize: isActive ? '14px' : '13px',
+                      paddingLeft: isActive ? '2px' : '0',
+                      paddingRight: isActive ? '2px' : '0',
+                      paddingTop: isActive ? '2px' : '0',
+                      paddingBottom: isActive ? '2px' : '0',
                     }}
                   >
-                    {pill.label} {pill.count}
-                  </span>
-                </button>
-              );
-            })}
+                    <button
+                      onClick={() => setSelectedPill(pill.id)}
+                      className="inline-flex items-center justify-center gap-2 rounded-full whitespace-nowrap transition-all duration-200 focus:outline-none bg-white"
+                      style={{
+                        minHeight: isActive ? '44px' : '40px',
+                        paddingLeft: isActive ? '18px' : '16px',
+                        paddingRight: isActive ? '18px' : '16px',
+                        paddingTop: isActive ? '12px' : '10px',
+                        paddingBottom: isActive ? '12px' : '10px',
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        color: isActive ? '#111827' : '#6B7280',
+                        willChange: 'transform, box-shadow',
+                        transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        e.currentTarget.style.transform = isActive ? 'scale(1.05) translateY(-1px)' : 'scale(1) translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        e.currentTarget.style.transform = isActive ? 'scale(1.05)' : 'scale(1)';
+                      }}
+                    >
+                      <span className="text-sm font-medium leading-none">{pill.label}</span>
+                      {pill.count !== null && (
+                        <span
+                          className={`ml-2 text-xs leading-none ${
+                            isActive ? 'text-neutral-700' : 'text-neutral-500'
+                          }`}
+                        >
+                          {pill.count}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Life Section Content */}
