@@ -16,13 +16,40 @@ import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus, Image as ImageIcon } from "lucide-react";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
-import HappeningNowBanner from "@/components/HappeningNowBanner";
 
 const ChatLayoutContent = () => {
   const { account, user } = useAuth();
   const chatService = useChatService();
   const { data: chats = [], isLoading, error, refetch } = useChats(chatService, user?.id || null);
+  
+  // Log when chats data changes
+  useEffect(() => {
+    console.log('🔵 ChatLayout: chats data changed', {
+      chatsCount: chats.length,
+      chats: chats.map(c => ({
+        id: c.id,
+        lastMessageText: c.last_message?.message_text,
+        hasProfileUrl: /\/p\/([A-Z0-9]+)/i.test(c.last_message?.message_text || '')
+      }))
+    });
+  }, [chats]);
+  
   const refreshChats = useRefreshChats();
+  
+  // Refetch chats when component mounts or when navigating back to chat page
+  // This ensures chats are refreshed after sending a profile or other actions
+  useEffect(() => {
+    if (account?.id && chatService && user?.id) {
+      console.log('🔵 ChatLayout: Component mounted/navigated back, refetching chats...', {
+        hasAccount: !!account?.id,
+        hasChatService: !!chatService,
+        hasUserId: !!user?.id,
+        currentChatsCount: chats.length
+      });
+      // Use refreshChats which properly invalidates and refetches
+      refreshChats();
+    }
+  }, [account?.id, chatService, user?.id, refreshChats]);
   useModal();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,6 +116,16 @@ const ChatLayoutContent = () => {
     // Use last_message string if available (new format)
     if (conversation.last_message && typeof conversation.last_message === 'string') {
       const trimmed = conversation.last_message.trim();
+      
+      // Log if it's a profile URL that should have been formatted
+      if (/\/p\/([A-Z0-9]+)/i.test(trimmed)) {
+        console.log('🔵 ChatLayout.getLastMessage: WARNING - Profile URL still in last_message!', {
+          conversationId: conversation.id,
+          lastMessage: trimmed,
+          expectedFormat: 'Should be "Sent a profile" or "(Name): Sent a profile"'
+        });
+      }
+      
       if (trimmed) {
         return trimmed;
       }
@@ -211,7 +248,20 @@ const ChatLayoutContent = () => {
     }
     
     // Otherwise show the last message
-    return getLastMessage(conversation);
+    const lastMsg = getLastMessage(conversation);
+    
+    // Log if this conversation should have formatted text but doesn't
+    if (conversation.last_message && typeof conversation.last_message === 'string') {
+      if (/\/p\/([A-Z0-9]+)/i.test(conversation.last_message) && lastMsg === conversation.last_message) {
+        console.log('🔵 ChatLayout.getDisplayMessage: ERROR - Profile URL not formatted!', {
+          conversationId: conversation.id,
+          last_message: conversation.last_message,
+          returnedText: lastMsg
+        });
+      }
+    }
+    
+    return lastMsg;
   }, [getLastMessage, typingUsersByChat, getTypingUserName]);
 
   // Helper component to render message with icon instead of emoji
@@ -236,6 +286,16 @@ const ChatLayoutContent = () => {
 
   // Convert chats to conversations format for compatibility
   const conversations = useMemo(() => {
+    console.log('🔵 ChatLayout: conversations useMemo running', {
+      hasAccount: !!account?.id,
+      chatsCount: chats.length,
+      chats: chats.map(c => ({
+        id: c.id,
+        lastMessageText: c.last_message?.message_text,
+        hasProfileUrl: /\/p\/([A-Z0-9]+)/i.test(c.last_message?.message_text || '')
+      }))
+    });
+    
     if (!account?.id) return [];
     
     return chats.map(chat => {
@@ -266,6 +326,10 @@ const ChatLayoutContent = () => {
         const hasText = messageText.trim().length > 0;
         const messageType = chat.last_message.message_type;
         
+        // Check if message contains a profile URL pattern (check BEFORE other conditions)
+        const profileUrlPattern = /\/p\/([A-Z0-9]+)/i;
+        const hasProfileUrl = profileUrlPattern.test(messageText);
+        
         // Priority 1: Listing message
         if (messageType === 'listing') {
           if (isFromCurrentUser) {
@@ -275,8 +339,35 @@ const ChatLayoutContent = () => {
             // Someone else sent it: "Name: Sent a listing"
             lastMessageText = `${senderName}: Sent a listing`;
           }
+        } else if (hasProfileUrl) {
+          // Priority 2: Profile message (detect /p/{connectId} pattern)
+          // This check happens regardless of hasText, as profile URLs might be the only content
+          if (isFromCurrentUser) {
+            // You sent it: "Sent a profile"
+            lastMessageText = 'Sent a profile';
+            console.log('🔵 ChatLayout: Setting lastMessageText to "Sent a profile"', {
+              chatId: chat.id,
+              originalText: messageText
+            });
+          } else {
+            // Someone else sent it: "Name: Sent a profile"
+            lastMessageText = `${senderName}: Sent a profile`;
+            console.log('🔵 ChatLayout: Setting lastMessageText to', lastMessageText, {
+              chatId: chat.id,
+              originalText: messageText
+            });
+          }
+        } else if (hasText) {
+          // Priority 3: Regular text message (no profile URL)
+          if (isFromCurrentUser) {
+            // You sent it: just show the message
+            lastMessageText = messageText;
+          } else {
+            // Someone else sent it: "John: Hello whats up?"
+            lastMessageText = `${senderName}: ${messageText}`;
+          }
         } else if (attachmentCount > 0 || (!hasText && messageType === 'image')) {
-          // Priority 2: If message has attachments, show attachment count with icon
+          // Priority 4: If message has attachments, show attachment count with icon
           const count = attachmentCount > 0 ? attachmentCount : 1; // Default to 1 if message_type is image but no count
           if (isFromCurrentUser) {
             // You sent it: "3 📷 Attachments"
@@ -284,15 +375,6 @@ const ChatLayoutContent = () => {
           } else {
             // Someone else sent it: "John 3 📷 Attachments"
             lastMessageText = `${senderName} ${count} 📷 Attachment${count > 1 ? 's' : ''}`;
-          }
-        } else if (hasText) {
-          // Priority 3: Regular text message
-          if (isFromCurrentUser) {
-            // You sent it: just show the message
-            lastMessageText = messageText;
-          } else {
-            // Someone else sent it: "John: Hello whats up?"
-            lastMessageText = `${senderName}: ${messageText}`;
           }
         } else if (messageType === 'image') {
           // Priority 4: Legacy image message (no attachment_count)
@@ -304,7 +386,17 @@ const ChatLayoutContent = () => {
         }
       }
       
-      return {
+      // Log final formatted message for profile URLs
+      if (chat.last_message?.message_text && /\/p\/([A-Z0-9]+)/i.test(chat.last_message.message_text)) {
+        console.log('🔵 ChatLayout: Final formatted last message:', {
+          chatId: chat.id,
+          originalText: chat.last_message.message_text,
+          formattedText: lastMessageText,
+          isFromCurrentUser: chat.last_message.sender_id === account.id
+        });
+      }
+      
+      const conversation = {
         id: chat.id,
         title,
         avatarUrl,
@@ -315,6 +407,17 @@ const ChatLayoutContent = () => {
         last_message_at: chat.last_message_at,
         messages: [] // Empty array for compatibility
       };
+      
+      // Log if this conversation has a profile URL that was formatted
+      if (chat.last_message?.message_text && /\/p\/([A-Z0-9]+)/i.test(chat.last_message.message_text)) {
+        console.log('🔵 ChatLayout: Conversation created with formatted last_message:', {
+          conversationId: conversation.id,
+          last_message: conversation.last_message,
+          originalMessageText: chat.last_message.message_text
+        });
+      }
+      
+      return conversation;
     });
   }, [chats, account?.id]);
 
@@ -659,7 +762,18 @@ const ChatLayoutContent = () => {
                                   </div>
                                 </div>
                                 <p className={`text-xs truncate leading-relaxed flex items-center gap-1 ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                                  <MessageTextWithIcon text={getDisplayMessage(conversation)} />
+                                  {(() => {
+                                    const displayText = getDisplayMessage(conversation);
+                                    // Log if this conversation has a profile URL that wasn't formatted
+                                    if (conversation.last_message && typeof conversation.last_message === 'string' && /\/p\/([A-Z0-9]+)/i.test(conversation.last_message) && displayText === conversation.last_message) {
+                                      console.log('🔵 ChatLayout: RENDERING - Profile URL not formatted!', {
+                                        conversationId: conversation.id,
+                                        last_message: conversation.last_message,
+                                        displayText: displayText
+                                      });
+                                    }
+                                    return <MessageTextWithIcon text={displayText} />;
+                                  })()}
                                 </p>
                               </div>
                             </div>
@@ -710,7 +824,7 @@ const ChatLayout = () => {
       </div>
     }>
       <ChatLayoutContent />
-      <HappeningNowBanner />
+      {/* HappeningNowBanner removed - only show on initial inbox page (/chat/) */}
     </Suspense>
   );
 };

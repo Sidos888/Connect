@@ -33,6 +33,48 @@ import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
 import Highlights from "@/components/highlights/Highlights";
 import Timeline from "@/components/timeline/Timeline";
+
+// Convert base64 data URL to Blob with proper MIME type (same as listing creation)
+const dataURLtoBlob = (dataurl: string): Blob => {
+  try {
+    if (!dataurl || typeof dataurl !== 'string') {
+      throw new Error('Invalid data URL: not a string');
+    }
+
+    if (!dataurl.includes(',')) {
+      throw new Error('Invalid data URL format: missing comma separator');
+    }
+
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    
+    const base64Data = arr[1];
+    
+    if (!base64Data || base64Data.length === 0) {
+      throw new Error('Empty base64 data');
+    }
+
+    let bstr: string;
+    try {
+      bstr = atob(base64Data);
+    } catch (e) {
+      throw new Error(`Invalid base64 encoding: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    }
+
+    const n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    
+    for (let i = 0; i < n; i++) {
+      u8arr[i] = bstr.charCodeAt(i);
+    }
+    
+    return new Blob([u8arr], { type: mime });
+  } catch (error) {
+    console.error('dataURLtoBlob error:', error);
+    throw error;
+  }
+};
 import Achievements from "@/components/achievements/Achievements";
 import Connections from "@/components/connections/Connections";
 import CenteredConnections from "@/components/connections/CenteredConnections";
@@ -43,7 +85,6 @@ import SettingsContent from "@/components/settings/SettingsContent";
 import Notifications from "@/components/notifications/Notifications";
 import Memories from "@/components/memories/Memories";
 import Saved from "@/components/saved/Saved";
-import ShareProfile from "@/components/profile/ShareProfile";
 import AccountSettings from "@/components/settings/AccountSettings";
 
 // Module-level cache for connections (persists across component mounts)
@@ -59,7 +100,7 @@ export default function Page() {
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'share-profile' | 'account-settings' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail'>('menu');
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'account-settings' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail'>('menu');
   const [selectedMomentType, setSelectedMomentType] = React.useState<{ id: string; label: string; category: string } | null>(null);
   const [selectedMomentId, setSelectedMomentId] = React.useState<string | null>(null);
   const [showProfileModal, setShowProfileModal] = React.useState(false);
@@ -126,9 +167,11 @@ export default function Page() {
     else if (view === 'achievements') setCurrentView('achievements');
     else if (view === 'life') {
       setCurrentView('life');
-      // If viewing another user's timeline, load their data
+      // If viewing another user's timeline, load their friend data
       if (userId && userId !== account?.id) {
         console.log('🔶 Menu page: Loading friend profile for timeline:', userId);
+        // Load friend data so back button can navigate to friend-profile
+        loadFriendProfile(userId, false); // false = set as selectedFriend, not connections context
         loadFriendProfile(userId, false);
       }
     }
@@ -141,7 +184,11 @@ export default function Page() {
       setCurrentView('saved');
     }
     else if (view === 'edit-profile') setCurrentView('edit-profile');
-    else if (view === 'share-profile') setCurrentView('share-profile');
+    else if (view === 'share-profile') {
+      // Redirect to QR code page
+      router.push('/qr-code');
+      return;
+    }
     else if (view === 'account-settings') setCurrentView('account-settings');
     else if (view === 'add-moment') setCurrentView('add-moment');
     else if (view === 'add-moment-form') setCurrentView('add-moment-form');
@@ -179,7 +226,7 @@ export default function Page() {
   }, [currentView]);
 
   // Helper to update URL to a view on /menu (keeps transitions smooth)
-  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'share-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail', from?: string, userId?: string) => {
+  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail', from?: string, userId?: string) => {
     console.log('🔷 goToView called:', { view, from, userId });
     
     if (view === 'menu') {
@@ -238,7 +285,7 @@ export default function Page() {
       document.body.style.paddingBottom = '';
     };
     
-    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile' || currentView === 'highlights' || currentView === 'timeline' || currentView === 'achievements' || currentView === 'life' || currentView === 'add-moment' || currentView === 'add-moment-form' || currentView === 'moment-detail' || currentView === 'connections' || currentView === 'settings' || currentView === 'notifications' || currentView === 'memories' || currentView === 'saved' || currentView === 'share-profile' || currentView === 'account-settings') {
+    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile' || currentView === 'highlights' || currentView === 'timeline' || currentView === 'achievements' || currentView === 'life' || currentView === 'add-moment' || currentView === 'add-moment-form' || currentView === 'moment-detail' || currentView === 'connections' || currentView === 'settings' || currentView === 'notifications' || currentView === 'memories' || currentView === 'saved' || currentView === 'account-settings') {
       hideBottomNav();
     } else {
       showBottomNav();
@@ -525,7 +572,7 @@ export default function Page() {
               showBackButton={false}
               onViewProfile={() => goToView('profile', 'settings')}
               onEditProfile={() => goToView('edit-profile', 'settings')}
-              onShareProfile={() => goToView('share-profile', 'settings')}
+              onShareProfile={() => router.push('/qr-code')}
               onAccountSettings={() => goToView('account-settings', 'settings')}
             />
           </div>
@@ -638,45 +685,6 @@ export default function Page() {
     );
   };
 
-  // Share Profile View Component
-  const ShareProfileView = () => {
-    const fromParam = searchParams?.get('from');
-    const from = fromParam ? decodeURIComponent(fromParam) : 'menu';
-    
-    const handleBack = () => {
-      // If from is a full pathname (starts with /), navigate directly
-      if (from.startsWith('/')) {
-        router.push(from);
-      } else {
-        // Otherwise, treat it as a view name
-        goToView(from as any);
-      }
-    };
-    
-    return (
-      <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-        <MobilePage>
-          <PageHeader
-            title="Share Profile"
-            backButton
-            onBack={handleBack}
-          />
-          <ShareProfile />
-          {/* Bottom Blur */}
-          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
-            <div className="absolute bottom-0 left-0 right-0" style={{
-              height: '80px',
-              background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
-            }} />
-            <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
-            <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
-            <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
-            <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
-          </div>
-        </MobilePage>
-      </div>
-    );
-  };
 
   // Saved View Component
   const SavedView = () => {
@@ -1020,7 +1028,7 @@ export default function Page() {
         onClose={() => goToView(from as any)}
         onEdit={() => goToView('edit-profile', 'profile')}
           onSettings={() => goToView('settings', 'profile')}
-        onShare={() => goToView('share-profile', 'profile')}
+        onShare={() => router.push('/qr-code')}
           onOpenTimeline={() => goToView('life', 'profile')}
         onOpenHighlights={() => goToView('highlights', 'profile')}
         onOpenBadges={() => goToView('achievements', 'profile')}
@@ -1243,7 +1251,10 @@ export default function Page() {
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     willChange: 'transform, box-shadow',
                     overflow: 'hidden',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                    position: 'relative',
+                    zIndex: 10
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -1254,24 +1265,58 @@ export default function Page() {
                 >
                   {/* Search Icon - Left Side */}
                   <button
+                    type="button"
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
+                      console.log('🔍 Search button clicked, opening modal');
+                      console.log('🔍 Current isConnectionsSearchOpen state:', isConnectionsSearchOpen);
+                      setIsConnectionsSearchOpen(true);
+                      console.log('🔍 Set isConnectionsSearchOpen to true');
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('🔍 Search button touched, opening modal');
                       setIsConnectionsSearchOpen(true);
                     }}
                     className="flex items-center justify-center flex-1 h-full"
+                    style={{
+                      pointerEvents: 'auto',
+                      cursor: 'pointer',
+                      zIndex: 20,
+                      position: 'relative',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent',
+                      border: 'none',
+                      background: 'transparent',
+                      padding: 0,
+                      margin: 0
+                    }}
                   >
-                    <SearchIcon size={20} className="text-gray-900" style={{ strokeWidth: 2.5 }} />
+                    <SearchIcon size={20} className="text-gray-900" style={{ strokeWidth: 2.5, pointerEvents: 'none' }} />
                   </button>
                   {/* QR Code Icon - Right Side */}
                   <button
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
-                      // Placeholder for QR code functionality
-                      console.log('QR code clicked');
+                      router.push('/qr-code');
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/qr-code');
                     }}
                     className="flex items-center justify-center flex-1 h-full"
+                    style={{
+                      pointerEvents: 'auto',
+                      cursor: 'pointer',
+                      zIndex: 20,
+                      position: 'relative'
+                    }}
                   >
-                    <QrCode size={20} className="text-gray-900" strokeWidth={2.5} />
+                    <QrCode size={20} className="text-gray-900" strokeWidth={2.5} style={{ pointerEvents: 'none' }} />
                   </button>
                 </div>
               }
@@ -1300,19 +1345,13 @@ export default function Page() {
             </div>
           </MobilePage>
         </div>
-        <ConnectionsSearchModal
-          isOpen={isConnectionsSearchOpen}
-          onClose={() => setIsConnectionsSearchOpen(false)}
-          searchQuery={connectionsSearchQuery}
-          onSearchChange={setConnectionsSearchQuery}
-        />
       </>
     );
   };
 
   return (
     <ProtectedRoute
-      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'life' ? "Timeline" : currentView === 'add-moment' ? "Add" : currentView === 'add-moment-form' ? (selectedMomentType?.label || "Add Moment") : currentView === 'moment-detail' ? "Moment" : currentView === 'achievements' ? "Achievements" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'share-profile' ? "Share Profile" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
+      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'life' ? "Timeline" : currentView === 'add-moment' ? "Add" : currentView === 'add-moment-form' ? (selectedMomentType?.label || "Add Moment") : currentView === 'moment-detail' ? "Moment" : currentView === 'achievements' ? "Achievements" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
       description="Log in / sign up to access your account settings and preferences"
       buttonText="Log in"
     >
@@ -1376,8 +1415,14 @@ export default function Page() {
                   createdAt: friendData?.created_at
                 }}
                 onBack={() => {
-                  // Go back in browser history (returns to profile)
-                  router.back();
+                  // Use state-based navigation to friend-profile (same pattern as connections)
+                  // This avoids dynamic routes and RSC payload errors
+                  if (selectedFriend?.id === lifeUserId) {
+                    goToView('friend-profile', 'life', selectedFriend.id);
+                  } else {
+                    // If friend not loaded, go back to connections
+                    goToView('connections');
+                  }
                 }}
                 onOpenMomentDetail={(momentId) => {
                   setSelectedMomentId(momentId);
@@ -1433,32 +1478,79 @@ export default function Page() {
             }
 
             try {
-              // Upload photos to storage first
+              // Upload photos to storage (using File objects directly - like chat uploads)
+              console.log('📸 CREATE MOMENT: Starting photo upload', {
+                photoCount: momentData.photo_files.length
+              });
+              
               const photoUrls: string[] = [];
-              for (const photoData of momentData.photo_urls) {
-                const response = await fetch(photoData);
-                const blob = await response.blob();
+              for (let i = 0; i < momentData.photo_files.length; i++) {
+                const file = momentData.photo_files[i];
+                console.log(`📤 CREATE MOMENT: Processing photo ${i + 1}/${momentData.photo_files.length}`, {
+                  fileName: file.name,
+                  fileSize: file.size,
+                  fileType: file.type
+                });
                 
-                const fileExt = 'jpg';
-                const fileName = `moments/${account.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-                const { error: uploadError } = await supabaseClient.storage
-                  .from('listing-photos')
-                  .upload(fileName, blob);
-
-                if (uploadError) {
-                  console.error('Error uploading photo:', uploadError);
+                // Validate file
+                if (!file || file.size === 0) {
+                  console.error('❌ CREATE MOMENT: Invalid file', { size: file?.size });
                   continue;
                 }
+                
+                // Determine file extension from file type
+                let fileExt = 'jpg';
+                if (file.type.includes('png')) fileExt = 'png';
+                else if (file.type.includes('webp')) fileExt = 'webp';
+                else if (file.type.includes('gif')) fileExt = 'gif';
+                
+                // Generate unique filename
+                const timestamp = Date.now();
+                const randomStr = Math.random().toString(36).substring(2, 11);
+                const fileName = `moments/${account.id}/${timestamp}-${randomStr}.${fileExt}`;
+
+                if (!supabaseClient) {
+                  console.error('❌ CREATE MOMENT: Supabase client not available');
+                  continue;
+                }
+
+                // Upload File directly (same as chat uploads - no conversion needed!)
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                  .from('listing-photos')
+                  .upload(fileName, file);
+
+                if (uploadError) {
+                  console.error(`❌ CREATE MOMENT: Upload failed`, {
+                    error: uploadError,
+                    errorName: uploadError?.name,
+                    errorMessage: uploadError?.message,
+                    fileName
+                  });
+                  continue;
+                }
+
+                console.log(`✅ CREATE MOMENT: Upload successful`, { uploadData });
 
                 const { data: { publicUrl } } = supabaseClient.storage
                   .from('listing-photos')
                   .getPublicUrl(fileName);
 
+                console.log(`🔗 CREATE MOMENT: Got public URL`, { publicUrl });
                 photoUrls.push(publicUrl);
               }
+              
+              console.log(`📸 CREATE MOMENT: All photos processed`, {
+                totalUploaded: photoUrls.length,
+                urls: photoUrls
+              });
 
               // Insert moment into database
+              if (!supabaseClient) {
+                console.error('❌ CREATE MOMENT: Supabase client not available');
+                alert('Failed to save moment: Database connection error');
+                return;
+              }
+
               const { error } = await supabaseClient
                 .from('user_moments')
                 .insert({
@@ -1517,8 +1609,6 @@ export default function Page() {
         <MemoriesView />
       ) : currentView === 'saved' ? (
         <SavedView />
-      ) : currentView === 'share-profile' ? (
-        <ShareProfileView />
       ) : currentView === 'account-settings' ? (
         <AccountSettingsView />
       ) : currentView === 'menu' ? (
@@ -1587,11 +1677,11 @@ export default function Page() {
                     onClick={() => goToView('profile')}
                     onViewProfile={() => goToView('profile')}
                     onEditProfile={() => goToView('edit-profile', 'menu')}
-                    onShareProfile={() => goToView('share-profile', 'menu')}
+                    onShareProfile={() => router.push('/qr-code')}
                     avatarSize={36}
                     slim={true}
                     customActionIcon={QrCode}
-                    onCustomAction={() => goToView('share-profile', 'menu')}
+                    onCustomAction={() => router.push('/qr-code')}
                   />
                 </div>
 
@@ -1685,7 +1775,7 @@ export default function Page() {
                     onClick={() => setCurrentView('profile')}
                     onViewProfile={() => goToView('profile')}
                     onEditProfile={() => goToView('edit-profile', 'menu')}
-                    onShareProfile={() => goToView('share-profile', 'menu')}
+                    onShareProfile={() => router.push('/qr-code')}
                     avatarSize={36}
                   />
                 </div>
@@ -1774,10 +1864,19 @@ export default function Page() {
         name={currentAccount?.name ?? "User"}
         avatarUrl={currentAccount?.avatarUrl}
         onViewProfile={() => goToView('profile', 'menu')}
-        onShareProfile={() => goToView('share-profile', 'menu')}
+        onShareProfile={() => router.push('/qr-code')}
         onAddBusiness={() => router.push('/create-business')}
       />
-      <HappeningNowBanner />
+      {/* Only show HappeningNowBanner on initial menu page, not subpages */}
+      {currentView === 'menu' && <HappeningNowBanner />}
+      
+      {/* Connections Search Modal - Outside AddPersonWrapper to prevent re-renders */}
+      <ConnectionsSearchModal
+        isOpen={isConnectionsSearchOpen}
+        onClose={() => setIsConnectionsSearchOpen(false)}
+        searchQuery={connectionsSearchQuery}
+        onSearchChange={setConnectionsSearchQuery}
+      />
     </ProtectedRoute>
   );
 }

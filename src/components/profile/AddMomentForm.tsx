@@ -15,7 +15,7 @@ interface AddMomentFormProps {
     start_date: Date;
     end_date: Date | null;
     location: string;
-    photo_urls: string[];
+    photo_files: File[];
   }) => void;
 }
 
@@ -34,7 +34,9 @@ export default function AddMomentForm({
   const [endTime, setEndTime] = useState("");
   const [includeEndTime, setIncludeEndTime] = useState(false);
   const [location, setLocation] = useState("");
-  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]);
+  // Store File objects in ref (not state) to preserve iOS WebView file handles
+  const pendingPhotoFilesRef = useRef<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if form is valid (title and start date/time required)
@@ -46,22 +48,28 @@ export default function AddMomentForm({
     const files = Array.from(e.target.files);
     
     files.forEach((file) => {
+      // Store File object in ref (not state) to preserve iOS WebView file handles
+      pendingPhotoFilesRef.current.push(file);
+      
+      // Create preview URL for display
       const reader = new FileReader();
       reader.onloadend = () => {
         if (reader.result) {
-          setPendingPhotos(prev => [...prev, reader.result as string]);
+          setPhotoPreviews(prev => [...prev, reader.result as string]);
         }
       };
       reader.readAsDataURL(file);
     });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    // Don't clear input - keep File objects valid for iOS WebView
+    // if (fileInputRef.current) {
+    //   fileInputRef.current.value = '';
+    // }
   };
 
   const handleRemovePhoto = (index: number) => {
-    setPendingPhotos(prev => prev.filter((_, i) => i !== index));
+    pendingPhotoFilesRef.current.splice(index, 1);
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = () => {
@@ -78,7 +86,7 @@ export default function AddMomentForm({
       start_date: startDateTime,
       end_date: endDateTime,
       location,
-      photo_urls: pendingPhotos
+      photo_files: [...pendingPhotoFilesRef.current] // Copy array from ref
     });
   };
 
@@ -151,7 +159,7 @@ export default function AddMomentForm({
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
             }}
           >
-            {pendingPhotos.length === 0 ? (
+            {pendingPhotoFilesRef.current.length === 0 ? (
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-semibold text-gray-900">Upload Photos</h2>
                 <button
@@ -175,7 +183,7 @@ export default function AddMomentForm({
                   <div>
                     <h2 className="text-base font-semibold text-gray-900">Photos</h2>
                     <p className="text-sm text-gray-500">
-                      {pendingPhotos.length} Selected
+                      {pendingPhotoFilesRef.current.length} Selected
                     </p>
                   </div>
                   <button
@@ -195,7 +203,7 @@ export default function AddMomentForm({
                 </div>
 
                 <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                  {pendingPhotos.map((photoData, index) => (
+                  {photoPreviews.map((photoPreview, index) => (
                     <div
                       key={index}
                       className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden"
@@ -205,7 +213,7 @@ export default function AddMomentForm({
                       }}
                     >
                       <img
-                        src={photoData}
+                        src={photoPreview}
                         alt={`Photo ${index + 1}`}
                         className="w-full h-full object-cover"
                       />

@@ -73,6 +73,9 @@ function AppShellContent({ children }: AppShellProps) {
   }, [pathname, menuView, isAddPersonView, isMenuPage]);
   const isOnboardingPage = pathname === '/onboarding';
   const isTimelinePage = pathname.startsWith('/timeline');
+  const isLinksPage = pathname.startsWith('/links');
+  const isQRCodePage = pathname.startsWith('/qr-code');
+  const isScanPage = pathname.startsWith('/scan');
   const isCreateListingPage = pathname === '/my-life/create' || pathname === '/my-life/create/' || pathname.startsWith('/my-life/create/');
   const isProfilePage = pathname.startsWith('/profile');
   // Handle listing detail page - check pathname (with/without trailing slash) and search params
@@ -140,7 +143,7 @@ function AppShellContent({ children }: AppShellProps) {
         </div>
         
         {/* Mobile: Top Navigation Bar */}
-        {!isSettingsPage && (
+        {!isSettingsPage && !isScanPage && (
           <div className="lg:hidden">
             <MobileTopNavigation />
           </div>
@@ -152,7 +155,7 @@ function AppShellContent({ children }: AppShellProps) {
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
-        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isNewChatPage && !isAddMembersPage && !isCreateGroupPage && !isAnyModalOpen && (
+        {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isLinksPage && !isQRCodePage && !isScanPage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isNewChatPage && !isAddMembersPage && !isCreateGroupPage && !isAnyModalOpen && (
           <div className="lg:hidden">
             <MobileBottomNavigation />
           </div>
@@ -174,7 +177,7 @@ function AppShellContent({ children }: AppShellProps) {
         )}
         
         {/* Mobile: Top Navigation Bar - Not needed for Chat page (has own PageHeader) */}
-        {!isSettingsPage && !isChatPage && (
+        {!isSettingsPage && !isChatPage && !isScanPage && (
           <div className="sm:hidden">
             <MobileTopNavigation />
           </div>
@@ -205,7 +208,7 @@ function AppShellContent({ children }: AppShellProps) {
       </div>
       
       {/* Mobile: Top Navigation Bar - Not needed for pages with own PageHeader */}
-      {!isSettingsPage && !isMyLifePage && !isMenuPage && !isListingsPage && !isProfilePage && (
+      {!isSettingsPage && !isMyLifePage && !isMenuPage && !isListingsPage && !isProfilePage && !isScanPage && !isQRCodePage && (
         <div className="lg:hidden">
           <MobileTopNavigation />
         </div>
@@ -219,7 +222,7 @@ function AppShellContent({ children }: AppShellProps) {
       </main>
 
       {/* Mobile: Bottom Navigation Bar */}
-      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isEventChatPage && !isInvitePage && !isAttendeesPage && !isSharePage && !isNewChatPage && !isAddMembersPage && !isCreateGroupPage && !isAnyModalOpen && (
+      {!isSettingsPage && !isOnboardingPage && !isMenuPage && !isAddPersonView && !isConnectionsView && !isTimelinePage && !isLinksPage && !isQRCodePage && !isScanPage && !isCreateListingPage && !isListingDetailPage && !isProfilePage && !isEventChatPage && !isInvitePage && !isAttendeesPage && !isSharePage && !isNewChatPage && !isAddMembersPage && !isCreateGroupPage && !isAnyModalOpen && (
         <div className="lg:hidden">
           <MobileBottomNavigation />
         </div>

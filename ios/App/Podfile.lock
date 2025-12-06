@@ -6,15 +6,24 @@ PODS:
   - CapacitorCordova (7.4.3)
   - CapacitorDevice (7.0.2):
     - Capacitor
+  - CapacitorFilesystem (7.1.5):
+    - Capacitor
+    - IONFilesystemLib (~> 1.0.1)
   - CapacitorHaptics (7.0.2):
     - Capacitor
+  - IONFilesystemLib (1.0.1)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorDevice (from `../../node_modules/@capacitor/device`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+
+SPEC REPOS:
+  trunk:
+    - IONFilesystemLib
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -25,6 +34,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorDevice:
     :path: "../../node_modules/@capacitor/device"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
   CapacitorHaptics:
     :path: "../../node_modules/@capacitor/haptics"
 
@@ -33,8 +44,10 @@ SPEC CHECKSUMS:
   CapacitorCamera: f9e54db0a18bb218a8dc360907d63aaefe9209ff
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
   CapacitorDevice: 81ae78d5d1942707caad79276badd458bf6ec603
+  CapacitorFilesystem: 609d5cceca1ed93d7f25839dbfdfd224bfe78209
   CapacitorHaptics: b3fb2869e72c4466e18ce9ccbeb60a3d8723b3d4
+  IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
 
-PODFILE CHECKSUM: a6b6c8ee508e2ecd50bfe566c67395df88d6e493
+PODFILE CHECKSUM: 6438ebd7376d1215657cc242effd952b81318ce5
 
 COCOAPODS: 1.16.2

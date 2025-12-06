@@ -96,7 +96,9 @@ export default function MobileTopNavigation() {
                           pathname.startsWith('/side-quest-listings') ||
                           pathname.startsWith('/for-you-listings') ||
                           pathname.startsWith('/casual-listings') ||
-                          pathname.startsWith('/profile');
+                          pathname.startsWith('/profile') ||
+                          pathname.startsWith('/scan') ||
+                          pathname.startsWith('/qr-code');
   
   if (shouldHideHeader) {
     return null;

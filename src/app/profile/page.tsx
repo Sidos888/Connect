@@ -117,7 +117,7 @@ export default function ProfileRoute() {
         onClose={handleBack}
         onEdit={isOwnProfile ? () => router.push('/settings/edit/details') : undefined}
         onSettings={isOwnProfile ? () => router.push('/settings') : undefined}
-        onShare={isOwnProfile ? () => router.push('/menu?view=share-profile') : undefined}
+        onShare={isOwnProfile ? () => router.push('/qr-code') : undefined}
         onOpenTimeline={() => router.push(`/timeline?userId=${userId}`)}
         onOpenHighlights={() => router.push(`/highlights?userId=${userId}`)}
         onOpenBadges={() => router.push(`/achievements?userId=${userId}`)}

@@ -444,7 +444,7 @@ export default function MyLifeLayout(): React.JSX.Element {
         name={account?.name || personalProfile?.name || "User"}
         avatarUrl={account?.profile_pic || personalProfile?.avatarUrl}
         onViewProfile={() => router.push(`/profile?id=${account?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
-        onShareProfile={() => router.push(`/menu?view=share-profile&from=${encodeURIComponent(pathname)}`)}
+        onShareProfile={() => router.push('/qr-code')}
         onAddBusiness={() => router.push('/create-business')}
       />
     </>

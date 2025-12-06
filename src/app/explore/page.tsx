@@ -430,7 +430,7 @@ export default function ExplorePage() {
         name={currentAccount?.name ?? "User"}
         avatarUrl={currentAccount?.avatarUrl}
         onViewProfile={() => router.push(`/profile?id=${account?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
-        onShareProfile={() => router.push(`/menu?view=share-profile&from=${encodeURIComponent(pathname)}`)}
+        onShareProfile={() => router.push('/qr-code')}
         onAddBusiness={() => router.push('/create-business')}
       />
     </>

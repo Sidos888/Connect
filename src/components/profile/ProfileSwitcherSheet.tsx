@@ -228,7 +228,7 @@ export default function ProfileSwitcherSheet({ isOpen, onClose }: ProfileSwitche
                         onShareProfile={() => {
                           setIsProfileMenuOpen(false);
                           closeSheet();
-                          router.push('/menu?view=share-profile&from=menu');
+                          router.push('/qr-code');
                         }}
                       />
                     </div>

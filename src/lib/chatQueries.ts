@@ -42,7 +42,7 @@ export function useChats(chatService: ChatService | null, userId: string | null)
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes in cache
     refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loops
-    refetchOnMount: false, // Don't refetch on mount to prevent loops
+    refetchOnMount: true, // Refetch on mount if data is stale (after invalidation)
   });
 }
 

@@ -601,8 +601,63 @@ export default function ShareListingPage() {
       <PageContent>
         <div className="px-4" style={{ 
           paddingTop: `calc(${headerHeight} + ${searchBarHeight})`, 
-          paddingBottom: '100px' 
+          paddingBottom: '24px' 
         }}>
+
+          {/* Share Externally Card - First option in scrollable content */}
+          <div className="mb-6">
+            <div
+              className="bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onClick={() => {
+                // Share externally functionality
+                if (!listingId) return;
+                const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/listing?id=${listingId}` : '';
+                const shareText = `Check out ${listing?.title || 'this listing'} on Connect!`;
+                
+                if (navigator.share) {
+                  navigator.share({
+                    title: listing?.title || 'Listing',
+                    text: shareText,
+                    url: shareUrl
+                  }).catch(err => {
+                    console.log('Error sharing:', err);
+                  });
+                } else {
+                  // Fallback: copy to clipboard
+                  navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert('Listing link copied to clipboard!');
+                  }).catch(err => {
+                    console.error('Failed to copy:', err);
+                  });
+                }
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-base font-semibold text-gray-900 mb-1">
+                    Share Externally
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Airdrop, messages etc
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-gray-400" />
+              </div>
+            </div>
+          </div>
 
           {/* Selected Section */}
           {(selectedChats.size > 0 || selectedUsers.size > 0) && (
@@ -893,47 +948,6 @@ export default function ShareListingPage() {
           )}
         </div>
       </PageContent>
-
-      {/* Fixed Bottom: Share Externally Card - transparent background like bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 z-50"
-        style={{
-          paddingTop: '16px',
-          paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
-          paddingLeft: '16px',
-          paddingRight: '16px',
-          pointerEvents: 'none'
-        }}
-      >
-        <div
-          className="bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
-          style={{
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            willChange: 'transform, box-shadow',
-            pointerEvents: 'auto'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-base font-semibold text-gray-900 mb-1">
-                Share Externally
-              </div>
-              <div className="text-sm text-gray-500">
-                Airdrop, messages etc
-              </div>
-            </div>
-            <ChevronRight size={20} className="text-gray-400" />
-          </div>
-        </div>
-      </div>
     </MobilePage>
   );
 }

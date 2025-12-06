@@ -1,10 +1,11 @@
 "use client";
 
 import Avatar from "@/components/Avatar";
-import { Pencil, Settings, MoreVertical, Users, UserPlus, Link2, Check, MessageCircle, Clock, X, Cake, ChevronRight, Calendar, UserCheck, GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal } from "lucide-react";
+import { Pencil, Settings, MoreVertical, Users, UserPlus, Link, Check, MessageCircle, Clock, X, Cake, ChevronRight, Calendar, UserCheck, GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, Share } from "lucide-react";
 import Image from "next/image";
 import { PageHeader } from "@/components/layout/PageSystem";
-import { useEffect, useState, useRef } from "react";
+import ProfileTopActions from "@/components/layout/ProfileTopActions";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { connectionsService } from "@/lib/connectionsService";
 import { useChatService } from "@/lib/chatProvider";
@@ -17,6 +18,8 @@ type Profile = {
   profile_visibility?: 'public' | 'private';
   dateOfBirth?: string;
   createdAt?: string;
+  connectId?: string; // For compatibility
+  connect_id?: string; // From database
 };
 
 // Helper to get category icon
@@ -150,9 +153,16 @@ export default function ProfilePage({
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
+  const [hasLinks, setHasLinks] = useState(false);
+  const [loadingLinks, setLoadingLinks] = useState(true);
   const router = useRouter();
   const chatService = useChatService();
   
+  // Determine if full profile should be visible (calculate early to avoid uninitialized variable error)
+  // Default to private if undefined (safe fallback)
+  const isPrivateProfile = !profile?.profile_visibility || profile?.profile_visibility === 'private';
+  const showFullProfile = isOwnProfile || !isPrivateProfile || areFriends;
+
   // Get current user ID
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -163,6 +173,85 @@ export default function ProfilePage({
     };
     getCurrentUser();
   }, []);
+
+  // Check if user has links (only for other users' profiles)
+  // For own profile, always show link button (users need to add/view their links)
+  // Use LinksService to match the same query pattern used by the Links component
+  // Only check when profile is fully visible (showFullProfile) to avoid RLS issues
+  useEffect(() => {
+    const checkUserLinks = async () => {
+      if (isOwnProfile) {
+        // Own profile: always show link button (users need to manage their links)
+        setHasLinks(true);
+        setLoadingLinks(false);
+        return;
+      }
+
+      if (!profile?.id || !showFullProfile) {
+        // Don't check links if profile isn't fully visible yet (might be private)
+        setLoadingLinks(false);
+        setHasLinks(false);
+        return;
+      }
+
+      try {
+        setLoadingLinks(true);
+        const { LinksService } = await import('@/lib/linksService');
+        const linksService = new LinksService();
+        
+        console.log('🔗 ProfilePage: Checking links for user:', profile.id);
+        const { links, error } = await linksService.getUserLinks(profile.id);
+
+        console.log('🔗 ProfilePage: Links query result:', { 
+          links, 
+          error, 
+          hasLinks: !!links, 
+          linksLength: links?.length,
+          profileId: profile.id,
+          showFullProfile,
+          linksArray: links ? JSON.stringify(links) : 'null'
+        });
+
+        // Also try a direct query to verify RLS isn't silently blocking
+        if (!error && (!links || links.length === 0)) {
+          const { getSupabaseClient } = await import('@/lib/supabaseClient');
+          const supabase = getSupabaseClient();
+          const { data: directData, error: directError, count } = await supabase
+            .from('user_links')
+            .select('*', { count: 'exact' })
+            .eq('user_id', profile.id);
+          
+          console.log('🔗 ProfilePage: Direct query check:', {
+            directData,
+            directError,
+            count,
+            hasDirectData: !!directData,
+            directDataLength: directData?.length
+          });
+        }
+
+        if (error) {
+          console.error('🔗 ProfilePage: Error querying links:', error);
+          // If RLS blocks the query, we can't determine if links exist
+          // Default to not showing link button if we can't check
+          setHasLinks(false);
+        } else if (links && links.length > 0) {
+          console.log('🔗 ProfilePage: User has links, showing link button');
+          setHasLinks(true);
+        } else {
+          console.log('🔗 ProfilePage: User has no links');
+          setHasLinks(false);
+        }
+      } catch (error) {
+        console.error('🔗 ProfilePage: Exception checking user links:', error);
+        setHasLinks(false);
+      } finally {
+        setLoadingLinks(false);
+      }
+    };
+
+    checkUserLinks();
+  }, [profile?.id, isOwnProfile, showFullProfile, areFriends, profile?.profile_visibility]);
   
   useEffect(() => {
     const checkMobile = () => {
@@ -429,11 +518,6 @@ export default function ProfilePage({
     checkFriendship();
   }, [profile?.id, isOwnProfile]);
 
-  // Determine if full profile should be visible
-  // Default to private if undefined (safe fallback)
-  const isPrivateProfile = !profile?.profile_visibility || profile?.profile_visibility === 'private';
-  const showFullProfile = isOwnProfile || !isPrivateProfile || areFriends;
-
   console.log('🔐 ProfilePage: Visibility check', {
     profileId: profile?.id,
     profileName: profile?.name,
@@ -457,16 +541,73 @@ export default function ProfilePage({
     }
   }, [profile?.id]);
 
-  // Build action buttons for PageHeader - Link icon only for public/friend profiles
-  const actionButtons = showFullProfile ? [
-    {
-      icon: <Link2 className="h-5 w-5 text-gray-900" strokeWidth={2.5} />,
-      onClick: () => {
-        console.log('Link button clicked - placeholder');
-      },
-      label: "Link"
+  // Build action buttons for PageHeader
+  // For own profile: always show link button (users need to add/view their links)
+  // For other users: show share button always, link button only if they have links
+  // When both share and link buttons are present, use ProfileTopActions component
+  const { actionButtons, customActions } = useMemo(() => {
+    if (!showFullProfile) {
+      return { actionButtons: undefined, customActions: undefined };
     }
-  ] : undefined;
+
+    if (isOwnProfile) {
+      // Own profile: always show link button (single button)
+      return {
+        actionButtons: [{
+          icon: <Link className="h-5 w-5 text-gray-900" strokeWidth={2.5} />,
+          onClick: () => {
+            router.push('/links');
+          },
+          label: "Link"
+        }],
+        customActions: undefined
+      };
+    } else {
+      // Other users' profiles
+      const shareButton = {
+        icon: <Share className="h-5 w-5 text-gray-900" strokeWidth={2.5} />,
+        onClick: () => {
+          // Navigate to share profile page with current full URL (including query params) as 'from' parameter
+          // This ensures we can navigate back to the exact page the user came from
+          const currentUrl = typeof window !== 'undefined' 
+            ? `${window.location.pathname}${window.location.search}`
+            : '';
+          const fromParam = currentUrl ? `&from=${encodeURIComponent(currentUrl)}` : '';
+          const profileConnectId = profile?.connect_id || profile?.connectId;
+          
+          if (profile?.id) {
+            router.push(`/profile/share?id=${profile.id}${profileConnectId ? `&connectId=${profileConnectId}` : ''}${fromParam}`);
+          } else if (profileConnectId) {
+            router.push(`/profile/share?connectId=${profileConnectId}${fromParam}`);
+          }
+        },
+        label: "Share"
+      };
+
+      // If user has links, show both buttons in shared component
+      if (hasLinks && !loadingLinks) {
+        return {
+          actionButtons: undefined,
+          customActions: (
+            <ProfileTopActions
+              onShareClick={shareButton.onClick}
+              onLinkClick={() => {
+                if (profile?.id) {
+                  router.push(`/links?userId=${profile.id}`);
+                }
+              }}
+            />
+          )
+        };
+      } else {
+        // Only share button (single button)
+        return {
+          actionButtons: [shareButton],
+          customActions: undefined
+        };
+      }
+    }
+  }, [isOwnProfile, showFullProfile, hasLinks, loadingLinks, profile?.id, router]);
 
   const contentPaddingTop = isMobile ? '140px' : '104px';
 
@@ -481,6 +622,7 @@ export default function ProfilePage({
         backIcon={showBackButton ? "arrow" : "close"}
         onBack={onClose}
         actions={actionButtons}
+        customActions={customActions}
       />
 
       {/* Content */}
@@ -713,7 +855,7 @@ export default function ProfilePage({
           {selectedPill === 'life' && (
             <div className="space-y-3">
               {/* Moments Title */}
-              <button 
+          <button 
                 onClick={onOpenFullLife}
                 className="flex items-center gap-1 mb-4"
               >
@@ -890,10 +1032,10 @@ export default function ProfilePage({
                         </div>
                         <div 
                           className="flex-1 bg-white rounded-xl px-4 py-3 flex items-center gap-3"
-                          style={{
+            style={{ 
                             borderWidth: '0.4px',
                             borderColor: '#E5E7EB',
-                            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                             minHeight: '80px',
                           }}
                         >

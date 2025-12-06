@@ -204,7 +204,7 @@ export default function PageHeader({
               
               {/* Right: Action Buttons (max 2) or Custom Actions */}
               {customActions ? (
-                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px' }}>
+                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px', pointerEvents: 'auto', zIndex: 30 }}>
                   {customActions}
                 </div>
               ) : actions.length > 0 ? (
@@ -478,7 +478,7 @@ export default function PageHeader({
             
             {/* Right: Action Buttons (max 2) or Custom Actions */}
             {customActions ? (
-              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px' }}>
+              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px', pointerEvents: 'auto', zIndex: 30 }}>
                 {customActions}
               </div>
             ) : actions.length > 0 ? (

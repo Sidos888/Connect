@@ -1,36 +1,36 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
-import Timeline from "@/components/timeline/Timeline";
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+function TimelinePageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Redirect to menu life view - preserving userId if present (same pattern as connections page)
+  // This avoids dynamic routes and uses query parameters instead, preventing RSC payload errors
+  useEffect(() => {
+    const userId = searchParams?.get('userId');
+    const from = searchParams?.get('from');
+    console.log('🔶 Timeline page redirect:', { userId, from });
+    
+    if (userId) {
+      // Viewing another user's timeline - redirect to menu with userId (no dynamic routes!)
+      router.replace(`/menu?view=life&userId=${userId}${from ? `&from=${from}` : ''}`);
+    } else {
+      // Viewing own timeline - redirect to menu life view
+      router.replace('/menu?view=life');
+    }
+  }, [router, searchParams]);
+    
+  return null;
+}
 
 export default function TimelinePage() {
-  const router = useRouter();
-
   return (
-    <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-      <MobilePage>
-        <PageHeader
-          title="Timeline"
-          backButton
-          onBack={() => router.replace('/menu?view=profile')}
-        />
-        
-        <Timeline />
-
-        {/* Bottom Blur */}
-        <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
-          <div className="absolute bottom-0 left-0 right-0" style={{
-            height: '80px',
-            background: 'linear-gradient(to top, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.35) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0) 100%)'
-          }} />
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: '20px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
-          <div className="absolute left-0 right-0" style={{ bottom: '20px', height: '20px', backdropFilter: 'blur(0.3px)', WebkitBackdropFilter: 'blur(0.3px)' }} />
-          <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
-          <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
-        </div>
-      </MobilePage>
-    </div>
+    <Suspense fallback={null}>
+      <TimelinePageContent />
+    </Suspense>
   );
 }
 

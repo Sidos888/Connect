@@ -7,6 +7,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import Avatar from '@/components/Avatar';
 import MessagePhotoCollage from '@/components/chat/MessagePhotoCollage';
 import ListingMessageCard from '@/components/chat/ListingMessageCard';
+import ProfileMessageCard from '@/components/chat/ProfileMessageCard';
 
 interface MessageBubbleProps {
   message: SimpleMessage;
@@ -56,6 +57,37 @@ const MessageBubble = React.memo(({
   
   const isOwnMessage = message.sender_id === currentUserId;
   const isDeleted = message.deleted_at !== null;
+
+  // Detect profile URL in message text (format: /p/{connectId} or full URL with /p/{connectId})
+  const detectProfileUrl = (text: string): { connectId: string | null; cleanedText: string; shouldHideText: boolean } => {
+    if (!text) return { connectId: null, cleanedText: text, shouldHideText: false };
+    
+    console.log('🔵 MessageBubble: Detecting profile URL in text:', text);
+    
+    // Match /p/{connectId} pattern (case-insensitive, with or without leading slash)
+    const profileUrlPattern = /\/p\/([A-Z0-9]+)/i;
+    const match = text.match(profileUrlPattern);
+    const connectId = match ? match[1].toUpperCase() : null;
+    
+    console.log('🔵 MessageBubble: Profile URL detection result:', { connectId, hasMatch: !!match });
+    
+    // Remove the profile URL from text (including full URLs with domain)
+    let cleanedText = text;
+    let shouldHideText = false;
+    
+    if (connectId) {
+      // When a profile URL is detected, ALWAYS hide the text
+      // The profile card replaces the text, so no text bubble is needed
+      shouldHideText = true;
+      cleanedText = '';
+      
+      console.log('🔵 MessageBubble: Profile URL detected - hiding text completely');
+    }
+    
+    return { connectId, cleanedText, shouldHideText };
+  };
+
+  const { connectId: profileConnectId, cleanedText: profileCleanedText, shouldHideText: shouldHideProfileText } = message.text ? detectProfileUrl(message.text) : { connectId: null, cleanedText: message.text || '', shouldHideText: false };
 
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => {
@@ -310,6 +342,30 @@ const MessageBubble = React.memo(({
           WebkitTouchCallout: 'none' 
         }}
       >
+        {/* Profile message card - detect profile URLs in text messages */}
+        {!isDeleted && message.message_type !== 'listing' && profileConnectId && (
+          <div 
+            className="mb-2"
+            style={{ pointerEvents: 'auto' }}
+            onClick={(e) => {
+              // Allow clicks to pass through to ProfileMessageCard
+              e.stopPropagation();
+            }}
+          >
+            <ProfileMessageCard 
+              connectId={profileConnectId} 
+              chatId={message.chat_id}
+              onLongPress={(element) => {
+                // Use the entire message container (menuRef) for positioning, not just the profile card
+                if (onLongPress && menuRef.current) {
+                  onLongPress(message, menuRef.current);
+                }
+              }}
+              onProfileClick={onProfileClick}
+            />
+          </div>
+        )}
+
         {/* Listing message card */}
         {!isDeleted && message.message_type === 'listing' && message.listing_id && (
           <div className="mb-2 max-w-xs">
@@ -379,8 +435,9 @@ const MessageBubble = React.memo(({
           </div>
         )}
 
-        {/* Main message bubble - only for text content (not for listing messages) */}
-        {!isDeleted && message.message_type !== 'listing' && message.text && (
+        {/* Main message bubble - only for text content (not for listing messages or profile-only messages) */}
+        {/* Hide message bubble if profile card is shown and text should be hidden */}
+        {!isDeleted && message.message_type !== 'listing' && message.text && !(profileConnectId && shouldHideProfileText) && (
           <div 
             ref={messageBubbleRef}
             className={`bg-white text-gray-900 rounded-2xl px-4 py-3 cursor-pointer ${message.reply_to_message ? 'w-full max-w-xs' : ''}`}
@@ -614,21 +671,42 @@ const MessageBubble = React.memo(({
             )}
 
             {/* Text content - appears below reply card */}
-            <div 
-              className="text-sm leading-relaxed whitespace-pre-wrap break-words"
-              style={{ 
-                wordBreak: 'break-word',
-                overflowWrap: 'break-word',
-                wordWrap: 'break-word',
-                // Ensure text respects parent width constraints
-                ...(message.reply_to_message && {
-                  maxWidth: '100%',
-                  minWidth: '0'
-                })
-              }}
-            >
-              {message.text}
-            </div>
+            {/* Hide text completely when profile card is shown (to avoid showing "Check out this profile..." text) */}
+            {!profileConnectId && profileCleanedText && (
+              <div 
+                className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                style={{ 
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                  wordWrap: 'break-word',
+                  // Ensure text respects parent width constraints
+                  ...(message.reply_to_message && {
+                    maxWidth: '100%',
+                    minWidth: '0'
+                  })
+                }}
+              >
+                {profileCleanedText}
+              </div>
+            )}
+            {/* Show text only if profile card is shown AND there's meaningful text beyond profile sharing phrases */}
+            {profileConnectId && !shouldHideProfileText && profileCleanedText && (
+              <div 
+                className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                style={{ 
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                  wordWrap: 'break-word',
+                  // Ensure text respects parent width constraints
+                  ...(message.reply_to_message && {
+                    maxWidth: '100%',
+                    minWidth: '0'
+                  })
+                }}
+              >
+                {profileCleanedText}
+              </div>
+            )}
           </div>
         )}
 

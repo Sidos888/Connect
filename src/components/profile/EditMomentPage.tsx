@@ -1,495 +1,788 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { MobilePage } from "@/components/layout/PageSystem";
-import { Check, GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, MapPin, Plus, X } from "lucide-react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { useState, useEffect, useRef } from "react";
+import { X, Check, Plus, MapPin, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { useAuth } from "@/lib/authContext";
+import { useRouter } from "next/navigation";
+import { getSupabaseClient } from "@/lib/supabaseClient";
+import DeleteMomentModal from "./DeleteMomentModal";
 
 interface EditMomentPageProps {
   moment: any;
+  momentLabel: string; // e.g., "Primary School"
   onBack: () => void;
   onSave: () => void;
 }
 
-// Category and moment type mappings
-const CATEGORIES = [
-  { value: 'education', label: 'Education', icon: GraduationCap },
-  { value: 'career', label: 'Career', icon: Briefcase },
-  { value: 'relationships', label: 'Relationships', icon: Heart },
-  { value: 'life-changes', label: 'Life Changes', icon: Home },
-  { value: 'experiences', label: 'Experiences', icon: Sparkles },
-  { value: 'other', label: 'Other', icon: MoreHorizontal }
-];
+// Convert base64 data URL to Blob with proper MIME type (same as listing creation)
+const dataURLtoBlob = (dataurl: string): Blob => {
+  try {
+    if (!dataurl || typeof dataurl !== 'string') {
+      throw new Error('Invalid data URL: not a string');
+    }
 
-const MOMENT_TYPES: Record<string, Array<{ value: string; label: string }>> = {
-  'education': [
-    { value: 'preschool', label: 'Preschool' },
-    { value: 'primary-school', label: 'Primary School' },
-    { value: 'high-school', label: 'High School' },
-    { value: 'university-tafe', label: 'University/Tafe' },
-    { value: 'course-certificate', label: 'Course / Certificate' }
-  ],
-  'career': [
-    { value: 'first-job', label: 'First Job' },
-    { value: 'new-job', label: 'New Job' },
-    { value: 'promotion', label: 'Promotion' },
-    { value: 'business-started', label: 'Business Started' }
-  ],
-  'relationships': [
-    { value: 'relationship-started', label: 'Relationship Started' },
-    { value: 'engagement', label: 'Engagement' },
-    { value: 'marriage', label: 'Marriage' },
-    { value: 'child-born', label: 'Child Born' }
-  ],
-  'life-changes': [
-    { value: 'moved-house', label: 'Moved House' },
-    { value: 'bought-home', label: 'Bought a Home' },
-    { value: 'major-transition', label: 'Major Transition' }
-  ],
-  'experiences': [
-    { value: 'major-trip', label: 'Major Trip' },
-    { value: 'big-achievement', label: 'Big Achievement' },
-    { value: 'important-memory', label: 'Important Memory' }
-  ],
-  'other': [
-    { value: 'personal-milestone', label: 'Personal Milestone' },
-    { value: 'custom-moment', label: 'Custom Moment' }
-  ]
+    if (!dataurl.includes(',')) {
+      throw new Error('Invalid data URL format: missing comma separator');
+    }
+
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    
+    const base64Data = arr[1];
+    
+    if (!base64Data || base64Data.length === 0) {
+      throw new Error('Empty base64 data');
+    }
+
+    let bstr: string;
+    try {
+      bstr = atob(base64Data);
+    } catch (e) {
+      throw new Error(`Invalid base64 encoding: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    }
+
+    const n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    
+    for (let i = 0; i < n; i++) {
+      u8arr[i] = bstr.charCodeAt(i);
+    }
+    
+    return new Blob([u8arr], { type: mime });
+  } catch (error) {
+    console.error('dataURLtoBlob error:', error);
+    throw error;
+  }
 };
 
-export default function EditMomentPage({ moment, onBack, onSave }: EditMomentPageProps) {
+export default function EditMomentPage({ moment, momentLabel, onBack, onSave }: EditMomentPageProps) {
   const supabase = getSupabaseClient();
-  const { account } = useAuth();
-  const [saving, setSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form state
-  const [category, setCategory] = useState(moment.category || 'education');
-  const [momentType, setMomentType] = useState(moment.moment_type || '');
-  const [title, setTitle] = useState(moment.title || '');
-  const [startDate, setStartDate] = useState<Date>(() => 
-    moment.start_date ? new Date(moment.start_date) : new Date()
-  );
-  const [endDate, setEndDate] = useState<Date | null>(() => 
-    moment.end_date ? new Date(moment.end_date) : null
-  );
-  const [hasEndDate, setHasEndDate] = useState(!!moment.end_date);
-  const [summary, setSummary] = useState(moment.summary || '');
-  const [location, setLocation] = useState(moment.location || '');
-  const [photos, setPhotos] = useState<string[]>(moment.photo_urls || []);
+  // Initialize with existing moment data
+  const [title, setTitle] = useState(moment.title || "");
+  const [summary, setSummary] = useState(moment.summary || "");
+  const [startDate, setStartDate] = useState(() => {
+    if (!moment.start_date) return "";
+    const date = new Date(moment.start_date);
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD
+  });
+  const [startTime, setStartTime] = useState(() => {
+    if (!moment.start_date) return "";
+    const date = new Date(moment.start_date);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    if (!moment.end_date) return "";
+    const date = new Date(moment.end_date);
+    return date.toISOString().split('T')[0];
+  });
+  const [endTime, setEndTime] = useState(() => {
+    if (!moment.end_date) return "";
+    const date = new Date(moment.end_date);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
+  const [includeEndTime, setIncludeEndTime] = useState(!!moment.end_date);
+  const [location, setLocation] = useState(moment.location || "");
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>(moment.photo_urls || []);
+  const [saving, setSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Original values for change detection
   const originalValues = {
-    category: moment.category || 'education',
-    momentType: moment.moment_type || '',
-    title: moment.title || '',
-    startDate: moment.start_date ? new Date(moment.start_date).toISOString() : '',
-    endDate: moment.end_date ? new Date(moment.end_date).toISOString() : '',
-    hasEndDate: !!moment.end_date,
-    summary: moment.summary || '',
-    location: moment.location || '',
-    photos: moment.photo_urls || []
+    title: moment.title || "",
+    summary: moment.summary || "",
+    startDate: startDate,
+    startTime: startTime,
+    endDate: endDate,
+    endTime: endTime,
+    includeEndTime: !!moment.end_date,
+    location: moment.location || "",
+    photos: JSON.stringify(moment.photo_urls || [])
   };
 
-  // Detect mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-  const buttonSize = isMobile ? '44px' : '40px';
-
   // Check for changes
-  useEffect(() => {
-    const photosChanged = 
-      photos.length !== originalValues.photos.length ||
-      photos.some((photo, index) => {
-        if (photo.startsWith('data:image/')) return true;
-        return photo !== originalValues.photos[index];
-      });
+  const hasChanges = 
+    title !== originalValues.title ||
+    summary !== originalValues.summary ||
+    startDate !== originalValues.startDate ||
+    startTime !== originalValues.startTime ||
+    endDate !== originalValues.endDate ||
+    endTime !== originalValues.endTime ||
+    includeEndTime !== originalValues.includeEndTime ||
+    location !== originalValues.location ||
+    JSON.stringify(pendingPhotos) !== originalValues.photos;
 
-    const changed = 
-      category !== originalValues.category ||
-      momentType !== originalValues.momentType ||
-      title !== originalValues.title ||
-      startDate.toISOString() !== originalValues.startDate ||
-      hasEndDate !== originalValues.hasEndDate ||
-      (hasEndDate && endDate && endDate.toISOString() !== originalValues.endDate) ||
-      summary !== originalValues.summary ||
-      location !== originalValues.location ||
-      photosChanged;
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
 
-    setHasChanges(changed);
-  }, [category, momentType, title, startDate, endDate, hasEndDate, summary, location, photos]);
+    const files = Array.from(e.target.files);
+    
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          setPendingPhotos(prev => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
 
-  // Handle save
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPendingPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     if (!hasChanges || saving) return;
 
+    console.log('💾 EditMomentPage: Starting save process');
     setSaving(true);
+    
     try {
-      // Upload new photos if any
-      let finalPhotos = photos.filter(p => !p.startsWith('data:image/'));
+      // Separate existing photos from new photos
+      const existingPhotos = pendingPhotos.filter(p => !p.startsWith('data:image/'));
+      const newPhotos = pendingPhotos.filter(p => p.startsWith('data:image/'));
       
-      for (const photo of photos.filter(p => p.startsWith('data:image/'))) {
-        const fileName = `${moment.user_id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
+      console.log('📸 EditMomentPage: Photo analysis', {
+        total: pendingPhotos.length,
+        existing: existingPhotos.length,
+        new: newPhotos.length
+      });
+      
+      let finalPhotos = [...existingPhotos];
+      
+      // Upload new photos if any
+      for (let i = 0; i < newPhotos.length; i++) {
+        const photo = newPhotos[i];
+        console.log(`📤 EditMomentPage: Uploading photo ${i + 1}/${newPhotos.length}`);
         
-        // Convert base64 to blob
-        const response = await fetch(photo);
-        const blob = await response.blob();
-        
-        const { error: uploadError } = await supabase.storage
-          .from('moment-photos')
-          .upload(fileName, blob);
+        let fileName: string | undefined;
+        try {
+          // Convert base64 data URL to blob with proper MIME type
+          const blob = dataURLtoBlob(photo);
+          
+          console.log('📤 EditMomentPage: Blob created (proper conversion)', {
+            size: blob.size,
+            type: blob.type
+          });
+          
+          // Validate blob
+          if (!blob || blob.size === 0) {
+            console.error('❌ EditMomentPage: Invalid blob', { size: blob?.size });
+            continue;
+          }
+          
+          // Determine file extension from blob type
+          let fileExt = 'jpg';
+          if (blob.type.includes('png')) fileExt = 'png';
+          else if (blob.type.includes('webp')) fileExt = 'webp';
+          else if (blob.type.includes('gif')) fileExt = 'gif';
+          
+          // Generate unique filename (same format as creation)
+          const timestamp = Date.now();
+          const randomStr = Math.random().toString(36).substring(2, 11);
+          fileName = `moments/${moment.user_id}/${timestamp}-${randomStr}.${fileExt}`;
+          
+          console.log('📤 EditMomentPage: Uploading to storage', {
+            bucket: 'listing-photos',
+            fileName,
+            contentType: blob.type,
+            blobSize: blob.size,
+            isBlob: blob instanceof Blob
+          });
+          
+          // Upload with retry logic (EXACT same as listing creation)
+          if (!supabase) {
+            throw new Error('Supabase client not available');
+          }
 
-        if (!uploadError) {
+          // 🔍 DEBUG: Check Supabase client state before upload
+          try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            console.log('🔍 EditMomentPage: Auth state check', {
+              hasSession: !!session,
+              userId: session?.user?.id,
+              sessionError: sessionError?.message,
+              hasSupabaseClient: !!supabase,
+              storageAvailable: !!supabase.storage
+            });
+          } catch (authCheckError) {
+            console.error('🔍 EditMomentPage: Auth check failed', authCheckError);
+          }
+
+          // 🔍 DEBUG: Validate blob before upload
+          console.log('🔍 EditMomentPage: Blob validation', {
+            isBlob: blob instanceof Blob,
+            blobSize: blob.size,
+            blobType: blob.type,
+            blobConstructor: blob.constructor.name,
+            hasArrayBuffer: typeof blob.arrayBuffer === 'function',
+            hasStream: typeof blob.stream === 'function',
+            hasText: typeof blob.text === 'function'
+          });
+          
+          let uploadData;
+          let uploadError;
+          const maxRetries = 3;
+          let retryCount = 0;
+          
+          while (retryCount < maxRetries) {
+            try {
+              console.log(`🔍 EditMomentPage: Starting upload attempt ${retryCount + 1}/${maxRetries}`, {
+                fileName,
+                blobSize: blob.size,
+                blobType: blob.type,
+                timestamp: Date.now()
+              });
+
+              const uploadStartTime = performance.now();
+              console.log('🔍 EditMomentPage: Step 12 - Converting Blob to File for iOS compatibility');
+              // Convert Blob to File (iOS WebView handles File objects better than Blobs from base64)
+              const file = new File([blob], fileName, { type: blob.type });
+              console.log('🔍 EditMomentPage: File created', {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                isFile: file instanceof File,
+                isBlob: file instanceof Blob
+              });
+              
+              console.log('🔍 EditMomentPage: Step 13 - Calling upload() method with File');
+              const uploadPromise = supabase.storage
+                .from('listing-photos')
+                .upload(fileName, file, {
+                  cacheControl: '3600',
+                  upsert: false,
+                  contentType: file.type
+                });
+              
+              console.log('🔍 EditMomentPage: Step 14 - Upload promise created', {
+                hasPromise: !!uploadPromise,
+                promiseType: typeof uploadPromise,
+                isPromise: uploadPromise instanceof Promise,
+                timestamp: Date.now()
+              });
+              
+              // Add timeout (30 seconds per upload)
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+              );
+              
+              console.log('🔍 EditMomentPage: Step 15 - Racing upload vs timeout (30s)');
+              const raceStartTime = performance.now();
+              const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
+              const raceDuration = performance.now() - raceStartTime;
+              const uploadDuration = performance.now() - uploadStartTime;
+              
+              console.log('🔍 EditMomentPage: Step 16 - Promise race completed', {
+                raceDuration: `${raceDuration.toFixed(2)}ms`,
+                totalDuration: `${uploadDuration.toFixed(2)}ms`
+              });
+              
+              console.log('🔍 EditMomentPage: Upload race completed', {
+                duration: `${uploadDuration.toFixed(2)}ms`,
+                hasData: !!result?.data,
+                hasError: !!result?.error,
+                resultKeys: result ? Object.keys(result) : []
+              });
+              
+              uploadData = result.data;
+              uploadError = result.error;
+              
+              if (!uploadError) {
+                console.log('✅ EditMomentPage: Upload succeeded on attempt', retryCount + 1, {
+                  uploadData,
+                  duration: `${uploadDuration.toFixed(2)}ms`
+                });
+                break; // Success, exit retry loop
+              }
+              
+              // 🔍 DEBUG: Log detailed error information
+              console.error(`🔍 EditMomentPage: Upload attempt ${retryCount + 1} failed`, {
+                error: uploadError,
+                errorName: uploadError?.name,
+                errorMessage: uploadError?.message,
+                errorStack: uploadError?.stack,
+                statusCode: uploadError?.statusCode,
+                errorDetails: JSON.stringify(uploadError, null, 2),
+                duration: `${uploadDuration.toFixed(2)}ms`,
+                blobSize: blob.size,
+                blobType: blob.type,
+                fileName
+              });
+              
+              // If error is retryable, try again
+              if (retryCount < maxRetries - 1 && (
+                uploadError.message?.includes('network') || 
+                uploadError.message?.includes('timeout') ||
+                uploadError.message?.includes('Load failed')
+              )) {
+                retryCount++;
+                const backoffDelay = 1000 * retryCount;
+                console.warn(`📤 EditMomentPage: Upload attempt ${retryCount} failed, retrying in ${backoffDelay}ms... (${retryCount}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, backoffDelay)); // Exponential backoff
+                continue;
+              }
+              
+              break; // Non-retryable error or max retries reached
+            } catch (timeoutError) {
+              console.error(`🔍 EditMomentPage: Upload exception on attempt ${retryCount + 1}`, {
+                error: timeoutError,
+                errorName: timeoutError?.name,
+                errorMessage: timeoutError?.message,
+                errorStack: timeoutError?.stack,
+                isTimeout: timeoutError instanceof Error && timeoutError.message.includes('timeout')
+              });
+              
+              if (retryCount < maxRetries - 1) {
+                retryCount++;
+                const backoffDelay = 1000 * retryCount;
+                console.warn(`📤 EditMomentPage: Upload timeout, retrying in ${backoffDelay}ms... (${retryCount}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                continue;
+              }
+              uploadError = timeoutError as any;
+              break;
+            }
+          }
+
+          if (uploadError) {
+            console.error(`❌ EditMomentPage: Upload failed after ${retryCount + 1} attempts`, {
+              error: uploadError,
+              errorName: uploadError?.name,
+              errorMessage: uploadError?.message,
+              fileName,
+              blobSize: blob.size,
+              blobType: blob.type
+            });
+            continue; // Skip this photo but continue with others
+          }
+
+          console.log('✅ EditMomentPage: Upload successful', { uploadData });
+
           const { data: { publicUrl } } = supabase.storage
-            .from('moment-photos')
+            .from('listing-photos')
             .getPublicUrl(fileName);
+            
+          console.log('🔗 EditMomentPage: Got public URL', { publicUrl });
           finalPhotos.push(publicUrl);
+        } catch (photoError) {
+          console.error('❌ EditMomentPage: Photo upload failed', {
+            error: photoError,
+            fileName: fileName || 'unknown'
+          });
         }
       }
 
+      console.log('📸 EditMomentPage: Final photos array', {
+        count: finalPhotos.length,
+        urls: finalPhotos
+      });
+
+      // Combine date and time
+      const startDateTime = new Date(`${startDate}T${startTime}`);
+      const endDateTime = includeEndTime && endDate && endTime 
+        ? new Date(`${endDate}T${endTime}`)
+        : null;
+
+      console.log('📅 EditMomentPage: Date/time values', {
+        startDateTime: startDateTime.toISOString(),
+        endDateTime: endDateTime?.toISOString()
+      });
+
       // Update moment in database
-      const { error } = await supabase
+      const updateData = {
+        title,
+        summary: summary || null,
+        start_date: startDateTime.toISOString(),
+        end_date: endDateTime ? endDateTime.toISOString() : null,
+        location: location || null,
+        photo_urls: finalPhotos,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('💾 EditMomentPage: Updating database', {
+        momentId: moment.id,
+        updateData
+      });
+
+      if (!supabase) {
+        console.error('❌ EditMomentPage: Supabase client not available');
+        alert('Failed to update moment: Database connection error');
+        return;
+      }
+
+      const { data: updateResult, error } = await supabase
         .from('user_moments')
-        .update({
-          category,
-          moment_type: momentType,
-          title,
-          start_date: startDate.toISOString(),
-          end_date: hasEndDate && endDate ? endDate.toISOString() : null,
-          summary: summary || null,
-          location: location || null,
-          photo_urls: finalPhotos,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', moment.id);
+        .update(updateData)
+        .eq('id', moment.id)
+        .select();
 
       if (error) {
-        console.error('Error updating moment:', error);
+        console.error('❌ EditMomentPage: Database update error', error);
         alert('Failed to update moment');
       } else {
+        console.log('✅ EditMomentPage: Database updated successfully', { updateResult });
         onSave();
       }
     } catch (error) {
-      console.error('Error saving moment:', error);
+      console.error('❌ EditMomentPage: Save process error', error);
       alert('Failed to save changes');
     } finally {
       setSaving(false);
     }
   };
 
-  // Handle photo upload
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  const handleDelete = async () => {
+    if (!supabase || deleting) return;
 
-    const newPhotosArray: string[] = [];
-    let processed = 0;
+    setDeleting(true);
+    try {
+      console.log('🗑️ EditMomentPage: Deleting moment', moment.id);
 
-    Array.from(files).forEach((file) => {
-      if (photos.length + newPhotosArray.length >= 12) return;
+      const { error } = await supabase
+        .from('user_moments')
+        .delete()
+        .eq('id', moment.id);
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          newPhotosArray.push(event.target.result as string);
-          processed++;
+      if (error) {
+        console.error('❌ EditMomentPage: Delete error', error);
+        alert('Failed to delete moment. Please try again.');
+        setDeleting(false);
+        return;
+      }
 
-          if (processed === files.length) {
-            setPhotos([...photos, ...newPhotosArray]);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // Remove photo
-  const handleRemovePhoto = (index: number) => {
-    setPhotos(photos.filter((_, i) => i !== index));
-  };
-
-  // Format date for input
-  const formatDateForInput = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+      console.log('✅ EditMomentPage: Moment deleted successfully');
+      
+      // Navigate to timeline full page after deletion
+      router.push('/menu?view=timeline');
+    } catch (error) {
+      console.error('❌ EditMomentPage: Delete failed', error);
+      alert('Failed to delete moment. Please try again.');
+      setDeleting(false);
+    }
   };
 
   return (
-    <div style={{ '--saved-content-padding-top': '104px' } as React.CSSProperties}>
-      <MobilePage>
-        {/* Custom Header */}
-        <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
-          {/* Blur background */}
-          <div className="absolute top-0 left-0 right-0" style={{
-            height: isMobile ? '135px' : '100px',
-            background: isMobile 
-              ? 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.62) 60%, rgba(255,255,255,0.58) 80%, rgba(255,255,255,0.3) 100%)'
-              : 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0.25) 80%, rgba(255,255,255,0.05) 100%)'
-          }} />
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+      {/* Header */}
+      <div 
+        className="flex-shrink-0 bg-white"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top), 70px)',
+          paddingBottom: '16px',
+          paddingLeft: '16px',
+          paddingRight: '16px',
+        }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          {/* Back Button */}
+          <button
+            onClick={onBack}
+            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '100px',
+              background: 'white',
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Title */}
+          <h1 className="text-xl font-bold text-gray-900 flex-1 text-center min-w-0">
+            {momentLabel}
+          </h1>
           
-          <div className="px-4 lg:px-8" style={{ 
-            paddingTop: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
-            paddingBottom: '16px',
-            position: 'relative',
-            zIndex: 10,
-            pointerEvents: 'auto'
-          }}>
-            {/* Back button */}
-            <button
-              onClick={onBack}
-              className="absolute left-4 flex items-center justify-center transition-all duration-200"
-              style={{
-                top: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
-                width: buttonSize,
-                height: buttonSize,
-                borderRadius: '100px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              }}
-            >
-              <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            {/* Title */}
-            <div className="flex items-center justify-center" style={{ height: buttonSize }}>
-              <h1 className="text-lg font-semibold text-gray-900">Edit Moment</h1>
-            </div>
-
-            {/* Save button */}
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              className="absolute right-4 flex items-center justify-center transition-all duration-200"
-              style={{
-                top: isMobile ? 'max(env(safe-area-inset-top), 70px)' : '32px',
-                width: buttonSize,
-                height: buttonSize,
-                borderRadius: '100px',
-                background: hasChanges ? '#FF6B35' : 'rgba(255, 255, 255, 0.9)',
-                borderWidth: '0.4px',
-                borderColor: '#E5E7EB',
-                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                opacity: hasChanges ? 1 : 0.5,
-                cursor: hasChanges ? 'pointer' : 'default'
-              }}
-            >
-              <Check size={20} className={hasChanges ? "text-white" : "text-gray-400"} strokeWidth={2.5} />
-            </button>
-          </div>
+          {/* Save Button - Grey initially, Orange when changes detected */}
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges || saving}
+            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '100px',
+              background: hasChanges ? '#FF6600' : '#E5E7EB',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow',
+              opacity: hasChanges ? 1 : 0.6
+            }}
+          >
+            <Check size={20} className={hasChanges ? "text-white" : "text-gray-400"} strokeWidth={2.5} />
+          </button>
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
-          paddingTop: 'var(--saved-content-padding-top, 104px)',
-          paddingBottom: '32px',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
-        }}>
-          <div className="space-y-4">
-            {/* Photos Section */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Photos</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {photos.map((photo, index) => (
-                  <div key={index} className="relative aspect-square">
-                    <Image
-                      src={photo}
-                      alt={`Photo ${index + 1}`}
-                      width={200}
-                      height={200}
-                      className="w-full h-full object-cover rounded-xl"
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-4 pb-8" style={{ paddingTop: '32px' }}>
+        <div className="space-y-3">
+          {/* Upload Photos Card */}
+          <div
+            className="bg-white rounded-2xl p-4"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            }}
+          >
+            {pendingPhotos.length === 0 ? (
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-900">Upload Photos</h2>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-gray-900"
+                >
+                  <Plus size={20} strokeWidth={2.5} />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900">Photos</h2>
+                    <p className="text-sm text-gray-500">
+                      {pendingPhotos.length} Selected
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-gray-900"
+                  >
+                    <Plus size={20} strokeWidth={2.5} />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                  {pendingPhotos.map((photoData, index) => (
+                    <div
+                      key={index}
+                      className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden"
                       style={{
                         borderWidth: '0.4px',
                         borderColor: '#E5E7EB',
-                        boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                       }}
-                    />
-                    <button
-                      onClick={() => handleRemovePhoto(index)}
-                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
                     >
-                      <X size={14} className="text-white" strokeWidth={3} />
-                    </button>
-                  </div>
-                ))}
-                
-                {photos.length < 12 && (
-                  <label className="aspect-square flex items-center justify-center rounded-xl cursor-pointer"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      background: 'rgba(255, 255, 255, 0.5)'
-                    }}
-                  >
-                    <Plus size={24} className="text-gray-400" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handlePhotoUpload}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
+                      <Image
+                        src={photoData}
+                        alt={`Photo ${index + 1}`}
+                        width={96}
+                        height={96}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => handleRemovePhoto(index)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black bg-opacity-60 flex items-center justify-center"
+                      >
+                        <X size={14} className="text-white" strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
-            {/* Category */}
-            <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 block">Category</label>
-              <select
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  setMomentType(''); // Reset moment type when category changes
-                }}
-                className="w-full px-4 py-3 rounded-xl"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              >
-                {CATEGORIES.map(cat => (
-                  <option key={cat.value} value={cat.value}>{cat.label}</option>
-                ))}
-              </select>
-            </div>
+          {/* Title Input */}
+          <input
+            type="text"
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-white rounded-2xl px-4 py-4 text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              height: '56px',
+            }}
+          />
 
-            {/* Moment Type */}
-            <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 block">Type</label>
-              <select
-                value={momentType}
-                onChange={(e) => setMomentType(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              >
-                <option value="">Select type...</option>
-                {MOMENT_TYPES[category]?.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
+          {/* Summary Textarea */}
+          <textarea
+            placeholder="Write a short summary ..."
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            className="w-full bg-white rounded-2xl px-4 py-4 text-sm text-gray-900 placeholder-gray-400 focus:outline-none resize-none"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              minHeight: '120px',
+            }}
+          />
 
-            {/* Title */}
-            <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 block">Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter title..."
-                className="w-full px-4 py-3 rounded-xl"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              />
-            </div>
-
-            {/* Start Date */}
-            <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 block">Start Date</label>
-              <input
-                type="date"
-                value={formatDateForInput(startDate)}
-                onChange={(e) => setStartDate(new Date(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              />
-            </div>
-
-            {/* End Date Toggle */}
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={hasEndDate}
-                onChange={(e) => {
-                  setHasEndDate(e.target.checked);
-                  if (e.target.checked && !endDate) {
-                    setEndDate(new Date(startDate.getTime() + 86400000)); // Next day
-                  }
-                }}
-                className="w-5 h-5"
-              />
-              <label className="text-sm text-gray-700">Include end date</label>
-            </div>
-
-            {/* End Date */}
-            {hasEndDate && (
-              <div>
-                <label className="text-sm font-semibold text-gray-900 mb-2 block">End Date</label>
+          {/* Date & Time Card */}
+          <div
+            className="bg-white rounded-2xl p-4"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            }}
+          >
+            {/* Start Date/Time */}
+            <div className="mb-3">
+              <label className="text-sm font-medium text-gray-900 mb-2 block">Starts</label>
+              <div className="flex gap-2">
                 <input
                   type="date"
-                  value={endDate ? formatDateForInput(endDate) : ''}
-                  onChange={(e) => setEndDate(new Date(e.target.value))}
-                  className="w-full px-4 py-3 rounded-xl"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="flex-1 bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                  style={{ height: '40px' }}
+                />
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="flex-1 bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                  style={{ height: '40px' }}
+                />
+              </div>
+            </div>
+
+            {/* Include End Time Toggle */}
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-gray-900">Include end time</span>
+              <button
+                onClick={() => setIncludeEndTime(!includeEndTime)}
+                className="relative w-11 h-6 rounded-full transition-colors duration-200"
+                style={{
+                  backgroundColor: includeEndTime ? '#FF6600' : '#E5E7EB',
+                }}
+              >
+                <div
+                  className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200"
                   style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    left: includeEndTime ? 'calc(100% - 22px)' : '2px',
                   }}
                 />
+              </button>
+            </div>
+
+            {/* End Date/Time (conditional) */}
+            {includeEndTime && (
+              <div className="mt-3">
+                <label className="text-sm font-medium text-gray-900 mb-2 block">Ends</label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="flex-1 bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                    style={{ height: '40px' }}
+                  />
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="flex-1 bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                    style={{ height: '40px' }}
+                  />
+                </div>
               </div>
             )}
+          </div>
 
-            {/* Summary */}
-            <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 block">Summary</label>
-              <textarea
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                placeholder="Add a summary..."
-                rows={4}
-                className="w-full px-4 py-3 rounded-xl resize-none"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="text-sm font-semibold text-gray-900 mb-2 block">Location</label>
-              <div className="relative">
-                <MapPin size={20} className="absolute left-4 top-3.5 text-gray-400" strokeWidth={2} />
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Add location..."
-                  className="w-full pl-12 pr-4 py-3 rounded-xl"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  }}
-                />
-              </div>
-            </div>
+          {/* Location Input */}
+          <div
+            className="bg-white rounded-2xl px-4 py-4 flex items-center justify-between"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              height: '56px',
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Choose Location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="flex-1 text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent"
+            />
+            <MapPin size={20} className="text-gray-400 flex-shrink-0" strokeWidth={2} />
           </div>
         </div>
-      </MobilePage>
+
+        {/* Delete Button */}
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full rounded-2xl transition-all duration-200 hover:-translate-y-[1px] mt-6"
+          style={{
+            padding: '16px',
+            background: 'white',
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Trash2 size={18} className="text-red-600" strokeWidth={2.5} />
+            <span className="text-base font-medium text-red-600">Delete Moment</span>
+          </div>
+        </button>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteMomentModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        momentTitle={moment.title || undefined}
+      />
     </div>
   );
 }

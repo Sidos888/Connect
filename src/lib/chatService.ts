@@ -286,11 +286,13 @@ export class ChatService {
             messageId: lastMessage.id,
             hasText: !!lastMessage.message_text,
             textLength: lastMessage.message_text?.length || 0,
+            messageText: lastMessage.message_text, // Log the actual message text
             attachmentCount: finalAttachmentCount,
             senderId: lastMessage.sender_id,
             senderName: (lastMessage.accounts as any)?.name,
             messageType: (lastMessage as any).message_type,
-            listingId: (lastMessage as any).listing_id
+            listingId: (lastMessage as any).listing_id,
+            isProfileUrl: /\/p\/([A-Z0-9]+)/i.test(lastMessage.message_text || '')
           });
           
           chat.last_message = {

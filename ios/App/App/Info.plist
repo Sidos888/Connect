@@ -44,7 +44,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Connect needs access to your camera to take photos for listings and chats.</string>
+	<string>Connect needs access to your camera to take photos for listings, chats, and scan QR codes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Connect needs access to your photo library to select photos for listings and chats.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

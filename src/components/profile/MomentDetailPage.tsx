@@ -300,6 +300,7 @@ export default function MomentDetailPage({ momentId, profile, onBack, onOpenPhot
     return (
       <EditMomentPage
         moment={moment}
+        momentLabel={subcategoryLabel}
         onBack={handleEditCancel}
         onSave={handleEditSave}
       />

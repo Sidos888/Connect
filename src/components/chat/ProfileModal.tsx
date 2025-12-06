@@ -99,7 +99,11 @@ export default function ProfileModal({ isOpen, userId, onClose }: ProfileModalPr
           profile={profile}
           isOwnProfile={isOwnProfile}
           showBackButton={true}
-          onClose={onClose}
+          onClose={() => {
+            // Simply close the modal - no navigation needed
+            // The chat page should remain visible underneath
+            onClose();
+          }}
           onEdit={isOwnProfile ? () => {
             onClose();
             router.push('/settings/edit/details');
@@ -110,7 +114,7 @@ export default function ProfileModal({ isOpen, userId, onClose }: ProfileModalPr
           } : undefined}
           onShare={isOwnProfile ? () => {
             onClose();
-            router.push('/menu?view=share-profile');
+            router.push('/qr-code');
           } : undefined}
           onOpenTimeline={() => {
             onClose();

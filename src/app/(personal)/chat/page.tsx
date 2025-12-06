@@ -1016,7 +1016,7 @@ function MessagesPageContent() {
           name={account?.name || "User"}
           avatarUrl={account?.profile_pic}
           onViewProfile={() => router.push(`/profile?id=${account?.id}&from=${encodeURIComponent(pathname)}`)}
-          onShareProfile={() => router.push(`/menu?view=share-profile&from=${encodeURIComponent(pathname)}`)}
+          onShareProfile={() => router.push('/qr-code')}
           onAddBusiness={() => router.push('/create-business')}
         />
 

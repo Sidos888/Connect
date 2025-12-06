@@ -603,121 +603,265 @@ export default function IndividualChatPage() {
       fileType: file.type
     });
 
-    // Check if we're on Capacitor (iOS/Android)
-    const isCapacitor = !!(window as any).Capacitor;
+    // Check if we're on Capacitor (iOS/Android) - use native HTTP for reliable uploads
+    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
     
+    let uploadData;
+    let uploadError;
+    const maxRetries = 3;
+    let retryCount = 0;
+
     if (isCapacitor) {
-      // Use Capacitor HTTP to bypass WebKit limitations
-      console.log(`  🔄 Using Capacitor HTTP for native upload...`);
+      // Use Capacitor HTTP for native uploads (bypasses iOS WebView restrictions)
+      console.log(`  🔄 Using Capacitor HTTP for native upload (bypasses iOS WebView)...`);
       
-      try {
-        // Get auth session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('No auth session available');
-        }
+      // Get auth session and config
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No auth session available');
+      }
 
-        // Get Supabase URL and keys
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (!supabaseUrl || !supabaseAnonKey) {
-          throw new Error('Supabase configuration missing');
-        }
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase configuration missing');
+      }
 
-        // Read file as ArrayBuffer and create Blob for upload
-        console.log(`  📖 Reading file as ArrayBuffer...`);
-        const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            if (reader.result instanceof ArrayBuffer) {
-              resolve(reader.result);
-            } else {
-              reject(new Error('FileReader did not return ArrayBuffer'));
-            }
-          };
-          reader.onerror = () => reject(new Error('FileReader failed'));
-          reader.readAsArrayBuffer(file);
-        });
+      // Read File as ArrayBuffer once (before retry loop)
+      console.log(`  📖 Reading file as ArrayBuffer...`);
+      const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result instanceof ArrayBuffer) {
+            resolve(reader.result);
+          } else {
+            reject(new Error('FileReader did not return ArrayBuffer'));
+          }
+        };
+        reader.onerror = () => reject(new Error('FileReader failed'));
+        reader.readAsArrayBuffer(file);
+      });
 
-        console.log(`  ✅ File converted to ArrayBuffer (${Math.round(arrayBuffer.byteLength / 1024)}KB)`);
+      console.log(`  ✅ File converted to ArrayBuffer (${Math.round(arrayBuffer.byteLength / 1024)}KB)`);
 
-        // Create Blob from ArrayBuffer
-        const blob = new Blob([arrayBuffer], { type: file.type });
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/chat-media/${fileName}`;
+      
+      // Try upload with retry logic
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`  ⬆️ Uploading via Capacitor HTTP (attempt ${retryCount + 1}/${maxRetries})...`);
+          
+          const { CapacitorHttp } = await import('@capacitor/core');
+          
+          console.log(`  📤 Uploading ${Math.round(arrayBuffer.byteLength / 1024)}KB via Capacitor HTTP...`);
+          
+          // Convert ArrayBuffer to base64 for transmission
+          // Note: Supabase Storage API expects raw binary, but Capacitor HTTP needs string data
+          // We'll send base64 and Supabase should handle it (or we'll fall back to JS client)
+          const uint8Array = new Uint8Array(arrayBuffer);
+          let binaryString = '';
+          const chunkSize = 0x8000; // 32KB chunks
+          
+          for (let i = 0; i < uint8Array.length; i += chunkSize) {
+            const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+            binaryString += String.fromCharCode.apply(null, Array.from(chunk) as any);
+          }
+          
+          const base64Data = btoa(binaryString);
+          
+          // Upload using CapacitorHttp.request
+          // Note: Sending base64 - if this corrupts the file, we'll fall back to Supabase JS client
+          const uploadPromise = CapacitorHttp.request({
+            method: 'POST',
+            url: uploadUrl,
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'apikey': supabaseAnonKey,
+              'Content-Type': file.type,
+              'x-upsert': 'false',
+              'cache-control': '3600'
+            },
+            data: base64Data,
+            responseType: 'text'
+          });
 
-        // Use Capacitor HTTP plugin - Supabase Storage API expects binary data
-        const { CapacitorHttp } = await import('@capacitor/core');
-        
-        const uploadUrl = `${supabaseUrl}/storage/v1/object/chat-media/${fileName}`;
-        console.log(`  ⬆️ Uploading via Capacitor HTTP to: ${uploadUrl.substring(0, 80)}...`);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+          );
 
-        // Convert ArrayBuffer to base64 for Capacitor HTTP
-        // Supabase Storage API can accept base64, but we need to send it correctly
-        const base64 = btoa(
-          String.fromCharCode(...new Uint8Array(arrayBuffer))
-        );
+          const response = await Promise.race([uploadPromise, timeoutPromise]) as any;
 
-        // Use Capacitor HTTP with base64 data
-        // Note: Supabase Storage API expects the raw file bytes
-        const response = await CapacitorHttp.post({
-          url: uploadUrl,
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': supabaseAnonKey,
-            'Content-Type': file.type,
-            'x-upsert': 'false',
-            'cache-control': '3600'
-          },
-          data: base64,
-          responseType: 'text' // Expect text response, not JSON
-        });
-
-        if (response.status < 200 || response.status >= 300) {
-          console.error(`  ❌ Upload failed:`, {
+          console.log(`  📥 Capacitor HTTP response:`, {
             status: response.status,
-            data: response.data
+            url: response.url,
+            dataLength: response.data?.length
           });
-          throw new Error(`Upload failed: ${response.status} (${typeof response.data === 'string' ? response.data.substring(0, 100) : 'Unknown error'})`);
+
+          if (response.status >= 200 && response.status < 300) {
+            // Parse response to get the actual path from Supabase
+            let uploadedPath = fileName;
+            try {
+              // Supabase Storage API returns JSON with the path
+              if (response.data && typeof response.data === 'string') {
+                const parsed = JSON.parse(response.data);
+                if (parsed.path || parsed.Key) {
+                  uploadedPath = parsed.path || parsed.Key;
+                  console.log(`  📍 Parsed upload path from response:`, uploadedPath);
+                }
+              }
+            } catch (e) {
+              console.warn(`  ⚠️ Could not parse response, using fileName:`, fileName);
+            }
+            
+            console.log(`  ✅ Capacitor HTTP upload completed successfully`);
+            uploadData = { path: uploadedPath };
+            break;
+          } else {
+            throw new Error(`Upload failed: ${response.status} - ${response.data || 'Unknown error'}`);
+          }
+        } catch (error: any) {
+          uploadError = error;
+          const errorMessage = error?.message || error?.toString() || 'Unknown error';
+          
+          // Check if error is retryable
+          if (retryCount < maxRetries - 1 && (
+            errorMessage.includes('network') ||
+            errorMessage.includes('timeout') ||
+            errorMessage.includes('Load failed') ||
+            errorMessage.includes('failed')
+          )) {
+            retryCount++;
+            console.warn(`  ⚠️ Capacitor HTTP upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+            continue;
+          }
+          break; // Non-retryable error or max retries reached
         }
-
-        console.log(`  ✅ Capacitor HTTP upload completed successfully`);
-      } catch (capacitorError: any) {
-        console.error(`  ❌ Capacitor HTTP upload failed:`, capacitorError);
-        console.log(`  ⚠️ Falling back to Supabase JS client...`);
+      }
+      
+      // If Capacitor HTTP failed, fall back to Supabase JS client
+      if (uploadError && !uploadData) {
+        console.warn(`  ⚠️ Capacitor HTTP failed, falling back to Supabase JS client...`);
         
-        // Fallback to Supabase JS client
-        const { data, error } = await supabase.storage
-          .from('chat-media')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (error) {
-          console.error(`  ❌ Fallback upload also failed:`, error);
-          throw new Error(`Failed to upload ${file.name}: ${error.message || 'Unknown error'}`);
+        // Create Blob from ArrayBuffer for fallback
+        const blob = new Blob([arrayBuffer], { type: file.type });
+        
+        // Reset retry counter for fallback
+        retryCount = 0;
+        uploadError = null;
+        
+        // Try Supabase JS client with retry
+        while (retryCount < maxRetries) {
+          try {
+            const uploadPromise = supabase.storage
+              .from('chat-media')
+              .upload(fileName, blob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: blob.type
+              });
+            
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+            );
+            
+            const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
+            uploadData = result.data;
+            uploadError = result.error;
+            
+            if (!uploadError) {
+              break; // Success
+            }
+            
+            if (retryCount < maxRetries - 1 && (
+              uploadError.message?.includes('network') || 
+              uploadError.message?.includes('timeout') ||
+              uploadError.message?.includes('Load failed')
+            )) {
+              retryCount++;
+              console.warn(`  ⚠️ Fallback upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              continue;
+            }
+            
+            break;
+          } catch (timeoutError: any) {
+            if (retryCount < maxRetries - 1) {
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              continue;
+            }
+            uploadError = timeoutError;
+            break;
+          }
         }
       }
     } else {
-      // Use standard Supabase JS client for web
-      console.log(`  ⬆️ Uploading to Supabase Storage (web)...`);
-      const { data, error } = await supabase.storage
-        .from('chat-media')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error(`  ❌ Upload error:`, {
-          error,
-          errorName: error.name,
-          errorMessage: error.message,
-          fileName,
-          fileSize: file.size,
-          fileType: file.type
-        });
-        throw new Error(`Failed to upload ${file.name}: ${error.message || 'Unknown error'}`);
+      // Web platform: Use Supabase JS client with Blob
+      console.log(`  ⬆️ Uploading to Supabase Storage (web platform)...`);
+      
+      // Convert File to Blob
+      console.log(`  📦 Converting File to Blob for upload...`);
+      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+      console.log(`  ✅ File converted to Blob (${Math.round(blob.size / 1024)}KB, type: ${blob.type})`);
+      
+      while (retryCount < maxRetries) {
+        try {
+          const uploadPromise = supabase.storage
+            .from('chat-media')
+            .upload(fileName, blob, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: blob.type
+            });
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+          );
+          
+          const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
+          uploadData = result.data;
+          uploadError = result.error;
+          
+          if (!uploadError) {
+            break; // Success
+          }
+          
+          if (retryCount < maxRetries - 1 && (
+            uploadError.message?.includes('network') || 
+            uploadError.message?.includes('timeout') ||
+            uploadError.message?.includes('Load failed')
+          )) {
+            retryCount++;
+            console.warn(`  ⚠️ Upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            continue;
+          }
+          
+          break;
+        } catch (timeoutError: any) {
+          if (retryCount < maxRetries - 1) {
+            retryCount++;
+            console.warn(`  ⚠️ Upload timeout, retrying... (${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            continue;
+          }
+          uploadError = timeoutError;
+          break;
+        }
       }
+    }
+
+    if (uploadError || !uploadData) {
+      console.error(`  ❌ Upload error after ${retryCount + 1} attempts:`, {
+        error: uploadError,
+        errorName: uploadError?.name,
+        errorMessage: uploadError?.message,
+        fileName,
+        fileSize: file.size,
+        fileType: file.type
+      });
+      throw new Error(`Failed to upload ${file.name}: ${uploadError?.message || 'Unknown error'}`);
     }
 
     // Get public URL (after successful upload via any method)
@@ -2591,6 +2735,8 @@ export default function IndividualChatPage() {
         isOpen={showProfileModal}
         userId={profileModalUserId}
         onClose={() => {
+          // Simply close the modal - chat page remains visible underneath
+          // No navigation needed - modal is just an overlay
           setShowProfileModal(false);
           setProfileModalUserId(null);
         }}

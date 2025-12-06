@@ -262,7 +262,7 @@ export default function InlineProfileView({
             />
           </div>
           <button
-            onClick={() => router.push('/share-profile')}
+            onClick={() => router.push('/qr-code')}
             className="inline-block mb-3"
             style={{
               borderRadius: '16px',

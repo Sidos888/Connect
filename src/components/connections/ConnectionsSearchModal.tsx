@@ -210,9 +210,10 @@ export default function ConnectionsSearchModal({
               msOverflowStyle: 'none'
             }}
           >
+
             {/* Search Results */}
             {searchQuery.trim() && (
-              <div className="space-y-3 pt-6">
+              <div className="space-y-2">
                 {isSearching ? (
                   <div className="flex flex-col items-center justify-center h-64">
                     <p className="text-gray-500 text-sm">Searching...</p>
@@ -226,7 +227,7 @@ export default function ConnectionsSearchModal({
                     <div
                       key={user.id}
                       onClick={() => handleUserClick(user.id)}
-                      className="p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white min-h-[70px]"
+                      className="p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white"
                       style={{
                         borderWidth: '0.4px',
                         borderColor: '#E5E7EB',
@@ -243,31 +244,18 @@ export default function ConnectionsSearchModal({
                         e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                       }}
                     >
-                      <div className="flex items-center gap-4">
-                        {/* Profile Picture */}
-                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {user.profile_pic ? (
-                            <Image
-                              src={user.profile_pic}
-                              alt={user.name || 'User'}
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-gray-500 text-sm font-medium">
-                              {user.name?.charAt(0).toUpperCase() || 'U'}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Name */}
+                      <div className="flex items-center space-x-3">
+                        <Avatar
+                          src={user.profile_pic}
+                          name={user.name || 'User'}
+                          size={48}
+                        />
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm font-semibold text-gray-900 truncate">
                             {user.name || 'Unknown User'}
                           </h3>
                           {user.bio && (
-                            <p className="text-xs text-gray-500 truncate mt-0.5">
+                            <p className="text-sm text-gray-500 truncate mt-1">
                               {user.bio}
                             </p>
                           )}
@@ -284,4 +272,3 @@ export default function ConnectionsSearchModal({
     </div>
   );
 }
-
