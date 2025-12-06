@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Flashlight, QrCode } from "lucide-react";
 import { PageContent } from "@/components/layout/PageSystem";
 import ProfilePage from "@/components/profile/ProfilePage";
@@ -10,6 +10,18 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function ScanPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get('from'); // Get the 'from' parameter
+
+  // Log the 'from' parameter for debugging
+  React.useEffect(() => {
+    console.log('🔵 ScanPage: Component mounted/updated', {
+      from,
+      fullUrl: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      pathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
+      search: typeof window !== 'undefined' ? window.location.search : 'N/A'
+    });
+  }, [from]);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -344,7 +356,44 @@ export default function ScanPage() {
       >
         {/* Back Button */}
         <button
-          onClick={() => router.back()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔵 ScanPage: Back button clicked', {
+              from,
+              decodedFrom: from ? decodeURIComponent(from) : null,
+              willUseFrom: !!from,
+              willUseRouterBack: !from
+            });
+            // Prioritize using the 'from' parameter to return to the exact previous page
+            if (from) {
+              const targetUrl = decodeURIComponent(from);
+              console.log('🔵 ScanPage: Navigating to original page via from parameter:', targetUrl);
+              router.replace(targetUrl);
+            } else {
+              console.log('🔵 ScanPage: No from parameter, using router.back()');
+              router.back();
+            }
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔵 ScanPage: Back button touched', {
+              from,
+              decodedFrom: from ? decodeURIComponent(from) : null,
+              willUseFrom: !!from,
+              willUseRouterBack: !from
+            });
+            // Prioritize using the 'from' parameter to return to the exact previous page
+            if (from) {
+              const targetUrl = decodeURIComponent(from);
+              console.log('🔵 ScanPage: Navigating to original page via from parameter:', targetUrl);
+              router.replace(targetUrl);
+            } else {
+              console.log('🔵 ScanPage: No from parameter, using router.back()');
+              router.back();
+            }
+          }}
           className="flex items-center justify-center transition-all duration-200"
           style={{
             width: '44px',
@@ -472,12 +521,40 @@ export default function ScanPage() {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                router.push('/qr-code');
+                // Navigate to QR code page, preserving the original 'from' parameter
+                // This ensures the back button always returns to the original page (e.g., /menu)
+                const urlParams = new URLSearchParams(window.location.search);
+                const originalFrom = urlParams.get('from');
+                // Always preserve the original 'from' parameter if it exists
+                // This is the page the user was on when they first clicked to view QR code
+                const fromParam = originalFrom ? `?from=${encodeURIComponent(originalFrom)}` : '';
+                const targetUrl = `/qr-code${fromParam}`;
+                console.log('🔵 ScanPage: Navigate to QR code button clicked', {
+                  originalFrom,
+                  fromParam,
+                  targetUrl,
+                  currentUrl: typeof window !== 'undefined' ? window.location.href : 'N/A'
+                });
+                router.push(targetUrl);
               }}
               onTouchStart={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                router.push('/qr-code');
+                // Navigate to QR code page, preserving the original 'from' parameter
+                // This ensures the back button always returns to the original page (e.g., /menu)
+                const urlParams = new URLSearchParams(window.location.search);
+                const originalFrom = urlParams.get('from');
+                // Always preserve the original 'from' parameter if it exists
+                // This is the page the user was on when they first clicked to view QR code
+                const fromParam = originalFrom ? `?from=${encodeURIComponent(originalFrom)}` : '';
+                const targetUrl = `/qr-code${fromParam}`;
+                console.log('🔵 ScanPage: Navigate to QR code button clicked', {
+                  originalFrom,
+                  fromParam,
+                  targetUrl,
+                  currentUrl: typeof window !== 'undefined' ? window.location.href : 'N/A'
+                });
+                router.push(targetUrl);
               }}
               className="flex flex-col items-center justify-center gap-2 px-6 py-4 rounded-2xl transition-all duration-200 hover:-translate-y-[1px]"
               style={{

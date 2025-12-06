@@ -2,9 +2,12 @@
 
 import { useState, useRef } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { compressImage, fileToDataURL } from "@/lib/imageUtils";
 
 export interface UploadedMedia {
-  // File object - stored for upload on send
+  // Base64 data URL - stored for upload on send (reliable, like listing system)
+  dataUrl?: string;
+  // File object - kept for backward compatibility and video handling
   file?: File;
   // Preview URL - blob URL for instant display (temporary)
   previewUrl?: string;
@@ -111,7 +114,7 @@ export default function MediaUploadButton({
       console.log('⚡ Creating blob URLs...');
       const blobStartTime = performance.now();
       
-      // Process files synchronously but very quickly - only essential operations
+      // Process files - compress images before storing (matches listing system)
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
@@ -125,14 +128,46 @@ export default function MediaUploadButton({
         }
 
         const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
-        const previewUrl = URL.createObjectURL(file); // This is instant - for preview only
         
-        // Create immediate preview - store File object for later upload
+        // For images: compress and convert to base64 (matches listing system for reliability)
+        // For videos: use original file (compression happens later if needed)
+        let processedFile = file;
+        let dataUrl: string | undefined;
+        
+        if (file_type === 'image') {
+          try {
+            // Compress image to reduce upload size (1920x1920, 85% quality - same as listing)
+            processedFile = await compressImage(file, {
+              maxWidth: 1920,
+              maxHeight: 1920,
+              quality: 0.85,
+            });
+            console.log(`📸 Image compressed: ${Math.round(file.size / 1024)}KB → ${Math.round(processedFile.size / 1024)}KB`);
+            
+            // Convert compressed file to base64 data URL (reliable storage, like listing system)
+            dataUrl = await fileToDataURL(processedFile);
+            console.log(`✅ Image converted to base64 data URL (${Math.round(dataUrl.length / 1024)}KB)`);
+          } catch (compressError) {
+            console.warn('Failed to compress image, using original:', compressError);
+            // Continue with original file if compression fails
+            processedFile = file;
+            dataUrl = await fileToDataURL(file);
+          }
+        } else {
+          // For videos, keep File object (videos are handled differently)
+          dataUrl = undefined;
+        }
+        
+        // Create preview URL from processed file (instant display)
+        const previewUrl = URL.createObjectURL(processedFile);
+        
+        // Create immediate preview - store base64 data URL for images (reliable like listing system)
         const immediatePreview: UploadedMedia = {
-          file: file, // Store File object for upload on send
+          dataUrl: dataUrl, // Store base64 data URL for images (reliable storage)
+          file: processedFile, // Keep File object for videos and backward compatibility
           previewUrl: previewUrl, // Blob URL for instant preview
           file_type,
-          file_size: file.size,
+          file_size: processedFile.size, // Use compressed size
           width: undefined, // Will be filled later
           height: undefined, // Will be filled later
           thumbnail_url: undefined // Will be filled later for videos
@@ -154,18 +189,22 @@ export default function MediaUploadButton({
       setUploadProgress(25);
 
       // Now generate thumbnails and dimensions asynchronously (don't block UI)
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const file_type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
-        const previewUrl = immediatePreviews[i].previewUrl; // Get the preview URL for this file
+      // Use the processed files from immediatePreviews (compressed for images)
+      for (let i = 0; i < immediatePreviews.length; i++) {
+        const preview = immediatePreviews[i];
+        const processedFile = preview.file; // This is the compressed file for images
+        if (!processedFile) continue;
+        
+        const file_type = preview.file_type;
+        const previewUrl = preview.previewUrl;
         
         // Generate thumbnail for videos asynchronously
         if (file_type === 'video') {
-          generateVideoThumbnail(file)
+          generateVideoThumbnail(processedFile)
             .then(thumbnailUrl => {
               // Update the preview with thumbnail when ready
-              const updatedPreviews = immediatePreviews.map(preview => 
-                preview.previewUrl === previewUrl ? { ...preview, thumbnail_url: thumbnailUrl } : preview
+              const updatedPreviews = immediatePreviews.map(p => 
+                p.previewUrl === previewUrl ? { ...p, thumbnail_url: thumbnailUrl } : p
               );
               onMediaSelected([...updatedPreviews]); // Create new array to trigger re-render
             })
@@ -174,12 +213,12 @@ export default function MediaUploadButton({
             });
         }
         
-        // Generate dimensions asynchronously for images
+        // Generate dimensions asynchronously for images (using compressed file)
         if (file_type === 'image') {
-          getImageDimensions(file)
+          getImageDimensions(processedFile)
             .then(dimensions => {
-              const updatedPreviews = immediatePreviews.map(preview => 
-                preview.previewUrl === previewUrl ? { ...preview, width: dimensions.width, height: dimensions.height } : preview
+              const updatedPreviews = immediatePreviews.map(p => 
+                p.previewUrl === previewUrl ? { ...p, width: dimensions.width, height: dimensions.height } : p
               );
               onMediaSelected([...updatedPreviews]); // Create new array to trigger re-render
             })

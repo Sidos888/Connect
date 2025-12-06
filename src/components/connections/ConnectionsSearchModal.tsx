@@ -70,23 +70,23 @@ export default function ConnectionsSearchModal({
 
   useEffect(() => {
     if (isOpen) {
-      setIsVisible(true);
-      setIsFullyPositioned(false);
+        setIsVisible(true);
+        setIsFullyPositioned(false);
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
-      
-      // Focus input only after animation completes (300ms transition)
-      const timer = setTimeout(() => {
-        setIsFullyPositioned(true);
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 300);
-      
-      return () => {
-        clearTimeout(timer);
-      };
-    } else {
+        
+        // Focus input only after animation completes (300ms transition)
+        const timer = setTimeout(() => {
+          setIsFullyPositioned(true);
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }, 300);
+        
+        return () => {
+          clearTimeout(timer);
+        };
+      } else {
       setIsVisible(false);
       setIsFullyPositioned(false);
       // Restore body scroll when modal is closed
@@ -246,7 +246,7 @@ export default function ConnectionsSearchModal({
                     >
                       <div className="flex items-center space-x-3">
                         <Avatar
-                          src={user.profile_pic}
+                              src={user.profile_pic}
                           name={user.name || 'User'}
                           size={48}
                         />

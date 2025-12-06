@@ -117,7 +117,14 @@ export default function ProfileRoute() {
         onClose={handleBack}
         onEdit={isOwnProfile ? () => router.push('/settings/edit/details') : undefined}
         onSettings={isOwnProfile ? () => router.push('/settings') : undefined}
-        onShare={isOwnProfile ? () => router.push('/qr-code') : undefined}
+        onShare={isOwnProfile ? () => {
+          // Navigate to QR code page with current URL as 'from' parameter
+          const currentUrl = typeof window !== 'undefined' 
+            ? `${window.location.pathname}${window.location.search}`
+            : '/profile';
+          const fromParam = `?from=${encodeURIComponent(currentUrl)}`;
+          router.push(`/qr-code${fromParam}`);
+        } : undefined}
         onOpenTimeline={() => router.push(`/timeline?userId=${userId}`)}
         onOpenHighlights={() => router.push(`/highlights?userId=${userId}`)}
         onOpenBadges={() => router.push(`/achievements?userId=${userId}`)}

@@ -7,6 +7,7 @@ import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSys
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { compressImage, fileToDataURL } from '@/lib/imageUtils';
 
 function CreateItineraryPageContent() {
   const router = useRouter();
@@ -16,7 +17,8 @@ function CreateItineraryPageContent() {
   const [location, setLocation] = useState("");
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date(Date.now() + 2 * 60 * 60 * 1000)); // 2 hours later
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null); // Store as base64 data URL
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dateTimeInputRef = useRef<HTMLInputElement>(null);
   const endDateTimeInputRef = useRef<HTMLInputElement>(null);
@@ -41,99 +43,261 @@ function CreateItineraryPageContent() {
     }
   }, []);
 
-  const compressImage = (file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.8): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
+  // Convert base64 data URL to Blob (more reliable than File)
+  const dataURLtoBlob = (dataurl: string): Blob => {
+    try {
+      // Handle data URL format: data:image/jpeg;base64,/9j/4AAQ...
+      if (!dataurl || typeof dataurl !== 'string') {
+        throw new Error('Invalid data URL: not a string');
+      }
 
-          if (width > height) {
-            if (width > maxWidth) {
-              height = (height * maxWidth) / width;
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = (width * maxHeight) / height;
-              height = maxHeight;
-            }
-          }
+      if (!dataurl.includes(',')) {
+        throw new Error('Invalid data URL format: missing comma separator');
+      }
 
-          canvas.width = width;
-          canvas.height = height;
+      const arr = dataurl.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      
+      // Decode base64
+      const base64Data = arr[1];
+      
+      // Validate base64 data
+      if (!base64Data || base64Data.length === 0) {
+        throw new Error('Empty base64 data');
+      }
 
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
+      // Try to decode base64
+      let bstr: string;
+      try {
+        bstr = atob(base64Data);
+      } catch (e) {
+        throw new Error(`Invalid base64 encoding: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      }
 
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                const compressedFile = new File([blob], file.name, {
-                  type: 'image/jpeg',
-                  lastModified: Date.now(),
-                });
-                resolve(compressedFile);
-              } else {
-                reject(new Error('Failed to compress image'));
-              }
-            },
-            'image/jpeg',
-            quality
-          );
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
+      const n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      
+      for (let i = 0; i < n; i++) {
+        u8arr[i] = bstr.charCodeAt(i);
+      }
+      
+      return new Blob([u8arr], { type: mime });
+    } catch (error) {
+      console.error('Error converting data URL to Blob:', error);
+      console.error('Data URL preview:', dataurl ? dataurl.substring(0, 100) + '...' : 'null');
+      throw new Error(`Failed to convert photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
+  // Upload photo to Supabase Storage (matches listing upload system)
+  const uploadPhoto = async (): Promise<string | null> => {
+    if (!photo) return null;
+    
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      throw new Error('Supabase client not available');
+    }
+    
+    if (!account) {
+      throw new Error('Not authenticated');
+    }
+
+    // Check authentication session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('No active session');
+    }
+
+    // Verify the bucket exists and is accessible
+    try {
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+      if (bucketError) {
+        console.error('Error listing buckets:', bucketError);
+      } else {
+        const listingPhotosBucket = buckets?.find(b => b.id === 'listing-photos');
+        if (!listingPhotosBucket) {
+          throw new Error('The listing-photos storage bucket does not exist. Please create it in your Supabase dashboard or run the setup script.');
+        }
+        console.log('✅ listing-photos bucket found:', listingPhotosBucket);
+      }
+    } catch (error) {
+      // If bucket check fails, log but continue - the upload will fail with a clearer error
+      console.warn('Could not verify bucket existence:', error);
+    }
+
+    try {
+      if (!photo || typeof photo !== 'string') {
+        throw new Error('Photo is invalid');
+      }
+
+      // Convert base64 to Blob
+      let blob: Blob;
+      try {
+        blob = dataURLtoBlob(photo);
+      } catch (conversionError) {
+        console.error('Failed to convert photo to blob:', conversionError);
+        throw new Error(`Photo is corrupted or invalid: ${conversionError instanceof Error ? conversionError.message : 'Unknown error'}`);
+      }
+      
+      // Validate blob
+      if (!blob || blob.size === 0) {
+        throw new Error(`Photo is empty (size: ${blob?.size || 0} bytes)`);
+      }
+
+      // Check blob size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (blob.size > maxSize) {
+        throw new Error(`Photo is too large (${Math.round(blob.size / 1024)}KB). Maximum size is 10MB.`);
+      }
+
+      // Determine file extension from blob type
+      let fileExt = 'jpg';
+      if (blob.type.includes('png')) fileExt = 'png';
+      else if (blob.type.includes('webp')) fileExt = 'webp';
+      else if (blob.type.includes('gif')) fileExt = 'gif';
+      
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 11);
+      const fileName = `${account.id}/itinerary_${timestamp}_${randomStr}.${fileExt}`;
+      
+      console.log(`Uploading itinerary photo: ${fileName} (${Math.round(blob.size / 1024)}KB, type: ${blob.type})`);
+      
+      // Upload to Supabase Storage using Blob
+      // Add timeout and retry logic for network issues
+      let uploadData;
+      let uploadError;
+      const maxRetries = 3;
+      let retryCount = 0;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const uploadPromise = supabase.storage
+            .from('listing-photos')
+            .upload(fileName, blob, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: blob.type
+            });
+            
+          // Add timeout (30 seconds per upload)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+          );
+            
+          const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
+          uploadData = result.data;
+          uploadError = result.error;
+            
+          if (!uploadError) {
+            break; // Success, exit retry loop
+          }
+            
+          // If error is retryable, try again
+          if (retryCount < maxRetries - 1 && (
+            uploadError.message?.includes('network') || 
+            uploadError.message?.includes('timeout') ||
+            uploadError.message?.includes('Load failed')
+          )) {
+            retryCount++;
+            console.warn(`Upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+            continue;
+          }
+            
+          break; // Non-retryable error or max retries reached
+        } catch (timeoutError) {
+          if (retryCount < maxRetries - 1) {
+            retryCount++;
+            console.warn(`Upload timeout, retrying... (${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            continue;
+          }
+          uploadError = timeoutError as any;
+          break;
+        }
+      }
+
+      if (uploadError) {
+        console.error(`Failed to upload photo after ${retryCount + 1} attempts:`, uploadError);
+        console.error(`Upload error details:`, {
+          name: uploadError.name,
+          message: uploadError.message,
+          statusCode: uploadError.statusCode,
+          error: uploadError,
+          blobSize: blob.size,
+          blobType: blob.type,
+          fileName: fileName
+        });
+          
+        // Provide more helpful error message
+        let errorMessage = `Failed to upload photo`;
+        if (uploadError.message) {
+          errorMessage += `: ${uploadError.message}`;
+        } else if (uploadError.name === 'StorageUnknownError') {
+          errorMessage += ': Storage bucket may not exist or may not have proper permissions. Please check your Supabase storage configuration.';
+        } else if (uploadError.message?.includes('timeout') || uploadError.message?.includes('Load failed')) {
+          errorMessage += ': Network timeout. Please check your internet connection and try again.';
+        } else {
+          errorMessage += ': Unknown error occurred';
+        }
+          
+        throw new Error(errorMessage);
+      }
+
+      if (!uploadData || !uploadData.path) {
+        throw new Error(`Upload succeeded but no path returned`);
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('listing-photos')
+        .getPublicUrl(uploadData.path);
+
+      if (!publicUrl) {
+        throw new Error(`Failed to get public URL`);
+      }
+
+      console.log(`✅ Photo uploaded successfully: ${publicUrl}`);
+      return publicUrl;
+    } catch (error) {
+      console.error(`Error uploading photo:`, error);
+      throw error;
+    }
+  };
+
+  // Handle photo selection - compress and store as base64 data URL (matches listing system)
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      // Compress image
-      const compressedFile = await compressImage(file);
-      
-      // Upload to Supabase immediately
-      const supabase = getSupabaseClient();
-      if (!supabase || !account) {
-        alert('Not authenticated');
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
         return;
       }
 
-      const fileExt = compressedFile.name.split('.').pop() || 'jpg';
-      const fileName = `${account.id}/itinerary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('listing-photos')
-        .upload(fileName, compressedFile);
-
-      if (uploadError) {
-        console.error('Failed to upload photo:', uploadError);
-        alert('Failed to upload photo');
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image is too large (max 10MB). Please select a smaller image.');
         return;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('listing-photos')
-        .getPublicUrl(fileName);
+      // Compress image to reduce storage size (matches listing system)
+      const compressedFile = await compressImage(file, {
+        maxWidth: 1920,
+        maxHeight: 1920,
+        quality: 0.85,
+      });
 
-      setPhoto(publicUrl);
+      // Convert compressed file to base64 data URL
+      const dataUrl = await fileToDataURL(compressedFile);
+      setPhoto(dataUrl);
     } catch (error) {
       console.error('Error processing photo:', error);
-      alert('Failed to process photo');
+      alert(error instanceof Error ? error.message : 'Failed to process photo');
     }
 
     if (fileInputRef.current) {
@@ -143,23 +307,37 @@ function CreateItineraryPageContent() {
 
   const isFormComplete = title.trim().length > 0;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isFormComplete) {
       return; // Don't save if title is empty
     }
 
-    const newItem = {
-      title: title.trim(),
-      summary: summary.trim(),
-      location: location.trim(),
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      photo: photo
-    };
+    setSaving(true);
+    try {
+      // Upload photo if one is selected (matches listing system)
+      let photoUrl: string | null = null;
+      if (photo) {
+        photoUrl = await uploadPhoto();
+      }
 
-    const updatedItems = [...existingItems, newItem];
-    sessionStorage.setItem('listingItinerary', JSON.stringify(updatedItems));
-    router.back();
+      const newItem = {
+        title: title.trim(),
+        summary: summary.trim(),
+        location: location.trim(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        photo: photoUrl
+      };
+
+      const updatedItems = [...existingItems, newItem];
+      sessionStorage.setItem('listingItinerary', JSON.stringify(updatedItems));
+      router.back();
+    } catch (error) {
+      console.error('Error saving itinerary item:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save itinerary item');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const formatDateTime = (date: Date): string => {
@@ -251,18 +429,18 @@ function CreateItineraryPageContent() {
           customActions={
             <button
               onClick={handleSave}
-              disabled={!isFormComplete}
+              disabled={!isFormComplete || saving}
               className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '100px',
-                background: isFormComplete ? '#FF6600' : '#9CA3AF',
+                background: (isFormComplete && !saving) ? '#FF6600' : '#9CA3AF',
                 boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                 willChange: 'transform, box-shadow'
               }}
               onMouseEnter={(e) => {
-                if (isFormComplete) {
+                if (isFormComplete && !saving) {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }
               }}

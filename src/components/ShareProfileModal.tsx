@@ -5,6 +5,7 @@ import { X, Copy, Share2 } from 'lucide-react';
 import Button from '@/components/Button';
 import { useAppStore } from '@/lib/store';
 import QRCode from 'qrcode';
+import { Share } from '@capacitor/share';
 
 interface ShareProfileModalProps {
   isOpen: boolean;
@@ -58,21 +59,38 @@ export default function ShareProfileModal({ isOpen, onClose }: ShareProfileModal
   };
 
   const handleShare = async () => {
-    if (navigator.share && profileUrl) {
-      try {
+    if (!profileUrl) return;
+    
+    try {
+      // Check if running in Capacitor (native app)
+      const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+      
+      if (isCapacitor) {
+        // Use native iOS/Android share sheet
+        await Share.share({
+          title: `${personalProfile?.name}'s Connect Profile`,
+          text: `Check out ${personalProfile?.name}'s profile on Connect`,
+          url: profileUrl,
+          dialogTitle: 'Share profile'
+        });
+      } else if (navigator.share) {
+        // Use Web Share API for web browsers
         await navigator.share({
           title: `${personalProfile?.name}'s Connect Profile`,
           text: `Check out ${personalProfile?.name}'s profile on Connect`,
           url: profileUrl,
         });
-      } catch (error) {
+      } else {
+        // Fallback to copy link
+        handleCopyLink();
+      }
+    } catch (error: any) {
+      // User cancelled or error occurred
+      if (error?.message !== 'User cancelled' && error?.message !== 'Share canceled') {
         console.error('Error sharing:', error);
         // Fallback to copy link
         handleCopyLink();
       }
-    } else {
-      // Fallback to copy link
-      handleCopyLink();
     }
   };
 

@@ -348,13 +348,27 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
             e.preventDefault();
             e.stopPropagation();
             onClose(); // Close scanner
-            router.push('/qr-code'); // Navigate to QR code page
+            // Navigate to QR code page, preserving the original 'from' parameter
+            // This ensures the back button always returns to the original page (e.g., /menu)
+            const urlParams = new URLSearchParams(window.location.search);
+            const originalFrom = urlParams.get('from');
+            // Always preserve the original 'from' parameter if it exists
+            // This is the page the user was on when they first clicked to view QR code
+            const fromParam = originalFrom ? `?from=${encodeURIComponent(originalFrom)}` : '';
+            router.push(`/qr-code${fromParam}`); // Navigate to QR code page
           }}
           onTouchStart={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onClose(); // Close scanner
-            router.push('/qr-code'); // Navigate to QR code page
+            // Navigate to QR code page, preserving the original 'from' parameter
+            // This ensures the back button always returns to the original page (e.g., /menu)
+            const urlParams = new URLSearchParams(window.location.search);
+            const originalFrom = urlParams.get('from');
+            // Always preserve the original 'from' parameter if it exists
+            // This is the page the user was on when they first clicked to view QR code
+            const fromParam = originalFrom ? `?from=${encodeURIComponent(originalFrom)}` : '';
+            router.push(`/qr-code${fromParam}`); // Navigate to QR code page
           }}
           className="flex flex-col items-center justify-center gap-2 px-6 py-4 rounded-2xl transition-all duration-200 hover:-translate-y-[1px]"
           style={{

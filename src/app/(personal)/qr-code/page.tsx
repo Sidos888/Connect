@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MobilePage, PageContent } from "@/components/layout/PageSystem";
 import QRCode from "@/components/qr-code/QRCode";
 import { Share, Image as ImageIcon } from "lucide-react";
@@ -9,7 +10,19 @@ import Avatar from "@/components/Avatar";
 
 export default function QRCodePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get('from'); // Get the 'from' parameter
   const { account } = useAuth();
+
+  // Log the 'from' parameter for debugging
+  React.useEffect(() => {
+    console.log('🔵 QRCodePage: Component mounted/updated', {
+      from,
+      fullUrl: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      pathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
+      search: typeof window !== 'undefined' ? window.location.search : 'N/A'
+    });
+  }, [from]);
 
   const userName = account?.name || "User Name";
   const userAvatar = account?.profile_pic || undefined;
@@ -28,7 +41,44 @@ export default function QRCodePage() {
         <div className="flex items-center justify-between gap-4">
           {/* Back Button */}
           <button
-            onClick={() => router.back()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🔵 QRCodePage: Back button clicked', {
+                from,
+                decodedFrom: from ? decodeURIComponent(from) : null,
+                willUseFrom: !!from,
+                willUseRouterBack: !from
+              });
+              // Prioritize using the 'from' parameter to return to the exact previous page
+              if (from) {
+                const targetUrl = decodeURIComponent(from);
+                console.log('🔵 QRCodePage: Navigating to original page via from parameter:', targetUrl);
+                router.replace(targetUrl);
+              } else {
+                console.log('🔵 QRCodePage: No from parameter, using router.back()');
+                router.back();
+              }
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🔵 QRCodePage: Back button touched', {
+                from,
+                decodedFrom: from ? decodeURIComponent(from) : null,
+                willUseFrom: !!from,
+                willUseRouterBack: !from
+              });
+              // Prioritize using the 'from' parameter to return to the exact previous page
+              if (from) {
+                const targetUrl = decodeURIComponent(from);
+                console.log('🔵 QRCodePage: Navigating to original page via from parameter:', targetUrl);
+                router.replace(targetUrl);
+              } else {
+                console.log('🔵 QRCodePage: No from parameter, using router.back()');
+                router.back();
+              }
+            }}
             className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
             style={{
               width: '44px',
@@ -92,8 +142,15 @@ export default function QRCodePage() {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // Placeholder for share functionality
-              console.log('Share button clicked');
+              // Navigate to share profile page with current URL (including 'from' parameter) as 'from' parameter
+              if (account?.id) {
+                const currentUrl = typeof window !== 'undefined' 
+                  ? `${window.location.pathname}${window.location.search}`
+                  : '/qr-code';
+                const fromParam = `&from=${encodeURIComponent(currentUrl)}`;
+                const connectIdParam = account.connect_id ? `&connectId=${account.connect_id}` : '';
+                router.push(`/profile/share?id=${account.id}${connectIdParam}${fromParam}`);
+              }
             }}
             className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
             style={{

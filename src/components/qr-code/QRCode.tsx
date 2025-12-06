@@ -4,7 +4,7 @@ import { ScanLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import QRCodeLib from "qrcode";
 import { useAuth } from "@/lib/authContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 /**
  * QRCode - Component for displaying QR code and scan button
@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 export default function QRCode() {
   const { account } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const originalFrom = searchParams.get('from'); // Get the original 'from' parameter
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
@@ -155,12 +157,32 @@ export default function QRCode() {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            router.push('/scan');
+            // Navigate to scan page, preserving the original 'from' parameter
+            // This ensures the back button always returns to the original page (e.g., /menu)
+            const fromParam = originalFrom ? `?from=${encodeURIComponent(originalFrom)}` : '';
+            const targetUrl = `/scan${fromParam}`;
+            console.log('🔵 QRCode: Navigate to scan button clicked', {
+              originalFrom,
+              fromParam,
+              targetUrl,
+              currentUrl: typeof window !== 'undefined' ? window.location.href : 'N/A'
+            });
+            router.push(targetUrl);
           }}
           onTouchStart={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            router.push('/scan');
+            // Navigate to scan page, preserving the original 'from' parameter
+            // This ensures the back button always returns to the original page (e.g., /menu)
+            const fromParam = originalFrom ? `?from=${encodeURIComponent(originalFrom)}` : '';
+            const targetUrl = `/scan${fromParam}`;
+            console.log('🔵 QRCode: Navigate to scan button touched', {
+              originalFrom,
+              fromParam,
+              targetUrl,
+              currentUrl: typeof window !== 'undefined' ? window.location.href : 'N/A'
+            });
+            router.push(targetUrl);
           }}
           className="flex flex-col items-center justify-center gap-2 px-6 py-4 rounded-2xl transition-all duration-200 hover:-translate-y-[1px]"
           style={{

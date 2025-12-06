@@ -14,7 +14,7 @@ import ItineraryViewer from '@/components/listings/ItineraryViewer';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
-import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Image as ImageIcon, Share } from 'lucide-react';
+import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Image as ImageIcon, Share, ChevronRight, ArrowLeft } from 'lucide-react';
 import EditListingDetailsView, { EditListingDetailsViewRef } from '@/components/listings/EditListingDetailsView';
 import CancelEventModal from '@/components/listings/CancelEventModal';
 import JoinListingModal from '@/components/listings/JoinListingModal';
@@ -46,6 +46,7 @@ export default function ListingPage() {
   const [saving, setSaving] = useState(false);
   const editDetailsRef = useRef<EditListingDetailsViewRef | null>(null);
   const [isPhotosMounted, setIsPhotosMounted] = useState(false);
+  const [editPage, setEditPage] = useState<'page1' | 'page2'>('page1');
   
   // Mount check for photos view to avoid hydration errors
   useEffect(() => {
@@ -435,7 +436,7 @@ export default function ListingPage() {
                       Listing Details
                     </div>
                     <div className="text-sm font-normal text-gray-500">
-                      Name, description, time and location
+                      Name, description, time, location, itinerary and gallery
                     </div>
                   </div>
               </button>
@@ -595,7 +596,9 @@ export default function ListingPage() {
             router.push(`/listing?${params.toString()}`);
           }} 
           onHasChanges={setHasChanges} 
-          onSavingChange={setSaving} 
+          onSavingChange={setSaving}
+          currentPage={editPage}
+          onPageChange={(page) => setEditPage(page)}
         />;
 
       case 'photos':
@@ -774,7 +777,7 @@ export default function ListingPage() {
     switch (view) {
       case 'manage': return 'Manage';
       case 'photos': return 'Listing Photos';
-      case 'edit-details': return 'Edit Listing';
+      case 'edit-details': return editPage === 'page1' ? 'Edit Listing' : 'Itinerary & Gallery';
       case 'gallery': return listing?.title || 'Gallery';
       case 'detail':
       default: return '';
@@ -825,33 +828,85 @@ export default function ListingPage() {
               return actions;
             })()}
             customActions={view === 'edit-details' ? (
+              editPage === 'page1' ? (
+                // Page 1: Right arrow to navigate to page 2
+                <button
+                  onClick={() => setEditPage('page2')}
+                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '100px',
+                    background: '#FF6600',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={18} className="text-white" />
+                </button>
+              ) : (
+                // Page 2: Tick button to save all changes
+                <button
+                  onClick={async () => {
+                    if (editDetailsRef.current && hasChanges && !saving) {
+                      await editDetailsRef.current.save();
+                    }
+                  }}
+                  disabled={!hasChanges || saving}
+                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '100px',
+                    background: hasChanges ? '#FF6600' : '#9CA3AF',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (hasChanges && !saving) {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label="Save"
+                >
+                  <Check size={18} className="text-white" />
+                </button>
+              )
+            ) : undefined}
+            customBackButton={view === 'edit-details' && editPage === 'page2' ? (
               <button
-                onClick={async () => {
-                  if (editDetailsRef.current && hasChanges && !saving) {
-                    await editDetailsRef.current.save();
-                  }
-                }}
-                disabled={!hasChanges || saving}
-                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setEditPage('page1')}
+                className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '100px',
-                  background: hasChanges ? '#FF6600' : '#9CA3AF',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   willChange: 'transform, box-shadow'
                 }}
                 onMouseEnter={(e) => {
-                  if (hasChanges && !saving) {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
-                aria-label="Save"
+                aria-label="Back"
               >
-                <Check size={18} className="text-white" />
+                <ArrowLeft size={18} className="text-gray-900" />
               </button>
             ) : undefined}
           />

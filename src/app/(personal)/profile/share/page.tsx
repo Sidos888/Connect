@@ -14,6 +14,7 @@ import Avatar from '@/components/Avatar';
 import { SearchIcon } from '@/components/icons';
 import Image from 'next/image';
 import ProfilePage from '@/components/profile/ProfilePage';
+import { Share } from '@capacitor/share';
 
 interface Contact {
   id: string;
@@ -256,11 +257,16 @@ export default function ShareProfilePage() {
   }, [searchQuery, contacts, groups, allContacts, selectedChats, selectedUsers]);
 
   const handleBack = () => {
-    if (profileId) {
-      router.push(`/p/${profile?.connect_id || connectId || ''}`);
+    // Prioritize using the 'from' parameter to return to the exact previous page
+    if (from) {
+      router.replace(decodeURIComponent(from));
+    } else if (profileId && (profile?.connect_id || connectId)) {
+      // Fallback: navigate to profile page
+      router.push(`/p/${profile?.connect_id || connectId}`);
     } else if (connectId) {
       router.push(`/p/${connectId}`);
     } else {
+      // Last resort: use browser back
       router.back();
     }
   };
@@ -477,7 +483,16 @@ export default function ShareProfilePage() {
           <div className="flex items-center justify-between gap-4">
           {/* Back Button */}
           <button
-            onClick={handleBack}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleBack();
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleBack();
+            }}
             className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
             style={{
               width: '40px',
@@ -488,7 +503,9 @@ export default function ShareProfilePage() {
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
+              willChange: 'transform, box-shadow',
+              cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -621,8 +638,84 @@ export default function ShareProfilePage() {
       <PageContent>
         <div className="px-4" style={{ 
           paddingTop: `calc(${headerHeight} + ${searchBarHeight})`, 
-          paddingBottom: '100px' 
+          paddingBottom: '24px' 
         }}>
+
+          {/* Share Externally Card - First option in scrollable content */}
+          <div className="mb-6">
+            <div
+              className="bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+              style={{
+                borderWidth: '0.4px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                willChange: 'transform, box-shadow'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }}
+              onClick={async () => {
+                // Share externally functionality
+                const profileConnectId = profile?.connect_id || connectId;
+                const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${profileConnectId}` : '';
+                const shareText = `Check out ${profile?.name || 'this profile'}'s profile on Connect!`;
+                
+                try {
+                  // Check if running in Capacitor (native app)
+                  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+                  
+                  if (isCapacitor) {
+                    // Use native iOS/Android share sheet
+                    await Share.share({
+                      title: `${profile?.name || 'User'}'s Profile`,
+                      text: shareText,
+                      url: shareUrl,
+                      dialogTitle: 'Share profile'
+                    });
+                  } else if (navigator.share) {
+                    // Use Web Share API for web browsers
+                    await navigator.share({
+                      title: `${profile?.name || 'User'}'s Profile`,
+                      text: shareText,
+                      url: shareUrl
+                    });
+                  } else {
+                    // Fallback: copy to clipboard
+                    await navigator.clipboard.writeText(shareUrl);
+                    alert('Profile link copied to clipboard!');
+                  }
+                } catch (err: any) {
+                  // User cancelled or error occurred
+                  if (err?.message !== 'User cancelled' && err?.message !== 'Share canceled') {
+                    console.error('Error sharing:', err);
+                    // Fallback to copy if share fails
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert('Profile link copied to clipboard!');
+                    } catch (copyErr) {
+                      console.error('Failed to copy:', copyErr);
+                    }
+                  }
+                }
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-base font-semibold text-gray-900 mb-1">
+                    Share Externally
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Airdrop, messages etc
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-gray-400" />
+              </div>
+            </div>
+          </div>
 
           {/* Selected Section */}
           {(selectedChats.size > 0 || selectedUsers.size > 0) && (
@@ -913,70 +1006,6 @@ export default function ShareProfilePage() {
           )}
         </div>
       </PageContent>
-
-      {/* Fixed Bottom: Share Externally Card - transparent background like bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 z-50"
-        style={{
-          paddingTop: '16px',
-          paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
-          paddingLeft: '16px',
-          paddingRight: '16px',
-          pointerEvents: 'none'
-        }}
-      >
-        <div
-          className="bg-white rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
-          style={{
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            willChange: 'transform, box-shadow',
-            pointerEvents: 'auto'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          onClick={() => {
-            // Share externally functionality
-            const profileConnectId = profile?.connect_id || connectId;
-            const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${profileConnectId}` : '';
-            const shareText = `Check out ${profile?.name || 'this profile'}'s profile on Connect!`;
-            
-            if (navigator.share) {
-              navigator.share({
-                title: `${profile?.name || 'User'}'s Profile`,
-                text: shareText,
-                url: shareUrl
-              }).catch(err => {
-                console.log('Error sharing:', err);
-              });
-            } else {
-              // Fallback: copy to clipboard
-              navigator.clipboard.writeText(shareUrl).then(() => {
-                alert('Profile link copied to clipboard!');
-              }).catch(err => {
-                console.error('Failed to copy:', err);
-              });
-            }
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-base font-semibold text-gray-900 mb-1">
-                Share Externally
-              </div>
-              <div className="text-sm text-gray-500">
-                Airdrop, messages etc
-              </div>
-            </div>
-            <ChevronRight size={20} className="text-gray-400" />
-          </div>
-        </div>
-      </div>
 
       {/* Profile Modal - Full page overlay (same pattern as scan page) */}
       {showProfileModal && profile && (

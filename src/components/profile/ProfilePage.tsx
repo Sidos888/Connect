@@ -162,7 +162,7 @@ export default function ProfilePage({
   // Default to private if undefined (safe fallback)
   const isPrivateProfile = !profile?.profile_visibility || profile?.profile_visibility === 'private';
   const showFullProfile = isOwnProfile || !isPrivateProfile || areFriends;
-
+  
   // Get current user ID
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -555,10 +555,10 @@ export default function ProfilePage({
       return {
         actionButtons: [{
           icon: <Link className="h-5 w-5 text-gray-900" strokeWidth={2.5} />,
-          onClick: () => {
+      onClick: () => {
             router.push('/links');
-          },
-          label: "Link"
+      },
+      label: "Link"
         }],
         customActions: undefined
       };

@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Listing } from '@/lib/listingsService';
 import { getSupabaseClient } from '@/lib/supabaseClient';
-import { Check, MapPin, Plus, Image as ImageIcon } from 'lucide-react';
+import { Check, MapPin, Plus, Image as ImageIcon, ChevronRight, ArrowLeft } from 'lucide-react';
 import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
 import { useAuth } from '@/lib/authContext';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useChatService } from '@/lib/chatProvider';
 
 interface EditListingDetailsViewProps {
   listing: Listing;
@@ -16,6 +17,8 @@ interface EditListingDetailsViewProps {
   onSave: () => void;
   onHasChanges?: (hasChanges: boolean) => void;
   onSavingChange?: (saving: boolean) => void;
+  onPageChange?: (page: 'page1' | 'page2') => void;
+  currentPage?: 'page1' | 'page2';
 }
 
 export interface EditListingDetailsViewRef {
@@ -23,13 +26,43 @@ export interface EditListingDetailsViewRef {
 }
 
 const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListingDetailsViewProps>(
-  ({ listing, listingId, onSave, onBack, onHasChanges, onSavingChange }, ref) => {
+  ({ listing, listingId, onSave, onBack, onHasChanges, onSavingChange, onPageChange, currentPage = 'page1' }, ref) => {
   const router = useRouter();
   const { account } = useAuth();
   const queryClient = useQueryClient();
+  const chatService = useChatService();
   const [listingTitle, setListingTitle] = useState(listing.title || '');
   const [summary, setSummary] = useState(listing.summary || '');
   const [location, setLocation] = useState<string>(listing.location || '');
+  const [itineraryItems, setItineraryItems] = useState<any[]>(() => {
+    // Load existing itinerary from listing
+    if (listing.itinerary && typeof listing.itinerary === 'object') {
+      return Array.isArray(listing.itinerary) ? listing.itinerary : [];
+    }
+    return [];
+  });
+  const [hasGallery, setHasGallery] = useState(listing.has_gallery || false);
+  const [enableEventChat, setEnableEventChat] = useState(!!listing.event_chat_id);
+
+  // Reload itinerary from sessionStorage when returning from itinerary creation page
+  useEffect(() => {
+    const storedItinerary = sessionStorage.getItem('listingItinerary');
+    const storedEditListingId = sessionStorage.getItem('editListingId');
+    
+    if (storedItinerary && storedEditListingId === listingId) {
+      try {
+        const parsed = JSON.parse(storedItinerary);
+        if (Array.isArray(parsed)) {
+          setItineraryItems(parsed);
+          // Clear the stored data after loading
+          sessionStorage.removeItem('listingItinerary');
+          sessionStorage.removeItem('editListingId');
+        }
+      } catch (e) {
+        console.error('Error parsing itinerary from sessionStorage:', e);
+      }
+    }
+  }, [listingId]);
   const [locationFocused, setLocationFocused] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [locationSearchQuery, setLocationSearchQuery] = useState('');
@@ -97,7 +130,10 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
     startDate: listing.start_date ? new Date(listing.start_date).toISOString() : '',
     endDate: listing.end_date ? new Date(listing.end_date).toISOString() : '',
     includeEndTime: !!listing.end_date,
-    photos: listing.photo_urls || []
+    photos: listing.photo_urls || [],
+    itinerary: listing.itinerary && typeof listing.itinerary === 'object' && Array.isArray(listing.itinerary) ? listing.itinerary : [],
+    hasGallery: listing.has_gallery || false,
+    enableEventChat: !!listing.event_chat_id
   };
 
   // Check for changes
@@ -123,6 +159,11 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
         return photo !== originalValues.photos[index];
       });
 
+    // Check itinerary changes
+    const itineraryChanged = JSON.stringify(itineraryItems) !== JSON.stringify(originalValues.itinerary);
+    const galleryChanged = hasGallery !== originalValues.hasGallery;
+    const eventChatChanged = enableEventChat !== originalValues.enableEventChat;
+
     const changed = 
       currentValues.title !== originalValues.title ||
       currentValues.summary !== originalValues.summary ||
@@ -130,13 +171,16 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
       currentValues.startDate !== originalValues.startDate ||
       (currentValues.includeEndTime !== originalValues.includeEndTime) ||
       (currentValues.includeEndTime && currentValues.endDate !== originalValues.endDate) ||
-      photosChanged;
+      photosChanged ||
+      itineraryChanged ||
+      galleryChanged ||
+      eventChatChanged;
 
     setHasChanges(changed);
     if (onHasChanges) {
       onHasChanges(changed);
     }
-  }, [listingTitle, summary, location, startDate, endDate, includeEndTime, photos, originalValues, onHasChanges]);
+  }, [listingTitle, summary, location, startDate, endDate, includeEndTime, photos, itineraryItems, hasGallery, enableEventChat, originalValues, onHasChanges]);
 
   // Update end date when start date changes (set to 2 hours later by default)
   useEffect(() => {
@@ -673,6 +717,34 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
         }
       }
 
+      // Handle event chat creation/deletion
+      let eventChatId = listing.event_chat_id || null;
+      if (enableEventChat && !eventChatId) {
+        // Create new event chat if enabled but doesn't exist
+        if (chatService) {
+          const { chat: newEventChat, error: chatError } = await chatService.createGroupChat(
+            listingTitle.trim(),
+            [],
+            finalPhotoUrls.length > 0 ? finalPhotoUrls[0] : undefined
+          );
+          if (!chatError && newEventChat) {
+            eventChatId = newEventChat.id;
+            // Mark chat as event chat
+            const { error: updateError } = await supabase
+              .from('chats')
+              .update({ is_event_chat: true, is_archived: false })
+              .eq('id', eventChatId);
+            if (updateError) {
+              console.error('Error updating event chat flags:', updateError);
+            }
+          }
+        }
+      } else if (!enableEventChat && eventChatId) {
+        // If disabling event chat, we'll keep the chat but could mark it as archived
+        // For now, just set event_chat_id to null
+        eventChatId = null;
+      }
+
       const updateData: any = {
         title: listingTitle.trim(),
         summary: summary.trim() || null,
@@ -680,6 +752,9 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(), // Always include end_date (compulsory)
         photo_urls: finalPhotoUrls,
+        itinerary: itineraryItems.length > 0 ? itineraryItems : null,
+        has_gallery: hasGallery,
+        event_chat_id: eventChatId,
         updated_at: new Date().toISOString()
       };
 
@@ -727,6 +802,180 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
     save: handleSave
   }));
 
+  // Notify parent of page changes
+  useEffect(() => {
+    if (onPageChange) {
+      onPageChange(currentPage);
+    }
+  }, [currentPage, onPageChange]);
+
+  // Page 2 content (Itinerary & Gallery) - Matching create listing page 2 layout
+  if (currentPage === 'page2') {
+    return (
+      <div className="px-4 pb-16" style={{ paddingTop: 'var(--saved-content-padding-top, 140px)' }}>
+        <div className="space-y-4" style={{ overflowX: 'hidden' }}>
+          {/* Event Chat Toggle Card - First, matching create flow */}
+          <div 
+            className="w-full bg-white rounded-xl p-4 flex items-center justify-between transition-all duration-200 hover:-translate-y-[1px]"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            <span className="text-base font-medium text-gray-900">Event Chat</span>
+            <button
+              type="button"
+              onClick={() => setEnableEventChat(!enableEventChat)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                enableEventChat ? 'bg-orange-500' : 'bg-gray-300'
+              }`}
+              role="switch"
+              aria-checked={enableEventChat}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  enableEventChat ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Gallery Toggle Card - Second, matching create flow */}
+          <div 
+            className="w-full bg-white rounded-xl p-4 flex items-center justify-between transition-all duration-200 hover:-translate-y-[1px]"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            <span className="text-base font-medium text-gray-900">Gallery</span>
+            <button
+              type="button"
+              onClick={() => setHasGallery(!hasGallery)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                hasGallery ? 'bg-orange-500' : 'bg-gray-300'
+              }`}
+              role="switch"
+              aria-checked={hasGallery}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  hasGallery ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Itinerary Card - Third, matching create flow */}
+          <div 
+            className="w-full bg-white rounded-xl p-4 transition-all duration-200 hover:-translate-y-[1px]"
+            style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            <div className={`flex items-center justify-between ${itineraryItems.length > 0 ? 'mb-3' : ''}`}>
+              <span className="text-base font-medium text-gray-900">Itinerary</span>
+              <button
+                onClick={() => {
+                  // Navigate to itinerary creation page (reuse existing flow)
+                  sessionStorage.setItem('listingItinerary', JSON.stringify(itineraryItems));
+                  sessionStorage.setItem('editListingId', listingId);
+                  router.push(`/my-life/create/itinerary?edit=true&listingId=${listingId}`);
+                }}
+                className="flex items-center justify-center transition-all"
+              >
+                <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
+              </button>
+            </div>
+
+            {/* Itinerary Items */}
+            {itineraryItems.length > 0 && (
+              <div className="space-y-2 mt-3">
+                {itineraryItems.map((item: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-white transition-all duration-200 hover:-translate-y-[1px]"
+                    style={{
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                  >
+                    {/* Image - Small square */}
+                    <div
+                      className="flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden"
+                      style={{ width: '44px', height: '44px' }}
+                    >
+                      {item.photo ? (
+                        <img
+                          src={item.photo}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200" />
+                      )}
+                    </div>
+                    
+                    {/* Title - Center, bold */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{item.title}</p>
+                    </div>
+                    
+                    {/* Date/Time - Right side */}
+                    <div className="flex-shrink-0 text-xs font-medium text-gray-500">
+                      {item.startDate && new Date(item.startDate).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: true 
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Page 1 content (Details)
   return (
     <div className="px-4 pb-16" style={{ paddingTop: 'var(--saved-content-padding-top, 140px)' }}>
       <div className="space-y-4" style={{ overflowX: 'hidden' }}>

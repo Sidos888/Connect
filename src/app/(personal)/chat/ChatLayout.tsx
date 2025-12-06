@@ -16,6 +16,7 @@ import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus, Image as ImageIcon } from "lucide-react";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
+import ThreeDotLoading from "@/components/ThreeDotLoading";
 
 const ChatLayoutContent = () => {
   const { account, user } = useAuth();
@@ -820,7 +821,7 @@ const ChatLayout = () => {
   return (
     <Suspense fallback={
       <div className="flex h-full bg-white items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <ThreeDotLoading />
       </div>
     }>
       <ChatLayoutContent />

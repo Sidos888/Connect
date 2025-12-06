@@ -26,6 +26,7 @@ import { SearchIcon } from "@/components/icons";
 import SearchModal from "@/components/chat/SearchModal";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Image from "next/image";
+import ThreeDotLoading from "@/components/ThreeDotLoading";
 
 function MessagesPageContent() {
   const { isHydrated } = useAppStore();
@@ -218,9 +219,10 @@ function MessagesPageContent() {
   }, [chats, account?.id, friendIds, typingUsersByChat]);
   
   // Event listing data for event chats - using React Query for caching
+  // Optimized: Batch query all event listings at once instead of Promise.all (much faster!)
   const eventChatIds = conversations.filter(conv => conv.isEventChat).map(conv => conv.id);
   
-  const { data: eventListingsArray = [] } = useQuery({
+  const { data: eventListingsArray = [], isLoading: isLoadingEventListings } = useQuery({
     queryKey: ['event-listings', eventChatIds.sort().join(',')],
     queryFn: async () => {
       const eventChats = conversations.filter(conv => conv.isEventChat);
@@ -229,44 +231,63 @@ function MessagesPageContent() {
       const supabase = getSupabaseClient();
       if (!supabase) return [];
       
-      const listings = await Promise.all(
-        eventChats.map(async (conv) => {
-          try {
-            const { data: listing, error } = await supabase
-              .from('listings')
-              .select('id, title, start_date, end_date, photo_urls, event_chat_id')
-              .eq('event_chat_id', conv.id)
-              .maybeSingle();
-            
-            if (!error && listing) {
-              return {
-                chatId: conv.id,
-                listing: {
-                  id: listing.id,
-                  title: listing.title,
-                  start_date: listing.start_date,
-                  end_date: listing.end_date,
-                  photo_urls: listing.photo_urls || null
-                }
-              };
-            }
-          } catch (err) {
-            console.error('Error fetching event listing for chat:', conv.id, err);
-          }
-          return null;
-        })
-      );
+      // Optimized: Batch query all event listings in a single query instead of Promise.all
+      // This is much faster - one database round trip instead of N round trips
+      const chatIds = eventChats.map(conv => conv.id);
       
-      return listings.filter(Boolean) as Array<{
-        chatId: string;
-        listing: {
-          id: string;
-          title: string;
-          start_date: string | null;
-          end_date: string | null;
-          photo_urls: string[] | null;
-        };
-      }>;
+      try {
+        const { data: listings, error } = await supabase
+          .from('listings')
+          .select('id, title, start_date, end_date, photo_urls, event_chat_id')
+          .in('event_chat_id', chatIds);
+        
+        if (error) {
+          console.error('Error fetching event listings:', error);
+          return [];
+        }
+        
+        // Map listings to chat IDs for easy lookup
+        const listingMap = new Map<string, {
+          chatId: string;
+          listing: {
+            id: string;
+            title: string;
+            start_date: string | null;
+            end_date: string | null;
+            photo_urls: string[] | null;
+          };
+        }>();
+        
+        listings?.forEach(listing => {
+          if (listing.event_chat_id) {
+            listingMap.set(listing.event_chat_id, {
+              chatId: listing.event_chat_id,
+              listing: {
+                id: listing.id,
+                title: listing.title,
+                start_date: listing.start_date,
+                end_date: listing.end_date,
+                photo_urls: listing.photo_urls || null
+              }
+            });
+          }
+        });
+        
+        // Return in the same order as eventChats (for consistency)
+        return eventChats.map(conv => listingMap.get(conv.id)).filter(Boolean) as Array<{
+          chatId: string;
+          listing: {
+            id: string;
+            title: string;
+            start_date: string | null;
+            end_date: string | null;
+            photo_urls: string[] | null;
+          };
+        }>;
+      } catch (err) {
+        console.error('Error fetching event listings:', err);
+        return [];
+      }
     },
     enabled: eventChatIds.length > 0,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -884,8 +905,7 @@ function MessagesPageContent() {
                 <div className="space-y-2">
                   {isLoading || isLoadingConnections ? (
                     <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                      <p className="text-gray-500 text-sm">Loading chats...</p>
+                      <ThreeDotLoading />
                     </div>
                   ) : filteredMobileConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 space-y-4">
@@ -1016,7 +1036,14 @@ function MessagesPageContent() {
           name={account?.name || "User"}
           avatarUrl={account?.profile_pic}
           onViewProfile={() => router.push(`/profile?id=${account?.id}&from=${encodeURIComponent(pathname)}`)}
-          onShareProfile={() => router.push('/qr-code')}
+          onShareProfile={() => {
+            // Navigate to QR code page with current URL as 'from' parameter
+            const currentUrl = typeof window !== 'undefined' 
+              ? `${window.location.pathname}${window.location.search}`
+              : '/chat';
+            const fromParam = `?from=${encodeURIComponent(currentUrl)}`;
+            router.push(`/qr-code${fromParam}`);
+          }}
           onAddBusiness={() => router.push('/create-business')}
         />
 
@@ -1054,7 +1081,7 @@ export default function MessagesPage() {
   return (
     <Suspense fallback={
       <div className="h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <ThreeDotLoading />
       </div>
     }>
       <MessagesPageContent />

@@ -444,7 +444,21 @@ export default function MyLifeLayout(): React.JSX.Element {
         name={account?.name || personalProfile?.name || "User"}
         avatarUrl={account?.profile_pic || personalProfile?.avatarUrl}
         onViewProfile={() => router.push(`/profile?id=${account?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
-        onShareProfile={() => router.push('/qr-code')}
+        onShareProfile={() => {
+          // Navigate to QR code page with current URL as 'from' parameter
+          const currentUrl = typeof window !== 'undefined' 
+            ? `${window.location.pathname}${window.location.search}`
+            : '/my-life';
+          const fromParam = `?from=${encodeURIComponent(currentUrl)}`;
+          const targetUrl = `/qr-code${fromParam}`;
+          console.log('🔵 MyLifeLayout: navigateToQRCode called', {
+            currentUrl,
+            fromParam,
+            targetUrl,
+            fullCurrentUrl: typeof window !== 'undefined' ? window.location.href : 'N/A'
+          });
+          router.push(targetUrl);
+        }}
         onAddBusiness={() => router.push('/create-business')}
       />
     </>

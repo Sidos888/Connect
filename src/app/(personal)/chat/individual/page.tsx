@@ -583,11 +583,81 @@ export default function IndividualChatPage() {
 
 
 
+  // Convert base64 data URL to Blob (same reliable method as listing system)
+  const dataURLtoBlob = (dataurl: string): Blob => {
+    try {
+      if (!dataurl || typeof dataurl !== 'string') {
+        throw new Error('Invalid data URL: not a string');
+      }
+      if (!dataurl.includes(',')) {
+        throw new Error('Invalid data URL format: missing comma separator');
+      }
+      const arr = dataurl.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      const base64Data = arr[1];
+      if (!base64Data || base64Data.length === 0) {
+        throw new Error('Empty base64 data');
+      }
+      let bstr: string;
+      try {
+        bstr = atob(base64Data);
+      } catch (e) {
+        throw new Error(`Invalid base64 encoding: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      }
+      const n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        u8arr[i] = bstr.charCodeAt(i);
+      }
+      return new Blob([u8arr], { type: mime });
+    } catch (error) {
+      console.error('Error converting data URL to Blob:', error);
+      throw new Error(`Failed to convert data URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Helper function to upload file to Supabase Storage (iOS-compatible)
-  const uploadFileToStorage = async (file: File, chatId: string, index: number): Promise<{ file_url: string; thumbnail_url?: string; width?: number; height?: number }> => {
+  // Now accepts media object to use base64 dataUrl for images (reliable like listing system)
+  const uploadFileToStorage = async (media: UploadedMedia, chatId: string, index: number): Promise<{ file_url: string; thumbnail_url?: string; width?: number; height?: number }> => {
     const supabase = getSupabaseClient();
     if (!supabase) {
       throw new Error('Supabase client not available');
+    }
+
+    // Check authentication session (matches listing upload system)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('No active session');
+    }
+    
+    // Get file reference (needed for filename and fallback)
+    const file = media.file;
+    if (!file) {
+      throw new Error(`File object missing for media ${index + 1}`);
+    }
+
+    // Verify the bucket exists and is accessible (matches listing upload system)
+    // Note: This is a non-blocking check - if it fails, we continue anyway since
+    // the upload itself will provide clearer error messages if the bucket doesn't exist
+    try {
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+      if (bucketError) {
+        // Permission issue with listBuckets() is not critical - upload will work if bucket exists
+        console.warn('⚠️ Could not list buckets (non-critical):', bucketError.message);
+      } else if (buckets && buckets.length > 0) {
+        const chatMediaBucket = buckets.find(b => b.id === 'chat-media');
+        if (chatMediaBucket) {
+          console.log('✅ chat-media bucket verified');
+        } else {
+          // Bucket not in list, but upload might still work (permissions issue with listBuckets)
+          console.warn('⚠️ chat-media bucket not found in buckets list (upload will verify)');
+        }
+      }
+      // If buckets is empty, it's likely a permissions issue - upload will verify bucket existence
+    } catch (error) {
+      // Non-critical - upload will show the real error if bucket doesn't exist
+      console.warn('⚠️ Bucket verification skipped (non-critical):', error instanceof Error ? error.message : String(error));
     }
 
     // Generate unique filename with chatId prefix
@@ -597,38 +667,23 @@ export default function IndividualChatPage() {
     const baseFileName = `${timestamp}_${index}_${randomSuffix}.${fileExt}`;
     const fileName = `${chatId}/${baseFileName}`;
 
-    console.log(`  📤 Uploading file ${index + 1}: ${file.name}`, {
-      fileName,
-      fileSize: file.size,
-      fileType: file.type
-    });
-
-    // Check if we're on Capacitor (iOS/Android) - use native HTTP for reliable uploads
-    const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+    // Convert to Blob - use base64 data URL if available (reliable like listing system)
+    // Otherwise fall back to File object (for videos)
+    let blob: Blob;
     
-    let uploadData;
-    let uploadError;
-    const maxRetries = 3;
-    let retryCount = 0;
-
-    if (isCapacitor) {
-      // Use Capacitor HTTP for native uploads (bypasses iOS WebView restrictions)
-      console.log(`  🔄 Using Capacitor HTTP for native upload (bypasses iOS WebView)...`);
-      
-      // Get auth session and config
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No auth session available');
+    // Check if we have a base64 data URL (images) - this is more reliable
+    if (media.dataUrl && typeof media.dataUrl === 'string') {
+      console.log(`  📦 Converting base64 data URL to Blob (reliable method, like listing system)...`);
+      try {
+        blob = dataURLtoBlob(media.dataUrl);
+        console.log(`  ✅ Base64 converted to Blob (${Math.round(blob.size / 1024)}KB, type: ${blob.type})`);
+      } catch (conversionError) {
+        console.error(`Failed to convert data URL to blob:`, conversionError);
+        throw new Error(`Photo ${index + 1} is corrupted or invalid: ${conversionError instanceof Error ? conversionError.message : 'Unknown error'}`);
       }
-
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Supabase configuration missing');
-      }
-
-      // Read File as ArrayBuffer once (before retry loop)
-      console.log(`  📖 Reading file as ArrayBuffer...`);
+    } else {
+      // Fallback to File object (for videos or backward compatibility)
+      console.log(`  📦 Converting File to Blob for upload...`);
       const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -641,116 +696,37 @@ export default function IndividualChatPage() {
         reader.onerror = () => reject(new Error('FileReader failed'));
         reader.readAsArrayBuffer(file);
       });
+      blob = new Blob([arrayBuffer], { type: file.type });
+      console.log(`  ✅ File converted to Blob (${Math.round(blob.size / 1024)}KB, type: ${blob.type})`);
+    }
+    
+    console.log(`  📤 Uploading file ${index + 1}: ${file?.name || 'media'}`, {
+      fileName,
+      fileSize: blob.size,
+      fileType: blob.type,
+      usingDataUrl: !!media.dataUrl
+    });
+    
+    // Validate blob (EXACT same validation as listing system)
+    if (!blob || blob.size === 0) {
+      throw new Error(`File is empty (size: ${blob?.size || 0} bytes)`);
+    }
 
-      console.log(`  ✅ File converted to ArrayBuffer (${Math.round(arrayBuffer.byteLength / 1024)}KB)`);
-
-      const uploadUrl = `${supabaseUrl}/storage/v1/object/chat-media/${fileName}`;
-      
-      // Try upload with retry logic
-      while (retryCount < maxRetries) {
-        try {
-          console.log(`  ⬆️ Uploading via Capacitor HTTP (attempt ${retryCount + 1}/${maxRetries})...`);
-          
-          const { CapacitorHttp } = await import('@capacitor/core');
-          
-          console.log(`  📤 Uploading ${Math.round(arrayBuffer.byteLength / 1024)}KB via Capacitor HTTP...`);
-          
-          // Convert ArrayBuffer to base64 for transmission
-          // Note: Supabase Storage API expects raw binary, but Capacitor HTTP needs string data
-          // We'll send base64 and Supabase should handle it (or we'll fall back to JS client)
-          const uint8Array = new Uint8Array(arrayBuffer);
-          let binaryString = '';
-          const chunkSize = 0x8000; // 32KB chunks
-          
-          for (let i = 0; i < uint8Array.length; i += chunkSize) {
-            const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-            binaryString += String.fromCharCode.apply(null, Array.from(chunk) as any);
-          }
-          
-          const base64Data = btoa(binaryString);
-          
-          // Upload using CapacitorHttp.request
-          // Note: Sending base64 - if this corrupts the file, we'll fall back to Supabase JS client
-          const uploadPromise = CapacitorHttp.request({
-            method: 'POST',
-            url: uploadUrl,
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'apikey': supabaseAnonKey,
-              'Content-Type': file.type,
-              'x-upsert': 'false',
-              'cache-control': '3600'
-            },
-            data: base64Data,
-            responseType: 'text'
-          });
-
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
-          );
-
-          const response = await Promise.race([uploadPromise, timeoutPromise]) as any;
-
-          console.log(`  📥 Capacitor HTTP response:`, {
-            status: response.status,
-            url: response.url,
-            dataLength: response.data?.length
-          });
-
-          if (response.status >= 200 && response.status < 300) {
-            // Parse response to get the actual path from Supabase
-            let uploadedPath = fileName;
-            try {
-              // Supabase Storage API returns JSON with the path
-              if (response.data && typeof response.data === 'string') {
-                const parsed = JSON.parse(response.data);
-                if (parsed.path || parsed.Key) {
-                  uploadedPath = parsed.path || parsed.Key;
-                  console.log(`  📍 Parsed upload path from response:`, uploadedPath);
-                }
-              }
-            } catch (e) {
-              console.warn(`  ⚠️ Could not parse response, using fileName:`, fileName);
-            }
-            
-            console.log(`  ✅ Capacitor HTTP upload completed successfully`);
-            uploadData = { path: uploadedPath };
-            break;
-          } else {
-            throw new Error(`Upload failed: ${response.status} - ${response.data || 'Unknown error'}`);
-          }
-        } catch (error: any) {
-          uploadError = error;
-          const errorMessage = error?.message || error?.toString() || 'Unknown error';
-          
-          // Check if error is retryable
-          if (retryCount < maxRetries - 1 && (
-            errorMessage.includes('network') ||
-            errorMessage.includes('timeout') ||
-            errorMessage.includes('Load failed') ||
-            errorMessage.includes('failed')
-          )) {
-            retryCount++;
-            console.warn(`  ⚠️ Capacitor HTTP upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-            continue;
-          }
-          break; // Non-retryable error or max retries reached
-        }
-      }
-      
-      // If Capacitor HTTP failed, fall back to Supabase JS client
-      if (uploadError && !uploadData) {
-        console.warn(`  ⚠️ Capacitor HTTP failed, falling back to Supabase JS client...`);
-        
-        // Create Blob from ArrayBuffer for fallback
-        const blob = new Blob([arrayBuffer], { type: file.type });
-        
-        // Reset retry counter for fallback
-        retryCount = 0;
-        uploadError = null;
-        
-        // Try Supabase JS client with retry
+    // Check blob size (10MB limit) - EXACT same as listing system
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (blob.size > maxSize) {
+      throw new Error(`File is too large (${Math.round(blob.size / 1024)}KB). Maximum size is 10MB.`);
+    }
+    
+    console.log(`  📤 Uploading file: ${fileName} (${Math.round(blob.size / 1024)}KB, type: ${blob.type})`);
+    
+    // Upload to Supabase Storage using Blob (EXACT same as listing system)
+    // Add timeout and retry logic for network issues
+    let uploadData;
+    let uploadError;
+    const maxRetries = 3;
+    let retryCount = 0;
+    
         while (retryCount < maxRetries) {
           try {
             const uploadPromise = supabase.storage
@@ -761,6 +737,7 @@ export default function IndividualChatPage() {
                 contentType: blob.type
               });
             
+        // Add timeout (30 seconds per upload) - EXACT same as listing system
             const timeoutPromise = new Promise((_, reject) => 
               setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
             );
@@ -770,24 +747,26 @@ export default function IndividualChatPage() {
             uploadError = result.error;
             
             if (!uploadError) {
-              break; // Success
+          break; // Success, exit retry loop
             }
             
+        // If error is retryable, try again (EXACT same logic as listing system)
             if (retryCount < maxRetries - 1 && (
               uploadError.message?.includes('network') || 
               uploadError.message?.includes('timeout') ||
               uploadError.message?.includes('Load failed')
             )) {
               retryCount++;
-              console.warn(`  ⚠️ Fallback upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          console.warn(`  ⚠️ Upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
               continue;
             }
             
-            break;
+        break; // Non-retryable error or max retries reached
           } catch (timeoutError: any) {
             if (retryCount < maxRetries - 1) {
               retryCount++;
+          console.warn(`  ⚠️ Upload timeout, retrying... (${retryCount}/${maxRetries})`);
               await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
               continue;
             }
@@ -795,73 +774,36 @@ export default function IndividualChatPage() {
             break;
           }
         }
-      }
-    } else {
-      // Web platform: Use Supabase JS client with Blob
-      console.log(`  ⬆️ Uploading to Supabase Storage (web platform)...`);
+
+    if (uploadError) {
+      console.error(`  ❌ Upload error after ${retryCount + 1} attempts:`, uploadError);
+      console.error(`  ❌ Upload error details:`, {
+        name: uploadError.name,
+        message: uploadError.message,
+        statusCode: uploadError.statusCode,
+        error: uploadError,
+        blobSize: blob.size,
+        blobType: blob.type,
+        fileName: fileName
+      });
       
-      // Convert File to Blob
-      console.log(`  📦 Converting File to Blob for upload...`);
-      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-      console.log(`  ✅ File converted to Blob (${Math.round(blob.size / 1024)}KB, type: ${blob.type})`);
-      
-      while (retryCount < maxRetries) {
-        try {
-          const uploadPromise = supabase.storage
-            .from('chat-media')
-            .upload(fileName, blob, {
-              cacheControl: '3600',
-              upsert: false,
-              contentType: blob.type
-            });
-          
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
-          );
-          
-          const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
-          uploadData = result.data;
-          uploadError = result.error;
-          
-          if (!uploadError) {
-            break; // Success
-          }
-          
-          if (retryCount < maxRetries - 1 && (
-            uploadError.message?.includes('network') || 
-            uploadError.message?.includes('timeout') ||
-            uploadError.message?.includes('Load failed')
-          )) {
-            retryCount++;
-            console.warn(`  ⚠️ Upload attempt ${retryCount} failed, retrying... (${retryCount}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-            continue;
-          }
-          
-          break;
-        } catch (timeoutError: any) {
-          if (retryCount < maxRetries - 1) {
-            retryCount++;
-            console.warn(`  ⚠️ Upload timeout, retrying... (${retryCount}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-            continue;
-          }
-          uploadError = timeoutError;
-          break;
-        }
+      // Provide more helpful error message (EXACT same as listing system)
+      let errorMessage = `Failed to upload ${file.name}`;
+      if (uploadError.message) {
+        errorMessage += `: ${uploadError.message}`;
+      } else if (uploadError.name === 'StorageUnknownError') {
+        errorMessage += ': Storage bucket may not exist or may not have proper permissions. Please check your Supabase storage configuration.';
+      } else if (uploadError.message?.includes('timeout') || uploadError.message?.includes('Load failed')) {
+        errorMessage += ': Network timeout. Please check your internet connection and try again.';
+      } else {
+        errorMessage += ': Unknown error occurred';
       }
+      
+      throw new Error(errorMessage);
     }
 
-    if (uploadError || !uploadData) {
-      console.error(`  ❌ Upload error after ${retryCount + 1} attempts:`, {
-        error: uploadError,
-        errorName: uploadError?.name,
-        errorMessage: uploadError?.message,
-        fileName,
-        fileSize: file.size,
-        fileType: file.type
-      });
-      throw new Error(`Failed to upload ${file.name}: ${uploadError?.message || 'Unknown error'}`);
+    if (!uploadData || !uploadData.path) {
+      throw new Error(`Upload succeeded but no path returned`);
     }
 
     // Get public URL (after successful upload via any method)
@@ -990,26 +932,36 @@ export default function IndividualChatPage() {
           const hasFiles = mediaToUpload.some(m => !!m.file);
           
           if (hasFiles) {
-            // New flow: Upload files now (using stored mediaToUpload array)
-            const uploadPromises = mediaToUpload.map(async (media, index) => {
-              if (!media.file) {
-                throw new Error(`File object missing for media ${index + 1}`);
+            // New flow: Upload files sequentially (one at a time) - matches listing system for reliability
+            // Sequential uploads prevent network congestion, rate limiting, and memory pressure
+            attachments = [];
+            
+            for (let i = 0; i < mediaToUpload.length; i++) {
+              const media = mediaToUpload[i];
+              
+              if (!media.file && !media.dataUrl) {
+                throw new Error(`File object or dataUrl missing for media ${i + 1}`);
               }
 
-              const uploadResult = await uploadFileToStorage(media.file, conversation.id, index);
-              
-              return {
-                id: `temp_${Date.now()}_${index}`,
-                file_url: uploadResult.file_url,
-                file_type: media.file_type,
-                thumbnail_url: uploadResult.thumbnail_url ?? media.thumbnail_url ?? undefined,
-                width: uploadResult.width || media.width,
-                height: uploadResult.height || media.height
-              } as MediaAttachment;
-            });
-
-            attachments = await Promise.all(uploadPromises);
-            console.log('✅ All files uploaded:', {
+              try {
+                const uploadResult = await uploadFileToStorage(media, conversation.id, i);
+                
+                attachments.push({
+                  id: `temp_${Date.now()}_${i}`,
+                  file_url: uploadResult.file_url,
+                  file_type: media.file_type,
+                  thumbnail_url: uploadResult.thumbnail_url ?? media.thumbnail_url ?? undefined,
+                  width: uploadResult.width || media.width,
+                  height: uploadResult.height || media.height
+                } as MediaAttachment);
+                
+                console.log(`✅ Uploaded file ${i + 1}/${mediaToUpload.length} successfully`);
+              } catch (error) {
+                console.error(`❌ Error uploading file ${i + 1}/${mediaToUpload.length}:`, error);
+                throw error; // Stop on first error (matches listing system behavior)
+              }
+            }
+            console.log('✅ All files uploaded sequentially:', {
               count: attachments.length,
               attachments: attachments.map(a => ({
                 id: a.id,
@@ -1284,7 +1236,7 @@ export default function IndividualChatPage() {
     // MessageActionCard: vertical card with 3 buttons (Reply, Copy, Delete)
     // Each button ~44px (py-3 = 12px top + 12px bottom + ~20px content) = ~132px for 3 buttons
     // Delete confirmation mode: 2 sections (Cancel + Delete button) = ~100px
-    const isDeleteConfirmation = deleteConfirmationMessageId === longPressedMessage.id;
+    const isDeleteConfirmation = longPressedMessage && deleteConfirmationMessageId === longPressedMessage.id;
     const actionCardHeight = isDeleteConfirmation ? 100 : 140; // Shorter when in confirmation mode
 
     // Message dimensions

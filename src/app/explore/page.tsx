@@ -430,7 +430,14 @@ export default function ExplorePage() {
         name={currentAccount?.name ?? "User"}
         avatarUrl={currentAccount?.avatarUrl}
         onViewProfile={() => router.push(`/profile?id=${account?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
-        onShareProfile={() => router.push('/qr-code')}
+        onShareProfile={() => {
+          // Navigate to QR code page with current URL as 'from' parameter
+          const currentUrl = typeof window !== 'undefined' 
+            ? `${window.location.pathname}${window.location.search}`
+            : '/explore';
+          const fromParam = `?from=${encodeURIComponent(currentUrl)}`;
+          router.push(`/qr-code${fromParam}`);
+        }}
         onAddBusiness={() => router.push('/create-business')}
       />
     </>

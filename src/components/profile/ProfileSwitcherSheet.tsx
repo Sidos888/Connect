@@ -228,7 +228,12 @@ export default function ProfileSwitcherSheet({ isOpen, onClose }: ProfileSwitche
                         onShareProfile={() => {
                           setIsProfileMenuOpen(false);
                           closeSheet();
-                          router.push('/qr-code');
+                          // Navigate to QR code page with current URL as 'from' parameter
+                          const currentUrl = typeof window !== 'undefined' 
+                            ? `${window.location.pathname}${window.location.search}`
+                            : '/menu';
+                          const fromParam = `?from=${encodeURIComponent(currentUrl)}`;
+                          router.push(`/qr-code${fromParam}`);
                         }}
                       />
                     </div>

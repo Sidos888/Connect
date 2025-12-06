@@ -12,6 +12,7 @@ import { MobilePage, PageContent } from '@/components/layout/PageSystem';
 import Avatar from '@/components/Avatar';
 import { SearchIcon } from '@/components/icons';
 import Image from 'next/image';
+import { Share } from '@capacitor/share';
 
 interface Contact {
   id: string;
@@ -621,27 +622,48 @@ export default function ShareListingPage() {
               onMouseLeave={(e) => {
                 e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
-              onClick={() => {
+              onClick={async () => {
                 // Share externally functionality
                 if (!listingId) return;
                 const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/listing?id=${listingId}` : '';
                 const shareText = `Check out ${listing?.title || 'this listing'} on Connect!`;
                 
-                if (navigator.share) {
-                  navigator.share({
-                    title: listing?.title || 'Listing',
-                    text: shareText,
-                    url: shareUrl
-                  }).catch(err => {
-                    console.log('Error sharing:', err);
-                  });
-                } else {
-                  // Fallback: copy to clipboard
-                  navigator.clipboard.writeText(shareUrl).then(() => {
+                try {
+                  // Check if running in Capacitor (native app)
+                  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
+                  
+                  if (isCapacitor) {
+                    // Use native iOS/Android share sheet
+                    await Share.share({
+                      title: listing?.title || 'Listing',
+                      text: shareText,
+                      url: shareUrl,
+                      dialogTitle: 'Share listing'
+                    });
+                  } else if (navigator.share) {
+                    // Use Web Share API for web browsers
+                    await navigator.share({
+                      title: listing?.title || 'Listing',
+                      text: shareText,
+                      url: shareUrl
+                    });
+                  } else {
+                    // Fallback: copy to clipboard
+                    await navigator.clipboard.writeText(shareUrl);
                     alert('Listing link copied to clipboard!');
-                  }).catch(err => {
-                    console.error('Failed to copy:', err);
-                  });
+                  }
+                } catch (err: any) {
+                  // User cancelled or error occurred
+                  if (err?.message !== 'User cancelled' && err?.message !== 'Share canceled') {
+                    console.error('Error sharing:', err);
+                    // Fallback to copy if share fails
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert('Listing link copied to clipboard!');
+                    } catch (copyErr) {
+                      console.error('Failed to copy:', copyErr);
+                    }
+                  }
                 }
               }}
             >

@@ -185,8 +185,8 @@ export default function Page() {
     }
     else if (view === 'edit-profile') setCurrentView('edit-profile');
     else if (view === 'share-profile') {
-      // Redirect to QR code page
-      router.push('/qr-code');
+      // Redirect to QR code page with 'from' parameter
+      navigateToQRCode();
       return;
     }
     else if (view === 'account-settings') setCurrentView('account-settings');
@@ -239,6 +239,22 @@ export default function Page() {
       console.log('🔷 goToView navigating to:', url);
       router.push(url);
     }
+  };
+
+  // Helper function to navigate to QR code page with 'from' parameter
+  const navigateToQRCode = () => {
+    const currentUrl = typeof window !== 'undefined' 
+      ? `${window.location.pathname}${window.location.search}`
+      : '/menu';
+    const fromParam = `?from=${encodeURIComponent(currentUrl)}`;
+    const targetUrl = `/qr-code${fromParam}`;
+    console.log('🔵 MenuPage: navigateToQRCode called', {
+      currentUrl,
+      fromParam,
+      targetUrl,
+      fullCurrentUrl: typeof window !== 'undefined' ? window.location.href : 'N/A'
+    });
+    router.push(targetUrl);
   };
 
   const handleFriendClick = (friend: ConnectionUser) => {
@@ -572,7 +588,7 @@ export default function Page() {
               showBackButton={false}
               onViewProfile={() => goToView('profile', 'settings')}
               onEditProfile={() => goToView('edit-profile', 'settings')}
-              onShareProfile={() => router.push('/qr-code')}
+              onShareProfile={navigateToQRCode}
               onAccountSettings={() => goToView('account-settings', 'settings')}
             />
           </div>
@@ -1028,7 +1044,7 @@ export default function Page() {
         onClose={() => goToView(from as any)}
         onEdit={() => goToView('edit-profile', 'profile')}
           onSettings={() => goToView('settings', 'profile')}
-        onShare={() => router.push('/qr-code')}
+        onShare={navigateToQRCode}
           onOpenTimeline={() => goToView('life', 'profile')}
         onOpenHighlights={() => goToView('highlights', 'profile')}
         onOpenBadges={() => goToView('achievements', 'profile')}
@@ -1301,12 +1317,12 @@ export default function Page() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      router.push('/qr-code');
+                      navigateToQRCode();
                     }}
                     onTouchStart={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      router.push('/qr-code');
+                      navigateToQRCode();
                     }}
                     className="flex items-center justify-center flex-1 h-full"
                     style={{
@@ -1677,11 +1693,11 @@ export default function Page() {
                     onClick={() => goToView('profile')}
                     onViewProfile={() => goToView('profile')}
                     onEditProfile={() => goToView('edit-profile', 'menu')}
-                    onShareProfile={() => router.push('/qr-code')}
+                    onShareProfile={navigateToQRCode}
                     avatarSize={36}
                     slim={true}
                     customActionIcon={QrCode}
-                    onCustomAction={() => router.push('/qr-code')}
+                    onCustomAction={navigateToQRCode}
                   />
                 </div>
 
@@ -1775,7 +1791,7 @@ export default function Page() {
                     onClick={() => setCurrentView('profile')}
                     onViewProfile={() => goToView('profile')}
                     onEditProfile={() => goToView('edit-profile', 'menu')}
-                    onShareProfile={() => router.push('/qr-code')}
+                    onShareProfile={navigateToQRCode}
                     avatarSize={36}
                   />
                 </div>
@@ -1864,7 +1880,7 @@ export default function Page() {
         name={currentAccount?.name ?? "User"}
         avatarUrl={currentAccount?.avatarUrl}
         onViewProfile={() => goToView('profile', 'menu')}
-        onShareProfile={() => router.push('/qr-code')}
+        onShareProfile={navigateToQRCode}
         onAddBusiness={() => router.push('/create-business')}
       />
       {/* Only show HappeningNowBanner on initial menu page, not subpages */}
