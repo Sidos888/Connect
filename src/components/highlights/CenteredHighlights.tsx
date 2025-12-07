@@ -2,13 +2,18 @@
 
 import { PageHeader } from "@/components/layout/PageSystem";
 import Highlights from "./Highlights";
+import { Plus } from "lucide-react";
 
 export default function CenteredHighlights({
   onBack,
   fromProfile = false,
+  onAddHighlight,
+  isOwnHighlights = true,
 }: {
   onBack: () => void;
   fromProfile?: boolean;
+  onAddHighlight?: () => void;
+  isOwnHighlights?: boolean;
 }) {
   return (
     <div 
@@ -22,6 +27,13 @@ export default function CenteredHighlights({
         backButton
         backIcon={fromProfile ? "arrow" : "close"}
         onBack={onBack}
+        actions={isOwnHighlights && onAddHighlight ? [
+          {
+            icon: <Plus size={20} strokeWidth={2.5} />,
+            onClick: onAddHighlight,
+            label: "Add highlight"
+          }
+        ] : undefined}
       />
       
       <Highlights />

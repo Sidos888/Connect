@@ -1137,8 +1137,29 @@ export default function ProfilePage({
             </div>
           )}
 
-          {/* Placeholder for other pills */}
-          {(selectedPill === 'highlights' || selectedPill === 'badges') && (
+          {/* Highlights Section Content */}
+          {selectedPill === 'highlights' && (
+            <div className="space-y-3">
+              {/* Highlights Title */}
+              <button 
+                onClick={onOpenHighlights}
+                className="flex items-center gap-1 mb-4"
+              >
+                <h3 className="text-base font-semibold text-gray-900">
+                  # Highlights
+                </h3>
+                <ChevronRight size={20} className="text-gray-400" strokeWidth={2} />
+              </button>
+
+              {/* Highlights Preview - Placeholder for now */}
+              <div className="space-y-4">
+                <p className="text-gray-400 text-sm">No highlights yet</p>
+              </div>
+            </div>
+          )}
+
+          {/* Placeholder for badges */}
+          {selectedPill === 'badges' && (
             <div className="space-y-4">
               <p className="text-gray-400 text-sm">Content will appear here...</p>
             </div>

@@ -406,6 +406,9 @@ export default function Page() {
   // Highlights View Component - Using same pattern as EditProfileView
   const HighlightsView = () => {
     const from = searchParams?.get('from') || 'menu';
+    const userId = searchParams?.get('userId');
+    const isOwnHighlights = !userId || userId === account?.id;
+    
     return (
       <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
@@ -413,6 +416,16 @@ export default function Page() {
             title="Highlights"
             backButton
             onBack={() => goToView(from as any)}
+            actions={isOwnHighlights ? [
+              {
+                icon: <Plus size={20} strokeWidth={2.5} />,
+                onClick: () => {
+                  // Placeholder for add highlight functionality
+                  console.log('Add highlight clicked');
+                },
+                label: "Add highlight"
+              }
+            ] : undefined}
           />
           <Highlights />
           {/* Bottom Blur */}
@@ -1109,6 +1122,7 @@ export default function Page() {
           // Let's just add a console log to confirm it's being called
           alert(`Timeline for ${friend.name} - Feature coming soon!`);
         }}
+        onOpenHighlights={() => goToView('highlights', 'friend-profile')}
         />
     );
   };

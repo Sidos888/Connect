@@ -1453,12 +1453,13 @@ export class ChatService {
     try {
       console.log('ChatService: Getting chat by ID:', chatId);
       
-      // Get current user ID
-      const { data: { user } } = await this.supabase.auth.getUser();
-      if (!user) {
+      // Get current user ID - use getSession() first as it's faster and more reliable
+      const { data: { session } } = await this.supabase.auth.getSession();
+      if (!session?.user) {
+        console.error('ChatService: No active session');
         return { chat: null, error: new Error('User not authenticated') };
       }
-      const userId = user.id;
+      const userId = session.user.id;
       
       // Fetch chat with participants
       const { data: chat, error } = await this.supabase
