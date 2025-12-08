@@ -238,7 +238,7 @@ export default function EventGalleryView({
     : null;
 
   return (
-    <div className="lg:hidden relative">
+    <div className="lg:hidden">
       {/* Hidden file input - ref-based approach for iOS compatibility */}
       <input
         ref={fileInputRef}
@@ -250,8 +250,9 @@ export default function EventGalleryView({
         style={{ display: 'none' }}
       />
       
-      {/* Custom Header - Matching Event Chat Style (using absolute like PageHeader) */}
-      <div className="absolute top-0 left-0 right-0 z-[60]"
+      {/* Custom Header - Matching Event Chat Style */}
+      {/* Note: Using fixed positioning to match chat page's fixed container structure */}
+      <div className="fixed top-0 left-0 right-0 z-[60]"
         style={{
           paddingTop: 'max(env(safe-area-inset-top), 70px)',
           paddingBottom: '16px',
