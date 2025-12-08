@@ -23,34 +23,29 @@ const ChatLayoutContent = () => {
   const chatService = useChatService();
   const { data: chats = [], isLoading, error, refetch } = useChats(chatService, user?.id || null);
   
-  // Log when chats data changes
+  // Log when chats data changes (only in development)
   useEffect(() => {
-    console.log('🔵 ChatLayout: chats data changed', {
-      chatsCount: chats.length,
-      chats: chats.map(c => ({
-        id: c.id,
-        lastMessageText: c.last_message?.message_text,
-        hasProfileUrl: /\/p\/([A-Z0-9]+)/i.test(c.last_message?.message_text || '')
-      }))
-    });
+    if (process.env.NODE_ENV === 'development' && chats.length > 0) {
+      console.log('🔵 ChatLayout: chats data changed', {
+        chatsCount: chats.length
+      });
+    }
   }, [chats]);
   
   const refreshChats = useRefreshChats();
   
   // Refetch chats when component mounts or when navigating back to chat page
   // This ensures chats are refreshed after sending a profile or other actions
+  // NOTE: React Query already handles refetchOnMount, so this is only for explicit refresh scenarios
   useEffect(() => {
-    if (account?.id && chatService && user?.id) {
-      console.log('🔵 ChatLayout: Component mounted/navigated back, refetching chats...', {
-        hasAccount: !!account?.id,
-        hasChatService: !!chatService,
-        hasUserId: !!user?.id,
-        currentChatsCount: chats.length
-      });
+    // Only refetch if we have all required dependencies AND chats are empty (initial load)
+    // This prevents excessive re-fetching when data already exists
+    if (account?.id && chatService && user?.id && chats.length === 0 && !isLoading) {
       // Use refreshChats which properly invalidates and refetches
       refreshChats();
     }
-  }, [account?.id, chatService, user?.id, refreshChats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.id, chatService, user?.id]); // Removed refreshChats and chats from deps to prevent loops
   useModal();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -287,15 +282,12 @@ const ChatLayoutContent = () => {
 
   // Convert chats to conversations format for compatibility
   const conversations = useMemo(() => {
-    console.log('🔵 ChatLayout: conversations useMemo running', {
-      hasAccount: !!account?.id,
-      chatsCount: chats.length,
-      chats: chats.map(c => ({
-        id: c.id,
-        lastMessageText: c.last_message?.message_text,
-        hasProfileUrl: /\/p\/([A-Z0-9]+)/i.test(c.last_message?.message_text || '')
-      }))
-    });
+    // Reduced logging - only log in development and when there are actual changes
+    if (process.env.NODE_ENV === 'development' && chats.length > 0) {
+      console.log('🔵 ChatLayout: conversations useMemo running', {
+        chatsCount: chats.length
+      });
+    }
     
     if (!account?.id) return [];
     
@@ -602,10 +594,11 @@ const ChatLayoutContent = () => {
                   </div>
                 </div>
 
-                {/* Filter Pills Section - Desktop */}
-                <div className="px-4 py-3 bg-white mb-1">
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
-                    {categories.map((category) => {
+                {/* Filter Pills Section - Desktop - Only show after data loads */}
+                {!isLoading && (
+                  <div className="py-3 bg-white mb-1" style={{ marginLeft: '-16px', marginRight: '-16px' }}>
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar" style={{ paddingTop: '2px', paddingBottom: '2px', paddingLeft: '20px', paddingRight: '20px' }}>
+                      {categories.map((category) => {
                       const isActive = activeCategory === category.id;
                       return (
                         <div
@@ -652,8 +645,9 @@ const ChatLayoutContent = () => {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Conversations List */}
                 <div className="bg-white mt-2 flex-1 min-h-0">

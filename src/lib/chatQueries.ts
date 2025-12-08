@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { ChatService } from './chatService';
 import { SimpleChat, SimpleMessage } from './types';
 
@@ -137,11 +138,12 @@ export function useCreateGroupChat(chatService: ChatService | null) {
 /**
  * Hook to manually refresh chat data
  * Useful for pull-to-refresh or manual refresh buttons
+ * Returns a stable function reference to prevent unnecessary re-renders
  */
 export function useRefreshChats() {
   const queryClient = useQueryClient();
 
-  return async () => {
+  return useCallback(async () => {
     // Invalidate queries first (marks them as stale)
     queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
     
@@ -150,6 +152,6 @@ export function useRefreshChats() {
       queryKey: chatKeys.lists(),
       type: 'active' // Only refetch active queries
     });
-  };
+  }, [queryClient]);
 }
 

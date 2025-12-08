@@ -78,8 +78,75 @@ export class ChatService {
     this.supabase = client;
   }
 
+  // Helper: Retry a Supabase query with exponential backoff
+  private async retrySupabaseQuery<T extends any>(
+    fn: () => Promise<{ data: T | null; error: any }>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<{ data: T | null; error: any }> {
+    let lastError: any = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const result = await fn();
+        
+        // If there's an error, check if we should retry
+        if (result.error) {
+          const error = result.error;
+          
+          // Don't retry on authentication errors or validation errors
+          if (error?.message?.includes('not authenticated') || 
+              error?.message?.includes('User ID') ||
+              error?.code === 'PGRST301') {
+            return result;
+          }
+          
+          // If it's a network error and we have retries left, wait and retry
+          if (attempt < maxRetries - 1 && (
+            error?.message?.includes('Load failed') ||
+            error?.message?.includes('network') ||
+            error?.message?.includes('timeout') ||
+            error?.message?.includes('TypeError') ||
+            error?.code === 'ECONNRESET'
+          )) {
+            lastError = error;
+            const delay = baseDelay * Math.pow(2, attempt);
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`Retrying Supabase query after ${delay}ms (attempt ${attempt + 1}/${maxRetries})`, error?.message);
+            }
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+        
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        
+        // If it's a network error and we have retries left, wait and retry
+        if (attempt < maxRetries - 1 && (
+          error?.message?.includes('Load failed') ||
+          error?.message?.includes('network') ||
+          error?.message?.includes('timeout') ||
+          error?.code === 'ECONNRESET'
+        )) {
+          const delay = baseDelay * Math.pow(2, attempt);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Retrying after ${delay}ms (attempt ${attempt + 1}/${maxRetries})`, error?.message);
+          }
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        return { data: null, error };
+      }
+    }
+    
+    return { data: null, error: lastError || new Error('Max retries exceeded') };
+  }
+
   // Get all chats for a user
-  async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null }> {
+async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null }> {
     try {
       // Validate userId
       if (!userId) {
@@ -87,8 +154,9 @@ export class ChatService {
         return { chats: [], error };
       }
 
-      // Check if user is authenticated
+      // Check if user is authenticated (auth.getUser doesn't need retry wrapper)
       const { data: { user } } = await this.supabase.auth.getUser();
+      
       if (!user) {
         const error = new Error('User not authenticated');
         return { chats: [], error };
@@ -100,26 +168,33 @@ export class ChatService {
         return { chats: [], error };
       }
 
-      console.log('ChatService: Getting chats for authenticated user:', userId);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('ChatService: Getting chats for authenticated user:', userId);
+      }
       
       // Test session status
       const { data: { user: authUser }, error: authError } = await this.supabase.auth.getUser();
-      console.log('ChatService: Auth check:', { 
-        authUser: authUser?.id, 
-        requestedUserId: userId, 
-        authError: authError?.message 
-      });
+      if (process.env.NODE_ENV === 'development' && authError) {
+        console.log('ChatService: Auth check:', { 
+          authUser: authUser?.id, 
+          requestedUserId: userId, 
+          authError: authError?.message 
+        });
+      }
       
       if (authError || !authUser) {
         console.error('ChatService: Authentication failed:', authError);
         return { chats: [], error: new Error('Authentication failed') };
       }
       
-      // Get all chats where the user is a participant
-      const { data: userChats, error: userChatsError } = await this.supabase
-        .from('chat_participants')
-        .select('chat_id')
-        .eq('user_id', userId);
+      // Get all chats where the user is a participant (with retry for network errors)
+      const userChatsResult = await this.retrySupabaseQuery(
+        async () => this.supabase
+          .from('chat_participants')
+          .select('chat_id')
+          .eq('user_id', userId)
+      );
+      const { data: userChats, error: userChatsError } = userChatsResult;
 
       if (userChatsError) {
         console.error('Error getting user chat participants:', {
@@ -139,17 +214,22 @@ export class ChatService {
         return { chats: [], error: null };
       }
 
-      // Get the actual chat details
+      // Get the actual chat details (with retry for network errors)
       const chatIds = userChats.map(chat => chat.chat_id);
-      console.log('🔍 ChatService.getUserChats: Fetching chat details for', chatIds.length, 'chats');
-      const { data: chats, error } = await this.supabase
-        .from('chats')
-        .select(`
-          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat, is_archived
-        `)
-        .in('id', chatIds)
-        // Fetch all chats including archived ones
-        .order('last_message_at', { ascending: false, nullsFirst: false });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 ChatService.getUserChats: Fetching chat details for', chatIds.length, 'chats');
+      }
+      const chatsResult = await this.retrySupabaseQuery(
+        async () => this.supabase
+          .from('chats')
+          .select(`
+            id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat, is_archived
+          `)
+          .in('id', chatIds)
+          // Fetch all chats including archived ones
+          .order('last_message_at', { ascending: false, nullsFirst: false })
+      );
+      const { data: chats, error } = chatsResult;
       
       // Log any missing chats (participant exists but chat not returned)
       if (chats && chatIds.length > chats.length) {
@@ -162,16 +242,8 @@ export class ChatService {
         });
       }
 
-      console.log('🔍 ChatService.getUserChats: Fetched', chats?.length || 0, 'chats after filtering');
-      if (chats) {
-        chats.forEach(chat => {
-          console.log('🔍 ChatService.getUserChats: Chat', chat.id, {
-            name: chat.name,
-            is_event_chat: chat.is_event_chat,
-            is_archived: chat.is_archived,
-            last_message_at: chat.last_message_at
-          });
-        });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 ChatService.getUserChats: Fetched', chats?.length || 0, 'chats after filtering');
       }
 
       if (error) {
@@ -210,14 +282,17 @@ export class ChatService {
         return { chats: [], error: err };
       }
 
-      // Get participants for all chats in parallel
-      const { data: allParticipants } = await this.supabase
-        .from('chat_participants')
-        .select(`
-          chat_id, user_id, role, joined_at, last_read_at,
-          accounts!inner(id, name, profile_pic)
-        `)
-        .in('chat_id', chatIds);
+      // Get participants for all chats in parallel (with retry for network errors)
+      const participantsResult = await this.retrySupabaseQuery(
+        async () => this.supabase
+          .from('chat_participants')
+          .select(`
+            chat_id, user_id, role, joined_at, last_read_at,
+            accounts!inner(id, name, profile_pic)
+          `)
+          .in('chat_id', chatIds)
+      );
+      const { data: allParticipants } = participantsResult;
 
       // Group participants by chat_id
       const participantsByChat = new Map<string, ChatParticipant[]>();
@@ -254,7 +329,7 @@ export class ChatService {
         participants: participantsByChat.get(chat.id) || []
       }));
 
-      // Get the last message for each chat in parallel
+      // OPTIMIZATION: Batch fetch last messages for all chats in parallel
       const lastMessagePromises = transformedChats.map(async (chat) => {
         const { data: lastMessage, error: messageError } = await this.supabase
           .from('chat_messages')
@@ -269,31 +344,83 @@ export class ChatService {
           .limit(1)
           .single();
 
-        if (!messageError && lastMessage) {
-          // Get attachment count for the last message
-          const { count: attachmentCount, error: attachmentError } = await this.supabase
-            .from('attachments')
-            .select('*', { count: 'exact', head: true })
-            .eq('message_id', lastMessage.id);
+        return { chatId: chat.id, lastMessage, messageError };
+      });
 
-          if (attachmentError) {
-            console.error('Error getting attachment count for message:', lastMessage.id, attachmentError);
-          }
+      const lastMessageResults = await Promise.all(lastMessagePromises);
+      
+      // Collect all message IDs for batch attachment count query
+      const messageIds = lastMessageResults
+        .filter(r => !r.messageError && r.lastMessage)
+        .map(r => r.lastMessage!.id);
 
-          const finalAttachmentCount = attachmentCount || 0;
-          
-          console.log('ChatService.getUserChats: Last message for chat', chat.id, {
-            messageId: lastMessage.id,
-            hasText: !!lastMessage.message_text,
-            textLength: lastMessage.message_text?.length || 0,
-            messageText: lastMessage.message_text, // Log the actual message text
-            attachmentCount: finalAttachmentCount,
-            senderId: lastMessage.sender_id,
-            senderName: (lastMessage.accounts as any)?.name,
-            messageType: (lastMessage as any).message_type,
-            listingId: (lastMessage as any).listing_id,
-            isProfileUrl: /\/p\/([A-Z0-9]+)/i.test(lastMessage.message_text || '')
+      // OPTIMIZATION: Batch fetch attachment counts for all messages in one query
+      let attachmentCountsMap = new Map<string, number>();
+      if (messageIds.length > 0) {
+        const { data: attachmentCounts, error: attachmentError } = await this.supabase
+          .from('attachments')
+          .select('message_id')
+          .in('message_id', messageIds);
+
+        if (!attachmentError && attachmentCounts) {
+          // Count attachments per message
+          attachmentCounts.forEach(att => {
+            const current = attachmentCountsMap.get(att.message_id) || 0;
+            attachmentCountsMap.set(att.message_id, current + 1);
           });
+        }
+      }
+
+      // OPTIMIZATION: Batch fetch unread counts for all chats in one query
+      const userParticipant = participantsByChat.get(transformedChats[0]?.id || '')?.find(p => p.user_id === userId);
+      const unreadCountsMap = new Map<string, number>();
+      
+      if (userParticipant && transformedChats.length > 0) {
+        // Get all chat IDs and their last_read_at timestamps
+        const chatReadTimes = new Map<string, string | null>();
+        transformedChats.forEach(chat => {
+          const participant = chat.participants?.find(p => p.user_id === userId);
+          if (participant) {
+            chatReadTimes.set(chat.id, participant.last_read_at);
+          }
+        });
+
+        // Batch query: Get unread counts for all chats
+        // We need to do this per chat due to last_read_at being per participant, but we can optimize
+        const unreadCountPromises = Array.from(chatReadTimes.entries()).map(async ([chatId, lastReadAt]) => {
+          if (!lastReadAt) return { chatId, count: 0 };
+          
+          const { count } = await this.supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('chat_id', chatId)
+            .gt('created_at', lastReadAt)
+            .neq('sender_id', userId)
+            .is('deleted_at', null);
+          
+          return { chatId, count: count || 0 };
+        });
+
+        const unreadCountResults = await Promise.all(unreadCountPromises);
+        unreadCountResults.forEach(({ chatId, count }) => {
+          unreadCountsMap.set(chatId, count);
+        });
+      }
+
+      // Map results back to chats
+      lastMessageResults.forEach(({ chatId, lastMessage, messageError }) => {
+        const chat = transformedChats.find(c => c.id === chatId);
+        if (!chat) return;
+
+        if (!messageError && lastMessage) {
+          const attachmentCount = attachmentCountsMap.get(lastMessage.id) || 0;
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log('ChatService.getUserChats: Last message for chat', chatId, {
+              messageId: lastMessage.id,
+              attachmentCount
+            });
+          }
           
           chat.last_message = {
             id: lastMessage.id,
@@ -310,31 +437,18 @@ export class ChatService {
             is_pinned: false,
             sender_name: (lastMessage.accounts as any)?.name,
             sender_profile_pic: (lastMessage.accounts as any)?.profile_pic,
-            attachment_count: finalAttachmentCount, // Add attachment count
+            attachment_count: attachmentCount,
             listing_id: (lastMessage as any).listing_id || null
           };
         }
 
-        // Calculate unread count for this user
-        const userParticipant = chat.participants?.find(p => p.user_id === userId);
-        if (userParticipant) {
-          const { count } = await this.supabase
-            .from('chat_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('chat_id', chat.id)
-            .gt('created_at', userParticipant.last_read_at)
-            .neq('sender_id', userId)
-            .is('deleted_at', null);
-
-          chat.unread_count = count || 0;
-        } else {
-          chat.unread_count = 0;
-          }
+        // Set unread count from batched query
+        chat.unread_count = unreadCountsMap.get(chatId) || 0;
       });
 
-      await Promise.all(lastMessagePromises);
-
-      console.log('Successfully got user chats:', transformedChats.length);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Successfully got user chats:', transformedChats.length);
+      }
       return { chats: transformedChats, error: null };
     } catch (error) {
       console.error('Error in getUserChats:', error);

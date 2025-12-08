@@ -78,6 +78,7 @@ export default function IndividualChatPage() {
   const isUpdatingReactionsRef = useRef(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [reactionsModalMessageId, setReactionsModalMessageId] = useState<string | null>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   // Get current auth user ID
   useEffect(() => {
@@ -1238,16 +1239,33 @@ export default function IndividualChatPage() {
     const isDeleteConfirmation = longPressedMessage && deleteConfirmationMessageId === longPressedMessage.id;
     const actionCardHeight = isDeleteConfirmation ? 100 : 140; // Shorter when in confirmation mode
 
+    // Detect if message contains a profile card (check for /p/{connectId} pattern in message text)
+    const isProfileCardMessage = longPressedMessage?.text && /\/p\/([A-Z0-9]+)/i.test(longPressedMessage.text);
+    
+    // Profile cards have mb-2 (8px margin-bottom) on their wrapper div, which creates a gap
+    // We need to account for this margin when calculating the actual card bottom position
+    const PROFILE_CARD_MARGIN_BOTTOM = 8; // mb-2 = 8px
+    
     // Message dimensions
+    // For profile cards, subtract the margin-bottom to get the actual card bottom
     const messageHeight = longPressedPosition.bottom - longPressedPosition.top;
-    const SPACING = 8; // 8px spacing between cards and message
+    const actualMessageBottom = isProfileCardMessage 
+      ? longPressedPosition.bottom - PROFILE_CARD_MARGIN_BOTTOM 
+      : longPressedPosition.bottom;
+    
+    // Use tighter spacing for profile cards to attach reaction card (like images/listings)
+    // For profile cards: 0px spacing (attached), for others: 8px spacing
+    const SPACING = isProfileCardMessage ? 0 : 8;
 
     // Step 1: Check if cards need to be constrained based on original message position
-    const desiredEmojiBottom = longPressedPosition.top - SPACING;
+    // For profile cards, use the actual card bottom (without margin) for positioning
+    const desiredEmojiBottom = isProfileCardMessage 
+      ? actualMessageBottom - SPACING 
+      : longPressedPosition.top - SPACING;
     const minEmojiBottom = topBoundary + emojiCardHeight;
     const emojiNeedsConstraint = desiredEmojiBottom < minEmojiBottom;
 
-    const desiredActionTop = longPressedPosition.bottom + SPACING;
+    const desiredActionTop = (isProfileCardMessage ? actualMessageBottom : longPressedPosition.bottom) + SPACING;
     const maxActionTop = bottomBoundary - actionCardHeight;
     const actionNeedsConstraint = desiredActionTop > maxActionTop;
 
@@ -1279,10 +1297,17 @@ export default function IndividualChatPage() {
     // We'll calculate ideal positions first, then adjust message if cards get constrained
     
     const constrainedMessageBottom = constrainedMessageTop + messageHeight;
+    // For profile cards, account for the margin when calculating actual bottom
+    const constrainedActualBottom = isProfileCardMessage 
+      ? constrainedMessageBottom - PROFILE_CARD_MARGIN_BOTTOM 
+      : constrainedMessageBottom;
     
     // Ideal positions: exactly SPACING pixels from message
-    const idealEmojiBottom = constrainedMessageTop - SPACING;
-    const idealActionTop = constrainedMessageBottom + SPACING;
+    // For profile cards, position relative to actual card bottom (without margin)
+    const idealEmojiBottom = isProfileCardMessage 
+      ? constrainedActualBottom - SPACING 
+      : constrainedMessageTop - SPACING;
+    const idealActionTop = (isProfileCardMessage ? constrainedActualBottom : constrainedMessageBottom) + SPACING;
     
     // Check if cards can fit at ideal positions
     const emojiFits = idealEmojiBottom >= minEmojiBottom;
@@ -1307,19 +1332,38 @@ export default function IndividualChatPage() {
     } else if (!emojiFits) {
       // Only emoji card needs constraint - shift message down, action card maintains spacing
       finalMessageTop = topBoundary + emojiCardHeight + SPACING;
-      finalEmojiBottom = finalMessageTop - SPACING;
+      // For profile cards, calculate actual bottom and position relative to it
       const adjustedMessageBottom = finalMessageTop + messageHeight;
-      finalActionTop = adjustedMessageBottom + SPACING;
+      const adjustedActualBottom = isProfileCardMessage 
+        ? adjustedMessageBottom - PROFILE_CARD_MARGIN_BOTTOM 
+        : adjustedMessageBottom;
+      finalEmojiBottom = isProfileCardMessage 
+        ? adjustedActualBottom - SPACING 
+        : finalMessageTop - SPACING;
+      finalActionTop = adjustedActualBottom + SPACING;
     } else if (!actionFits) {
       // Only action card needs constraint - shift message up, emoji card maintains spacing
       finalMessageTop = bottomBoundary - actionCardHeight - SPACING - messageHeight;
-      finalEmojiBottom = finalMessageTop - SPACING;
       const adjustedMessageBottom = finalMessageTop + messageHeight;
-      finalActionTop = adjustedMessageBottom + SPACING;
+      const adjustedActualBottom = isProfileCardMessage 
+        ? adjustedMessageBottom - PROFILE_CARD_MARGIN_BOTTOM 
+        : adjustedMessageBottom;
+      finalEmojiBottom = isProfileCardMessage 
+        ? adjustedActualBottom - SPACING 
+        : finalMessageTop - SPACING;
+      finalActionTop = adjustedActualBottom + SPACING;
     } else {
       // Both cards fit - use ideal positions with exact spacing
       finalEmojiBottom = idealEmojiBottom;
       finalActionTop = idealActionTop;
+    }
+    
+    // For profile cards, ensure we're using the actual card bottom (without margin) for final calculations
+    if (isProfileCardMessage) {
+      const finalMessageBottom = finalMessageTop + messageHeight;
+      const finalActualBottom = finalMessageBottom - PROFILE_CARD_MARGIN_BOTTOM;
+      // Recalculate if needed to ensure reaction card is attached to actual card
+      finalEmojiBottom = finalActualBottom - SPACING;
     }
     
     // Ensure final positions respect boundaries (should already, but double-check)
@@ -1761,6 +1805,7 @@ export default function IndividualChatPage() {
               router.push('/chat');
             }
           }}
+          disableBlur={true}
         />
         <div className="flex-1 flex items-center justify-center">
           <Loading8 />
@@ -1903,8 +1948,16 @@ export default function IndividualChatPage() {
             "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)";
         }}
       >
-        {/* Title - left aligned */}
-        <div className="font-semibold text-gray-900 text-base flex-1 text-left">
+        {/* Title - left aligned with ellipsis truncation */}
+        <div 
+          className="font-semibold text-gray-900 text-base flex-1 text-left"
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0 // Required for flex truncation to work
+          }}
+        >
           {conversation.title}
         </div>
         {/* Right chevron icon */}
@@ -1973,6 +2026,7 @@ export default function IndividualChatPage() {
           }
         }}
         leftSection={profileCard}
+        disableBlur={true}
       />
 
       {/* Blur overlay when replying */}
@@ -2382,6 +2436,16 @@ export default function IndividualChatPage() {
           // Full height with paddingBottom ensures no gap at bottom
         }}
         data-messages-container="true"
+        onScroll={() => {
+          if (messagesContainerRef.current) {
+            const container = messagesContainerRef.current;
+            const maxScroll = container.scrollHeight - container.clientHeight;
+            const currentScroll = container.scrollTop;
+            const threshold = 100;
+            const isAtBottom = (maxScroll - currentScroll) <= threshold;
+            setShowScrollToBottom(!isAtBottom);
+          }
+        }}
         ref={(el) => {
           messagesContainerRef.current = el;
           if (el) {
@@ -2546,6 +2610,52 @@ export default function IndividualChatPage() {
         {/* Scroll anchor - placed after typing indicator */}
         <div ref={messagesEndRef} style={{ height: '0px', margin: '0px', padding: '0px' }} />
       </div>
+
+      {/* Scroll to Bottom Button - Only show when scrolled up from bottom */}
+      {showScrollToBottom && chatInputRef.current && (
+        <button
+          onClick={() => {
+            if (messagesContainerRef.current) {
+              const container = messagesContainerRef.current;
+              const maxScroll = container.scrollHeight - container.clientHeight;
+              container.scrollTo({
+                top: maxScroll,
+                behavior: 'smooth'
+              });
+              setShowScrollToBottom(false);
+            }
+          }}
+          className="fixed z-40 flex items-center justify-center transition-all duration-200"
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.96)',
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            bottom: chatInputRef.current ? `${chatInputRef.current.getBoundingClientRect().height + 40}px` : '140px',
+            right: '16px',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+        >
+          <svg 
+            className="w-5 h-5 text-gray-900" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+            style={{ transform: 'rotate(270deg)' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
 
       {/* Blur overlay for long press - blurs entire page except selected message and cards */}
       {longPressedMessage && (

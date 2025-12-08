@@ -15,6 +15,7 @@ import MyLifeLayout from "./MyLifeLayout";
 import { Suspense } from "react";
 import { useCompletedListings } from "@/hooks/useCompletedListings";
 import HappeningNowBanner from "@/components/HappeningNowBanner";
+import Loading8 from "@/components/Loading8";
 
 export default function Page() {
   const { personalProfile, context } = useAppStore();
@@ -26,8 +27,16 @@ export default function Page() {
   // Show loading while checking for completed listings
   if (checking) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-500">Loading...</div>
+      <div 
+        className="fixed inset-0 flex bg-white items-center justify-center z-50"
+        style={{
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}
+      >
+        <Loading8 />
       </div>
     );
   }

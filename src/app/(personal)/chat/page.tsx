@@ -841,11 +841,12 @@ function MessagesPageContent() {
               {/* Top Spacing */}
               <div style={{ height: '12px' }} />
 
-                {/* Category Pills */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 -mx-1" style={{ paddingTop: '2px', paddingBottom: '2px' }}>
-                    {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => {
+                {/* Category Pills - Only show after data loads */}
+              {!isLoading && (
+                <div className="mb-6" style={{ marginLeft: '-16px', marginRight: '-16px' }}>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar" style={{ paddingTop: '2px', paddingBottom: '2px', paddingLeft: '20px', paddingRight: '20px' }}>
+                      {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => {
                       const isActive = mobileActiveCategory === category.id;
                       return (
                         <div
@@ -898,9 +899,10 @@ function MessagesPageContent() {
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
                   </div>
                 </div>
+              )}
 
                 {/* Chat List */}
                 {isLoading || isLoadingConnections ? (

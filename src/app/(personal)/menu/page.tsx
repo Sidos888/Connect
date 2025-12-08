@@ -1725,7 +1725,7 @@ export default function Page() {
                 <div style={{ height: '12px' }} />
                 
                 {/* Profile Card */}
-                <div style={{ paddingLeft: '22px', paddingRight: '22px', marginBottom: '30px' }}>
+                <div style={{ paddingLeft: '16px', paddingRight: '16px', marginBottom: '30px' }}>
                   <ProfileCard
                     name={currentAccount?.name ?? "Your Name"}
                     avatarUrl={currentAccount?.avatarUrl}
@@ -1742,8 +1742,8 @@ export default function Page() {
 
                 {/* Menu Grid - 2x3 layout */}
                 <div className="grid grid-cols-2" style={{ 
-                  paddingLeft: '22px', 
-                  paddingRight: '22px',
+                  paddingLeft: '16px',
+                  paddingRight: '16px',
                   gap: '22px',
                   rowGap: '22px'
                 }}>

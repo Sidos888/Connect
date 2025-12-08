@@ -1,6 +1,6 @@
 "use client";
 
-import { Image as ImageIcon } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface LoadingMessageCardProps {
   fileCount: number;
@@ -8,6 +8,12 @@ interface LoadingMessageCardProps {
 }
 
 export default function LoadingMessageCard({ fileCount, status = 'uploading' }: LoadingMessageCardProps) {
+  const dot1Ref = useRef<HTMLDivElement>(null);
+  const dot2Ref = useRef<HTMLDivElement>(null);
+  const dot3Ref = useRef<HTMLDivElement>(null);
+
+  // Removed debug logging - animation should work now with margin-top approach
+
   return (
     <div className="w-full max-w-xs rounded-2xl overflow-hidden bg-white relative"
       style={{
@@ -20,18 +26,58 @@ export default function LoadingMessageCard({ fileCount, status = 'uploading' }: 
     >
       {/* Loading indicator overlay */}
       <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-90 z-10">
-        <div className="flex flex-col items-center justify-center gap-2">
-          {/* Circular loading icon with number */}
-          <div className="relative w-12 h-12 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full border-2 border-gray-300"></div>
-            <div className="absolute inset-0 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
-            <div className="relative flex items-center justify-center gap-1">
-              <span className="text-xs font-medium text-gray-700">{fileCount}</span>
-              <ImageIcon size={14} className="text-gray-700" />
-            </div>
+        <style>{`
+          @keyframes loading8-bounce {
+            0%, 60%, 100% {
+              margin-top: 0px;
+            }
+            30% {
+              margin-top: -10px;
+            }
+          }
+          @-webkit-keyframes loading8-bounce {
+            0%, 60%, 100% {
+              margin-top: 0px;
+            }
+            30% {
+              margin-top: -10px;
+            }
+          }
+          [data-loading-dot] {
+            animation: loading8-bounce 1.4s ease-in-out infinite !important;
+            -webkit-animation: loading8-bounce 1.4s ease-in-out infinite !important;
+          }
+        `}</style>
+        <div className="flex items-center justify-center">
+          <div className="flex space-x-2">
+            <div 
+              ref={dot1Ref}
+              data-loading-dot
+              className="w-3 h-3 bg-black rounded-full"
+              style={{
+                animationDelay: '0s',
+                WebkitAnimationDelay: '0s'
+              }}
+            />
+            <div 
+              ref={dot2Ref}
+              data-loading-dot
+              className="w-3 h-3 bg-black rounded-full"
+              style={{
+                animationDelay: '0.2s',
+                WebkitAnimationDelay: '0.2s'
+              }}
+            />
+            <div 
+              ref={dot3Ref}
+              data-loading-dot
+              className="w-3 h-3 bg-black rounded-full"
+              style={{
+                animationDelay: '0.4s',
+                WebkitAnimationDelay: '0.4s'
+              }}
+            />
           </div>
-          {/* Loading text */}
-          <span className="text-xs text-gray-500 font-medium">Loading...</span>
         </div>
       </div>
       

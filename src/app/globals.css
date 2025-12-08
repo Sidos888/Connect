@@ -56,6 +56,34 @@
   }
 }
 
+/* Loading8 wave animation (for LoadingMessageCard) */
+@keyframes loading8-wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+@-webkit-keyframes loading8-wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
+@-moz-keyframes loading8-wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-10px);
+  }
+}
+
 @-webkit-keyframes typingBounce {
   0%, 60%, 100% {
     transform: translateY(0) !important;
@@ -343,18 +371,18 @@ body {
 /* Force Vercel rebuild - working version */
 
 /* Disable all transitions and animations on chat components */
-/* Exclude typing dots using attribute selector */
+/* Exclude typing dots and loading dots using attribute selector */
 .chat-container,
-.chat-container *:not([data-typing-dot]),
-.chat-container *:not([data-typing-dots]),
-[class*="chat"] *:not([data-typing-dot]),
-[class*="chat"] *:not([data-typing-dots]),
-[class*="Chat"] *:not([data-typing-dot]),
-[class*="Chat"] *:not([data-typing-dots]),
-div[class*="chat"] *:not([data-typing-dot]),
-div[class*="chat"] *:not([data-typing-dots]),
-div[class*="Chat"] *:not([data-typing-dot]),
-div[class*="Chat"] *:not([data-typing-dots]),
+.chat-container *:not([data-typing-dot]):not([data-loading-dot]),
+.chat-container *:not([data-typing-dots]):not([data-loading-dot]),
+[class*="chat"] *:not([data-typing-dot]):not([data-loading-dot]),
+[class*="chat"] *:not([data-typing-dots]):not([data-loading-dot]),
+[class*="Chat"] *:not([data-typing-dot]):not([data-loading-dot]),
+[class*="Chat"] *:not([data-typing-dots]):not([data-loading-dot]),
+div[class*="chat"] *:not([data-typing-dot]):not([data-loading-dot]),
+div[class*="chat"] *:not([data-typing-dots]):not([data-loading-dot]),
+div[class*="Chat"] *:not([data-typing-dot]):not([data-loading-dot]),
+div[class*="Chat"] *:not([data-typing-dots]):not([data-loading-dot]),
 button[class*="chat"],
 button[class*="Chat"] {
   transition: none !important;
@@ -392,6 +420,28 @@ div[class*="chat"] [data-typing-dot] {
   -webkit-transform: initial !important;
   -moz-transform: initial !important;
   -o-transform: initial !important;
+}
+
+/* Re-enable loading dot animations (for LoadingMessageCard) */
+/* This MUST come after the chat disable rule and have higher specificity */
+/* Use translateY(0) instead of initial to ensure transform works */
+[data-loading-dot],
+.chat-container [data-loading-dot],
+div.chat-messages-container [data-loading-dot],
+div[class*="chat"] [data-loading-dot],
+div[class*="Chat"] [data-loading-dot],
+.chat-container *[data-loading-dot],
+*[data-loading-dot] {
+  animation: loading8-wave 1.4s ease-in-out infinite !important;
+  -webkit-animation: loading8-wave 1.4s ease-in-out infinite !important;
+  -moz-animation: loading8-wave 1.4s ease-in-out infinite !important;
+  -o-animation: loading8-wave 1.4s ease-in-out infinite !important;
+  /* Allow transform to be animated - use translateY(0) as base */
+  transform: translateY(0) !important;
+  -webkit-transform: translateY(0) !important;
+  -moz-transform: translateY(0) !important;
+  -o-transform: translateY(0) !important;
+  will-change: transform !important;
 }
 
 .chat-container .transition-all {

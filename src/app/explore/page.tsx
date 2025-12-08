@@ -121,8 +121,8 @@ export default function ExplorePage() {
 
             {/* Feature Cards - For You & Side Quest */}
             <div className="grid grid-cols-2" style={{ 
-              paddingLeft: '22px', 
-              paddingRight: '22px',
+              paddingLeft: '16px', 
+              paddingRight: '16px',
               gap: '22px',
               marginBottom: '44px'
             }}>
@@ -188,8 +188,8 @@ export default function ExplorePage() {
 
             {/* 4 Category Cards - Casual is top left */}
             <div className="grid grid-cols-2" style={{ 
-              paddingLeft: '22px', 
-              paddingRight: '22px',
+              paddingLeft: '16px', 
+              paddingRight: '16px',
               gap: '22px',
               rowGap: '22px'
             }}>

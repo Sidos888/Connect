@@ -22,6 +22,7 @@ export interface PageHeaderProps {
   className?: string;
   titleClassName?: string;  // Custom className for the title
   frostedGlass?: boolean;  // Enable iOS-style frosted glass effect (for listing page)
+  disableBlur?: boolean;  // Disable blur/overlay effects at the top (for chat pages)
 }
 
 export default function PageHeader({
@@ -36,7 +37,8 @@ export default function PageHeader({
   customActions,
   className = "",
   titleClassName = "",
-  frostedGlass = false  // New iOS-style frosted glass effect
+  frostedGlass = false,  // New iOS-style frosted glass effect
+  disableBlur = false  // Disable blur/overlay effects
 }: PageHeaderProps) {
   // Detect platform (mobile vs web)
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -255,16 +257,18 @@ export default function PageHeader({
     <div className={`absolute top-0 left-0 right-0 z-20 ${className}`} style={{ 
       pointerEvents: 'none'
     }}>
-      {/* Compact Opacity Gradient - Platform specific */}
-      <div className="absolute top-0 left-0 right-0" style={{
-        height: blurHeight,
-        background: isMobile 
-          ? 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.62) 60%, rgba(255,255,255,0.58) 80%, rgba(255,255,255,0.3) 100%)'
-          : 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0.25) 80%, rgba(255,255,255,0.05) 100%)'
-      }} />
+      {/* Compact Opacity Gradient - Platform specific - Only show if blur is not disabled */}
+      {!disableBlur && (
+        <div className="absolute top-0 left-0 right-0" style={{
+          height: blurHeight,
+          background: isMobile 
+            ? 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.62) 60%, rgba(255,255,255,0.58) 80%, rgba(255,255,255,0.3) 100%)'
+            : 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0.25) 80%, rgba(255,255,255,0.05) 100%)'
+        }} />
+      )}
       
-      {/* Compact Progressive Blur - 5 layers */}
-      {isMobile ? (
+      {/* Compact Progressive Blur - 5 layers - Only show if blur is not disabled */}
+      {!disableBlur && (isMobile ? (
         <>
           {/* Mobile blur layers (27px each = 135px total) */}
           <div className="absolute top-0 left-0 right-0" style={{
@@ -330,7 +334,7 @@ export default function PageHeader({
             WebkitBackdropFilter: 'blur(0.2px)'
           }} />
         </>
-      )}
+      ))}
     
       {/* Header Content */}
       <div className="px-4 lg:px-8" style={{ 

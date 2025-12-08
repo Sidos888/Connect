@@ -9,6 +9,7 @@ import Avatar from "@/components/Avatar";
 import { Users, UserPlus, X } from "lucide-react";
 import { MobilePage, PageContent } from "@/components/layout/PageSystem";
 import { SearchIcon } from "@/components/icons";
+import Loading8 from "@/components/Loading8";
 
 interface Contact {
   id: string;
@@ -288,9 +289,8 @@ export default function NewChatPage() {
         >
       <div className="h-full bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading...</p>
-          <p className="text-sm text-gray-400 mt-2">Please make sure you&apos;re logged in</p>
+          <Loading8 />
+          <p className="text-sm text-gray-400 mt-4">Please make sure you&apos;re logged in</p>
             </div>
           </div>
         </div>
@@ -484,8 +484,8 @@ export default function NewChatPage() {
           paddingBottom: '100px' // Space for scrolling
         }}>
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
+            <Loading8 />
           </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
