@@ -24,62 +24,72 @@ export default function LoadingMessageCard({ fileCount, status = 'uploading' }: 
         aspectRatio: '1'
       }}
     >
-      {/* Loading indicator overlay */}
-      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-90 z-10">
-        <style>{`
-          @keyframes loading8-bounce {
-            0%, 60%, 100% {
-              margin-top: 0px;
+      {/* Loading indicator overlay - only show when uploading */}
+      {status === 'uploading' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-90 z-10">
+          <style>{`
+            @keyframes loading8-wave {
+              0%, 60%, 100% {
+                transform: translateY(0);
+              }
+              30% {
+                transform: translateY(-4px); // 60% smaller: 10px * 0.4 = 4px
+              }
             }
-            30% {
-              margin-top: -10px;
+            @-webkit-keyframes loading8-wave {
+              0%, 60%, 100% {
+                -webkit-transform: translateY(0);
+              }
+              30% {
+                -webkit-transform: translateY(-4px);
+              }
             }
-          }
-          @-webkit-keyframes loading8-bounce {
-            0%, 60%, 100% {
-              margin-top: 0px;
-            }
-            30% {
-              margin-top: -10px;
-            }
-          }
-          [data-loading-dot] {
-            animation: loading8-bounce 1.4s ease-in-out infinite !important;
-            -webkit-animation: loading8-bounce 1.4s ease-in-out infinite !important;
-          }
-        `}</style>
-        <div className="flex items-center justify-center">
-          <div className="flex space-x-2">
-            <div 
-              ref={dot1Ref}
-              data-loading-dot
-              className="w-3 h-3 bg-black rounded-full"
-              style={{
-                animationDelay: '0s',
-                WebkitAnimationDelay: '0s'
-              }}
-            />
-            <div 
-              ref={dot2Ref}
-              data-loading-dot
-              className="w-3 h-3 bg-black rounded-full"
-              style={{
-                animationDelay: '0.2s',
-                WebkitAnimationDelay: '0.2s'
-              }}
-            />
-            <div 
-              ref={dot3Ref}
-              data-loading-dot
-              className="w-3 h-3 bg-black rounded-full"
-              style={{
-                animationDelay: '0.4s',
-                WebkitAnimationDelay: '0.4s'
-              }}
-            />
+          `}</style>
+          <div className="flex items-center justify-center">
+            <div className="flex space-x-1.5">
+              <div 
+                ref={dot1Ref}
+                data-loading-dot
+                className="bg-black rounded-full"
+                style={{
+                  width: '4.8px', // 60% smaller: 12px * 0.4 = 4.8px
+                  height: '4.8px',
+                  animation: 'loading8-wave 1.4s ease-in-out infinite',
+                  WebkitAnimation: 'loading8-wave 1.4s ease-in-out infinite',
+                  animationDelay: '0s',
+                  WebkitAnimationDelay: '0s'
+                }}
+              />
+              <div 
+                ref={dot2Ref}
+                data-loading-dot
+                className="bg-black rounded-full"
+                style={{
+                  width: '4.8px',
+                  height: '4.8px',
+                  animation: 'loading8-wave 1.4s ease-in-out infinite',
+                  WebkitAnimation: 'loading8-wave 1.4s ease-in-out infinite',
+                  animationDelay: '0.2s',
+                  WebkitAnimationDelay: '0.2s'
+                }}
+              />
+              <div 
+                ref={dot3Ref}
+                data-loading-dot
+                className="bg-black rounded-full"
+                style={{
+                  width: '4.8px',
+                  height: '4.8px',
+                  animation: 'loading8-wave 1.4s ease-in-out infinite',
+                  WebkitAnimation: 'loading8-wave 1.4s ease-in-out infinite',
+                  animationDelay: '0.4s',
+                  WebkitAnimationDelay: '0.4s'
+                }}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
       {/* Placeholder background */}
       <div className="w-full h-full bg-gray-100"></div>

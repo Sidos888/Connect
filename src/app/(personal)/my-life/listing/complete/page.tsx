@@ -6,6 +6,7 @@ import { Check, Plus, X } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/lib/authContext";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { uploadFilesSequentially } from "@/lib/uploadUtils";
 
 function CompleteListingContent() {
   const searchParams = useSearchParams();
@@ -162,40 +163,57 @@ function CompleteListingContent() {
         }
 
         // Upload all pending photos to storage and add to gallery
-        for (const photoData of pendingPhotos) {
-          // Convert base64 to blob
-          const response = await fetch(photoData);
-          const blob = await response.blob();
-          
-          const fileExt = 'jpg';
-          const fileName = `galleries/${listingId}/${account.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        // Convert base64 data URLs to blobs
+        const blobs = await Promise.all(
+          pendingPhotos.map(async (photoData) => {
+            const response = await fetch(photoData);
+            return response.blob();
+          })
+        );
 
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('listing-photos')
-            .upload(fileName, blob);
+        // Upload with compression and retry
+        const uploadResults = await uploadFilesSequentially(
+          blobs,
+          {
+            bucket: 'listing-photos',
+            compress: true,
+            maxRetries: 3,
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            generatePath: (blob, index) => {
+              const fileExt = 'jpg';
+              const timestamp = Date.now();
+              const random = Math.random().toString(36).substring(7);
+              return `galleries/${listingId}/${account.id}/${timestamp}-${index}-${random}.${fileExt}`;
+            },
+          },
+          undefined, // No per-file progress needed
+          async (index, result) => {
+            // Photo uploaded successfully, add to database
+            try {
+              const { error: itemError } = await supabase
+                .from('event_gallery_items')
+                .insert({
+                  gallery_id: galleryId,
+                  user_id: account.id,
+                  photo_url: result.url
+                });
 
-          if (uploadError) {
-            console.error('Error uploading photo:', uploadError);
-            continue;
+              if (itemError) {
+                console.error(`Error adding photo ${index + 1} to gallery:`, itemError);
+              } else {
+                console.log(`✅ Photo ${index + 1}/${blobs.length} uploaded and added to gallery`);
+              }
+            } catch (dbError) {
+              console.error(`Error adding photo ${index + 1} to database:`, dbError);
+            }
+          },
+          (index, error) => {
+            // Photo upload failed
+            console.error(`Error uploading photo ${index + 1}:`, error);
           }
+        );
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('listing-photos')
-            .getPublicUrl(fileName);
-
-          // Add to event_gallery_items
-          const { error: itemError } = await supabase
-            .from('event_gallery_items')
-            .insert({
-              gallery_id: galleryId,
-              user_id: account.id,
-              photo_url: publicUrl
-            });
-
-          if (itemError) {
-            console.error('Error adding photo to gallery:', itemError);
-          }
-        }
+        console.log(`✅ Successfully uploaded ${uploadResults.length} of ${blobs.length} photo(s) to gallery`);
       } catch (error) {
         console.error('Error in handleComplete:', error);
       } finally {

@@ -198,31 +198,10 @@ function MessagesPageContent() {
       
       let displayMessage = lastMessageText;
       if (typingUserIds.length > 0) {
-        // Debug: Log typing state
-        console.log('[Typing Debug] Chat:', chat.id, {
-          typingUserIds,
-          participantCount: chat.participants?.length || 0,
-          participantUserIds: chat.participants?.map((p: any) => p.user_id).filter(Boolean),
-          participantStructure: chat.participants?.map((p: any) => ({
-            user_id: p.user_id,
-            user_name: p.user_name,
-            name: p.name,
-            id: p.id
-          }))
-        });
-        
         // Find typing user name from chat participants
         // Match by user_id only (this is the account ID that matches typingUserIds)
         const typingUser = chat.participants?.find((p: any) => {
-          const matches = p.user_id && typingUserIds.includes(p.user_id);
-          if (matches) {
-            console.log('[Typing Debug] Matched participant:', {
-              user_id: p.user_id,
-              user_name: p.user_name,
-              name: p.name
-            });
-          }
-          return matches;
+          return p.user_id && typingUserIds.includes(p.user_id);
         });
         
         if (typingUser) {
@@ -230,11 +209,9 @@ function MessagesPageContent() {
           // Extract first name only
           const typingUserName = fullName.split(' ')[0];
           displayMessage = `${typingUserName} is typing...`;
-          console.log('[Typing Debug] ✅ Set display message to:', displayMessage);
         } else {
           // Still show typing indicator even if we can't find the name
           displayMessage = 'Someone is typing...';
-          console.log('[Typing Debug] ⚠️ No matching participant found, using fallback');
         }
       }
       
@@ -359,12 +336,6 @@ function MessagesPageContent() {
       }
 
       const unsubscribe = chatService.subscribeToTyping(chat.id, (userIds) => {
-        console.log('[Typing Debug] Received typing update for chat', chat.id, {
-          userIds,
-          accountId: account.id,
-          filteredUserIds: userIds.filter(id => id !== account.id)
-        });
-        
         setTypingUsersByChat((prev) => {
           const newMap = new Map(prev);
           // Filter out current user from typing users
@@ -372,10 +343,8 @@ function MessagesPageContent() {
           
           if (filteredUserIds.length > 0) {
             newMap.set(chat.id, filteredUserIds);
-            console.log('[Typing Debug] Setting typing users for chat', chat.id, '=', filteredUserIds);
           } else {
             newMap.delete(chat.id);
-            console.log('[Typing Debug] Removing typing users for chat', chat.id);
           }
           return newMap;
         });

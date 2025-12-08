@@ -62,14 +62,10 @@ const MessageBubble = React.memo(({
   const detectProfileUrl = (text: string): { connectId: string | null; cleanedText: string; shouldHideText: boolean } => {
     if (!text) return { connectId: null, cleanedText: text, shouldHideText: false };
     
-    console.log('🔵 MessageBubble: Detecting profile URL in text:', text);
-    
     // Match /p/{connectId} pattern (case-insensitive, with or without leading slash)
     const profileUrlPattern = /\/p\/([A-Z0-9]+)/i;
     const match = text.match(profileUrlPattern);
     const connectId = match ? match[1].toUpperCase() : null;
-    
-    console.log('🔵 MessageBubble: Profile URL detection result:', { connectId, hasMatch: !!match });
     
     // Remove the profile URL from text (including full URLs with domain)
     let cleanedText = text;
@@ -80,8 +76,6 @@ const MessageBubble = React.memo(({
       // The profile card replaces the text, so no text bubble is needed
       shouldHideText = true;
       cleanedText = '';
-      
-      console.log('🔵 MessageBubble: Profile URL detected - hiding text completely');
     }
     
     return { connectId, cleanedText, shouldHideText };

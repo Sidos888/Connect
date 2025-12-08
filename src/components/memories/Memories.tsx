@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listingsService, EventGalleryWithItems } from "@/lib/listingsService";
 import { useAuth } from "@/lib/authContext";
+import Loading8 from "@/components/Loading8";
 
 /**
  * Memories - Unified component for Memories page
@@ -71,12 +72,11 @@ export default function Memories() {
 
   if (loading) {
     return (
-      <div className="flex-1 overflow-y-auto px-4 lg:px-8 pb-8 scrollbar-hide" style={{ 
-        paddingTop: 'var(--saved-content-padding-top, 104px)',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
+      <div className="flex-1 flex items-center justify-center bg-white" style={{
+        minHeight: '100%',
+        width: '100%'
       }}>
-        <div className="text-center py-8 text-gray-500">Loading galleries...</div>
+        <Loading8 />
       </div>
     );
   }

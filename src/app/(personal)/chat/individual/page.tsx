@@ -584,36 +584,16 @@ export default function IndividualChatPage() {
   // Mark messages as read when chat is loaded - using React Query mutation to invalidate cache
   const markMessagesAsRead = useMarkMessagesAsRead(chatService);
   useEffect(() => {
-    console.log('🔵 IndividualChatPage: useEffect for markMessagesAsRead', {
-      hasMarkedAsRead: hasMarkedAsRead.current,
-      hasAccount: !!account?.id,
-      hasChatId: !!chatId,
-      hasConversation: !!conversation,
-      hasChatService: !!chatService
-    });
-    
     if (!hasMarkedAsRead.current && account?.id && chatId && conversation && chatService) {
-      console.log('🔵 IndividualChatPage: Calling markMessagesAsRead mutation', { chatId, userId: account.id });
       markMessagesAsRead.mutate(
         { chatId, userId: account.id },
         {
-          onSuccess: () => {
-            console.log('🔵 IndividualChatPage: markMessagesAsRead mutation succeeded');
-          },
           onError: (error) => {
             console.error('🔵 IndividualChatPage: markMessagesAsRead mutation failed', error);
           },
         }
       );
       hasMarkedAsRead.current = true;
-    } else {
-      console.log('🔵 IndividualChatPage: Skipping markMessagesAsRead', {
-        reason: !hasMarkedAsRead.current ? 'already marked' : 
-                !account?.id ? 'no account' :
-                !chatId ? 'no chatId' :
-                !conversation ? 'no conversation' :
-                !chatService ? 'no chatService' : 'unknown'
-      });
     }
   }, [conversation, chatId, account?.id, chatService, markMessagesAsRead]);
 
@@ -2476,19 +2456,6 @@ export default function IndividualChatPage() {
         }}
         ref={(el) => {
           messagesContainerRef.current = el;
-          if (el) {
-            console.log('🔍 Chat container height calculation:', {
-              viewportHeight: window.innerHeight,
-              dvh: window.innerHeight,
-              calculatedHeight: window.innerHeight - 200,
-              actualHeight: el.offsetHeight,
-              style: el.style.height,
-              computedStyle: window.getComputedStyle(el).height,
-              top: el.style.top,
-              paddingTop: el.style.paddingTop,
-              paddingBottom: el.style.paddingBottom
-            });
-          }
         }}
       >
         {messages.map((message, index) => {

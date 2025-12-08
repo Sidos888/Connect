@@ -1,13 +1,15 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { PageContent } from "@/components/layout/PageSystem";
 import PhotoViewer from "@/components/listings/PhotoViewer";
 import { listingsService, EventGalleryItem } from '@/lib/listingsService';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/authContext';
+import { uploadFilesSequentially } from '@/lib/uploadUtils';
+import LoadingMessageCard from "@/components/chat/LoadingMessageCard";
 
 interface EventGalleryViewProps {
   listingId: string;
@@ -29,6 +31,8 @@ export default function EventGalleryView({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [listing, setListing] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState<Array<{ id: string; file: File; progress: number }>>([]);
 
   // Load listing data and gallery photos
   useEffect(() => {
@@ -84,69 +88,150 @@ export default function EventGalleryView({
   };
 
   const handleAddPhotoClick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.onchange = async (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (!files || files.length === 0 || !account) return;
+    console.log('📸 EventGalleryView: Add photo button clicked');
+    
+    // Use ref-based approach (more reliable on iOS than dynamically created inputs)
+    if (fileInputRef.current) {
+      console.log('📸 EventGalleryView: Triggering file picker via ref...');
+      fileInputRef.current.click();
+    } else {
+      console.error('❌ EventGalleryView: File input ref not available');
+    }
+  };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📸 EventGalleryView: File input changed event fired');
+    const files = e.target.files;
+      
+      if (!files || files.length === 0) {
+        console.log('⚠️ EventGalleryView: No files selected');
+        return;
+      }
+      
+      if (!account) {
+        console.error('❌ EventGalleryView: No account available');
+        return;
+      }
+
+      console.log(`📸 EventGalleryView: ${files.length} file(s) selected, starting upload process...`);
       setUploading(true);
+      
       const supabase = getSupabaseClient();
       if (!supabase) {
+        console.error('❌ EventGalleryView: Supabase client not available');
         alert('Supabase client not available');
         setUploading(false);
         return;
       }
 
       try {
+        const fileArray = Array.from(files);
+        console.log(`📤 EventGalleryView: Preparing to upload ${fileArray.length} file(s):`, 
+          fileArray.map(f => ({ name: f.name, size: f.size, type: f.type }))
+        );
+        
+        // Show loading cards immediately (like chat system)
+        const uploadingItems = fileArray.map((file, index) => ({
+          id: `upload-${Date.now()}-${index}`,
+          file,
+          progress: 0
+        }));
+        setUploadingPhotos(uploadingItems);
+        
         const newPhotoUrls: string[] = [];
+        const errors: string[] = [];
 
-        for (const file of Array.from(files)) {
-          const fileExt = 'jpg';
-          const fileName = `galleries/${listingId}/${account.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        // Upload files sequentially with compression and retry
+        console.log('🚀 EventGalleryView: Calling uploadFilesSequentially...');
+        const uploadResults = await uploadFilesSequentially(
+          fileArray,
+          {
+            bucket: 'listing-photos',
+            compress: true,
+            maxRetries: 3,
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            generatePath: (file, index) => {
+              const fileExt = 'jpg';
+              const timestamp = Date.now();
+              const random = Math.random().toString(36).substring(7);
+              return `galleries/${listingId}/${account.id}/${timestamp}-${index}-${random}.${fileExt}`;
+            },
+          },
+          (index, progress) => {
+            // Update progress for loading card
+            setUploadingPhotos(prev => prev.map((item, i) => 
+              i === index ? { ...item, progress } : item
+            ));
+            console.log(`Uploading ${fileArray[index].name}: ${progress}%`);
+          },
+          async (index, result) => {
+            // File uploaded successfully, add to database
+            try {
+              const { error: itemError } = await supabase
+                .from('event_gallery_items')
+                .insert({
+                  gallery_id: galleryId,
+                  user_id: account.id,
+                  photo_url: result.url
+                });
 
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('listing-photos')
-            .upload(fileName, file);
-
-          if (uploadError) {
-            console.error('Error uploading photo:', uploadError);
-            continue;
+              if (itemError) {
+                console.error(`Error adding photo ${fileArray[index].name} to gallery:`, itemError);
+                errors.push(`${fileArray[index].name}: Failed to add to gallery`);
+                // Remove failed upload from loading cards
+                setUploadingPhotos(prev => prev.filter((_, i) => i !== index));
+              } else {
+                newPhotoUrls.push(result.url);
+                console.log(`✅ Photo ${index + 1}/${fileArray.length} uploaded and added to gallery`);
+                // Remove successful upload from loading cards
+                setUploadingPhotos(prev => prev.filter((_, i) => i !== index));
+              }
+            } catch (dbError) {
+              console.error(`Error adding photo ${fileArray[index].name} to database:`, dbError);
+              errors.push(`${fileArray[index].name}: Database error`);
+              // Remove failed upload from loading cards
+              setUploadingPhotos(prev => prev.filter((_, i) => i !== index));
+            }
+          },
+          (index, error) => {
+            // File upload failed
+            console.error(`Error uploading ${fileArray[index].name}:`, error);
+            errors.push(`${fileArray[index].name}: ${error.message}`);
+            // Remove failed upload from loading cards
+            setUploadingPhotos(prev => prev.filter((_, i) => i !== index));
           }
+        );
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('listing-photos')
-            .getPublicUrl(fileName);
-
-          // Add to event_gallery_items
-          const { error: itemError } = await supabase
-            .from('event_gallery_items')
-            .insert({
-              gallery_id: galleryId,
-              user_id: account.id,
-              photo_url: publicUrl
-            });
-
-          if (itemError) {
-            console.error('Error adding photo to gallery:', itemError);
-          } else {
-            newPhotoUrls.push(publicUrl);
-          }
+        // Update local state with successfully uploaded photos
+        if (newPhotoUrls.length > 0) {
+          setPhotos(prev => [...prev, ...newPhotoUrls]);
         }
 
-        // Update local state
-        setPhotos(prev => [...prev, ...newPhotoUrls]);
+        // Show errors if any
+        if (errors.length > 0) {
+          const errorMessage = errors.length === fileArray.length
+            ? `Failed to upload all ${errors.length} file(s):\n${errors.join('\n')}`
+            : `Failed to upload ${errors.length} of ${fileArray.length} file(s):\n${errors.join('\n')}`;
+          
+          alert(errorMessage);
+        } else {
+          console.log(`✅ Successfully uploaded ${newPhotoUrls.length} photo(s)`);
+        }
       } catch (error) {
         console.error('Error uploading photos:', error);
-        alert('Failed to upload photos. Please try again.');
+        alert(
+          error instanceof Error
+            ? `Failed to upload photos: ${error.message}`
+            : 'Failed to upload photos. Please try again.'
+        );
       } finally {
         setUploading(false);
+        // Reset input so same file can be selected again
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     };
-    input.click();
-  };
 
   const mainPhoto = listing?.photo_urls && listing.photo_urls.length > 0 
     ? listing.photo_urls[0] 
@@ -154,6 +239,17 @@ export default function EventGalleryView({
 
   return (
     <div className="lg:hidden">
+      {/* Hidden file input - ref-based approach for iOS compatibility */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+        style={{ display: 'none' }}
+      />
+      
       {/* Custom Header with Listing Card */}
       <div className="fixed top-0 left-0 right-0 z-[60] bg-white"
         style={{
@@ -284,12 +380,22 @@ export default function EventGalleryView({
             paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 16px + 76px + 16px + 28px + 24px)', // Header height + padding + card height + spacing + count height + extra spacing
           }}
         >
-          {photos.length === 0 ? (
+          {photos.length === 0 && uploadingPhotos.length === 0 ? (
             <div className="grid grid-cols-4 gap-4 relative overflow-visible">
               {/* Empty state - just show empty grid, users can use + button to add photos */}
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-4 relative overflow-visible">
+              {/* Show loading cards FIRST (at the top) for uploading photos (like chat system) */}
+              {uploadingPhotos.map((uploadingPhoto) => (
+                <div
+                  key={uploadingPhoto.id}
+                  className="aspect-square rounded-xl overflow-hidden"
+                >
+                  <LoadingMessageCard fileCount={1} status="uploading" />
+                </div>
+              ))}
+              {/* Then show existing photos */}
               {photos.map((photo, index) => (
                 <button
                   key={index}
