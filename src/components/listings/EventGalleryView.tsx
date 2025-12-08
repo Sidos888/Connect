@@ -238,7 +238,7 @@ export default function EventGalleryView({
     : null;
 
   return (
-    <div className="lg:hidden">
+    <div className="lg:hidden relative">
       {/* Hidden file input - ref-based approach for iOS compatibility */}
       <input
         ref={fileInputRef}
