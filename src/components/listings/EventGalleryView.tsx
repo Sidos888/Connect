@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Plus, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 import { PageContent } from "@/components/layout/PageSystem";
 import PhotoViewer from "@/components/listings/PhotoViewer";
 import { listingsService, EventGalleryItem } from '@/lib/listingsService';
@@ -430,7 +430,6 @@ export default function EventGalleryView({
 
         {/* Photo Count - Below header */}
         <div className="flex justify-center mt-4 items-center gap-1.5" style={{ pointerEvents: 'auto' }}>
-          <ImageIcon size={16} className="text-gray-500" />
           <span className="text-sm font-medium text-gray-500">{photos.length} {photos.length === 1 ? 'Item' : 'Items'}</span>
         </div>
       </div>
@@ -439,7 +438,7 @@ export default function EventGalleryView({
         <div 
           className="px-4 pb-8" 
           style={{ 
-            paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 16px + 48px + 6px + 44px + 16px + 28px)', // Header padding + square card (48px) + gap (6px) + title card (44px) + spacing + count height + extra spacing
+            paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 16px + 48px + 6px + 44px + 16px + 24px)', // Header padding + square card (48px) + gap (6px) + title card (44px) + spacing + count height
           }}
         >
           {photos.length === 0 && uploadingPhotos.length === 0 ? (
