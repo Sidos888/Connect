@@ -250,56 +250,152 @@ export default function EventGalleryView({
         style={{ display: 'none' }}
       />
       
-      {/* Custom Header with Listing Card */}
-      <div className="fixed top-0 left-0 right-0 z-[60] bg-white"
+      {/* Custom Header - Matching Event Chat Style */}
+      <div className="fixed top-0 left-0 right-0 z-[60]"
         style={{
           paddingTop: 'max(env(safe-area-inset-top), 70px)',
           paddingBottom: '16px',
           paddingLeft: '16px',
           paddingRight: '16px',
+          pointerEvents: 'none'
         }}
       >
-        <div className="flex items-center justify-between gap-4">
-          {/* Back Button - chevron only */}
-          <button
-            onClick={onBack}
-            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0"
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
+        {/* Back Button - Left */}
+        <button
+          onClick={onBack}
+          className="absolute left-4 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+          style={{
+            top: '0',
+            width: '44px',
+            height: '44px',
+            borderRadius: '22px',
+            background: 'rgba(255, 255, 255, 0.96)',
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow',
+            pointerEvents: 'auto',
+            zIndex: 30
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          aria-label="Back"
+        >
+          <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        {/* Plus Button - Right */}
+        <button
+          onClick={handleAddPhotoClick}
+          disabled={uploading}
+          className="absolute right-4 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            top: '0',
+            width: '44px',
+            height: '44px',
+            borderRadius: '22px',
+            background: 'rgba(255, 255, 255, 0.96)',
+            borderWidth: '0.4px',
+            borderColor: '#E5E7EB',
+            borderStyle: 'solid',
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow',
+            pointerEvents: 'auto',
+            zIndex: 30
+          }}
+          onMouseEnter={(e) => {
+            if (!uploading) {
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          aria-label="Add Photo"
+        >
+          <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
+        </button>
+
+        {/* Middle Section - Square Card and Title (like event chat) */}
+        {!loading && listing && (
+          <div
+            className="absolute left-0 right-0"
+            style={{
+              top: '0',
+              height: '44px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              pointerEvents: 'auto'
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M15 18L9 12L15 6" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-
-          {/* Listing Card with Photo and Title */}
-          {!loading && listing && (
+            {/* Square Card - Top Center */}
             <button
               onClick={handleListingCardClick}
-              className="flex-1 bg-white rounded-xl p-3 flex items-center gap-3 text-left cursor-pointer transition-all duration-200 hover:-translate-y-[1px] min-w-0"
+              className="absolute z-10"
               style={{
+                cursor: 'pointer',
+                top: '0',
+                left: '50%',
+                transform: 'translateX(-50%)'
+              }}
+            >
+              <div
+                className="bg-gray-200 flex items-center justify-center overflow-hidden rounded-lg"
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderWidth: '0.5px',
+                  borderStyle: 'solid',
+                  borderColor: 'rgba(0, 0, 0, 0.08)'
+                }}
+              >
+                {mainPhoto ? (
+                  <img
+                    src={mainPhoto}
+                    alt={listing.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-gray-400 text-base font-semibold">
+                    {listing.title.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </button>
+
+            {/* Title Card - Below Image */}
+            <button
+              onClick={handleListingCardClick}
+              className="absolute z-0"
+              style={{
+                height: '44px',
+                borderRadius: '100px',
+                background: 'rgba(255, 255, 255, 0.96)',
                 borderWidth: '0.4px',
                 borderColor: '#E5E7EB',
                 borderStyle: 'solid',
                 boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                 willChange: 'transform, box-shadow',
-                maxWidth: '100%',
-                overflow: 'hidden'
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                maxWidth: 'calc(100% - 32px)',
+                paddingLeft: '16px',
+                paddingRight: '8px',
+                top: '42px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                cursor: 'pointer'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -308,66 +404,32 @@ export default function EventGalleryView({
                 e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
               }}
             >
-              {/* Listing Photo */}
-              {mainPhoto && (
-                <div 
-                  className="flex-shrink-0 rounded-lg overflow-hidden"
-                  style={{
-                    width: '60px',
-                    height: '60px',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                  }}
-                >
-                  <img
-                    src={mainPhoto}
-                    alt={listing.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-
-              {/* Listing Title (no date/time) */}
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <div className="text-base font-semibold text-gray-900 truncate" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {listing.title}
-                </div>
+              <div
+                className="font-semibold text-gray-900 text-base flex-1 text-left"
+                style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0
+                }}
+              >
+                {listing.title}
               </div>
+              <svg
+                className="w-5 h-5 text-gray-500 flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                style={{ marginLeft: '4px' }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
-          )}
+          </div>
+        )}
 
-          {/* Add Photo Button */}
-          <button
-            onClick={handleAddPhotoClick}
-            disabled={uploading}
-            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              if (!uploading) {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-          >
-            <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
-          </button>
-        </div>
-
-        {/* Photo Count - Below header like Page 2/2 */}
-        <div className="flex justify-center mt-4 items-center gap-1.5">
+        {/* Photo Count - Below header */}
+        <div className="flex justify-center mt-4 items-center gap-1.5" style={{ pointerEvents: 'auto' }}>
           <ImageIcon size={16} className="text-gray-500" />
           <span className="text-sm font-medium text-gray-500">{photos.length} {photos.length === 1 ? 'Item' : 'Items'}</span>
         </div>
@@ -377,7 +439,7 @@ export default function EventGalleryView({
         <div 
           className="px-4 pb-8" 
           style={{ 
-            paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 16px + 76px + 16px + 28px + 24px)', // Header height + padding + card height + spacing + count height + extra spacing
+            paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 16px + 48px + 6px + 44px + 16px + 28px)', // Header padding + square card (48px) + gap (6px) + title card (44px) + spacing + count height + extra spacing
           }}
         >
           {photos.length === 0 && uploadingPhotos.length === 0 ? (
