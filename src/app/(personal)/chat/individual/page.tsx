@@ -1786,42 +1786,96 @@ export default function IndividualChatPage() {
     );
   }
 
-  // Profile card component - Full width with page padding
+  // Handle navigation to chat details/listing
+  const handleHeaderClick = () => {
+    if (!chatId) return;
+
+    // For event-specific chats, open listing page instead of chat details
+    if (isEventChat && eventListing) {
+      const from = `/chat/individual?chat=${chatId}`;
+      router.push(
+        `/listing?id=${eventListing.id}&from=${encodeURIComponent(from)}`
+      );
+      return;
+    }
+
+    // Regular chats: open chat details
+    if (conversation.isGroup) {
+      router.push(`/chat/group-details?chat=${chatId}`);
+    } else {
+      router.push(`/chat/dm-details?chat=${chatId}`);
+    }
+  };
+
+  // Profile card component - Image top center, info card below
   const profileCard = (
     <div
-      className="absolute left-0 right-0 flex items-center justify-center"
+      className="absolute left-0 right-0"
       style={{
-        top: "50%",
-        transform: "translateY(-50%)",
-        paddingLeft: "72px", // Back button (44px) + spacing (12px) + page padding (16px)
-        paddingRight: "16px",
-        height: "100%",
+        top: "0", // Align with top of leftSection (same as back button)
+        height: "44px", // Match leftSection height
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-start", // Align items to top
       }}
     >
-      <button 
-        onClick={() => {
-          if (!chatId) return;
-
-          // For event-specific chats, open listing page instead of chat details
-          if (isEventChat && eventListing) {
-            const from = `/chat/individual?chat=${chatId}`;
-            router.push(
-              `/listing?id=${eventListing.id}&from=${encodeURIComponent(from)}`
-            );
-            return;
-          }
-
-          // Regular chats: open chat details
-            if (conversation.isGroup) {
-              router.push(`/chat/group-details?chat=${chatId}`);
-            } else {
-              router.push(`/chat/dm-details?chat=${chatId}`);
-          }
-        }}
-        className="w-full flex items-center"
+      {/* Image Component - Top Center - Positioned independently, aligned with back button top */}
+      <button
+        onClick={handleHeaderClick}
+        className="absolute z-10"
         style={{
-          padding: "10px 18px",
-          borderRadius: "16px",
+          cursor: "pointer",
+          top: "0", // Align top with back button top (container is now at top: 0)
+          left: "50%", // Center horizontally
+          transform: "translateX(-50%)", // Center horizontally only
+        }}
+      >
+        {isEventChat && eventListing ? (
+          // Event chat: squared image - 48px to visually match back button and chat box (accounting for shadows)
+          <div 
+            className="bg-gray-200 flex items-center justify-center overflow-hidden rounded-lg"
+            style={{
+              width: '48px',
+              height: '48px',
+              borderWidth: '0.5px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(0, 0, 0, 0.08)'
+            }}
+          >
+            {eventListing.photo_urls && eventListing.photo_urls.length > 0 ? (
+              <Image
+                src={eventListing.photo_urls[0]}
+                alt={eventListing.title}
+                width={48}
+                height={48}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-gray-400 text-base font-semibold">
+                {eventListing.title.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+        ) : (
+          // Regular chat: circular avatar - 48px to visually match back button and chat box (accounting for shadows)
+          <div className="rounded-full overflow-hidden" style={{ width: '48px', height: '48px' }}>
+            <Avatar
+              src={conversation.avatarUrl}
+              name={conversation.title}
+              size={48}
+            />
+          </div>
+        )}
+      </button>
+
+      {/* Info Card - Below Image, overlapping behind profile pic - Positioned independently */}
+      <button 
+        onClick={handleHeaderClick}
+        className="absolute z-0"
+        style={{
+          height: "44px", // Match back button and chat box height
+          borderRadius: "100px", // Match chat input box at bottom of page
           background: "rgba(255, 255, 255, 0.96)",
           borderWidth: "0.4px",
           borderColor: "#E5E7EB",
@@ -1829,10 +1883,16 @@ export default function IndividualChatPage() {
           boxShadow:
             "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)",
           willChange: "transform, box-shadow",
-          height: "60px",
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
-          gap: "12px",
+          justifyContent: "space-between", // Space between text and chevron
+          maxWidth: "calc(100% - 32px)", // Account for page padding
+          paddingLeft: "16px", // Left padding for text
+          paddingRight: "8px", // Tighter right padding for chevron
+          top: isEventChat ? "42px" : "40px", // 6px lower for event chats, 4px lower for groups/DMs (was 36px)
+          left: "50%", // Center horizontally
+          transform: "translateX(-50%)", // Center horizontally only
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.boxShadow =
@@ -1843,48 +1903,20 @@ export default function IndividualChatPage() {
             "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)";
         }}
       >
-        {isEventChat && eventListing ? (
-          // Event chat: squared image
-          <div 
-            className="w-10 h-10 bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 rounded-md"
-            style={{
-              borderWidth: '0.5px',
-              borderStyle: 'solid',
-              borderColor: 'rgba(0, 0, 0, 0.08)'
-            }}
-          >
-            {eventListing.photo_urls && eventListing.photo_urls.length > 0 ? (
-            <Image
-                src={eventListing.photo_urls[0]}
-                alt={eventListing.title}
-              width={40}
-              height={40}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="text-gray-400 text-sm font-semibold">
-                {eventListing.title.charAt(0).toUpperCase()}
-            </div>
-          )}
+        {/* Title - left aligned */}
+        <div className="font-semibold text-gray-900 text-base flex-1 text-left">
+          {conversation.title}
         </div>
-        ) : (
-          // Regular chat: circular avatar
-          <Avatar
-            src={conversation.avatarUrl}
-            name={conversation.title}
-            size={40}
-          />
-        )}
-        <div className="text-left min-w-0 flex-1">
-          <div className="font-semibold text-gray-900 text-base truncate">
-            {isEventChat && eventListing ? eventListing.title : conversation.title}
-          </div>
-          {isEventChat && (
-            <div className="text-xs text-gray-500">
-              {formatListingDateTime(eventListing?.start_date ?? null)}
-            </div>
-          )}
-        </div>
+        {/* Right chevron icon */}
+        <svg 
+          className="w-5 h-5 text-gray-500 flex-shrink-0" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+          style={{ marginLeft: "4px" }}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
       </button>
     </div>
   );

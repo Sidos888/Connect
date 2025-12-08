@@ -128,11 +128,11 @@ export default function Highlights({ userId, onHighlightClick }: HighlightsProps
       {/* Grid of highlights */}
       <div className="grid grid-cols-4 gap-2">
         {highlights.map((highlight) => (
-          <button
+              <button
             key={highlight.id}
             onClick={() => handleHighlightClick(highlight)}
             className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
-            style={{
+                style={{
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
@@ -147,7 +147,7 @@ export default function Highlights({ userId, onHighlightClick }: HighlightsProps
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <span className="text-gray-400 text-xs">{highlight.title}</span>
-              </div>
+          </div>
             )}
           </button>
         ))}
