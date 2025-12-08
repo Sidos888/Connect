@@ -514,8 +514,8 @@ export async function uploadFileWithRetry(
                          lastError.name === 'StorageUnknownError';
 
       if (retryCount < maxRetries && isRetryable) {
-        retryCount++;
         // Exponential backoff with jitter: 1s, 2s, 4s, 8s, 16s
+        // Note: retryCount is already incremented above, so use it directly
         const baseDelay = 1000 * Math.pow(2, retryCount - 1);
         const jitter = Math.random() * 500; // Add random 0-500ms jitter to prevent thundering herd
         const delay = baseDelay + jitter;

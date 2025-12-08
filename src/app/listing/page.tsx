@@ -805,97 +805,40 @@ export default function ListingPage() {
       <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
           {view !== 'gallery' && (
-            <PageHeader
-              title={getPageTitle()}
-              subtitle={getSubtitle()}
-              backButton
-              onBack={handleBack}
-              actions={(() => {
-                const actions = [];
-                
-                // Share button - show for everyone (including hosts)
-                if (showShareButton) {
-                  actions.push({
-                    icon: <Share size={20} className="text-gray-900" strokeWidth={2.5} />,
-                    label: 'Share',
-                    onClick: () => {
-                      if (listingId) {
-                        router.push(`/listing/share?id=${listingId}`);
-                      }
+          <PageHeader
+            title={getPageTitle()}
+            subtitle={getSubtitle()}
+            backButton
+            onBack={handleBack}
+            actions={(() => {
+              const actions = [];
+              
+              // Share button - show for everyone (including hosts)
+              if (showShareButton) {
+                actions.push({
+                  icon: <Share size={20} className="text-gray-900" strokeWidth={2.5} />,
+                  label: 'Share',
+                  onClick: () => {
+                    if (listingId) {
+                      router.push(`/listing/share?id=${listingId}`);
                     }
-                  });
-                }
-                
-                return actions;
-              })()}
-              customActions={view === 'edit-details' ? (
-                editPage === 'page1' ? (
-                  // Page 1: Right arrow to navigate to page 2
-                  <button
-                    onClick={() => setEditPage('page2')}
-                    className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '100px',
-                      background: '#FF6600',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    aria-label="Next page"
-                  >
-                    <ChevronRight size={18} className="text-white" />
-                  </button>
-                ) : (
-                  // Page 2: Tick button to save all changes
+                  }
+                });
+              }
+              
+              return actions;
+            })()}
+            customActions={view === 'edit-details' ? (
+              editPage === 'page1' ? (
+                // Page 1: Right arrow to navigate to page 2
                 <button
-                  onClick={async () => {
-                    if (editDetailsRef.current && hasChanges && !saving) {
-                      await editDetailsRef.current.save();
-                    }
-                  }}
-                  disabled={!hasChanges || saving}
-                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setEditPage('page2')}
+                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
                     width: '40px',
                     height: '40px',
                     borderRadius: '100px',
-                    background: hasChanges ? '#FF6600' : '#9CA3AF',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (hasChanges && !saving) {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  aria-label="Save"
-                >
-                  <Check size={18} className="text-white" />
-                  </button>
-                )
-              ) : undefined}
-              customBackButton={view === 'edit-details' && editPage === 'page2' ? (
-                <button
-                  onClick={() => setEditPage('page1')}
-                  className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
+                    background: '#FF6600',
                     boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     willChange: 'transform, box-shadow'
                   }}
@@ -905,12 +848,69 @@ export default function ListingPage() {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
-                  aria-label="Back"
+                  aria-label="Next page"
                 >
-                  <ArrowLeft size={18} className="text-gray-900" />
+                  <ChevronRight size={18} className="text-white" />
                 </button>
-              ) : undefined}
-            />
+              ) : (
+                // Page 2: Tick button to save all changes
+              <button
+                onClick={async () => {
+                  if (editDetailsRef.current && hasChanges && !saving) {
+                    await editDetailsRef.current.save();
+                  }
+                }}
+                disabled={!hasChanges || saving}
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '100px',
+                  background: hasChanges ? '#FF6600' : '#9CA3AF',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  if (hasChanges && !saving) {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Save"
+              >
+                <Check size={18} className="text-white" />
+                </button>
+              )
+            ) : undefined}
+            customBackButton={view === 'edit-details' && editPage === 'page2' ? (
+              <button
+                onClick={() => setEditPage('page1')}
+                className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Back"
+              >
+                <ArrowLeft size={18} className="text-gray-900" />
+              </button>
+            ) : undefined}
+          />
           )}
 
           <PageContent>

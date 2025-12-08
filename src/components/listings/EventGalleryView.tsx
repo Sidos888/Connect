@@ -441,7 +441,6 @@ export default function EventGalleryView({
           </div>
         </div>
       </div>
-      </div>
 
       <PageContent>
         <div 

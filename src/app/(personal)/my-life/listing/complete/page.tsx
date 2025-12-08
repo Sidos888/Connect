@@ -166,7 +166,7 @@ function CompleteListingContent() {
         // Convert base64 data URLs to blobs
         const blobs = await Promise.all(
           pendingPhotos.map(async (photoData) => {
-            const response = await fetch(photoData);
+          const response = await fetch(photoData);
             return response.blob();
           })
         );
@@ -180,7 +180,7 @@ function CompleteListingContent() {
             maxRetries: 3,
             maxFileSize: 10 * 1024 * 1024, // 10MB
             generatePath: (blob, index) => {
-              const fileExt = 'jpg';
+          const fileExt = 'jpg';
               const timestamp = Date.now();
               const random = Math.random().toString(36).substring(7);
               return `galleries/${listingId}/${account.id}/${timestamp}-${index}-${random}.${fileExt}`;
@@ -190,15 +190,15 @@ function CompleteListingContent() {
           async (index, result) => {
             // Photo uploaded successfully, add to database
             try {
-              const { error: itemError } = await supabase
-                .from('event_gallery_items')
-                .insert({
-                  gallery_id: galleryId,
-                  user_id: account.id,
+          const { error: itemError } = await supabase
+            .from('event_gallery_items')
+            .insert({
+              gallery_id: galleryId,
+              user_id: account.id,
                   photo_url: result.url
-                });
+            });
 
-              if (itemError) {
+          if (itemError) {
                 console.error(`Error adding photo ${index + 1} to gallery:`, itemError);
               } else {
                 console.log(`✅ Photo ${index + 1}/${blobs.length} uploaded and added to gallery`);

@@ -1252,26 +1252,26 @@ export default function ProfilePage({
                     if (photos.length === 1) {
                       // Single photo: just show image
                       return (
-                        <button
-                          key={highlight.id}
-                          onClick={() => {
-                            if (onOpenHighlightDetail) {
-                              onOpenHighlightDetail(highlight.id);
-                            }
-                          }}
-                          className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
-                          style={{
-                            borderWidth: '0.4px',
-                            borderColor: '#E5E7EB',
-                            borderStyle: 'solid',
-                          }}
-                        >
-                          <img 
+                    <button
+                      key={highlight.id}
+                      onClick={() => {
+                        if (onOpenHighlightDetail) {
+                          onOpenHighlightDetail(highlight.id);
+                        }
+                      }}
+                      className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                      }}
+                    >
+                        <img 
                             src={photos[0]} 
-                            alt={highlight.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
+                          alt={highlight.title}
+                          className="w-full h-full object-cover"
+                        />
+                    </button>
                       );
                     }
                     

@@ -26,7 +26,7 @@ export default function LoadingMessageCard({ fileCount, status = 'uploading' }: 
     >
       {/* Loading indicator overlay - only show when uploading */}
       {status === 'uploading' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-90 z-10">
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-90 z-10">
           <style>{`
             @keyframes loading8-wave {
               0%, 60%, 100% {

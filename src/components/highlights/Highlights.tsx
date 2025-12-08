@@ -222,13 +222,13 @@ export default function Highlights({ userId, onHighlightClick }: HighlightsProps
 
   return (
     <>
-      <div className="flex-1 px-4 pb-8 overflow-y-auto scrollbar-hide" style={{ 
-        paddingTop: 'var(--saved-content-padding-top, 104px)',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
-      }}>
-        {/* Grid of highlights */}
-        <div className="grid grid-cols-4 gap-2">
+    <div className="flex-1 px-4 pb-8 overflow-y-auto scrollbar-hide" style={{ 
+      paddingTop: 'var(--saved-content-padding-top, 104px)',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none'
+    }}>
+      {/* Grid of highlights */}
+      <div className="grid grid-cols-4 gap-2">
           {highlights.map((highlight) => {
             const photos = highlight.photo_urls || (highlight.image_url ? [highlight.image_url] : []);
             
@@ -277,21 +277,21 @@ export default function Highlights({ userId, onHighlightClick }: HighlightsProps
             if (photos.length <= 3) {
               // 2-3 photos: show first image, no # icon badge
               return (
-                <button
-                  key={highlight.id}
-                  onClick={() => handleHighlightClick(highlight)}
-                  className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                  }}
-                >
-                  <img 
+              <button
+            key={highlight.id}
+            onClick={() => handleHighlightClick(highlight)}
+            className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
+                style={{
+              borderWidth: '0.4px',
+              borderColor: '#E5E7EB',
+              borderStyle: 'solid',
+            }}
+          >
+              <img 
                     src={photos[0]} 
-                    alt={highlight.title}
-                    className="w-full h-full object-cover"
-                  />
+                alt={highlight.title}
+                className="w-full h-full object-cover"
+              />
                 </button>
               );
             }
@@ -332,10 +332,10 @@ export default function Highlights({ userId, onHighlightClick }: HighlightsProps
                         alt={`${highlight.title} photo ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
-                    </div>
-                  ))}
-                </div>
-              </div>
+          </div>
+        ))}
+      </div>
+    </div>
             );
           })}
         </div>
