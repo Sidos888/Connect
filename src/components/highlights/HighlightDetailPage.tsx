@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MobilePage } from "@/components/layout/PageSystem";
+import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { MapPin, Calendar } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import Image from "next/image";
+import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
+import PhotoViewer from '@/components/listings/PhotoViewer';
 
 interface Highlight {
   id: string;
@@ -13,6 +14,7 @@ interface Highlight {
   summary: string | null;
   location: string | null;
   image_url: string | null;
+  photo_urls: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,6 +28,8 @@ export default function HighlightDetailPage({ highlightId, onBack }: HighlightDe
   const supabase = getSupabaseClient();
   const [highlight, setHighlight] = useState<Highlight | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [showGridView, setShowGridView] = useState(false);
 
   useEffect(() => {
     const fetchHighlight = async () => {
@@ -45,7 +49,17 @@ export default function HighlightDetailPage({ highlightId, onBack }: HighlightDe
         if (error) {
           console.error('Error fetching highlight:', error);
         } else {
-          setHighlight(data);
+          // Process highlight to ensure photo_urls is properly formatted
+          const processedHighlight = {
+            ...data,
+            // If photo_urls exists and is an array, use it; otherwise fall back to image_url
+            photo_urls: data.photo_urls && Array.isArray(data.photo_urls) && data.photo_urls.length > 0
+              ? data.photo_urls
+              : data.image_url
+                ? [data.image_url] // Convert single image_url to array
+                : []
+          };
+          setHighlight(processedHighlight);
         }
       } catch (error) {
         console.error('Error in fetchHighlight:', error);
@@ -91,6 +105,80 @@ export default function HighlightDetailPage({ highlightId, onBack }: HighlightDe
       return dateString;
     }
   };
+
+  // Get photos for the highlight
+  const photos = highlight && (highlight.photo_urls && Array.isArray(highlight.photo_urls) && highlight.photo_urls.length > 0
+    ? highlight.photo_urls
+    : highlight.image_url
+      ? [highlight.image_url]
+      : []);
+
+  // If grid view is active, show full-page grid view (like listing photos)
+  if (showGridView && highlight && photos && photos.length > 0) {
+    return (
+      <div style={{ '--saved-content-padding-top': '180px' } as React.CSSProperties}>
+        <MobilePage>
+          <PageHeader
+            title="Highlight Photos"
+            subtitle={<span className="text-xs font-medium text-gray-900">{photos.length} {photos.length === 1 ? 'photo' : 'photos'}</span>}
+            backButton
+            onBack={() => setShowGridView(false)}
+          />
+          <PageContent>
+            <div className="px-4 pb-8" style={{ paddingTop: 'var(--saved-content-padding-top, 180px)' }}>
+              <div className="grid grid-cols-4 gap-4">
+                {photos.map((photo, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setShowGridView(false);
+                      setSelectedPhotoIndex(index);
+                    }}
+                    className="relative aspect-square bg-transparent overflow-hidden rounded-xl transition-all duration-200 hover:-translate-y-[1px]"
+                    style={{ 
+                      borderWidth: '0.4px', 
+                      borderColor: '#E5E7EB',
+                      backgroundColor: 'transparent',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                  >
+                    <img 
+                      src={photo} 
+                      alt={`Photo ${index + 1}`} 
+                      className="w-full h-full object-cover pointer-events-none"
+                      draggable={false}
+                      style={{
+                        backgroundColor: 'transparent',
+                        display: 'block',
+                        width: '100%',
+                        height: '100%'
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </PageContent>
+        </MobilePage>
+        {selectedPhotoIndex !== null && (
+          <PhotoViewer
+            isOpen={selectedPhotoIndex !== null}
+            photos={photos}
+            initialIndex={selectedPhotoIndex}
+            onClose={() => setSelectedPhotoIndex(null)}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (loading || !highlight) {
     return (
@@ -201,25 +289,13 @@ export default function HighlightDetailPage({ highlightId, onBack }: HighlightDe
         }}>
           <div className="space-y-6">
             {/* Image Section */}
-            {highlight.image_url && (
+            {photos && photos.length > 0 && (
               <div className="relative">
-                <div 
-                  className="w-full rounded-2xl overflow-hidden"
-                  style={{
-                    aspectRatio: '1',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  }}
-                >
-                  <Image
-                    src={highlight.image_url}
-                    alt={highlight.title}
-                    width={800}
-                    height={800}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <ListingPhotoCollage
+                  photos={photos}
+                  onPhotoClick={(index) => setSelectedPhotoIndex(index !== undefined ? index : 0)}
+                  onGridClick={() => setShowGridView(true)}
+                />
               </div>
             )}
 
@@ -282,6 +358,23 @@ export default function HighlightDetailPage({ highlightId, onBack }: HighlightDe
           <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
         </div>
       </MobilePage>
+
+      {/* Photo Viewer */}
+      {highlight && selectedPhotoIndex !== null && (() => {
+        const photos = highlight.photo_urls && Array.isArray(highlight.photo_urls) && highlight.photo_urls.length > 0
+          ? highlight.photo_urls
+          : highlight.image_url
+            ? [highlight.image_url]
+            : [];
+        return photos.length > 0 ? (
+          <PhotoViewer
+            isOpen={selectedPhotoIndex !== null}
+            photos={photos}
+            initialIndex={selectedPhotoIndex}
+            onClose={() => setSelectedPhotoIndex(null)}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

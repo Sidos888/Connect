@@ -197,7 +197,7 @@ export default function Notifications() {
 
             {/* Recent Section */}
             {invites.length > 0 && (
-              <>
+          <>
         <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Recent</h3>
         <div className="space-y-3">
             {invites.map((invite) => {
@@ -326,7 +326,7 @@ export default function Notifications() {
               </>
             )}
           </>
-        )}
+                )}
       </div>
     </div>
   );

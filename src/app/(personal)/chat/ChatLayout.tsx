@@ -26,9 +26,9 @@ const ChatLayoutContent = () => {
   // Log when chats data changes (only in development)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && chats.length > 0) {
-      console.log('🔵 ChatLayout: chats data changed', {
+    console.log('🔵 ChatLayout: chats data changed', {
         chatsCount: chats.length
-      });
+    });
     }
   }, [chats]);
   
@@ -284,9 +284,9 @@ const ChatLayoutContent = () => {
   const conversations = useMemo(() => {
     // Reduced logging - only log in development and when there are actual changes
     if (process.env.NODE_ENV === 'development' && chats.length > 0) {
-      console.log('🔵 ChatLayout: conversations useMemo running', {
+    console.log('🔵 ChatLayout: conversations useMemo running', {
         chatsCount: chats.length
-      });
+    });
     }
     
     if (!account?.id) return [];
@@ -598,7 +598,7 @@ const ChatLayoutContent = () => {
                 {!isLoading && (
                   <div className="py-3 bg-white mb-1" style={{ marginLeft: '-16px', marginRight: '-16px' }}>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar" style={{ paddingTop: '2px', paddingBottom: '2px', paddingLeft: '20px', paddingRight: '20px' }}>
-                      {categories.map((category) => {
+                    {categories.map((category) => {
                       const isActive = activeCategory === category.id;
                       return (
                         <div
@@ -645,8 +645,8 @@ const ChatLayoutContent = () => {
                         </div>
                       );
                     })}
-                    </div>
                   </div>
+                </div>
                 )}
 
                 {/* Conversations List */}
@@ -722,18 +722,18 @@ const ChatLayoutContent = () => {
                                       minWidth: 0 // Allow flex child to shrink
                                     }}
                                   >
-                                    {(() => {
-                                      const displayText = getDisplayMessage(conversation);
-                                      // Log if this conversation has a profile URL that wasn't formatted
-                                      if (conversation.last_message && typeof conversation.last_message === 'string' && /\/p\/([A-Z0-9]+)/i.test(conversation.last_message) && displayText === conversation.last_message) {
-                                        console.log('🔵 ChatLayout: RENDERING - Profile URL not formatted!', {
-                                          conversationId: conversation.id,
-                                          last_message: conversation.last_message,
-                                          displayText: displayText
-                                        });
-                                      }
-                                      return <MessageTextWithIcon text={displayText} />;
-                                    })()}
+                                  {(() => {
+                                    const displayText = getDisplayMessage(conversation);
+                                    // Log if this conversation has a profile URL that wasn't formatted
+                                    if (conversation.last_message && typeof conversation.last_message === 'string' && /\/p\/([A-Z0-9]+)/i.test(conversation.last_message) && displayText === conversation.last_message) {
+                                      console.log('🔵 ChatLayout: RENDERING - Profile URL not formatted!', {
+                                        conversationId: conversation.id,
+                                        last_message: conversation.last_message,
+                                        displayText: displayText
+                                      });
+                                    }
+                                    return <MessageTextWithIcon text={displayText} />;
+                                  })()}
                                   </span>
                                 </p>
                               </div>

@@ -109,10 +109,10 @@ export default function RemoveFriendSlideModal({
           onRemoveSuccess();
         }, 300);
       } else {
-        // Navigate back to inbox after a short delay
-        setTimeout(() => {
-          router.push('/chat');
-        }, 300);
+      // Navigate back to inbox after a short delay
+      setTimeout(() => {
+        router.push('/chat');
+      }, 300);
       }
       
     } catch (error) {
@@ -244,38 +244,38 @@ export default function RemoveFriendSlideModal({
             </>
           ) : (
             <>
-              {/* Confirmation Text */}
-              <div className="flex-1 flex items-center justify-center">
-                <p className="text-base text-gray-900 text-center">
-                  Are you sure you want to remove {userName} as a friend?
-                </p>
-              </div>
+          {/* Confirmation Text */}
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-base text-gray-900 text-center">
+              Are you sure you want to remove {userName} as a friend?
+            </p>
+          </div>
 
-              {/* Confirm Button */}
-              <button
-                onClick={handleRemoveFriend}
-                disabled={isRemoving || !userId}
-                className="w-full rounded-xl transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  padding: '16px',
-                  background: '#EF4444',
-                  color: 'white',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isRemoving && userId) {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-              >
-                {isRemoving ? 'Removing...' : 'Confirm'}
-              </button>
+          {/* Confirm Button */}
+          <button
+            onClick={handleRemoveFriend}
+            disabled={isRemoving || !userId}
+            className="w-full rounded-xl transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              padding: '16px',
+              background: '#EF4444',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: '600',
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+              willChange: 'transform, box-shadow'
+            }}
+            onMouseEnter={(e) => {
+              if (!isRemoving && userId) {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }}
+          >
+            {isRemoving ? 'Removing...' : 'Confirm'}
+          </button>
             </>
           )}
         </div>

@@ -878,9 +878,9 @@ function MessagesPageContent() {
                 {/* Category Pills - Only show after data loads */}
               {!isLoading && (
                 <div className="mb-6" style={{ marginLeft: '-16px', marginRight: '-16px' }}>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     <div className="flex gap-2 overflow-x-auto no-scrollbar" style={{ paddingTop: '2px', paddingBottom: '2px', paddingLeft: '20px', paddingRight: '20px' }}>
-                      {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => {
+                    {[...mobileCategoriesTop, ...mobileCategoriesBottom].map((category) => {
                       const isActive = mobileActiveCategory === category.id;
                       return (
                         <div
@@ -933,7 +933,7 @@ function MessagesPageContent() {
                         </div>
                       );
                     })}
-                    </div>
+                  </div>
                   </div>
                 </div>
               )}
@@ -1059,7 +1059,7 @@ function MessagesPageContent() {
                                   minWidth: 0 // Allow flex child to shrink
                                 }}
                               >
-                                <MessageTextWithIcon text={conversation.last_message || 'No messages yet'} />
+                              <MessageTextWithIcon text={conversation.last_message || 'No messages yet'} />
                               </span>
                             </p>
                           </div>

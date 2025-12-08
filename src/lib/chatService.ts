@@ -146,7 +146,7 @@ export class ChatService {
   }
 
   // Get all chats for a user
-async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null }> {
+  async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null }> {
     try {
       // Validate userId
       if (!userId) {
@@ -169,17 +169,17 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('ChatService: Getting chats for authenticated user:', userId);
+      console.log('ChatService: Getting chats for authenticated user:', userId);
       }
       
       // Test session status
       const { data: { user: authUser }, error: authError } = await this.supabase.auth.getUser();
       if (process.env.NODE_ENV === 'development' && authError) {
-        console.log('ChatService: Auth check:', { 
-          authUser: authUser?.id, 
-          requestedUserId: userId, 
-          authError: authError?.message 
-        });
+      console.log('ChatService: Auth check:', { 
+        authUser: authUser?.id, 
+        requestedUserId: userId, 
+        authError: authError?.message 
+      });
       }
       
       if (authError || !authUser) {
@@ -190,8 +190,8 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       // Get all chats where the user is a participant (with retry for network errors)
       const userChatsResult = await this.retrySupabaseQuery(
         async () => this.supabase
-          .from('chat_participants')
-          .select('chat_id')
+        .from('chat_participants')
+        .select('chat_id')
           .eq('user_id', userId)
       );
       const { data: userChats, error: userChatsError } = userChatsResult;
@@ -217,16 +217,16 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       // Get the actual chat details (with retry for network errors)
       const chatIds = userChats.map(chat => chat.chat_id);
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 ChatService.getUserChats: Fetching chat details for', chatIds.length, 'chats');
+      console.log('🔍 ChatService.getUserChats: Fetching chat details for', chatIds.length, 'chats');
       }
       const chatsResult = await this.retrySupabaseQuery(
         async () => this.supabase
-          .from('chats')
-          .select(`
-            id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat, is_archived
-          `)
-          .in('id', chatIds)
-          // Fetch all chats including archived ones
+        .from('chats')
+        .select(`
+          id, type, name, photo, listing_id, created_by, created_at, updated_at, last_message_at, is_event_chat, is_archived
+        `)
+        .in('id', chatIds)
+        // Fetch all chats including archived ones
           .order('last_message_at', { ascending: false, nullsFirst: false })
       );
       const { data: chats, error } = chatsResult;
@@ -243,7 +243,7 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 ChatService.getUserChats: Fetched', chats?.length || 0, 'chats after filtering');
+      console.log('🔍 ChatService.getUserChats: Fetched', chats?.length || 0, 'chats after filtering');
       }
 
       if (error) {
@@ -285,11 +285,11 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       // Get participants for all chats in parallel (with retry for network errors)
       const participantsResult = await this.retrySupabaseQuery(
         async () => this.supabase
-          .from('chat_participants')
-          .select(`
-            chat_id, user_id, role, joined_at, last_read_at,
-            accounts!inner(id, name, profile_pic)
-          `)
+        .from('chat_participants')
+        .select(`
+          chat_id, user_id, role, joined_at, last_read_at,
+          accounts!inner(id, name, profile_pic)
+        `)
           .in('chat_id', chatIds)
       );
       const { data: allParticipants } = participantsResult;
@@ -358,7 +358,7 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       let attachmentCountsMap = new Map<string, number>();
       if (messageIds.length > 0) {
         const { data: attachmentCounts, error: attachmentError } = await this.supabase
-          .from('attachments')
+            .from('attachments')
           .select('message_id')
           .in('message_id', messageIds);
 
@@ -417,9 +417,9 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
           
           if (process.env.NODE_ENV === 'development') {
             console.log('ChatService.getUserChats: Last message for chat', chatId, {
-              messageId: lastMessage.id,
+            messageId: lastMessage.id,
               attachmentCount
-            });
+          });
           }
           
           chat.last_message = {
@@ -447,7 +447,7 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       });
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('Successfully got user chats:', transformedChats.length);
+      console.log('Successfully got user chats:', transformedChats.length);
       }
       return { chats: transformedChats, error: null };
     } catch (error) {

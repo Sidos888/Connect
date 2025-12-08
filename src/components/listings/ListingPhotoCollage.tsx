@@ -19,7 +19,7 @@ export default function ListingPhotoCollage({
     if (editable && onPhotoClick) {
       return (
         <button
-          onClick={onPhotoClick}
+          onClick={() => onPhotoClick && onPhotoClick(0)}
           className="w-full aspect-square bg-gray-100 rounded-2xl flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
           style={{
             borderWidth: '0.4px',
@@ -131,14 +131,14 @@ export default function ListingPhotoCollage({
           onClick={() => onPhotoClick && onPhotoClick(0)}
           style={{ cursor: onPhotoClick ? 'pointer' : 'default' }}
         />
-        {photos.length > 1 && (onGridClick || onPhotoClick) && <PhotoCountBadge count={photos.length} onClick={onGridClick || onPhotoClick} />}
+        {photos.length > 1 && (onGridClick || onPhotoClick) && <PhotoCountBadge count={photos.length} onClick={onGridClick || (() => onPhotoClick && onPhotoClick(0))} />}
       </>
     );
 
     if (editable && onPhotoClick) {
       return (
         <button
-          onClick={onPhotoClick}
+          onClick={() => onPhotoClick && onPhotoClick(0)}
           className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:-translate-y-[1px]"
           style={{
             borderWidth: '0.4px',
@@ -207,7 +207,11 @@ export default function ListingPhotoCollage({
           <div 
             key={index} 
             className="w-full h-full overflow-hidden"
-            onClick={() => onPhotoClick && onPhotoClick(index)}
+            data-photo-index={index}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onPhotoClick) onPhotoClick(index);
+            }}
             style={{ cursor: onPhotoClick ? 'pointer' : 'default' }}
           >
             <img 
@@ -224,8 +228,7 @@ export default function ListingPhotoCollage({
 
   if (editable && onPhotoClick) {
     return (
-      <button
-        onClick={onPhotoClick}
+      <div
         className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:-translate-y-[1px]"
         style={{
           borderWidth: '0.4px',
@@ -242,7 +245,7 @@ export default function ListingPhotoCollage({
         }}
       >
         {gridContent}
-      </button>
+      </div>
     );
   }
 
@@ -266,11 +269,11 @@ export default function ListingPhotoCollage({
             e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
           }}
           onClick={(e) => {
-            // Only trigger if clicking on the background, not the badge
+            // Only trigger if clicking on the background (not a grid item or badge)
             const target = e.target as HTMLElement;
-            if (!target.closest('.photo-badge-button')) {
-              console.log('Background clicked, calling onPhotoClick');
-              onPhotoClick();
+            if (!target.closest('.photo-badge-button') && !target.closest('[data-photo-index]')) {
+              // Default to first photo if clicking background
+              if (onPhotoClick) onPhotoClick(0);
             }
           }}
         >

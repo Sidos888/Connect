@@ -1,6 +1,9 @@
 "use client";
 
 import { X, MapPin, Calendar } from 'lucide-react';
+import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
+import PhotoViewer from '@/components/listings/PhotoViewer';
+import { useState } from 'react';
 
 interface Highlight {
   id: string;
@@ -9,6 +12,7 @@ interface Highlight {
   summary: string | null;
   location: string | null;
   image_url: string | null;
+  photo_urls: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,7 +24,91 @@ interface HighlightDetailModalProps {
 }
 
 export default function HighlightDetailModal({ highlight, isOpen, onClose }: HighlightDetailModalProps) {
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [showGridView, setShowGridView] = useState(false);
+  
   if (!isOpen || !highlight) return null;
+
+  // Get photos array - prefer photo_urls, fallback to image_url
+  const photos = highlight.photo_urls && Array.isArray(highlight.photo_urls) && highlight.photo_urls.length > 0
+    ? highlight.photo_urls
+    : highlight.image_url
+      ? [highlight.image_url]
+      : [];
+
+  // If grid view is active, show the grid
+  if (showGridView && photos.length > 0) {
+    return (
+      <div 
+        className="fixed inset-0 z-[100] bg-white flex flex-col"
+        onClick={(e) => {
+          // Only close if clicking backdrop
+          if (e.target === e.currentTarget) {
+            setShowGridView(false);
+          }
+        }}
+      >
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {highlight.title} - {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
+              </h2>
+              <button
+                onClick={() => setShowGridView(false)}
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '100px',
+                  background: 'rgba(255, 255, 255, 0.96)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                }}
+              >
+                <X size={20} className="text-gray-900" />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {photos.map((photo, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setShowGridView(false);
+                    setSelectedPhotoIndex(index);
+                  }}
+                  className="relative aspect-square bg-transparent overflow-hidden rounded-xl transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{ 
+                    borderWidth: '0.4px', 
+                    borderColor: '#E5E7EB',
+                    backgroundColor: 'transparent',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  <img 
+                    src={photo} 
+                    alt={`Photo ${index + 1}`} 
+                    className="w-full h-full object-cover pointer-events-none"
+                    draggable={false}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Format date
   const formatDate = (dateString: string): string => {
@@ -81,13 +169,13 @@ export default function HighlightDetailModal({ highlight, isOpen, onClose }: Hig
           <X size={20} className="text-gray-900" />
         </button>
 
-        {/* Image */}
-        {highlight.image_url && (
-          <div className="w-full aspect-video bg-gray-100 relative">
-            <img 
-              src={highlight.image_url} 
-              alt={highlight.title}
-              className="w-full h-full object-cover"
+        {/* Images */}
+        {photos.length > 0 && (
+          <div className="w-full bg-gray-100 relative">
+            <ListingPhotoCollage
+              photos={photos}
+              onPhotoClick={(index) => setSelectedPhotoIndex(index !== undefined ? index : 0)}
+              onGridClick={() => setShowGridView(true)}
             />
           </div>
         )}
@@ -133,6 +221,16 @@ export default function HighlightDetailModal({ highlight, isOpen, onClose }: Hig
           )}
         </div>
       </div>
+
+      {/* Photo Viewer */}
+      {selectedPhotoIndex !== null && photos.length > 0 && (
+        <PhotoViewer
+          isOpen={selectedPhotoIndex !== null}
+          photos={photos}
+          initialIndex={selectedPhotoIndex}
+          onClose={() => setSelectedPhotoIndex(null)}
+        />
+      )}
     </div>
   );
 }

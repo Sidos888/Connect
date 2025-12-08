@@ -1226,34 +1226,127 @@ export default function ProfilePage({
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
-                  {highlights.map((highlight) => (
-                    <button
-                      key={highlight.id}
-                      onClick={() => {
-                        if (onOpenHighlightDetail) {
-                          onOpenHighlightDetail(highlight.id);
-                        }
-                      }}
-                      className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
-                      style={{
-                        borderWidth: '0.4px',
-                        borderColor: '#E5E7EB',
-                        borderStyle: 'solid',
-                      }}
-                    >
-                      {highlight.image_url ? (
-                        <img 
-                          src={highlight.image_url} 
-                          alt={highlight.title}
-                          className="w-full h-full object-cover"
+                  {highlights.map((highlight) => {
+                    const photos = highlight.photo_urls || (highlight.image_url ? [highlight.image_url] : []);
+                    
+                    // On profile page highlights grid:
+                    // - Single photo: show just the image
+                    // - 2-3 photos: show first image
+                    // - 4+ photos: show 2x2 grid
+                    // All cards clickable to open highlight detail page
+                    
+                    if (photos.length === 0) {
+                      return (
+                        <div
+                          key={highlight.id}
+                          className="aspect-square rounded-xl bg-gray-100"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            borderStyle: 'solid',
+                          }}
                         />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-gray-400 text-xs">{highlight.title}</span>
+                      );
+                    }
+                    
+                    if (photos.length === 1) {
+                      // Single photo: just show image
+                      return (
+                        <button
+                          key={highlight.id}
+                          onClick={() => {
+                            if (onOpenHighlightDetail) {
+                              onOpenHighlightDetail(highlight.id);
+                            }
+                          }}
+                          className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            borderStyle: 'solid',
+                          }}
+                        >
+                          <img 
+                            src={photos[0]} 
+                            alt={highlight.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      );
+                    }
+                    
+                    if (photos.length <= 3) {
+                      // 2-3 photos: show first image
+                      return (
+                        <button
+                          key={highlight.id}
+                          onClick={() => {
+                            if (onOpenHighlightDetail) {
+                              onOpenHighlightDetail(highlight.id);
+                            }
+                          }}
+                          className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
+                          style={{
+                            borderWidth: '0.4px',
+                            borderColor: '#E5E7EB',
+                            borderStyle: 'solid',
+                          }}
+                        >
+                          <img 
+                            src={photos[0]} 
+                            alt={highlight.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      );
+                    }
+                    
+                    // 4+ photos: show 2x2 grid
+                    return (
+                      <div
+                        key={highlight.id}
+                        className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
+                        style={{
+                          borderWidth: '0.4px',
+                          borderColor: '#E5E7EB',
+                          borderStyle: 'solid',
+                        }}
+                        onClick={(e) => {
+                          // Only trigger if clicking on the background (not a grid item)
+                          const target = e.target as HTMLElement;
+                          if (!target.closest('[data-photo-index]')) {
+                            if (onOpenHighlightDetail) {
+                              onOpenHighlightDetail(highlight.id);
+                            }
+                          }
+                        }}
+                      >
+                        <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0">
+                          {photos.slice(0, 4).map((photo, index) => (
+                            <div 
+                              key={index} 
+                              className="w-full h-full overflow-hidden"
+                              data-photo-index={index}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Open highlight detail page when clicking a specific grid image
+                                if (onOpenHighlightDetail) {
+                                  onOpenHighlightDetail(highlight.id);
+                                }
+                              }}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <img 
+                                src={photo} 
+                                alt={`${highlight.title} photo ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
                         </div>
-                      )}
-                    </button>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
