@@ -804,11 +804,12 @@ export default function ListingPage() {
     >
       <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
-          <PageHeader
-            title={getPageTitle()}
-            subtitle={getSubtitle()}
-            backButton
-            onBack={handleBack}
+          {view !== 'gallery' && (
+            <PageHeader
+              title={getPageTitle()}
+              subtitle={getSubtitle()}
+              backButton
+              onBack={handleBack}
             actions={(() => {
               const actions = [];
               
@@ -910,6 +911,7 @@ export default function ListingPage() {
               </button>
             ) : undefined}
           />
+          )}
 
           <PageContent>
             {renderContent()}
