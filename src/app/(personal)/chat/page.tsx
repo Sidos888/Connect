@@ -235,10 +235,10 @@ function MessagesPageContent() {
       // This is much faster - one database round trip instead of N round trips
       const chatIds = eventChats.map(conv => conv.id);
       
-      try {
+          try {
         const { data: listings, error } = await supabase
-          .from('listings')
-          .select('id, title, start_date, end_date, photo_urls, event_chat_id')
+              .from('listings')
+              .select('id, title, start_date, end_date, photo_urls, event_chat_id')
           .in('event_chat_id', chatIds);
         
         if (error) {
@@ -262,28 +262,28 @@ function MessagesPageContent() {
           if (listing.event_chat_id) {
             listingMap.set(listing.event_chat_id, {
               chatId: listing.event_chat_id,
-              listing: {
-                id: listing.id,
-                title: listing.title,
-                start_date: listing.start_date,
-                end_date: listing.end_date,
-                photo_urls: listing.photo_urls || null
-              }
+                listing: {
+                  id: listing.id,
+                  title: listing.title,
+                  start_date: listing.start_date,
+                  end_date: listing.end_date,
+                  photo_urls: listing.photo_urls || null
+                }
             });
-          }
+            }
         });
         
         // Return in the same order as eventChats (for consistency)
         return eventChats.map(conv => listingMap.get(conv.id)).filter(Boolean) as Array<{
-          chatId: string;
-          listing: {
-            id: string;
-            title: string;
-            start_date: string | null;
-            end_date: string | null;
-            photo_urls: string[] | null;
-          };
-        }>;
+        chatId: string;
+        listing: {
+          id: string;
+          title: string;
+          start_date: string | null;
+          end_date: string | null;
+          photo_urls: string[] | null;
+        };
+      }>;
       } catch (err) {
         console.error('Error fetching event listings:', err);
         return [];

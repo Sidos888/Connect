@@ -596,7 +596,7 @@ export default function ListingPage() {
             router.push(`/listing?${params.toString()}`);
           }} 
           onHasChanges={setHasChanges} 
-          onSavingChange={setSaving}
+          onSavingChange={setSaving} 
           currentPage={editPage}
           onPageChange={(page) => setEditPage(page)}
         />;
@@ -853,33 +853,33 @@ export default function ListingPage() {
                 </button>
               ) : (
                 // Page 2: Tick button to save all changes
-                <button
-                  onClick={async () => {
-                    if (editDetailsRef.current && hasChanges && !saving) {
-                      await editDetailsRef.current.save();
-                    }
-                  }}
-                  disabled={!hasChanges || saving}
-                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '100px',
-                    background: hasChanges ? '#FF6600' : '#9CA3AF',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (hasChanges && !saving) {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  aria-label="Save"
-                >
-                  <Check size={18} className="text-white" />
+              <button
+                onClick={async () => {
+                  if (editDetailsRef.current && hasChanges && !saving) {
+                    await editDetailsRef.current.save();
+                  }
+                }}
+                disabled={!hasChanges || saving}
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '100px',
+                  background: hasChanges ? '#FF6600' : '#9CA3AF',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  if (hasChanges && !saving) {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Save"
+              >
+                <Check size={18} className="text-white" />
                 </button>
               )
             ) : undefined}

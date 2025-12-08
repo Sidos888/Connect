@@ -30,7 +30,11 @@ export default function CenteredHighlights({
         actions={isOwnHighlights && onAddHighlight ? [
           {
             icon: <Plus size={20} strokeWidth={2.5} />,
-            onClick: onAddHighlight,
+            onClick: () => {
+              const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+              onAddHighlight();
+              // Navigation will be handled by parent component
+            },
             label: "Add highlight"
           }
         ] : undefined}

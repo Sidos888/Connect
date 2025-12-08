@@ -691,21 +691,21 @@ const MessageBubble = React.memo(({
             )}
             {/* Show text only if profile card is shown AND there's meaningful text beyond profile sharing phrases */}
             {profileConnectId && !shouldHideProfileText && profileCleanedText && (
-              <div 
-                className="text-sm leading-relaxed whitespace-pre-wrap break-words"
-                style={{ 
-                  wordBreak: 'break-word',
-                  overflowWrap: 'break-word',
-                  wordWrap: 'break-word',
-                  // Ensure text respects parent width constraints
-                  ...(message.reply_to_message && {
-                    maxWidth: '100%',
-                    minWidth: '0'
-                  })
-                }}
-              >
+            <div 
+              className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+              style={{ 
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                wordWrap: 'break-word',
+                // Ensure text respects parent width constraints
+                ...(message.reply_to_message && {
+                  maxWidth: '100%',
+                  minWidth: '0'
+                })
+              }}
+            >
                 {profileCleanedText}
-              </div>
+            </div>
             )}
           </div>
         )}

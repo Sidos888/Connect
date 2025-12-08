@@ -114,7 +114,7 @@ function CreateItineraryPageContent() {
       const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
       if (bucketError) {
         console.error('Error listing buckets:', bucketError);
-      } else {
+          } else {
         const listingPhotosBucket = buckets?.find(b => b.id === 'listing-photos');
         if (!listingPhotosBucket) {
           throw new Error('The listing-photos storage bucket does not exist. Please create it in your Supabase dashboard or run the setup script.');
@@ -149,7 +149,7 @@ function CreateItineraryPageContent() {
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (blob.size > maxSize) {
         throw new Error(`Photo is too large (${Math.round(blob.size / 1024)}KB). Maximum size is 10MB.`);
-      }
+            }
 
       // Determine file extension from blob type
       let fileExt = 'jpg';
@@ -239,12 +239,12 @@ function CreateItineraryPageContent() {
           errorMessage += ': Storage bucket may not exist or may not have proper permissions. Please check your Supabase storage configuration.';
         } else if (uploadError.message?.includes('timeout') || uploadError.message?.includes('Load failed')) {
           errorMessage += ': Network timeout. Please check your internet connection and try again.';
-        } else {
+              } else {
           errorMessage += ': Unknown error occurred';
         }
           
         throw new Error(errorMessage);
-      }
+              }
 
       if (!uploadData || !uploadData.path) {
         throw new Error(`Upload succeeded but no path returned`);
@@ -318,20 +318,20 @@ function CreateItineraryPageContent() {
       let photoUrl: string | null = null;
       if (photo) {
         photoUrl = await uploadPhoto();
-      }
+    }
 
-      const newItem = {
-        title: title.trim(),
-        summary: summary.trim(),
-        location: location.trim(),
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+    const newItem = {
+      title: title.trim(),
+      summary: summary.trim(),
+      location: location.trim(),
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
         photo: photoUrl
-      };
+    };
 
-      const updatedItems = [...existingItems, newItem];
-      sessionStorage.setItem('listingItinerary', JSON.stringify(updatedItems));
-      router.back();
+    const updatedItems = [...existingItems, newItem];
+    sessionStorage.setItem('listingItinerary', JSON.stringify(updatedItems));
+    router.back();
     } catch (error) {
       console.error('Error saving itinerary item:', error);
       alert(error instanceof Error ? error.message : 'Failed to save itinerary item');

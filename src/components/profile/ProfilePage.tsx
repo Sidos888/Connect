@@ -9,6 +9,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { connectionsService } from "@/lib/connectionsService";
 import { useChatService } from "@/lib/chatProvider";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type Profile = {
   id?: string;
@@ -81,6 +82,7 @@ export default function ProfilePage({
   onOpenBadges,
   onOpenConnections,
   onOpenFullLife,
+  onOpenHighlightDetail,
   onThreeDotsMenu,
   showBackButton = false,
 }: {
@@ -95,6 +97,7 @@ export default function ProfilePage({
   onOpenBadges?: () => void;
   onOpenConnections?: () => void;
   onOpenFullLife?: () => void;
+  onOpenHighlightDetail?: (highlightId: string) => void;
   onThreeDotsMenu?: () => void;
   showBackButton?: boolean;
 }) {
@@ -122,6 +125,11 @@ export default function ProfilePage({
       
       const supabase = await import('@/lib/supabaseClient').then(m => m.getSupabaseClient());
       
+      if (!supabase) {
+        setLoadingMoments(false);
+        return;
+      }
+      
       // Fetch all moments for count and preview
       const { data, error, count } = await supabase
         .from('user_moments')
@@ -142,6 +150,50 @@ export default function ProfilePage({
 
     fetchMoments();
   }, [profile?.id]);
+
+  // Fetch highlights for the profile user
+  useEffect(() => {
+    const fetchHighlights = async () => {
+      if (!profile?.id) {
+        setLoadingHighlights(false);
+        return;
+      }
+
+      try {
+        setLoadingHighlights(true);
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+          setLoadingHighlights(false);
+          return;
+        }
+
+        // Fetch highlights with count
+        const { data, error: fetchError, count } = await supabase
+          .from('user_highlights')
+          .select('*', { count: 'exact' })
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(8); // Limit to 8 for preview grid (2 rows of 4)
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        setHighlights(data || []);
+        if (count !== null) {
+          setHighlightsCount(count);
+        }
+      } catch (err: any) {
+        console.error('Error loading highlights:', err);
+        setHighlights([]);
+        setHighlightsCount(0);
+      } finally {
+        setLoadingHighlights(false);
+      }
+    };
+
+    fetchHighlights();
+  }, [profile?.id]);
   // Platform detection for responsive padding
   const [isMobile, setIsMobile] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -155,6 +207,9 @@ export default function ProfilePage({
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [hasLinks, setHasLinks] = useState(false);
   const [loadingLinks, setLoadingLinks] = useState(true);
+  const [highlights, setHighlights] = useState<any[]>([]);
+  const [highlightsCount, setHighlightsCount] = useState(0);
+  const [loadingHighlights, setLoadingHighlights] = useState(true);
   const router = useRouter();
   const chatService = useChatService();
   
@@ -168,6 +223,7 @@ export default function ProfilePage({
     const getCurrentUser = async () => {
       const { getSupabaseClient } = await import('@/lib/supabaseClient');
       const supabase = getSupabaseClient();
+      if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
     };
@@ -216,18 +272,20 @@ export default function ProfilePage({
         if (!error && (!links || links.length === 0)) {
           const { getSupabaseClient } = await import('@/lib/supabaseClient');
           const supabase = getSupabaseClient();
-          const { data: directData, error: directError, count } = await supabase
-            .from('user_links')
-            .select('*', { count: 'exact' })
-            .eq('user_id', profile.id);
+          if (supabase) {
+            const { data: directData, error: directError, count } = await supabase
+              .from('user_links')
+              .select('*', { count: 'exact' })
+              .eq('user_id', profile.id);
           
-          console.log('🔗 ProfilePage: Direct query check:', {
-            directData,
-            directError,
-            count,
-            hasDirectData: !!directData,
-            directDataLength: directData?.length
-          });
+            console.log('🔗 ProfilePage: Direct query check:', {
+              directData,
+              directError,
+              count,
+              hasDirectData: !!directData,
+              directDataLength: directData?.length
+            });
+          }
         }
 
         if (error) {
@@ -793,7 +851,7 @@ export default function ProfilePage({
                     return count;
                   })()
                 },
-                { id: 'highlights' as const, label: 'Highlights', count: 10 },
+                { id: 'highlights' as const, label: 'Highlights', count: highlightsCount },
                 { id: 'badges' as const, label: 'Badges', count: 10 }
               ].map((pill) => {
                 const isActive = selectedPill === pill.id;
@@ -1146,15 +1204,52 @@ export default function ProfilePage({
                 className="flex items-center gap-1 mb-4"
               >
                 <h3 className="text-base font-semibold text-gray-900">
-                  # Highlights
+                  {highlightsCount} Highlights
                 </h3>
                 <ChevronRight size={20} className="text-gray-400" strokeWidth={2} />
               </button>
 
-              {/* Highlights Preview - Placeholder for now */}
-              <div className="space-y-4">
-                <p className="text-gray-400 text-sm">No highlights yet</p>
-              </div>
+              {/* Highlights Grid */}
+              {loadingHighlights ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-gray-400 text-sm">Loading highlights...</p>
+                </div>
+              ) : highlights.length === 0 ? (
+                <div className="space-y-4">
+                  <p className="text-gray-400 text-sm">No highlights yet</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {highlights.map((highlight) => (
+                    <button
+                      key={highlight.id}
+                      onClick={() => {
+                        if (onOpenHighlightDetail) {
+                          onOpenHighlightDetail(highlight.id);
+                        }
+                      }}
+                      className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative transition-all duration-200 hover:opacity-90"
+                      style={{
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                      }}
+                    >
+                      {highlight.image_url ? (
+                        <img 
+                          src={highlight.image_url} 
+                          alt={highlight.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-gray-400 text-xs">{highlight.title}</span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1180,6 +1275,7 @@ export default function ProfilePage({
         <div className="absolute left-0 right-0" style={{ bottom: '40px', height: '20px', backdropFilter: 'blur(0.15px)', WebkitBackdropFilter: 'blur(0.15px)' }} />
         <div className="absolute left-0 right-0" style={{ bottom: '60px', height: '20px', backdropFilter: 'blur(0.05px)', WebkitBackdropFilter: 'blur(0.05px)' }} />
       </div>
+
 
       {/* Cancel Request Modal */}
       {showCancelRequestModal && (
