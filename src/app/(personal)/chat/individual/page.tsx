@@ -1063,37 +1063,29 @@ export default function IndividualChatPage() {
         setReplyToMessage(null);
         setReplyingMessageElement(null);
 
-        // Wait a brief moment for the database to be fully updated
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        console.log('🔄 Refreshing messages to show attachments...');
-        // Refresh messages to show the new message with attachments
-        // This replaces all messages, so we don't need to manually add newMessage
-        const { messages: updatedMessages } = await chatService?.getChatMessages(conversation.id);
-        if (updatedMessages) {
-          console.log('✅ Messages refreshed, count:', updatedMessages.length);
-          // Debug: Check if the new message has reply data
-          const sentMessage = updatedMessages.find(m => m.id === newMessage?.id || m.reply_to_message_id === replyToMessage?.id);
-          if (sentMessage) {
-            console.log('🔍 Sent message found in refreshed messages:', {
-              id: sentMessage.id,
-              reply_to_message_id: sentMessage.reply_to_message_id,
-              has_reply_to_message: !!sentMessage.reply_to_message,
-              reply_to_message: sentMessage.reply_to_message
-            });
+        // Optimized: Append the new message directly instead of refetching all messages
+        // The newMessage returned from sendMessage already includes all data (attachments, reply info, etc.)
+        console.log('✅ Appending new message directly to state:', {
+          messageId: newMessage.id,
+          hasAttachments: !!(newMessage.attachments && newMessage.attachments.length > 0),
+          attachmentCount: newMessage.attachments?.length || 0
+        });
+        
+        // Use functional update to append the new message
+        setMessages(prev => {
+          // Remove any optimistic messages that might still be there
+          const withoutOptimistic = prev.filter(msg => !msg.id.startsWith('optimistic_'));
+          
+          // Check if message already exists (shouldn't happen, but safety check)
+          const messageExists = withoutOptimistic.some(msg => msg.id === newMessage.id);
+          if (messageExists) {
+            console.warn('⚠️ Message already exists in state, skipping append');
+            return withoutOptimistic;
           }
-          // Use functional update to ensure we're working with latest state
-          setMessages(prev => {
-            // Remove any optimistic messages that might still be there
-            const withoutOptimistic = prev.filter(msg => !msg.id.startsWith('optimistic_'));
-            // Merge with fresh messages from database, avoiding duplicates
-            const existingIds = new Set(withoutOptimistic.map(m => m.id));
-            const newMessages = updatedMessages.filter(m => !existingIds.has(m.id));
-            return [...withoutOptimistic, ...newMessages];
-          });
-        } else {
-          console.warn('⚠️ No messages returned from refresh');
-        }
+          
+          // Append the new message
+          return [...withoutOptimistic, newMessage];
+        });
         
         // Reset sending flag after successful completion
         isSendingRef.current = false;
