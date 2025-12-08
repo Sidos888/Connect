@@ -259,12 +259,12 @@ export default function PageHeader({
     }}>
       {/* Compact Opacity Gradient - Platform specific - Only show if blur is not disabled */}
       {!disableBlur && (
-        <div className="absolute top-0 left-0 right-0" style={{
-          height: blurHeight,
-          background: isMobile 
-            ? 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.62) 60%, rgba(255,255,255,0.58) 80%, rgba(255,255,255,0.3) 100%)'
-            : 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0.25) 80%, rgba(255,255,255,0.05) 100%)'
-        }} />
+      <div className="absolute top-0 left-0 right-0" style={{
+        height: blurHeight,
+        background: isMobile 
+          ? 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.62) 60%, rgba(255,255,255,0.58) 80%, rgba(255,255,255,0.3) 100%)'
+          : 'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 20%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0.25) 80%, rgba(255,255,255,0.05) 100%)'
+      }} />
       )}
       
       {/* Compact Progressive Blur - 5 layers - Only show if blur is not disabled */}

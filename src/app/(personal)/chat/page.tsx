@@ -9,7 +9,7 @@ import ChatLayout from "./ChatLayout";
 import PersonalChatPanel from "./PersonalChatPanel";
 import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
-import { useChats } from "@/lib/chatQueries";
+import { useChats, useMarkInboxAsViewed } from "@/lib/chatQueries";
 import { useModal } from "@/lib/modalContext";
 import HappeningNowBanner from "@/components/HappeningNowBanner";
 import { useHappeningNow } from "@/hooks/useHappeningNow";
@@ -41,7 +41,41 @@ function MessagesPageContent() {
   const openNewChat = searchParams.get("openNewChat");
   
   // Use React Query to fetch chats
-  const { data: chats = [], isLoading, error } = useChats(chatService, user?.id || null);
+  const { data: chats = [], isLoading, error, refetch: refetchChats } = useChats(chatService, user?.id || null);
+  
+  // Log when chats data changes
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔵 ChatPage: Chats data updated', {
+        chatsCount: chats.length,
+        unreadCounts: chats.map(c => ({ id: c.id, unread_count: c.unread_count }))
+      });
+    }
+  }, [chats]);
+  
+  // Refetch chats when navigating back from individual chat page
+  useEffect(() => {
+    // When pathname is /chat/ and there's no selectedChatId, we're on the main chat list
+    // This means we navigated back from an individual chat
+    if (pathname === '/chat' && !selectedChatId && user?.id) {
+      console.log('🔵 ChatPage: Navigated back to chat list, forcing refetch of chats');
+      // Force refetch even if data is still fresh (bypasses staleTime)
+      refetchChats().then(() => {
+        console.log('🔵 ChatPage: Refetch completed after navigation');
+      }).catch((error) => {
+        console.error('🔵 ChatPage: Refetch error after navigation', error);
+      });
+    }
+  }, [pathname, selectedChatId, user?.id, refetchChats]);
+  
+  // Mark inbox as viewed when page loads (removes badge from chats icon)
+  const markInboxAsViewed = useMarkInboxAsViewed(chatService);
+  useEffect(() => {
+    if (user?.id && chatService) {
+      markInboxAsViewed.mutate(user.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only run once when page loads (chatService is stable)
   
   // Typing indicator state - must be declared before useMemo that uses it
   const [typingUsersByChat, setTypingUsersByChat] = useState<Map<string, string[]>>(new Map());
@@ -693,8 +727,8 @@ function MessagesPageContent() {
   ];
 
   const mobileCategoriesBottom = [
-    { id: "dm", label: "DM", count: mobileDmCount },
-    { id: "group", label: "Groups", count: mobileGroupCount },
+    ...(mobileDmCount > 0 ? [{ id: "dm", label: "DM", count: mobileDmCount }] : []),
+    ...(mobileGroupCount > 0 ? [{ id: "group", label: "Groups", count: mobileGroupCount }] : []),
     ...(mobileEventsCount > 0 ? [{ id: "events", label: "Events", count: mobileEventsCount }] : []),
   ];
 
@@ -993,7 +1027,7 @@ function MessagesPageContent() {
                               </h3>
                               <div className="relative flex-shrink-0">
                                 <span 
-                                  className={`text-xs ${conversation.unreadCount > 0 ? 'text-orange-500' : 'text-gray-500'}`}
+                                  className="text-xs text-gray-500"
                                 >
                                   {getLastMessageTime(conversation)}
                                 </span>
@@ -1001,7 +1035,7 @@ function MessagesPageContent() {
                                   <div 
                                     className="absolute right-0 top-full mt-0.5 rounded-full flex items-center justify-center"
                                     style={{ 
-                                      backgroundColor: '#F97316',
+                                      backgroundColor: '#EF4444', // red-500
                                       width: '20px',
                                       height: '20px',
                                       minWidth: '20px'
@@ -1014,8 +1048,19 @@ function MessagesPageContent() {
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-500 truncate mt-1 flex items-center gap-1">
-                              <MessageTextWithIcon text={conversation.last_message || 'No messages yet'} />
+                            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                              <span
+                                style={{
+                                  maxWidth: 'calc(100% - 60px)', // Cut off about 60px before right edge
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  display: 'inline-block',
+                                  minWidth: 0 // Allow flex child to shrink
+                                }}
+                              >
+                                <MessageTextWithIcon text={conversation.last_message || 'No messages yet'} />
+                              </span>
                             </p>
                           </div>
                         </div>

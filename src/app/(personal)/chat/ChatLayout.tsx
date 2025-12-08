@@ -690,7 +690,7 @@ const ChatLayoutContent = () => {
                                   </div>
                                   <div className="relative flex-shrink-0">
                                     <span 
-                                      className={`text-xs ${conversation.unreadCount > 0 ? 'text-orange-500' : 'text-gray-500'}`}
+                                      className="text-xs text-gray-500"
                                     >
                                       {getLastMessageTime(conversation)}
                                     </span>
@@ -698,7 +698,7 @@ const ChatLayoutContent = () => {
                                       <div 
                                         className="absolute right-0 top-full mt-0.5 rounded-full flex items-center justify-center"
                                         style={{ 
-                                          backgroundColor: '#F97316',
+                                          backgroundColor: '#EF4444', // red-500
                                           width: '20px',
                                           height: '20px',
                                           minWidth: '20px'
@@ -711,19 +711,30 @@ const ChatLayoutContent = () => {
                                     )}
                                   </div>
                                 </div>
-                                <p className={`text-xs truncate leading-relaxed flex items-center gap-1 ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                                  {(() => {
-                                    const displayText = getDisplayMessage(conversation);
-                                    // Log if this conversation has a profile URL that wasn't formatted
-                                    if (conversation.last_message && typeof conversation.last_message === 'string' && /\/p\/([A-Z0-9]+)/i.test(conversation.last_message) && displayText === conversation.last_message) {
-                                      console.log('🔵 ChatLayout: RENDERING - Profile URL not formatted!', {
-                                        conversationId: conversation.id,
-                                        last_message: conversation.last_message,
-                                        displayText: displayText
-                                      });
-                                    }
-                                    return <MessageTextWithIcon text={displayText} />;
-                                  })()}
+                                <p className={`text-xs leading-relaxed flex items-center gap-1 ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                                  <span
+                                    style={{
+                                      maxWidth: 'calc(100% - 60px)', // Cut off about 60px before right edge
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      display: 'inline-block',
+                                      minWidth: 0 // Allow flex child to shrink
+                                    }}
+                                  >
+                                    {(() => {
+                                      const displayText = getDisplayMessage(conversation);
+                                      // Log if this conversation has a profile URL that wasn't formatted
+                                      if (conversation.last_message && typeof conversation.last_message === 'string' && /\/p\/([A-Z0-9]+)/i.test(conversation.last_message) && displayText === conversation.last_message) {
+                                        console.log('🔵 ChatLayout: RENDERING - Profile URL not formatted!', {
+                                          conversationId: conversation.id,
+                                          last_message: conversation.last_message,
+                                          displayText: displayText
+                                        });
+                                      }
+                                      return <MessageTextWithIcon text={displayText} />;
+                                    })()}
+                                  </span>
                                 </p>
                               </div>
                             </div>

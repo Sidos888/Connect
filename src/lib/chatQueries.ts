@@ -33,10 +33,15 @@ export function useChats(chatService: ChatService | null, userId: string | null)
   return useQuery({
     queryKey: chatKeys.lists(),
     queryFn: async () => {
+      console.log('🔵 useChats: Fetching chats', { userId });
       if (!chatService) throw new Error('Chat service not available');
       if (!userId) throw new Error('User ID not available');
       const result = await chatService.getUserChats(userId);
       if (result.error) throw result.error;
+      console.log('🔵 useChats: Fetched chats', { 
+        count: result.chats.length,
+        unreadCounts: result.chats.map(c => ({ id: c.id, unread_count: c.unread_count }))
+      });
       return result.chats;
     },
     enabled: !!chatService && !!userId,
@@ -153,5 +158,94 @@ export function useRefreshChats() {
       type: 'active' // Only refetch active queries
     });
   }, [queryClient]);
+}
+
+/**
+ * Hook to get unread chats count (for badge display)
+ * - Cached for 30 seconds
+ * - Auto-refreshes periodically
+ * - Used to show badge on chats icon
+ */
+export function useUnreadChatsCount(chatService: ChatService | null, userId: string | null) {
+  return useQuery({
+    queryKey: ['unread-chats-count', userId],
+    queryFn: async () => {
+      if (!chatService) throw new Error('Chat service not available');
+      if (!userId) throw new Error('User ID not available');
+      const result = await chatService.getUnreadChatsCount(userId);
+      if (result.error) throw result.error;
+      return result.count;
+    },
+    enabled: !!chatService && !!userId,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 2 * 60 * 1000, // 2 minutes in cache
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+  });
+}
+
+/**
+ * Hook to mark inbox as viewed (removes badge from chats icon)
+ * - Invalidates unread count query
+ * - Called when chats page is opened
+ */
+export function useMarkInboxAsViewed(chatService: ChatService | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      if (!chatService) throw new Error('Chat service not available');
+      const result = await chatService.markInboxAsViewed(userId);
+      if (result.error) throw result.error;
+      return result;
+    },
+    onSuccess: (_, userId) => {
+      // Invalidate unread count to update badge
+      queryClient.invalidateQueries({ queryKey: ['unread-chats-count', userId] });
+    },
+  });
+}
+
+/**
+ * Hook to mark messages as read
+ * - Invalidates chat list to update unread counts on chat cards
+ * - Invalidates unread count query to update badge
+ * - Called when user opens a chat
+ */
+export function useMarkMessagesAsRead(chatService: ChatService | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ chatId, userId }: { chatId: string; userId: string }) => {
+      console.log('🔵 useMarkMessagesAsRead: Mutation called', { chatId, userId });
+      if (!chatService) throw new Error('Chat service not available');
+      const result = await chatService.markMessagesAsRead(chatId, userId);
+      if (result.error) throw result.error;
+      console.log('🔵 useMarkMessagesAsRead: Mutation completed successfully');
+      return result;
+    },
+    onSuccess: async (_, { userId }) => {
+      console.log('🔵 useMarkMessagesAsRead: onSuccess called, invalidating queries', { userId });
+      
+      // Invalidate chat list query (marks as stale)
+      queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
+      console.log('🔵 useMarkMessagesAsRead: Invalidated chat list query');
+      
+      // Force immediate refetch of chat list regardless of active status
+      // This ensures the data is fresh when user navigates back
+      await queryClient.refetchQueries({ 
+        queryKey: chatKeys.lists(),
+        type: 'all' // Refetch all matching queries, not just active ones
+      });
+      console.log('🔵 useMarkMessagesAsRead: Refetched chat list query');
+      
+      // Invalidate unread count to update badge
+      queryClient.invalidateQueries({ queryKey: ['unread-chats-count', userId] });
+      console.log('🔵 useMarkMessagesAsRead: Invalidated unread count query');
+    },
+    onError: (error) => {
+      console.error('🔵 useMarkMessagesAsRead: Mutation error', error);
+    },
+  });
 }
 

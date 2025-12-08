@@ -4,9 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { listingsService, ListingInvite } from "@/lib/listingsService";
+import { connectionsService, FriendRequest } from "@/lib/connectionsService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import ListingCard from "@/components/listings/ListingCard";
+import { useMarkNotificationsPageAsViewed } from "@/lib/notificationsQueries";
+import Loading8 from "@/components/Loading8";
 
 /**
  * Notifications - Unified component for Notifications page
@@ -16,6 +19,15 @@ export default function Notifications() {
   const router = useRouter();
   const { account } = useAuth();
   const queryClient = useQueryClient();
+
+  // Mark notifications page as viewed when component loads (removes badges from menu and bell icons)
+  const markNotificationsPageAsViewed = useMarkNotificationsPageAsViewed();
+  useEffect(() => {
+    if (account?.id) {
+      markNotificationsPageAsViewed.mutate(account.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.id]); // Only run once when component loads
 
   // Fetch listing invitations
   const { data: invitesData, isLoading } = useQuery({
@@ -28,7 +40,19 @@ export default function Notifications() {
     staleTime: 30 * 1000,
   });
 
+  // Fetch pending friend requests
+  const { data: friendRequestsData, isLoading: isLoadingFriendRequests } = useQuery({
+    queryKey: ['friend-requests', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return { requests: [], error: null };
+      return await connectionsService.getPendingRequests(account.id);
+    },
+    enabled: !!account?.id,
+    staleTime: 30 * 1000,
+  });
+
   const invites = invitesData?.invites || [];
+  const friendRequests = friendRequestsData?.requests || [];
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -98,6 +122,12 @@ export default function Notifications() {
     router.push(`/listing?id=${invite.listing_id}&from=${returnPath}`);
   };
 
+  const handleFriendRequestCardClick = () => {
+    // Navigate to add person page with return path to notifications
+    const returnPath = encodeURIComponent('/notifications');
+    router.push(`/menu?view=add-person&from=${returnPath}`);
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-4 lg:px-8 pb-8 scrollbar-hide" style={{ 
       paddingTop: 'var(--saved-content-padding-top, 104px)',
@@ -106,16 +136,68 @@ export default function Notifications() {
     }}>
       {/* Notifications Section */}
       <div className="mb-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-orange-500"></div>
+        {isLoading || isLoadingFriendRequests ? (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-white">
+            <Loading8 />
           </div>
-        ) : invites.length === 0 ? (
+        ) : friendRequests.length === 0 && invites.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-gray-500 text-lg">No notifications :)</p>
           </div>
         ) : (
           <>
+            {/* Friend Requests Section */}
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Friend requests</h3>
+            <div className="mb-6">
+              <div
+                onClick={handleFriendRequestCardClick}
+                className="bg-white rounded-2xl border border-gray-200 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer relative"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow',
+                  backgroundColor: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+              >
+                <div className="flex items-center justify-between" style={{ padding: '16px' }}>
+                  {friendRequests.length === 0 ? (
+                    <p className="text-sm text-gray-500">No friend requests yet</p>
+                  ) : (
+                    <p className="text-sm text-gray-900">
+                      {friendRequests[0]?.sender?.name || 'Unknown'}
+                      {friendRequests.length > 1 && (
+                        <span className="text-gray-500"> +{friendRequests.length - 1} {friendRequests.length === 2 ? 'other' : 'others'}</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+                {/* Red dot indicator - always shown if there are friend requests (on the right side) */}
+                {friendRequests.length > 0 && (
+                  <div
+                    className="absolute rounded-full bg-red-500 flex-shrink-0"
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      top: '12px',
+                      right: '12px',
+                      boxShadow: '0 0 0 1px rgba(255, 255, 255, 1)',
+                      zIndex: 10
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Recent Section */}
+            {invites.length > 0 && (
+              <>
         <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Recent</h3>
         <div className="space-y-3">
             {invites.map((invite) => {
@@ -241,8 +323,10 @@ export default function Notifications() {
               );
             })}
                 </div>
+              </>
+            )}
           </>
-                )}
+        )}
       </div>
     </div>
   );

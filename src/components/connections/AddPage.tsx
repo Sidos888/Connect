@@ -204,10 +204,10 @@ export default function AddPage({ onBack, onOpenFriendRequests }: AddPageProps) 
     }
   };
 
-  // Display first 5 requests
-  const displayedRequests = friendRequests.slice(0, 5);
-  const hasMoreRequests = friendRequests.length > 5;
-  const totalRequestsCount = friendRequests.length;
+  // Display first 5 requests - ensure friendRequests is an array
+  const displayedRequests = Array.isArray(friendRequests) ? friendRequests.slice(0, 5) : [];
+  const hasMoreRequests = Array.isArray(friendRequests) && friendRequests.length > 5;
+  const totalRequestsCount = Array.isArray(friendRequests) ? friendRequests.length : 0;
 
   return (
     <div className="space-y-6">

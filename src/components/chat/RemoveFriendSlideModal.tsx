@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X, UserMinus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { getDeviceCornerRadius } from '@/lib/deviceCornerRadius';
@@ -14,6 +14,7 @@ interface RemoveFriendSlideModalProps {
   userName: string;
   userId?: string;
   chatId?: string;
+  onRemoveSuccess?: () => void; // Optional callback when friend is successfully removed
 }
 
 export default function RemoveFriendSlideModal({
@@ -22,6 +23,7 @@ export default function RemoveFriendSlideModal({
   userName,
   userId,
   chatId,
+  onRemoveSuccess,
 }: RemoveFriendSlideModalProps) {
   const router = useRouter();
   const { account } = useAuth();
@@ -29,17 +31,20 @@ export default function RemoveFriendSlideModal({
   const [isRemoving, setIsRemoving] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false); // Two-step confirmation
   const [cornerRadius, setCornerRadius] = useState<number>(45);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log('RemoveFriendSlideModal: isOpen changed to:', isOpen);
+    console.log('🔵 RemoveFriendSlideModal: isOpen changed to:', isOpen, 'userName:', userName, 'userId:', userId);
     if (isOpen) {
-      console.log('RemoveFriendSlideModal: Opening modal, userName:', userName, 'userId:', userId);
+      console.log('🔵 RemoveFriendSlideModal: Opening modal, userName:', userName, 'userId:', userId);
       setShouldRender(true);
+      setShowConfirm(false); // Reset confirm state when opening
       setTimeout(() => setIsVisible(true), 10);
     } else {
       setIsVisible(false);
+      setShowConfirm(false); // Reset confirm state when closing
       setTimeout(() => {
         setShouldRender(false);
       }, 300);
@@ -90,15 +95,25 @@ export default function RemoveFriendSlideModal({
       await queryClient.invalidateQueries({ queryKey: ['suggested-friends', account.id] });
       // Invalidate friend-requests to refresh any pending requests
       await queryClient.invalidateQueries({ queryKey: ['friend-requests', account.id] });
+      // Invalidate connection status queries
+      await queryClient.invalidateQueries({ queryKey: ['connection-status'] });
       console.log('Cache invalidation complete');
       
       // Close the modal
       handleClose();
       
-      // Navigate back to inbox after a short delay
-      setTimeout(() => {
-        router.push('/chat');
-      }, 300);
+      // If onRemoveSuccess callback is provided, call it (for profile page updates)
+      // Otherwise, navigate back to inbox (for chat settings)
+      if (onRemoveSuccess) {
+        setTimeout(() => {
+          onRemoveSuccess();
+        }, 300);
+      } else {
+        // Navigate back to inbox after a short delay
+        setTimeout(() => {
+          router.push('/chat');
+        }, 300);
+      }
       
     } catch (error) {
       console.error('Error in handleRemoveFriend:', error);
@@ -118,10 +133,11 @@ export default function RemoveFriendSlideModal({
   }, [shouldRender]);
 
   if (!shouldRender) {
+    console.log('🔵 RemoveFriendSlideModal: Not rendering (shouldRender is false)');
     return null;
   }
 
-  console.log('RemoveFriendSlideModal: Rendering modal, isVisible:', isVisible, 'userName:', userName, 'userId:', userId);
+  console.log('🔵 RemoveFriendSlideModal: Rendering modal, isVisible:', isVisible, 'userName:', userName, 'userId:', userId, 'showConfirm:', showConfirm);
 
   return (
     <div
@@ -197,38 +213,71 @@ export default function RemoveFriendSlideModal({
 
         {/* Content */}
         <div className="flex-1 flex flex-col px-6 pb-6">
-          {/* Confirmation Text */}
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-base text-gray-900 text-center">
-              Are you sure you want to remove {userName} as a friend?
-            </p>
-          </div>
+          {!showConfirm ? (
+            <>
+              {/* Initial Remove Friend Option */}
+              <div className="flex-1 flex items-center justify-center">
+                <button
+                  onClick={() => setShowConfirm(true)}
+                  className="w-full flex items-center gap-3 px-4 py-4 rounded-xl transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    background: 'white',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  <div className="w-6 h-6 flex items-center justify-center">
+                    <UserMinus size={20} className="text-gray-900" />
+                  </div>
+                  <span className="text-base text-gray-900 font-medium">Remove Friend</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Confirmation Text */}
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-base text-gray-900 text-center">
+                  Are you sure you want to remove {userName} as a friend?
+                </p>
+              </div>
 
-          {/* Confirm Button */}
-          <button
-            onClick={handleRemoveFriend}
-            disabled={isRemoving || !userId}
-            className="w-full rounded-xl transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              padding: '16px',
-              background: '#EF4444',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: '600',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              if (!isRemoving && userId) {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-          >
-            {isRemoving ? 'Removing...' : 'Confirm'}
-          </button>
+              {/* Confirm Button */}
+              <button
+                onClick={handleRemoveFriend}
+                disabled={isRemoving || !userId}
+                className="w-full rounded-xl transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  padding: '16px',
+                  background: '#EF4444',
+                  color: 'white',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isRemoving && userId) {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+              >
+                {isRemoving ? 'Removing...' : 'Confirm'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

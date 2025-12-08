@@ -10,6 +10,8 @@ export type TabItem = {
   href: string;
   label: string;
   icon?: React.ReactNode | React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>;
+  badgeCount?: number; // Number to display (or "9+" if > 9)
+  badgeType?: 'number' | 'dot'; // Display number badge or just dot
 };
 
 type Props = {
@@ -369,7 +371,7 @@ export default function TabBar({ items }: Props) {
                 }}
               >
                 <span 
-                  className="flex items-center justify-center flex-shrink-0" 
+                  className="flex items-center justify-center flex-shrink-0 relative" 
                   style={{ 
                     width: iconContainerWidth,
                     height: iconContainerHeight,
@@ -384,6 +386,32 @@ export default function TabBar({ items }: Props) {
                     stroke: "none",
                     active: active
                   })}
+                  {/* Badge - Show if badgeCount > 0 */}
+                  {item.badgeCount !== undefined && item.badgeCount > 0 && (
+                    <span
+                      className="absolute flex items-center justify-center"
+                      style={{
+                        top: '-4px',
+                        right: isChatIcon ? '-6px' : '-4px', // Chat icon is wider, adjust position
+                        width: '20px', // Same size as chat notification dot
+                        height: '20px', // Same size as chat notification dot
+                        minWidth: '20px', // Same size as chat notification dot
+                        backgroundColor: '#EF4444', // red-500
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        padding: item.badgeType === 'dot' ? '0' : '0 4px', // No padding for dot, padding for number
+                        border: '2px solid white',
+                        boxShadow: '0 0 0 1px rgba(255, 255, 255, 1)', // Stronger white shadow to prevent red bleed
+                        zIndex: 10,
+                        isolation: 'isolate', // Create new stacking context to prevent bleed
+                        lineHeight: '1',
+                        borderRadius: '50%',
+                      }}
+                    >
+                      {item.badgeType === 'dot' ? '' : (item.badgeCount && item.badgeCount > 9 ? '9+' : String(item.badgeCount))}
+                    </span>
+                  )}
                 </span>
                 <span 
                   className="whitespace-nowrap font-semibold leading-tight"

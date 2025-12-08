@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
 import { useAppStore } from "@/lib/store";
-import { useChatById } from "@/lib/chatQueries";
+import { useChatById, useMarkMessagesAsRead } from "@/lib/chatQueries";
 import { ArrowLeft, X } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import MessageActionModal from "@/components/chat/MessageActionModal";
@@ -581,13 +581,41 @@ export default function IndividualChatPage() {
     }
   }, [conversation?.id, loading, messages.length]);
 
-  // Mark messages as read when chat is loaded
+  // Mark messages as read when chat is loaded - using React Query mutation to invalidate cache
+  const markMessagesAsRead = useMarkMessagesAsRead(chatService);
   useEffect(() => {
+    console.log('🔵 IndividualChatPage: useEffect for markMessagesAsRead', {
+      hasMarkedAsRead: hasMarkedAsRead.current,
+      hasAccount: !!account?.id,
+      hasChatId: !!chatId,
+      hasConversation: !!conversation,
+      hasChatService: !!chatService
+    });
+    
     if (!hasMarkedAsRead.current && account?.id && chatId && conversation && chatService) {
-      chatService.markMessagesAsRead(chatId, account.id);
+      console.log('🔵 IndividualChatPage: Calling markMessagesAsRead mutation', { chatId, userId: account.id });
+      markMessagesAsRead.mutate(
+        { chatId, userId: account.id },
+        {
+          onSuccess: () => {
+            console.log('🔵 IndividualChatPage: markMessagesAsRead mutation succeeded');
+          },
+          onError: (error) => {
+            console.error('🔵 IndividualChatPage: markMessagesAsRead mutation failed', error);
+          },
+        }
+      );
       hasMarkedAsRead.current = true;
+    } else {
+      console.log('🔵 IndividualChatPage: Skipping markMessagesAsRead', {
+        reason: !hasMarkedAsRead.current ? 'already marked' : 
+                !account?.id ? 'no account' :
+                !chatId ? 'no chatId' :
+                !conversation ? 'no conversation' :
+                !chatService ? 'no chatService' : 'unknown'
+      });
     }
-  }, [conversation, chatId, account?.id, chatService]);
+  }, [conversation, chatId, account?.id, chatService, markMessagesAsRead]);
 
 
 
@@ -1245,7 +1273,7 @@ export default function IndividualChatPage() {
     // Profile cards have mb-2 (8px margin-bottom) on their wrapper div, which creates a gap
     // We need to account for this margin when calculating the actual card bottom position
     const PROFILE_CARD_MARGIN_BOTTOM = 8; // mb-2 = 8px
-    
+
     // Message dimensions
     // For profile cards, subtract the margin-bottom to get the actual card bottom
     const messageHeight = longPressedPosition.bottom - longPressedPosition.top;
@@ -1958,8 +1986,8 @@ export default function IndividualChatPage() {
             minWidth: 0 // Required for flex truncation to work
           }}
         >
-          {conversation.title}
-        </div>
+              {conversation.title}
+            </div>
         {/* Right chevron icon */}
         <svg 
           className="w-5 h-5 text-gray-500 flex-shrink-0" 

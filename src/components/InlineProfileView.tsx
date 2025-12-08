@@ -5,12 +5,14 @@ import { MessageCircle, Images, Settings, Users, ArrowLeft, X, MoreVertical, Tra
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { useChatService } from '@/lib/chatProvider';
+import { connectionsService } from '@/lib/connectionsService';
 // import { simpleChatService } from '@/lib/simpleChatService'; // OLD - removed
 import Avatar from '@/components/Avatar';
 import ConnectionsModal from './chat/ConnectionsModal';
 import AboutMeView from './AboutMeView';
 import { formatNameForDisplay } from '@/lib/utils';
 import QRCode from 'qrcode';
+import RemoveFriendSlideModal from './chat/RemoveFriendSlideModal';
 
 interface InlineProfileViewProps {
   userId: string;
@@ -54,6 +56,7 @@ export default function InlineProfileView({
   const [selfConnectionsCount, setSelfConnectionsCount] = useState(0);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [showRemoveFriendModal, setShowRemoveFriendModal] = useState(false);
 
   // Reset profile when userId changes to ensure proper loading behavior
   useEffect(() => {
@@ -64,6 +67,16 @@ export default function InlineProfileView({
     setLoading(false);
     setError(null);
   }, [userId]);
+
+  // Debug: Log connectionStatus changes
+  useEffect(() => {
+    console.log('🔵 InlineProfileView: connectionStatus changed to', connectionStatus);
+  }, [connectionStatus]);
+
+  // Debug: Log showRemoveFriendModal changes
+  useEffect(() => {
+    console.log('🔵 InlineProfileView: showRemoveFriendModal changed to', showRemoveFriendModal);
+  }, [showRemoveFriendModal]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -104,14 +117,55 @@ export default function InlineProfileView({
                 setSelfConnectionsCount(contacts.length);
                 setConnectionStatus('self');
               } else {
-                // Viewing someone else: show mutuals/relationship
-                // For now, set default connection status since simpleChatService is removed
-                const statusRes = { status: 'none' };
-                const mutualCountRes = { count: 0 };
-                const mutualsRes = { connections: [] };
-                setConnectionStatus(statusRes.status);
-                setMutualCount(mutualCountRes.count);
-                setMutualConnections(mutualsRes.connections);
+                // Viewing someone else: check connection status and load mutuals
+                try {
+                  console.log('🔵 InlineProfileView: Loading connection status', { accountId: account.id, userId });
+                  const statusRes = await connectionsService.getConnectionStatus(account.id, userId);
+                  console.log('🔵 InlineProfileView: Connection status result', statusRes);
+                  
+                  // Map 'connected' to 'accepted' for compatibility with existing UI
+                  const mappedStatus = statusRes.status === 'connected' ? 'accepted' : 
+                                      statusRes.status === 'pending_sent' ? 'pending' : 
+                                      statusRes.status;
+                  console.log('🔵 InlineProfileView: Setting connectionStatus to', mappedStatus);
+                  setConnectionStatus(mappedStatus);
+                  
+                  // Load mutual connections if connected
+                  if (statusRes.status === 'connected') {
+                    console.log('🔵 InlineProfileView: Loading mutual connections');
+                    try {
+                      // Get current user's connections
+                      const { connections: userConnections } = await connectionsService.getConnections(account.id);
+                      // Get other user's connections
+                      const { connections: otherConnections } = await connectionsService.getConnections(userId);
+                      
+                      // Find mutual connections
+                      const userConnectionIds = new Set(
+                        userConnections.map(c => c.user1_id === account.id ? c.user2_id : c.user1_id)
+                      );
+                      const mutuals = otherConnections.filter(c => {
+                        const otherUserId = c.user1_id === userId ? c.user2_id : c.user1_id;
+                        return userConnectionIds.has(otherUserId) && otherUserId !== account.id;
+                      });
+                      
+                      console.log('🔵 InlineProfileView: Found mutual connections', mutuals.length);
+                      setMutualConnections(mutuals.slice(0, 3));
+                      setMutualCount(mutuals.length);
+                    } catch (mutualError) {
+                      console.error('🔵 InlineProfileView: Error loading mutual connections:', mutualError);
+                      setMutualConnections([]);
+                      setMutualCount(0);
+                    }
+                  } else {
+                    setMutualConnections([]);
+                    setMutualCount(0);
+                  }
+                } catch (connError) {
+                  console.error('🔵 InlineProfileView: Error loading connection data:', connError);
+                  setConnectionStatus('none');
+                  setMutualConnections([]);
+                  setMutualCount(0);
+                }
               }
             } catch (connError) {
               console.error('InlineProfileView: Error loading connection data:', connError);
@@ -180,12 +234,40 @@ export default function InlineProfileView({
 
 
   const handleConnectionsClick = () => {
+    console.log('🔵 InlineProfileView: handleConnectionsClick called', {
+      connectionStatus,
+      userId,
+      accountId: account?.id,
+      showRemoveFriendModal,
+      profileName: profile?.name
+    });
+    
+    // If status is 'accepted' or 'connected' (friends), open remove friend modal
+    if (connectionStatus === 'accepted' || connectionStatus === 'connected') {
+      console.log('🔵 InlineProfileView: Status is friends, opening remove friend modal');
+      console.log('🔵 InlineProfileView: Setting showRemoveFriendModal to true');
+      setShowRemoveFriendModal(true);
+      console.log('🔵 InlineProfileView: showRemoveFriendModal should now be true');
+      return;
+    }
+    
+    console.log('🔵 InlineProfileView: Status is not friends, opening connections modal instead');
+    // Otherwise, open connections modal
     if (onOpenConnections) {
       onOpenConnections(userId);
     } else {
       setCurrentView('connections');
       setShowConnectionsModal(true);
     }
+  };
+
+  const handleRemoveFriendSuccess = () => {
+    console.log('🔵 InlineProfileView: handleRemoveFriendSuccess called');
+    // Update connection status to 'none' after friend removal
+    setConnectionStatus('none');
+    setMutualConnections([]);
+    setMutualCount(0);
+    setShowRemoveFriendModal(false);
   };
 
   const handleSettingsClick = () => {
@@ -357,6 +439,10 @@ export default function InlineProfileView({
             <div className="flex items-center justify-center">
               <span className="text-sm font-medium text-black">Friends</span>
             </div>
+          ) : connectionStatus === 'connected' ? (
+            <div className="flex items-center justify-center">
+              <span className="text-sm font-medium text-black">Friends</span>
+            </div>
           ) : (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -415,6 +501,20 @@ export default function InlineProfileView({
         }}
         userId={userId}
       />
+
+      {/* Remove Friend Modal */}
+      {profile && (
+        <RemoveFriendSlideModal
+          isOpen={showRemoveFriendModal}
+          onClose={() => {
+            console.log('🔵 InlineProfileView: Closing remove friend modal');
+            setShowRemoveFriendModal(false);
+          }}
+          userName={profile.name}
+          userId={userId}
+          onRemoveSuccess={handleRemoveFriendSuccess}
+        />
+      )}
 
       {/* About Me View */}
       {currentView === 'about' && (

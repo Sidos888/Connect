@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { connectionsService } from "@/lib/connectionsService";
 import { useChatService } from "@/lib/chatProvider";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import RemoveFriendSlideModal from "@/components/chat/RemoveFriendSlideModal";
 
 type Profile = {
   id?: string;
@@ -207,6 +208,7 @@ export default function ProfilePage({
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [hasLinks, setHasLinks] = useState(false);
   const [loadingLinks, setLoadingLinks] = useState(true);
+  const [showRemoveFriendModal, setShowRemoveFriendModal] = useState(false);
   const [highlights, setHighlights] = useState<any[]>([]);
   const [highlightsCount, setHighlightsCount] = useState(0);
   const [loadingHighlights, setLoadingHighlights] = useState(true);
@@ -761,7 +763,11 @@ export default function ProfilePage({
               {/* Status Button (Add Friend/Pending/Friends) - Always same width */}
               {friendshipStatus === 'friends' ? (
           <button 
-                  className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-semibold text-gray-900 transition-all duration-200 flex items-center justify-center gap-2"
+                  onClick={() => {
+                    console.log('🔵 ProfilePage: Friends button clicked, opening remove friend modal');
+                    setShowRemoveFriendModal(true);
+                  }}
+                  className="flex-1 bg-white rounded-xl border-[0.4px] border-[#E5E7EB] py-3 px-4 text-sm font-semibold text-gray-900 transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-[1px]"
             style={{ 
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   }}
@@ -1328,6 +1334,25 @@ export default function ProfilePage({
             </div>
           </div>
         </>
+      )}
+
+      {/* Remove Friend Modal */}
+      {profile?.id && profile?.name && (
+        <RemoveFriendSlideModal
+          isOpen={showRemoveFriendModal}
+          onClose={() => {
+            console.log('🔵 ProfilePage: Closing remove friend modal');
+            setShowRemoveFriendModal(false);
+          }}
+          userName={profile.name}
+          userId={profile.id}
+          onRemoveSuccess={() => {
+            console.log('🔵 ProfilePage: Friend removed successfully, updating state');
+            setFriendshipStatus('none');
+            setAreFriends(false);
+            setShowRemoveFriendModal(false);
+          }}
+        />
       )}
     </div>
   );

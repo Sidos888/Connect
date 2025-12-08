@@ -695,10 +695,9 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
         });
       }
 
-      // Mark messages as read for this user
-      if (userId) {
-      await this.markMessagesAsRead(chatId, userId);
-      }
+      // NOTE: Marking messages as read is now handled by the React Query mutation hook
+      // in the individual chat page component, not here. This ensures proper cache invalidation.
+      // Removed: await this.markMessagesAsRead(chatId, userId);
 
       console.log('Successfully got chat messages:', transformedMessages.length, 'hasMore:', hasMore);
       return { messages: transformedMessages, hasMore, error: null };
@@ -995,6 +994,50 @@ async getUserChats(userId: string): Promise<{ chats: Chat[]; error: Error | null
       return { error: null };
     } catch (error) {
       console.error('Error in markMessagesAsRead:', error);
+      return { error: error as Error };
+    }
+  }
+
+  /**
+   * Get count of chats with unread messages (for badge display)
+   * Uses last_inbox_view_at to determine if user has viewed inbox since new messages arrived
+   */
+  async getUnreadChatsCount(userId: string): Promise<{ count: number; error: Error | null }> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_unread_chats_count', {
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error getting unread chats count:', error);
+        return { count: 0, error };
+      }
+
+      return { count: data || 0, error: null };
+    } catch (error) {
+      console.error('Error in getUnreadChatsCount:', error);
+      return { count: 0, error: error as Error };
+    }
+  }
+
+  /**
+   * Mark inbox as viewed (removes badge from chats icon)
+   * Updates user's last_inbox_view_at timestamp when chats page is viewed
+   */
+  async markInboxAsViewed(userId: string): Promise<{ error: Error | null }> {
+    try {
+      const { error } = await this.supabase.rpc('mark_inbox_as_viewed', {
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error marking inbox as viewed:', error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in markInboxAsViewed:', error);
       return { error: error as Error };
     }
   }
