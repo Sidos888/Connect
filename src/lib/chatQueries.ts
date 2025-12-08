@@ -47,6 +47,28 @@ export function useChats(chatService: ChatService | null, userId: string | null)
 }
 
 /**
+ * Hook to get a specific chat by ID
+ * - Cached for 2 minutes
+ * - Eliminates duplicate fetches when navigating between desktop/mobile views
+ * - Automatically shares cache between ChatLayout and individual chat page
+ */
+export function useChatById(chatService: ChatService | null, chatId: string | null) {
+  return useQuery({
+    queryKey: chatKeys.detail(chatId || ''),
+    queryFn: async () => {
+      if (!chatService || !chatId) throw new Error('Chat service or chat ID not available');
+      const result = await chatService.getChatById(chatId);
+      if (result.error) throw result.error;
+      return result.chat;
+    },
+    enabled: !!chatService && !!chatId,
+    staleTime: 2 * 60 * 1000, // 2 minutes - chat details don't change often
+    gcTime: 5 * 60 * 1000, // 5 minutes in cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+  });
+}
+
+/**
  * Hook to get messages for a specific chat
  * - Cached per chat
  * - Shorter cache time for messages (more real-time)

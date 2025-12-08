@@ -26,7 +26,7 @@ import { SearchIcon } from "@/components/icons";
 import SearchModal from "@/components/chat/SearchModal";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Image from "next/image";
-import ThreeDotLoading from "@/components/ThreeDotLoading";
+import Loading8 from "@/components/Loading8";
 
 function MessagesPageContent() {
   const { isHydrated } = useAppStore();
@@ -834,8 +834,9 @@ function MessagesPageContent() {
                   : 'max(env(safe-area-inset-bottom), 194px)', // With banner or loading: 96px nav + 12px gap + 62px banner + 24px spacing
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
-                WebkitOverflowScrolling: 'touch'
-                    }}
+                WebkitOverflowScrolling: 'touch',
+                position: 'relative'
+              }}
             >
               {/* Top Spacing */}
               <div style={{ height: '12px' }} />
@@ -902,27 +903,36 @@ function MessagesPageContent() {
                 </div>
 
                 {/* Chat List */}
-                <div className="space-y-2">
-                  {isLoading || isLoadingConnections ? (
-                    <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                      <ThreeDotLoading />
-                    </div>
-                  ) : filteredMobileConversations.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                {isLoading || isLoadingConnections ? (
+                  <div className="flex items-center justify-center" style={{ 
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: '100vh',
+                    paddingTop: '80px',
+                    zIndex: 10
+                  }}>
+                    <Loading8 />
+                  </div>
+                ) : filteredMobileConversations.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center" style={{ minHeight: 'calc(100vh - 280px)' }}>
                       <p className="text-gray-500 text-lg">
                         {account?.id ? "No chats yet" : "Please log in to see your chats"}
                       </p>
                     </div>
                   ) : (
-                    filteredMobileConversations.map((conversation) => (
-                      <div
-                        key={conversation.id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          router.push(`/chat?chat=${conversation.id}`);
-                        }}
-                        className="p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white"
+                    <div className="space-y-2">
+                      {filteredMobileConversations.map((conversation) => (
+                        <div
+                          key={conversation.id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            router.push(`/chat?chat=${conversation.id}`);
+                          }}
+                          className="p-4 rounded-2xl cursor-pointer transition-all duration-200 bg-white"
                         style={{
                           borderWidth: '0.4px',
                           borderColor: selectedChatId === conversation.id ? '#D1D5DB' : '#E5E7EB',
@@ -1008,10 +1018,10 @@ function MessagesPageContent() {
                           </div>
                         </div>
                       </div>
-                    ))
+                      ))}
+                    </div>
                   )}
               </div>
-            </div>
           </MobilePage>
         </div>
 
@@ -1081,7 +1091,7 @@ export default function MessagesPage() {
   return (
     <Suspense fallback={
       <div className="h-screen bg-white flex items-center justify-center">
-        <ThreeDotLoading />
+        <Loading8 />
       </div>
     }>
       <MessagesPageContent />

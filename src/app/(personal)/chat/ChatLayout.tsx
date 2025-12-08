@@ -9,14 +9,14 @@ import PersonalChatPanel from "./PersonalChatPanel";
 import type { Conversation } from "@/lib/types";
 import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
-import { useChats, useRefreshChats } from "@/lib/chatQueries";
+import { useChats, useRefreshChats, useChatById } from "@/lib/chatQueries";
 // Removed unused showAddFriend
 import { useModal } from "@/lib/modalContext";
 import InlineContactSelector from "@/components/chat/InlineContactSelector";
 import InlineGroupSetup from "@/components/chat/InlineGroupSetup";
 import { Plus, Image as ImageIcon } from "lucide-react";
 import { formatMessageTimeShort } from "@/lib/messageTimeUtils";
-import ThreeDotLoading from "@/components/ThreeDotLoading";
+import Loading8 from "@/components/Loading8";
 
 const ChatLayoutContent = () => {
   const { account, user } = useAuth();
@@ -453,71 +453,26 @@ const ChatLayoutContent = () => {
     return { unreadCount, dmCount, groupCount, archivedCount };
   }, [conversations]);
 
-  // Fetch selected conversation from simple chat service
-  // Store raw conversation data separately to prevent re-renders
-  const [selectedConversationData, setSelectedConversationData] = useState<{
-    id: string;
-    title: string;
-    avatarUrl: string | null;
-    isGroup: boolean;
-  } | null>(null);
-  
-  useEffect(() => {
-    const fetchSelectedConversation = async () => {
-      if (selectedChatId && chatService) {
-        const result = await chatService.getChatById(selectedChatId);
-        if (!result) return;
-        
-        const { chat, error } = result;
-        if (error) {
-          console.error('ChatLayout: Error fetching chat:', error);
-          setSelectedConversationData(null);
-          return;
-        }
-        if (chat && account?.id) {
-          // Store minimal data to prevent unnecessary re-renders
-          const conversationData = {
-            id: chat.id,
-            title: chat.name || 'Unknown Chat',
-            avatarUrl: chat.photo || null,
-            isGroup: chat.type === 'group',
-          };
-          
-          // Only update if data actually changed
-          setSelectedConversationData(prev => {
-            if (!prev || prev.id !== conversationData.id) {
-              return conversationData;
-            }
-            return prev;
-          });
-        } else {
-          setSelectedConversationData(null);
-        }
-      } else {
-        setSelectedConversationData(null);
-      }
-    };
-
-    fetchSelectedConversation();
-  }, [selectedChatId, account?.id]);
+  // Use React Query hook to fetch selected conversation (with caching)
+  const { data: selectedChat, isLoading: isLoadingChat } = useChatById(chatService, selectedChatId);
   
   // Create a STABLE conversation object reference using useMemo
   const stableSelectedConversation = useMemo(() => {
-    if (!selectedConversationData) {
+    if (!selectedChat || !account?.id) {
       return null;
     }
     
     const stable = {
-      id: selectedConversationData.id,
-      title: selectedConversationData.title,
-      avatarUrl: selectedConversationData.avatarUrl,
-      isGroup: selectedConversationData.isGroup,
+      id: selectedChat.id,
+      title: selectedChat.name || 'Unknown Chat',
+      avatarUrl: selectedChat.photo || null,
+      isGroup: selectedChat.type === 'group',
       unreadCount: 0,
       messages: []
     };
     
     return stable;
-  }, [selectedConversationData?.id, selectedConversationData?.title, selectedConversationData?.avatarUrl, selectedConversationData?.isGroup]);
+  }, [selectedChat?.id, selectedChat?.name, selectedChat?.photo, selectedChat?.type, account?.id]);
   
   // Auto-select first conversation if none is selected and conversations exist - DISABLED TO TEST SLIDE-UP ISSUE
   // useEffect(() => {
@@ -821,7 +776,7 @@ const ChatLayout = () => {
   return (
     <Suspense fallback={
       <div className="flex h-full bg-white items-center justify-center">
-        <ThreeDotLoading />
+        <Loading8 />
       </div>
     }>
       <ChatLayoutContent />

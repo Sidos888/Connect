@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
 import { useAppStore } from "@/lib/store";
+import { useChatById } from "@/lib/chatQueries";
 import { ArrowLeft, X } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import MessageActionModal from "@/components/chat/MessageActionModal";
@@ -22,6 +23,7 @@ import type { SimpleMessage, MediaAttachment } from "@/lib/types";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Avatar from "@/components/Avatar";
+import Loading8 from "@/components/Loading8";
 
 export default function IndividualChatPage() {
   const router = useRouter();
@@ -29,6 +31,8 @@ export default function IndividualChatPage() {
   const chatId = searchParams.get('chat');
   const { account } = useAuth();
   const chatService = useChatService();
+  // Use React Query hook to fetch chat data (with caching)
+  const { data: chat, isLoading: isLoadingChat, error: chatError } = useChatById(chatService, chatId);
   // Removed old store methods - using chatService directly
   type Participant = { id: string; name: string; profile_pic?: string | null };
   type ConversationLite = { id: string; title: string; avatarUrl: string | null; isGroup: boolean };
@@ -161,7 +165,7 @@ export default function IndividualChatPage() {
     };
   }, []);
 
-  // Load conversation and messages
+  // Load conversation and messages when chat data is available
   useEffect(() => {
     const loadData = async () => {
       if (!account?.id || !chatId) {
@@ -170,22 +174,25 @@ export default function IndividualChatPage() {
         return;
       }
 
-      try {
-        // Load conversation from database
-        if (!chatService) {
-          console.error('IndividualChatPage: ChatService not available');
-          setError('Chat service not available');
-          setLoading(false);
-          return;
-        }
-        
-        const { chat, error: chatError } = await chatService.getChatById(chatId);
-        if (chatError || !chat) {
-          setError('Conversation not found');
-          setLoading(false);
-          return;
-        }
+      // Wait for chat data from React Query hook
+      if (isLoadingChat) {
+        return; // Still loading, wait
+      }
 
+      if (chatError || !chat) {
+        setError('Conversation not found');
+        setLoading(false);
+        return;
+      }
+
+      if (!chatService) {
+        console.error('IndividualChatPage: ChatService not available');
+        setError('Chat service not available');
+        setLoading(false);
+        return;
+      }
+
+      try {
         // Store whether this is an event chat from the database
         setIsEventChatFromDB(chat.is_event_chat || false);
 
@@ -205,7 +212,7 @@ export default function IndividualChatPage() {
           isGroup: chat.type === 'group'
         };
 
-        console.log('Individual chat page: Chat data loaded from database:', chat);
+        console.log('Individual chat page: Chat data loaded (from cache or DB):', chat);
         console.log('Individual chat page: Conversation avatarUrl:', conversation.avatarUrl);
         console.log('Individual chat page: Conversation isGroup:', conversation.isGroup);
         setConversation(conversation);
@@ -269,7 +276,7 @@ export default function IndividualChatPage() {
         setLoading(false);
 
         // Subscribe to real-time reactions for this chat
-        if (chatId && chatService && conversation?.id) {
+        if (chatId && chatService && chat?.id) {
           const supabase = getSupabaseClient();
           if (supabase) {
             // Subscribe to all reactions - we'll filter by refreshing messages
@@ -407,7 +414,7 @@ export default function IndividualChatPage() {
         unsubscribeMessagesRef.current = null;
       }
     };
-  }, [account?.id, chatId, chatService]);
+  }, [account?.id, chatId, chatService, chat, isLoadingChat, chatError]);
 
   // Track if we've scrolled to bottom on initial load
   const hasScrolledToBottomRef = useRef(false);
@@ -1741,9 +1748,24 @@ export default function IndividualChatPage() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-white flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
+      <MobilePage>
+        <PageHeader
+          title=""
+          backButton={true}
+          onBack={async () => {
+            // Check for 'from' parameter to return to previous page
+            const from = searchParams.get('from');
+            if (from) {
+              router.push(from);
+            } else {
+              router.push('/chat');
+            }
+          }}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <Loading8 />
+        </div>
+      </MobilePage>
     );
   }
 
