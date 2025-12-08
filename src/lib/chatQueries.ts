@@ -131,6 +131,3 @@ export function useRefreshChats() {
   };
 }
 
-
-import { SimpleChat, SimpleMessage } from './types';
-

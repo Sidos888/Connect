@@ -7,10 +7,6 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true
   },
-  eslint: {
-    // Unblock deployments while we fix CI lint rules incrementally
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     // Allow mobile asset builds even if there are stray type errors in debug pages
     ignoreBuildErrors: true,
