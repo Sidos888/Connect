@@ -101,17 +101,47 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   // Reset success states when modal opens
   useEffect(() => {
     if (isOpen) {
-      setVerificationSuccess(false);
-      setAccountRecognized(false);
-      setIsRedirecting(false);
-      
-      // Reset to default step based on device type
-      if (isMobile) {
-        setStep('phone');
-        // Don't auto-focus - let user click to activate
+      console.log('🔐 LoginModal: Modal opened, resetting state', {
+        currentStep: step,
+        isMobile,
+        willResetTo: isMobile ? 'phone' : 'email'
+      });
+
+      // Only reset step if we're not already in verify step
+      // This prevents resetting when modal re-opens during verification flow
+      if (step !== 'verify') {
+        setVerificationSuccess(false);
+        setAccountRecognized(false);
+        setIsRedirecting(false);
+        setLoading(false); // Ensure loading is cleared when modal opens fresh
+
+        // Reset to default step based on device type
+        if (isMobile) {
+          setStep('phone');
+          // Don't auto-focus - let user click to activate
+        } else {
+          setStep('email');
+          // Don't auto-focus email field on web - let user click to activate
+        }
       } else {
-        setStep('email');
-        // Don't auto-focus email field on web - let user click to activate
+        console.log('🔐 LoginModal: Modal opened but step is verify, preserving verify step');
+        // If we're in verify step, clear loading to show the verification modal properly
+        setLoading(false);
+      }
+    } else {
+      // CRITICAL: Reset step when modal closes to prevent stale verify step
+      console.log('🔐 LoginModal: Modal closed, resetting step from', step, 'to default');
+      if (step === 'verify') {
+        console.log('🔐 LoginModal: Step was verify, resetting to', isMobile ? 'phone' : 'email');
+        setStep(isMobile ? 'phone' : 'email');
+        setVerificationSuccess(false);
+        setAccountRecognized(false);
+        setIsRedirecting(false);
+        setLoading(false); // Clear loading when modal closes
+        // Clear phone/email to prevent stale data
+        setPhoneNumber('');
+        setEmail('');
+        setError('');
       }
     }
   }, [isOpen, isMobile]);
@@ -224,16 +254,29 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       console.log('LoginModal: Normalized phone number:', { input: phoneNumber, normalized: fullPhoneNumber });
       const { error } = await sendPhoneVerification(fullPhoneNumber);
       
+      console.log('🔐 LoginModal: Phone verification response:', { 
+        hasError: !!error, 
+        errorMessage: error?.message,
+        currentStep: step,
+        willSetStepTo: 'verify'
+      });
+      
       if (error) {
+        console.error('🔐 LoginModal: Phone verification error:', error.message);
         setError(error.message);
+        setLoading(false); // Only clear loading on error
       } else {
+        console.log('🔐 LoginModal: Phone verification successful, setting step to verify');
         setStep('verify');
         setVerificationMethod('phone');
+        console.log('🔐 LoginModal: Step set to verify, verificationMethod set to phone');
+        // Clear loading immediately - VerificationModal will handle its own loading state
+        setLoading(false);
+        console.log('🔐 LoginModal: Loading cleared, VerificationModal should now be visible');
       }
     } catch {
       setError('Failed to send verification code');
-    } finally {
-      setLoading(false);
+      setLoading(false); // Clear loading on catch
     }
   };
 
@@ -277,17 +320,20 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       if (error) {
         console.error('📧 LoginModal: Email verification failed:', error.message);
         setError(error.message);
+        setLoading(false); // Clear loading on error
       } else {
         console.log('📧 LoginModal: Email verification successful, moving to verify step');
         setStep('verify');
         setVerificationMethod('email');
+        // Clear loading immediately - VerificationModal will handle its own loading state
+        setLoading(false);
+        console.log('🔐 LoginModal: Loading cleared, VerificationModal should now be visible');
       }
     } catch (err) {
       console.error('📧 LoginModal: ========== EMAIL VERIFICATION EXCEPTION ==========');
       console.error('📧 LoginModal: Exception details:', err);
       setError('Failed to send verification code');
-    } finally {
-      setLoading(false);
+      setLoading(false); // Clear loading on catch
     }
   };
 
@@ -532,24 +578,55 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   }, [email, step]);
   // END REVIEWER OVERRIDE
 
-  if (!isOpen) return null;
+  // Debug logging for step changes
+  useEffect(() => {
+    console.log('🔐 LoginModal: Step changed', { 
+      step, 
+      isOpen, 
+      verificationMethod,
+      phoneNumber: phoneNumber ? '***' : 'empty',
+      email: email ? '***' : 'empty'
+    });
+  }, [step, isOpen, verificationMethod, phoneNumber, email]);
+
+  console.log('🔐 LoginModal: Render check', { 
+    isOpen, 
+    step, 
+    willRenderVerificationModal: step === 'verify',
+    verificationMethod,
+    phoneNumber: phoneNumber ? '***' : 'empty',
+    email: email ? '***' : 'empty'
+  });
+
+  if (!isOpen) {
+    console.log('🔐 LoginModal: Not rendering - isOpen is false');
+    return null;
+  }
 
   return (
     <>
       {step === 'verify' ? (
-        <VerificationModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onVerify={handleVerifyCode}
-          onResend={handleResendCode}
-          onBack={handleBack}
-          verificationMethod={verificationMethod}
-          phoneOrEmail={verificationMethod === 'phone' ? phoneNumber : email}
-          loading={loading}
-          error={error}
-          verificationSuccess={verificationSuccess}
-          accountRecognized={accountRecognized}
-        />
+        <>
+          {console.log('🔐 LoginModal: Rendering VerificationModal', { 
+            isOpen, 
+            verificationMethod, 
+            phoneOrEmail: verificationMethod === 'phone' ? phoneNumber : email 
+          })}
+          {/* Don't show loading overlay in verify step - VerificationModal will handle its own loading state */}
+          <VerificationModal
+            isOpen={isOpen}
+            onClose={onClose}
+            onVerify={handleVerifyCode}
+            onResend={handleResendCode}
+            onBack={handleBack}
+            verificationMethod={verificationMethod}
+            phoneOrEmail={verificationMethod === 'phone' ? phoneNumber : email}
+            loading={loading}
+            error={error}
+            verificationSuccess={verificationSuccess}
+            accountRecognized={accountRecognized}
+          />
+        </>
       ) : (
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
           {/* Backdrop - removed for full page modal */}

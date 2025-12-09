@@ -218,10 +218,13 @@ export default function VerificationModal({
 
   // Prevent body scrolling when modal is open
   useEffect(() => {
+    console.log('🔐 VerificationModal: isOpen changed', { isOpen });
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      console.log('🔐 VerificationModal: Modal is open, body scroll locked');
     } else {
       document.body.style.overflow = 'unset';
+      console.log('🔐 VerificationModal: Modal is closed, body scroll unlocked');
     }
     
     return () => {
@@ -229,9 +232,24 @@ export default function VerificationModal({
     };
   }, [isOpen]);
 
+  // Log when component renders
+  useEffect(() => {
+    console.log('🔐 VerificationModal: Component rendered', { 
+      isOpen, 
+      verificationMethod, 
+      phoneOrEmail: phoneOrEmail ? '***' : 'empty',
+      loading,
+      error
+    });
+  }, [isOpen, verificationMethod, phoneOrEmail, loading, error]);
+
   // Handle dismiss - sign out and return to original page
   const handleDismiss = async () => {
-    console.log('VerificationModal: Dismissing modal');
+    console.log('🔐 VerificationModal: handleDismiss called - user is dismissing verification modal', {
+      verificationMethod,
+      phoneOrEmail: phoneOrEmail ? '***' : 'empty',
+      timestamp: new Date().toISOString()
+    });
     
     // Sign out the user to ensure they're not signed in
     try {
@@ -239,13 +257,14 @@ export default function VerificationModal({
       const supabase = getSupabaseClient();
       if (supabase) {
         await supabase.auth.signOut();
-        console.log('VerificationModal: User signed out for dismiss');
+        console.log('🔐 VerificationModal: User signed out for dismiss');
       }
     } catch (error) {
-      console.error('VerificationModal: Error signing out on dismiss:', error);
+      console.error('🔐 VerificationModal: Error signing out on dismiss:', error);
     }
 
     // Close modal - the modal context will handle navigation back to original page
+    console.log('🔐 VerificationModal: Calling onClose()');
     onClose();
   };
 

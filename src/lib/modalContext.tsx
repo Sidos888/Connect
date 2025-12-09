@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import LoginModal from '@/components/auth/LoginModal';
 import SignUpModal from '@/components/auth/SignUpModal';
 import { useAuth } from './authContext';
@@ -56,8 +56,56 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
   const [originalPath, setOriginalPath] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const { signOut, personalProfile } = useAuth();
   const { personalProfile: storeProfile } = useAppStore();
+  
+  // Track previous pathname to detect actual navigation
+  const prevPathnameRef = React.useRef<string | null>(null);
+  
+  // Close login/signup modals when user navigates to a different page
+  // BUT: Don't close if we're in the verification step (user is entering code)
+  // This prevents modals from staying open when navigating (e.g., verification modal overlay issue)
+  React.useEffect(() => {
+    const prevPathname = prevPathnameRef.current;
+    prevPathnameRef.current = pathname;
+    
+    // Skip on initial mount (no previous pathname)
+    if (prevPathname === null) {
+      console.log('🔐 ModalContext: Initial pathname, skipping modal close check', { pathname });
+      return;
+    }
+    
+    // Only close if pathname actually changed AND modals are open
+    // CRITICAL: We can't check step here (it's in LoginModal), so we'll be more conservative
+    // Only close on navigation if it's a significant route change (not just a query param change)
+    const prevRoute = prevPathname.split('?')[0];
+    const newRoute = pathname.split('?')[0];
+    const isSignificantRouteChange = prevRoute !== newRoute;
+    
+    if (isSignificantRouteChange && (isLoginOpen || isSignUpOpen)) {
+      console.log('🔐 ModalContext: Significant route changed, closing login/signup modals', {
+        prevPathname,
+        newPathname: pathname,
+        prevRoute,
+        newRoute,
+        isLoginOpen,
+        isSignUpOpen,
+        originalPath
+      });
+      setIsLoginOpen(false);
+      setIsSignUpOpen(false);
+      setOriginalPath(null);
+    } else if (prevPathname !== pathname) {
+      console.log('🔐 ModalContext: Pathname changed but not closing modals', {
+        prevPathname,
+        newPathname: pathname,
+        isSignificantRouteChange,
+        isLoginOpen,
+        isSignUpOpen
+      });
+    }
+  }, [pathname, isLoginOpen, isSignUpOpen]); // Include modal states to log correctly
 
   // Profile modal states
   const [showCenteredProfile, setShowCenteredProfile] = useState(false);
@@ -498,11 +546,35 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
         isOpen={isLoginOpen}
         onClose={async () => {
           // NOT signing out - preserving user state
-          console.log('ModalContext: Closing modal but preserving user authentication');
+          console.log('🔐 ModalContext: onClose called for LoginModal', {
+            originalPath,
+            currentPath: window.location.pathname,
+            willNavigate: originalPath && originalPath !== window.location.pathname,
+            timestamp: new Date().toISOString()
+          });
           setIsLoginOpen(false);
           // Return to original page if available
-          if (originalPath && originalPath !== window.location.pathname) {
+          // BUT: Don't navigate if we're already on a public route (explore, etc.)
+          const currentPath = window.location.pathname;
+          const isPublicRoute = currentPath === '/' || 
+                                currentPath.startsWith('/explore') ||
+                                currentPath.startsWith('/for-you-listings') ||
+                                currentPath.startsWith('/casual-listings') ||
+                                currentPath.startsWith('/side-quest-listings') ||
+                                (currentPath === '/listing' && new URLSearchParams(window.location.search).get('id') !== null);
+          
+          if (originalPath && originalPath !== currentPath && !isPublicRoute) {
+            console.log('🔐 ModalContext: Navigating back to original path:', originalPath);
             router.push(originalPath);
+          } else {
+            console.log('🔐 ModalContext: No navigation needed', {
+              reason: !originalPath ? 'no original path' : 
+                      originalPath === currentPath ? 'already on original path' :
+                      isPublicRoute ? 'already on public route' : 'unknown',
+              originalPath,
+              currentPath,
+              isPublicRoute
+            });
           }
         }}
         onProfileSetup={() => {
