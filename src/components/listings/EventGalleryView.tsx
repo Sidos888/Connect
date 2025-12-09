@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { Plus, ArrowLeft } from 'lucide-react';
-import { PageContent } from "@/components/layout/PageSystem";
+import { PageHeader } from "@/components/layout/PageSystem";
 import PhotoViewer from "@/components/listings/PhotoViewer";
 import { listingsService, EventGalleryItem } from '@/lib/listingsService';
 import { getSupabaseClient } from '@/lib/supabaseClient';
@@ -33,6 +33,53 @@ export default function EventGalleryView({
   const [listing, setListing] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadingPhotos, setUploadingPhotos] = useState<Array<{ id: string; file: File; progress: number }>>([]);
+
+  // Hide bottom nav on mobile (same as listing page)
+  useEffect(() => {
+    document.body.classList.add('hide-bottom-nav');
+    document.documentElement.classList.add('hide-bottom-nav');
+    
+    const hideBottomNav = () => {
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = 'none';
+        (bottomNav as HTMLElement).style.visibility = 'hidden';
+        (bottomNav as HTMLElement).style.opacity = '0';
+        (bottomNav as HTMLElement).style.transform = 'translateY(100%)';
+        (bottomNav as HTMLElement).style.position = 'fixed';
+        (bottomNav as HTMLElement).style.bottom = '-100px';
+        (bottomNav as HTMLElement).style.zIndex = '-1';
+      }
+      document.body.style.paddingBottom = '0';
+    };
+
+    const showBottomNav = () => {
+      document.body.classList.remove('hide-bottom-nav');
+      document.documentElement.classList.remove('hide-bottom-nav');
+      
+      const bottomNav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      if (bottomNav) {
+        (bottomNav as HTMLElement).style.display = '';
+        (bottomNav as HTMLElement).style.visibility = '';
+        (bottomNav as HTMLElement).style.opacity = '';
+        (bottomNav as HTMLElement).style.transform = '';
+        (bottomNav as HTMLElement).style.position = '';
+        (bottomNav as HTMLElement).style.bottom = '';
+        (bottomNav as HTMLElement).style.zIndex = '';
+      }
+      document.body.style.paddingBottom = '';
+    };
+
+    hideBottomNav();
+    const timeoutId = setTimeout(hideBottomNav, 100);
+    const intervalId = setInterval(hideBottomNav, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+      showBottomNav();
+    };
+  }, []);
 
   // Load listing data and gallery photos
   useEffect(() => {
@@ -237,8 +284,115 @@ export default function EventGalleryView({
     ? listing.photo_urls[0] 
     : null;
 
+  // Profile card component - Image top center, info card below (matching event chat)
+  const profileCard = !loading && listing ? (
+    <div
+      className="absolute left-0 right-0"
+      style={{
+        top: "0", // Align with top of leftSection (same as back button)
+        height: "44px", // Match leftSection height
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-start", // Align items to top
+      }}
+    >
+      {/* Image Component - Top Center - Positioned independently, aligned with back button top */}
+      <button
+        onClick={handleListingCardClick}
+        className="absolute z-10"
+        style={{
+          cursor: "pointer",
+          top: "0", // Align top with back button top
+          left: "50%", // Center horizontally
+          transform: "translateX(-50%)", // Center horizontally only
+        }}
+      >
+        {/* Square image - 48px to visually match back button */}
+        <div 
+          className="bg-gray-200 flex items-center justify-center overflow-hidden rounded-lg"
+          style={{
+            width: '48px',
+            height: '48px',
+            borderWidth: '0.5px',
+            borderStyle: 'solid',
+            borderColor: 'rgba(0, 0, 0, 0.08)'
+          }}
+        >
+          {mainPhoto ? (
+            <img
+              src={mainPhoto}
+              alt={listing.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-gray-400 text-base font-semibold">
+              {listing.title.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      </button>
+
+      {/* Info Card - Below Image - Positioned independently like event chat */}
+      <button 
+        onClick={handleListingCardClick}
+        className="absolute z-0"
+        style={{
+          height: "44px", // Match back button and chat box height
+          borderRadius: "100px", // Match chat input box at bottom of page
+          background: "rgba(255, 255, 255, 0.96)",
+          borderWidth: "0.4px",
+          borderColor: "#E5E7EB",
+          borderStyle: "solid",
+          boxShadow: "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)",
+          willChange: "transform, box-shadow",
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between", // Space between text and chevron
+          maxWidth: "calc(100% - 32px)", // Account for page padding
+          paddingLeft: "16px", // Left padding for text
+          paddingRight: "8px", // Tighter right padding for chevron
+          top: "42px", // Same as event chat (42px for event chats)
+          left: "50%", // Center horizontally
+          transform: "translateX(-50%)", // Center horizontally only
+          cursor: "pointer"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)";
+        }}
+      >
+        {/* Title - left aligned with ellipsis truncation */}
+        <div 
+          className="font-semibold text-gray-900 text-base flex-1 text-left"
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0 // Required for flex truncation to work
+          }}
+        >
+          {listing.title}
+        </div>
+        {/* Right chevron icon */}
+        <svg 
+          className="w-5 h-5 text-gray-500 flex-shrink-0" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+          style={{ marginLeft: "4px" }}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  ) : null;
+
   return (
-    <div className="lg:hidden">
+    <div className="lg:hidden w-full h-full">
       {/* Hidden file input - ref-based approach for iOS compatibility */}
       <input
         ref={fileInputRef}
@@ -250,61 +404,18 @@ export default function EventGalleryView({
         style={{ display: 'none' }}
       />
       
-      {/* Custom Header - Matching Event Chat Style */}
-      {/* Using absolute positioning like PageHeader to position relative to MobilePage */}
-      <div className="absolute top-0 left-0 right-0 z-[60]"
-        style={{
-          pointerEvents: 'none'
-        }}
-      >
-        {/* Inner content div with paddingTop - matching PageHeader structure */}
-        <div 
-          className="px-4"
-          style={{
-            paddingTop: 'max(env(safe-area-inset-top), 70px)',
-            paddingBottom: '16px',
-            position: 'relative',
-            zIndex: 10
-          }}
-        >
-          {/* Back Button - Left */}
-          <button
-            onClick={onBack}
-            className="absolute left-4 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-            style={{
-              top: '0',
-            width: '44px',
-            height: '44px',
-            borderRadius: '22px',
-            background: 'rgba(255, 255, 255, 0.96)',
-            borderWidth: '0.4px',
-            borderColor: '#E5E7EB',
-            borderStyle: 'solid',
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-            willChange: 'transform, box-shadow',
-            pointerEvents: 'auto',
-            zIndex: 30
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-          }}
-          aria-label="Back"
-        >
-          <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-          {/* Plus Button - Right */}
+      {/* Header with central component - matching event chat page */}
+      <PageHeader
+        title=""
+        backButton
+        onBack={onBack}
+        leftSection={profileCard}
+        customActions={
           <button
             onClick={handleAddPhotoClick}
             disabled={uploading}
-            className="absolute right-4 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              top: '0',
               width: '44px',
               height: '44px',
               borderRadius: '22px',
@@ -314,8 +425,7 @@ export default function EventGalleryView({
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
               willChange: 'transform, box-shadow',
-              pointerEvents: 'auto',
-              zIndex: 30
+              pointerEvents: 'auto'
             }}
             onMouseEnter={(e) => {
               if (!uploading) {
@@ -329,165 +439,60 @@ export default function EventGalleryView({
           >
             <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
           </button>
+        }
+      />
 
-          {/* Middle Section - Square Card and Title (like event chat) */}
-          {!loading && listing && (
-            <div
-              className="absolute left-0 right-0"
-              style={{
-                top: '0',
-                height: '44px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                pointerEvents: 'auto'
-              }}
-            >
-              {/* Square Card - Top Center */}
-              <button
-                onClick={handleListingCardClick}
-                className="absolute z-10"
-                style={{
-                  cursor: 'pointer',
-                  top: '0',
-                  left: '50%',
-                  transform: 'translateX(-50%)'
-                }}
+      <div className="flex-1 px-4 lg:px-8 overflow-y-auto scrollbar-hide" style={{
+        paddingTop: 'var(--saved-content-padding-top, 140px)', // Same as timeline page
+        paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))', // Account for safe area + spacing
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}>
+        {/* Photo Count Title - Matching timeline year heading style */}
+        {/* Positioned to account for profile card height (44px + 42px + 44px = 130px from top of header) */}
+        <h3 className="text-lg font-bold text-gray-900 mb-4 px-1" style={{ marginTop: '86px' }}>
+          {photos.length + uploadingPhotos.length} {photos.length + uploadingPhotos.length === 1 ? 'photo' : 'photos'}
+        </h3>
+        
+        {/* Photo Grid - Positioned at same height as first timeline card */}
+        {photos.length === 0 && uploadingPhotos.length === 0 ? (
+          <div className="grid grid-cols-4 gap-4 relative overflow-visible">
+            {/* Empty state - just show empty grid, users can use + button to add photos */}
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-4 relative overflow-visible">
+            {/* Show loading cards FIRST (at the top) for uploading photos (like chat system) */}
+            {uploadingPhotos.map((uploadingPhoto) => (
+              <div
+                key={uploadingPhoto.id}
+                className="aspect-square rounded-xl overflow-hidden"
               >
-                <div
-                  className="bg-gray-200 flex items-center justify-center overflow-hidden rounded-lg"
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderWidth: '0.5px',
-                    borderStyle: 'solid',
-                    borderColor: 'rgba(0, 0, 0, 0.08)'
-                  }}
-                >
-                  {mainPhoto ? (
-                    <img
-                      src={mainPhoto}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-gray-400 text-base font-semibold">
-                      {listing.title.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              </button>
-
-              {/* Title Card - Below Image */}
+                <LoadingMessageCard fileCount={1} status="uploading" />
+              </div>
+            ))}
+            {/* Then show existing photos */}
+            {photos.map((photo, index) => (
               <button
-                onClick={handleListingCardClick}
-                className="absolute z-0"
+                key={index}
+                onClick={() => handlePhotoClick(index)}
+                className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative"
                 style={{
-                  height: '44px',
-                  borderRadius: '100px',
-                  background: 'rgba(255, 255, 255, 0.96)',
                   borderWidth: '0.4px',
                   borderColor: '#E5E7EB',
                   borderStyle: 'solid',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow',
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  maxWidth: 'calc(100% - 32px)',
-                  paddingLeft: '16px',
-                  paddingRight: '8px',
-                  top: '42px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                <div
-                  className="font-semibold text-gray-900 text-base flex-1 text-left"
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0
-                  }}
-                >
-                  {listing.title}
-                </div>
-                <svg
-                  className="w-5 h-5 text-gray-500 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  style={{ marginLeft: '4px' }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <img
+                  src={photo}
+                  alt={`Gallery photo ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
               </button>
-            </div>
-          )}
-
-          {/* Photo Count - Below header */}
-          <div className="flex justify-center mt-4 items-center gap-1.5" style={{ pointerEvents: 'auto' }}>
-            <span className="text-sm font-medium text-gray-500">{photos.length} {photos.length === 1 ? 'Item' : 'Items'}</span>
+            ))}
           </div>
-        </div>
+        )}
       </div>
-
-      <PageContent>
-        <div 
-          className="px-4 pb-8" 
-          style={{ 
-            paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 16px + 48px + 6px + 44px + 16px + 24px)', // Header padding + square card (48px) + gap (6px) + title card (44px) + spacing + count height
-          }}
-        >
-          {photos.length === 0 && uploadingPhotos.length === 0 ? (
-            <div className="grid grid-cols-4 gap-4 relative overflow-visible">
-              {/* Empty state - just show empty grid, users can use + button to add photos */}
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-4 relative overflow-visible">
-              {/* Show loading cards FIRST (at the top) for uploading photos (like chat system) */}
-              {uploadingPhotos.map((uploadingPhoto) => (
-                <div
-                  key={uploadingPhoto.id}
-                  className="aspect-square rounded-xl overflow-hidden"
-                >
-                  <LoadingMessageCard fileCount={1} status="uploading" />
-                </div>
-              ))}
-              {/* Then show existing photos */}
-              {photos.map((photo, index) => (
-                <button
-                  key={index}
-                  onClick={() => handlePhotoClick(index)}
-                  className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative"
-                  style={{
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  }}
-                >
-                  <img
-                    src={photo}
-                    alt={`Gallery photo ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </PageContent>
 
       {selectedPhotoIndex !== null && (
         <PhotoViewer

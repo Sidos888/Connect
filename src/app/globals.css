@@ -424,7 +424,7 @@ div[class*="chat"] [data-typing-dot] {
 
 /* Re-enable loading dot animations (for LoadingMessageCard) */
 /* This MUST come after the chat disable rule and have higher specificity */
-/* Use translateY(0) instead of initial to ensure transform works */
+/* Note: animation-delay is set inline in LoadingMessageCard component for wave effect */
 [data-loading-dot],
 .chat-container [data-loading-dot],
 div.chat-messages-container [data-loading-dot],
@@ -432,15 +432,23 @@ div[class*="chat"] [data-loading-dot],
 div[class*="Chat"] [data-loading-dot],
 .chat-container *[data-loading-dot],
 *[data-loading-dot] {
-  animation: loading8-wave 1.4s ease-in-out infinite !important;
-  -webkit-animation: loading8-wave 1.4s ease-in-out infinite !important;
-  -moz-animation: loading8-wave 1.4s ease-in-out infinite !important;
-  -o-animation: loading8-wave 1.4s ease-in-out infinite !important;
-  /* Allow transform to be animated - use translateY(0) as base */
-  transform: translateY(0) !important;
-  -webkit-transform: translateY(0) !important;
-  -moz-transform: translateY(0) !important;
-  -o-transform: translateY(0) !important;
+  /* Only set animation properties that don't conflict with inline delays */
+  animation-name: loading8-wave !important;
+  animation-duration: 1.4s !important;
+  animation-timing-function: ease-in-out !important;
+  animation-iteration-count: infinite !important;
+  -webkit-animation-name: loading8-wave !important;
+  -webkit-animation-duration: 1.4s !important;
+  -webkit-animation-timing-function: ease-in-out !important;
+  -webkit-animation-iteration-count: infinite !important;
+  -moz-animation-name: loading8-wave !important;
+  -moz-animation-duration: 1.4s !important;
+  -moz-animation-timing-function: ease-in-out !important;
+  -moz-animation-iteration-count: infinite !important;
+  -o-animation-name: loading8-wave !important;
+  -o-animation-duration: 1.4s !important;
+  -o-animation-timing-function: ease-in-out !important;
+  -o-animation-iteration-count: infinite !important;
   will-change: transform !important;
 }
 

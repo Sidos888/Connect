@@ -81,6 +81,7 @@ export default function PageHeader({
               pointerEvents: 'auto', 
               position: 'relative', 
               zIndex: 20,
+              width: '100%', // Full width to allow absolute right-0 positioning
               height: isMobile ? '44px' : '40px', // Fixed height to match back button for proper centering
               display: 'flex',
               alignItems: 'center' // Center children vertically
@@ -132,6 +133,13 @@ export default function PageHeader({
                 </button>
               )}
               {leftSection}
+              
+              {/* Right: Custom Actions (when leftSection is provided) */}
+              {customActions ? (
+                <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px', pointerEvents: 'auto', zIndex: 30 }}>
+                  {customActions}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="relative w-full" style={{ 
@@ -349,6 +357,7 @@ export default function PageHeader({
             pointerEvents: 'auto', 
             position: 'relative', 
             zIndex: 20,
+            width: '100%', // Full width to allow absolute right-0 positioning
             height: isMobile ? '44px' : '40px', // Fixed height to match back button for proper centering
             display: 'flex',
             alignItems: 'center' // Center children vertically
@@ -400,6 +409,13 @@ export default function PageHeader({
               </button>
             )}
             {leftSection}
+            
+            {/* Right: Custom Actions (when leftSection is provided) */}
+            {customActions ? (
+              <div className="absolute right-0 flex items-center gap-3" style={{ top: '0', height: isMobile ? '44px' : '40px', pointerEvents: 'auto', zIndex: 30 }}>
+                {customActions}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="relative w-full" style={{ 
