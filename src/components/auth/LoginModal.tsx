@@ -99,6 +99,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   }, []);
 
   // Reset success states when modal opens
+  // NOTE: We do NOT reset step when modal closes - this allows VerificationModal to display
+  // The step will be reset when modal opens fresh (not in verify step)
   useEffect(() => {
     if (isOpen) {
       console.log('🔐 LoginModal: Modal opened, resetting state', {
@@ -129,20 +131,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         setLoading(false);
       }
     } else {
-      // CRITICAL: Reset step when modal closes to prevent stale verify step
-      console.log('🔐 LoginModal: Modal closed, resetting step from', step, 'to default');
-      if (step === 'verify') {
-        console.log('🔐 LoginModal: Step was verify, resetting to', isMobile ? 'phone' : 'email');
-        setStep(isMobile ? 'phone' : 'email');
-        setVerificationSuccess(false);
-        setAccountRecognized(false);
-        setIsRedirecting(false);
-        setLoading(false); // Clear loading when modal closes
-        // Clear phone/email to prevent stale data
-        setPhoneNumber('');
-        setEmail('');
-        setError('');
-      }
+      // When modal closes, only reset success states - DO NOT reset step
+      // This allows VerificationModal to remain visible if modal briefly closes/reopens
+      console.log('🔐 LoginModal: Modal closed, preserving step state', { currentStep: step });
+      // Only clear loading state, but keep step intact
+      setLoading(false);
+      // Note: We intentionally do NOT reset step here to allow VerificationModal to display
+      // Step will be reset when modal opens fresh (not in verify step) in the if (isOpen) block above
     }
   }, [isOpen, isMobile]);
 
@@ -615,7 +610,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           {/* Don't show loading overlay in verify step - VerificationModal will handle its own loading state */}
           <VerificationModal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             onVerify={handleVerifyCode}
             onResend={handleResendCode}
             onBack={handleBack}

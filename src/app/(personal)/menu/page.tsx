@@ -363,18 +363,16 @@ export default function Page() {
 
   const handleSignOut = async () => {
     console.log('Menu page: Starting sign out...');
-    await signOut();
-    console.log('Menu page: Sign out complete, navigating to explore');
-    // Navigate to explore page (unsigned-in state) using replace to clear history
-    router.replace('/explore');
     
-    // Force a small delay to ensure state is cleared before navigation
-    setTimeout(() => {
-      // Ensure we're on explore page
-      if (window.location.pathname !== '/explore') {
-        router.replace('/explore');
-      }
-    }, 100);
+    // CRITICAL: Navigate FIRST before any state changes
+    // This prevents React from re-rendering and blocking navigation
+    console.log('🧭 Menu page: IMMEDIATELY navigating to /signing-out');
+    if (typeof window !== 'undefined') {
+      // Navigate FIRST - this must happen before any state changes
+      window.location.replace('/signing-out');
+      // Stop execution immediately - navigation will happen
+      return;
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -551,16 +549,42 @@ export default function Page() {
     const [showFinalConfirm, setShowFinalConfirm] = React.useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
     const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
+    const [isSigningOut, setIsSigningOut] = React.useState(false);
 
     const handleSignOut = () => {
       setShowSignOutConfirm(true);
     };
 
     const confirmSignOut = async () => {
-      await signOut();
-      const { clearAll } = useAppStore.getState();
-      clearAll();
-      router.replace("/");
+      console.log('Menu page: confirmSignOut called - starting sign out process');
+      
+      // Close confirmation modal
+      setShowSignOutConfirm(false);
+      
+      // Show loading overlay immediately
+      setIsSigningOut(true);
+      
+      try {
+        console.log('Menu page: Calling signOut()');
+        await signOut();
+        console.log('Menu page: Sign out complete');
+        
+        // Wait additional time to ensure everything is cleared (total ~3 seconds)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        console.log('Menu page: Redirecting to /explore');
+        // Redirect to explore page (non-signed-in state)
+        if (typeof window !== 'undefined') {
+          window.location.replace('/explore');
+        }
+      } catch (error) {
+        console.error('Menu page: Sign out error:', error);
+        // Even on error, redirect after delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (typeof window !== 'undefined') {
+          window.location.replace('/explore');
+        }
+      }
     };
 
     const cancelSignOut = () => {
@@ -598,31 +622,52 @@ export default function Page() {
             backButton
             onBack={() => goToView(from as any)}
           />
+          {/* Full-page signing out overlay - shows immediately when confirm is clicked */}
+          {isSigningOut && (
+            <div className="fixed inset-0 bg-white flex items-center justify-center z-[99999]" style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
+              zIndex: 99999
+            }}>
+              <div className="flex flex-col items-center space-y-6">
+                <LoadingSpinner size="lg" />
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-900">Signing out...</h3>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none'
           }}>
             <SettingsContent
-              onBack={() => goToView(from as any)}
-              onSignOut={handleSignOut}
-              onDeleteAccount={handleDeleteAccount}
-              showDeleteConfirm={showDeleteConfirm}
-              showFinalConfirm={showFinalConfirm}
-              onConfirmDelete={confirmDeleteAccount}
-              onCancelDelete={cancelDeleteAccount}
-              onProceedToFinalConfirm={() => setShowFinalConfirm(true)}
-              onBackToMenu={backToMenu}
-              isDeletingAccount={isDeletingAccount}
-              personalProfile={personalProfile}
-              showBackButton={false}
-              onViewProfile={() => goToView('profile', 'settings')}
-              onEditProfile={() => goToView('edit-profile', 'settings')}
-              onShareProfile={navigateToQRCode}
-              onAccountSettings={() => goToView('account-settings', 'settings')}
-              showSignOutConfirm={showSignOutConfirm}
-              onConfirmSignOut={confirmSignOut}
-              onCancelSignOut={cancelSignOut}
-            />
+                onBack={() => goToView(from as any)}
+                onSignOut={handleSignOut}
+                onDeleteAccount={handleDeleteAccount}
+                showDeleteConfirm={showDeleteConfirm}
+                showFinalConfirm={showFinalConfirm}
+                onConfirmDelete={confirmDeleteAccount}
+                onCancelDelete={cancelDeleteAccount}
+                onProceedToFinalConfirm={() => setShowFinalConfirm(true)}
+                onBackToMenu={backToMenu}
+                isDeletingAccount={isDeletingAccount}
+                personalProfile={personalProfile}
+                showBackButton={false}
+                onViewProfile={() => goToView('profile', 'settings')}
+                onEditProfile={() => goToView('edit-profile', 'settings')}
+                onShareProfile={navigateToQRCode}
+                onAccountSettings={() => goToView('account-settings', 'settings')}
+                showSignOutConfirm={showSignOutConfirm}
+                onConfirmSignOut={confirmSignOut}
+                onCancelSignOut={cancelSignOut}
+              />
           </div>
           {/* Bottom Blur */}
           <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>

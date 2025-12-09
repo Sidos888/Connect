@@ -18,10 +18,27 @@ export default function Guard({ children }: { children: React.ReactNode }) {
     if (isAnyModalOpen) return;
     
     try {
+      // Allow signing-out page (it handles its own redirect)
+      if (pathname === '/signing-out') {
+        return;
+      }
+      
       // If user is not authenticated, redirect to explore page (but allow explore and onboarding)
-      if (!user && pathname !== "/" && pathname !== "/onboarding" && !pathname.startsWith("/explore")) {
+      // CRITICAL: Also allow public listing routes
+      const isPublicRoute = pathname === "/" || 
+                           pathname === "/onboarding" || 
+                           pathname.startsWith("/explore") ||
+                           pathname.startsWith("/for-you-listings") ||
+                           pathname.startsWith("/casual-listings") ||
+                           pathname.startsWith("/side-quest-listings") ||
+                           (pathname === "/listing" && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('id') !== null);
+      
+      if (!user && !isPublicRoute) {
         console.log('🛡️ Guard: User not signed in, redirecting to /explore from', pathname);
-        router.replace("/explore");
+        // Use window.location for absolute reliability
+        if (typeof window !== 'undefined') {
+          window.location.replace('/explore');
+        }
         return;
       }
       
@@ -34,6 +51,10 @@ export default function Guard({ children }: { children: React.ReactNode }) {
       
     } catch (error) {
       console.error("Guard redirect error:", error);
+      // Even on error, try to redirect
+      if (!user && typeof window !== 'undefined' && window.location.pathname !== '/explore') {
+        window.location.replace('/explore');
+      }
     }
   }, [pathname, router, isAnyModalOpen, user, authLoading]);
 

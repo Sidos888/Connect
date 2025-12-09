@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -54,19 +54,7 @@ export default function VerificationModal({
   const [resendCountdown, setResendCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
   
-  // Scroll-to-dismiss state
-  const [scrollY, setScrollY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startY, setStartY] = useState(0);
-  const [currentY, setCurrentY] = useState(0);
-  const [initialViewportHeight, setInitialViewportHeight] = useState(0);
-
-  // Capture initial viewport height when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setInitialViewportHeight(window.innerHeight);
-    }
-  }, [isOpen]);
+  // Removed scroll-to-dismiss for full-page modal
 
   // Focus first input when modal opens and reset countdown
   useEffect(() => {
@@ -243,124 +231,114 @@ export default function VerificationModal({
     });
   }, [isOpen, verificationMethod, phoneOrEmail, loading, error]);
 
-  // Handle dismiss - sign out and return to original page
-  const handleDismiss = async () => {
-    console.log('🔐 VerificationModal: handleDismiss called - user is dismissing verification modal', {
-      verificationMethod,
-      phoneOrEmail: phoneOrEmail ? '***' : 'empty',
-      timestamp: new Date().toISOString()
-    });
-    
-    // Sign out the user to ensure they're not signed in
-    try {
-      const { getSupabaseClient } = await import('@/lib/supabaseClient');
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        await supabase.auth.signOut();
-        console.log('🔐 VerificationModal: User signed out for dismiss');
-      }
-    } catch (error) {
-      console.error('🔐 VerificationModal: Error signing out on dismiss:', error);
-    }
-
-    // Close modal - the modal context will handle navigation back to original page
-    console.log('🔐 VerificationModal: Calling onClose()');
-    onClose();
-  };
-
-  // Touch handlers for scroll-to-dismiss
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true);
-    setStartY(e.touches[0].clientY);
-    setCurrentY(e.touches[0].clientY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (isDragging) {
-      const touchY = e.touches[0].clientY;
-      const deltaY = touchY - startY;
-      setCurrentY(touchY);
-      // Use initial viewport height for consistent scroll behavior with/without keyboard
-      const viewportHeight = initialViewportHeight || window.innerHeight;
-      const maxScroll = viewportHeight / 3;
-      const slowScrollFactor = 0.3; // Much slower scrolling
-      setScrollY(Math.max(0, Math.min(deltaY * slowScrollFactor, maxScroll)));
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      
-      // Use initial viewport height for consistent scroll behavior with/without keyboard
-      const viewportHeight = initialViewportHeight || window.innerHeight;
-      const dismissThreshold = (viewportHeight / 3) * 0.5;
-      if (scrollY > dismissThreshold) {
-        handleDismiss();
-      } else {
-        // Snap back to original position
-        setScrollY(0);
-        setCurrentY(0);
-      }
-    }
-  };
+  // Removed handleDismiss and scroll-to-dismiss handlers for full-page modal
+  // User can close via X button or back button
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center overflow-hidden">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleDismiss}
-      />
+    <div className="fixed inset-0 z-[101] flex items-center justify-center overflow-hidden">
+      {/* Backdrop - removed for full page modal */}
       
-      {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
+      {/* Modal - Full Page */}
       <div 
-        className="relative bg-white rounded-t-3xl md:rounded-2xl w-full max-w-[680px] md:w-[680px] h-[85vh] md:h-[620px] overflow-hidden flex flex-col transform transition-all duration-200 ease-out"
+        className="relative bg-white w-full h-full overflow-y-auto flex flex-col"
         style={{
           borderWidth: '0.4px',
           borderColor: '#E5E7EB',
           borderStyle: 'solid',
-          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-          transform: `translateY(${scrollY}px)`
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6">
-          <button
-            onClick={onBack}
-            className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderWidth: '0.4px',
-              borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              willChange: 'transform, box-shadow'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-            }}
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5 text-gray-900" />
-          </button>
-          <h2 className="text-xl font-semibold text-gray-900">Verify</h2>
-          <div className="w-10" /> {/* Spacer */}
+        <div className="px-4" style={{ 
+          paddingTop: typeof window !== 'undefined' && window.innerWidth < 1024 ? 'max(env(safe-area-inset-top), 70px)' : '32px',
+          paddingBottom: '16px',
+          position: 'relative',
+          zIndex: 10
+        }}>
+          {/* Inner container matching PageHeader structure */}
+          <div className="relative w-full" style={{ 
+            width: '100%', 
+            minHeight: '44px',
+            pointerEvents: 'auto'
+          }}>
+            {/* Left: Back Button */}
+            <div className="absolute left-0 flex items-center gap-3" style={{ 
+              top: '0', 
+              height: '44px' 
+            }}>
+              <button
+                onClick={onBack}
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-900" strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Center: Title */}
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center" style={{ 
+              top: '0', 
+              height: '44px' 
+            }}>
+              <h2 className="text-xl font-semibold text-gray-900">Verify</h2>
+            </div>
+
+            {/* Right: X Button */}
+            <div className="absolute right-0 flex items-center gap-3" style={{ 
+              top: '0', 
+              height: '44px' 
+            }}>
+              <button
+                onClick={onClose}
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Close"
+              >
+                <X size={18} className="text-gray-900" strokeWidth={2.5} />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 flex flex-col justify-center relative">
+        <div className="flex-1 px-4 lg:px-8 flex flex-col justify-center relative" style={{ 
+          paddingBottom: 'max(env(safe-area-inset-bottom), 24px)'
+        }}>
           <div className="text-center mb-8 max-w-md mx-auto w-full">
             {verificationSuccess && accountRecognized ? (
               <>
@@ -518,9 +496,9 @@ export default function VerificationModal({
             </div>
           )}
 
-          {/* Resend Button - Absolute positioned at bottom */}
+          {/* Resend Button */}
           {!verificationSuccess && (
-            <div className="absolute bottom-6 left-0 right-0 text-center">
+            <div className="text-center mt-6">
               <button
                 onClick={handleResend}
                 disabled={!canResend}
@@ -532,7 +510,7 @@ export default function VerificationModal({
               >
                 {canResend ? 'Resend code' : `Resend code in ${resendCountdown}s`}
               </button>
-          </div>
+            </div>
           )}
         </div>
       </div>

@@ -702,39 +702,18 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
                 onSignOut={async () => {
                   console.log('🚪 Logging out from Settings...');
                   
-                  // Close ALL modals immediately
-                  closeAllModals();
-                  
-                  // Sign out and clear all state (WAIT for it to complete)
-                  await signOut();
-                  
-                  console.log('✅ Logout complete, navigating to explore');
-                  
-                  // Force navigation to explore page - use multiple methods for reliability
-                  try {
-                    // Method 1: Next.js router (preferred)
-                    router.replace('/explore');
-                    console.log('🧭 Navigation: Used router.replace(/explore)');
-                    
-                    // Method 2: Fallback with window.location after a short delay
-                    setTimeout(() => {
-                      if (window.location.pathname !== '/explore') {
-                        console.log('🧭 Navigation: Fallback - using window.location.replace');
-                        window.location.replace('/explore');
-                      } else {
-                        console.log('🧭 Navigation: Already on /explore, skipping fallback');
-                      }
-                    }, 100);
-                  } catch (navError) {
-                    console.error('⚠️ Navigation error, using window.location fallback:', navError);
-                    window.location.replace('/explore');
+                  // CRITICAL: Navigate FIRST before any state changes
+                  // This prevents React from re-rendering and blocking navigation
+                  console.log('🧭 Navigation: IMMEDIATELY navigating to /signing-out');
+                  if (typeof window !== 'undefined') {
+                    // Navigate FIRST - this must happen before any state changes
+                    window.location.replace('/signing-out');
+                    // Stop execution immediately - navigation will happen
+                    return;
                   }
                   
-                  // Force open login modal after a short delay
-                  setTimeout(() => {
-                    console.log('🔓 Opening login modal after logout');
-                    setIsLoginOpen(true);
-                  }, 500);
+                  // Close ALL modals (this won't execute if navigation happens)
+                  closeAllModals();
                 }}
                 onDeleteAccount={() => {}}
                 showDeleteConfirm={false}

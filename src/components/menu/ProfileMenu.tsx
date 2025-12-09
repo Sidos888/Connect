@@ -914,61 +914,22 @@ export default function ProfileMenu() {
   }, []);
 
   const handleSignOut = async () => {
-    setIsLoading(true);
-    setLoadingMessage('Signing out...');
+    console.log('ProfileMenu: Starting sign out...');
+    
+    // CRITICAL: Navigate FIRST before any state changes
+    // This prevents React from re-rendering and blocking navigation
+    console.log('🧭 ProfileMenu: IMMEDIATELY navigating to /signing-out');
+    if (typeof window !== 'undefined') {
+      // Navigate FIRST - this must happen before any state changes
+      window.location.replace('/signing-out');
+      // Stop execution immediately - navigation will happen
+      return;
+    }
+    
+    // State changes (this won't execute if navigation happens)
     setOpen(false);
     setShowConnections(false);
     setShowAddPerson(false);
-    
-    try {
-      console.log('ProfileMenu: Starting sign out...');
-      
-      // Use the auth context signOut which handles everything properly
-      await signOut();
-      
-      // Navigate to explore page (unsigned-in state) - use multiple methods for reliability
-      console.log('ProfileMenu: Navigating to explore page');
-      try {
-        // Method 1: Next.js router (preferred)
-        router.replace('/explore');
-        console.log('🧭 ProfileMenu: Used router.replace(/explore)');
-        
-        // Method 2: Fallback with window.location after a short delay
-        setTimeout(() => {
-          if (window.location.pathname !== '/explore') {
-            console.log('🧭 ProfileMenu: Fallback - using window.location.replace');
-            window.location.replace('/explore');
-          } else {
-            console.log('🧭 ProfileMenu: Already on /explore, skipping fallback');
-          }
-        }, 100);
-      } catch (navError) {
-        console.error('⚠️ ProfileMenu: Navigation error, using window.location fallback:', navError);
-        window.location.replace('/explore');
-      }
-      
-    } catch (error) {
-      console.error('ProfileMenu: Sign out error:', error);
-      // Even on error, try to sign out and navigate
-      try {
-        await signOut();
-      } catch (signOutError) {
-        console.error('ProfileMenu: Sign out error (ignoring):', signOutError);
-      }
-      // Force navigate to explore with fallback
-      try {
-        router.replace('/explore');
-        setTimeout(() => {
-          if (window.location.pathname !== '/explore') {
-            window.location.replace('/explore');
-          }
-        }, 100);
-      } catch (navError) {
-        window.location.replace('/explore');
-      }
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleFriendClick = (friend: ConnectionUser) => {

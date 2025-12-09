@@ -346,7 +346,9 @@ export default function ProtectedRoute({ children, fallback, title, description,
   // 🚀 BULLETPROOF: Only show login screen if BOTH user AND personalProfile are missing
   // This prevents the flash during client-side navigation when profile is set but user hasn't loaded yet
   // BUT: Allow public routes to render content even without user
+  // CRITICAL: Allow signing-out page (it handles its own sign out)
   const isPublicRoute = pathname === '/' || 
+                        pathname === '/signing-out' ||
                         pathname.startsWith('/explore') ||
                         pathname.startsWith('/for-you-listings') ||
                         pathname.startsWith('/casual-listings') ||

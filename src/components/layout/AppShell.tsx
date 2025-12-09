@@ -112,7 +112,7 @@ function AppShellContent({ children }: AppShellProps) {
   }
   
   // Routes that are always accessible (no login required)
-  const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test'];
+  const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test', '/signing-out'];
   const normalizedPath = pathname.replace(/\/$/, '') || '/';
   const isPublicRoute = publicRoutes.includes(normalizedPath) || 
                        pathname.startsWith('/for-you-listings') ||
