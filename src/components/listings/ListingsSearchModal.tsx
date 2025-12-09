@@ -13,6 +13,7 @@ interface ListingsSearchModalProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   listings?: Listing[];
+  sourcePath?: string; // For navigation tracking
 }
 
 export default function ListingsSearchModal({
@@ -21,6 +22,7 @@ export default function ListingsSearchModal({
   searchQuery,
   onSearchChange,
   listings: providedListings = [],
+  sourcePath = "/for-you-listings",
 }: ListingsSearchModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isFullyPositioned, setIsFullyPositioned] = useState(false);
@@ -193,7 +195,7 @@ export default function ListingsSearchModal({
                     <ListingCard
                       key={listing.id}
                       listing={listing}
-                      sourcePath="/for-you-listings"
+                      sourcePath={sourcePath}
                     />
                   ))
                 )}

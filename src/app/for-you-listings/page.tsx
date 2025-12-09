@@ -216,17 +216,6 @@ export default function ForYouListingsPage() {
             </div>
           </div>
 
-          {/* O/B overlay */}
-          <div className="absolute top-0 left-0 right-0 z-15 pointer-events-none" style={{ height: '214px' as any }}>
-            <div className="absolute top-0 left-0 right-0" style={{
-              height: '214px',
-              background: 'linear-gradient(to bottom, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.5) 60px, rgba(255,255,255,0.35) 120px, rgba(255,255,255,0.15) 180px, rgba(255,255,255,0) 214px)'
-            }} />
-            <div className="absolute top-0 left-0 right-0" style={{ height: '60px', backdropFilter: 'blur(1px)', WebkitBackdropFilter: 'blur(1px)' }} />
-            <div className="absolute left-0 right-0" style={{ top: '60px', height: '40px', backdropFilter: 'blur(0.75px)', WebkitBackdropFilter: 'blur(0.75px)' }} />
-            <div className="absolute left-0 right-0" style={{ top: '100px', height: '40px', backdropFilter: 'blur(0.5px)', WebkitBackdropFilter: 'blur(0.5px)' }} />
-            <div className="absolute left-0 right-0" style={{ top: '140px', height: '40px', backdropFilter: 'blur(0.35px)', WebkitBackdropFilter: 'blur(0.35px)' }} />
-          </div>
 
           {/* Map Background - full page when showMap is true */}
           <div 

@@ -9,6 +9,9 @@ import Avatar from "@/components/Avatar";
 import ProfileModal from "@/components/profile/ProfileModal";
 import FiltersModal from "@/components/explore/FiltersModal";
 import { Search, MapPin, Clock } from "lucide-react";
+import { listingsService } from "@/lib/listingsService";
+import { useQuery } from "@tanstack/react-query";
+import ListingsSearchModal from "@/components/listings/ListingsSearchModal";
 
 export default function ExplorePage() {
   const router = useRouter();
@@ -19,6 +22,8 @@ export default function ExplorePage() {
   const [hasError, setHasError] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Listen for filter card click from TabBar
   useEffect(() => {
@@ -46,6 +51,18 @@ export default function ExplorePage() {
       document.documentElement.style.overflow = '';
     };
   }, []);
+
+  // Fetch all public listings for search (for-you and casual combined)
+  const { data: listingsData } = useQuery({
+    queryKey: ['all-public-listings'],
+    queryFn: async () => {
+      const result = await listingsService.getPublicListings(100); // Get more listings for comprehensive search
+      return result;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  const allListings = listingsData?.listings || [];
 
   // Get current account info
   const currentAccount = context.type === "business" && currentBusiness 
@@ -118,8 +135,7 @@ export default function ExplorePage() {
               {
                 icon: <Search size={20} className="text-gray-900" strokeWidth={2.5} />,
                 onClick: () => {
-                  // Handle search - could open search modal or navigate
-                  console.log('Search clicked');
+                  setIsSearchOpen(true);
                 },
                 label: "Search"
               }
@@ -462,6 +478,16 @@ export default function ExplorePage() {
       <FiltersModal
         isOpen={showFiltersModal}
         onClose={() => setShowFiltersModal(false)}
+      />
+
+      {/* Search Modal */}
+      <ListingsSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        listings={allListings}
+        sourcePath="/explore"
       />
     </>
     );

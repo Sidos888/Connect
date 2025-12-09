@@ -126,7 +126,7 @@ export default function FiltersModal({
             {/* Header */}
             <div className="relative flex items-center justify-center" style={{ paddingTop: '24px', paddingBottom: '24px', paddingLeft: '24px', paddingRight: '24px', minHeight: '60px' }}>
               <h2 className="text-lg font-semibold text-gray-900" style={{ lineHeight: '44px' }}>Filters</h2>
-              <button
+          <button
                 onClick={handleClose}
                 className="absolute flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
@@ -150,8 +150,8 @@ export default function FiltersModal({
                 }}
               >
                 <X size={20} className="text-gray-900" />
-              </button>
-            </div>
+          </button>
+        </div>
 
             {/* Filters Content */}
             <div className="px-6 pb-6 flex-1 flex flex-col justify-start overflow-y-auto"
@@ -460,7 +460,7 @@ export default function FiltersModal({
                 <ChevronLeft size={20} className="text-gray-900" />
               </button>
 
-              {/* Title */}
+        {/* Title */}
               <h2 className="text-lg font-semibold text-gray-900" style={{ lineHeight: '44px' }}>Where</h2>
             </div>
 
@@ -537,7 +537,7 @@ export default function FiltersModal({
                       <Check size={12} className="text-white" strokeWidth={3} />
                     )}
                   </div>
-                </div>
+        </div>
 
                 {/* Choose location Option */}
                 <div 

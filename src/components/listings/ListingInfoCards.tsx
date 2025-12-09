@@ -72,22 +72,72 @@ export default function ListingInfoCards({
       {/* Event Location Card - only show if location exists */}
       {location && location.trim() && (
         <div 
-          className="bg-white rounded-xl p-4 flex items-center gap-3"
+          className="bg-white rounded-2xl flex items-center gap-4 transition-all hover:bg-gray-50"
           onClick={onLocationClick}
           role={onLocationClick ? "button" : undefined}
           tabIndex={onLocationClick ? 0 : undefined}
-          style={{ ...cardStyle, cursor: onLocationClick ? 'pointer' : 'default' }}
+          style={{ 
+            ...cardStyle, 
+            cursor: onLocationClick ? 'pointer' : 'default',
+            padding: '16px',
+            minHeight: '64px',
+          }}
+          onMouseEnter={(e) => {
+            if (onLocationClick) {
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (onLocationClick) {
+              e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+            }
+          }}
         >
-          <div className="flex-shrink-0">
-            <MapPin size={20} className="text-gray-900" />
+          {/* Location Pin Icon */}
+          <div className="flex-shrink-0 flex items-center justify-center">
+            <MapPin size={24} className="text-gray-900" strokeWidth={2.5} />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-base font-semibold text-gray-900 mb-1 truncate">
-              {location}
-            </div>
-            <div className="text-sm font-normal text-gray-500 truncate">
-              Tap to view maps
-            </div>
+          {/* Location Info - Two Line Format */}
+          {(() => {
+            const parts = location.split(',').map(p => p.trim()).filter(p => p);
+            const addressTitle = parts[0] || location;
+            const suburbStateParts = parts.slice(1, 3).filter(p => p && !p.match(/^(Australia|AU)$/i));
+            const suburbState = suburbStateParts.length > 0 
+              ? suburbStateParts.join(', ')
+              : parts.length > 1 ? parts.slice(1).join(', ') : '';
+            
+            return (
+              <div className="flex-1 min-w-0 flex flex-col justify-center" style={{ gap: '4px' }}>
+                <div 
+                  className="text-base font-semibold text-gray-900 leading-tight"
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={addressTitle}
+                >
+                  {addressTitle}
+                </div>
+                {suburbState && (
+                  <div 
+                    className="text-sm font-normal text-gray-500 leading-tight"
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={suburbState}
+                  >
+                    {suburbState}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          {/* View Text on Right */}
+          <div className="flex-shrink-0 text-base font-normal text-gray-900">
+            View
           </div>
         </div>
       )}

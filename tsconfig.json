@@ -39,6 +39,12 @@
   "exclude": [
     "node_modules",
     "ios/**",
-    "android/**"
+    "android/**",
+    "**/backups/**",
+    "**/*_backup*.ts",
+    "**/*_2025*.ts",
+    "tools/**",
+    ".next/cache/**",
+    "out/**"
   ]
 }

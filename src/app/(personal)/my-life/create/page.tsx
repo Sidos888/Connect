@@ -9,12 +9,15 @@ import { useAuth } from '@/lib/authContext';
 import { useChatService } from '@/lib/chatProvider';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import Avatar from '@/components/Avatar';
+import { useAppStore } from '@/lib/store';
+import LocationSearchModal from '@/components/location/LocationSearchModal';
 
 function CreateListingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { account } = useAuth();
   const chatService = useChatService();
+  const { selectedWhere } = useAppStore();
   
   // Check if this is a group event creation
   const groupChatId = searchParams.get('group');
@@ -34,11 +37,6 @@ function CreateListingPageContent() {
   const [location, setLocation] = useState<string>("");
   const [locationFocused, setLocationFocused] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationSearchQuery, setLocationSearchQuery] = useState("");
-  const [locationSearchResults, setLocationSearchResults] = useState<any[]>([]);
-  const [locationSearchLoading, setLocationSearchLoading] = useState(false);
-  const locationInputRef = useRef<HTMLInputElement>(null);
-  const [isComposing, setIsComposing] = useState(false);
   const [includeEndTime, setIncludeEndTime] = useState(true); // Always true - end time is compulsory
   const [addTimes, setAddTimes] = useState(true);
   const [titleFocused, setTitleFocused] = useState(false);
@@ -132,45 +130,10 @@ function CreateListingPageContent() {
     setEndDate(newEndDate);
   }, [startDate]);
 
-  // Mapbox Geocoding API functions
-  const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiY29ubmVjdC1sb2NhdGlvbiIsImEiOiJjbWkzdG5pcDgxNGh6MmlvZWdtbWxmMnVmIn0.9aWRKS5gofTwZCSSdRAX9g';
-
-  const searchMapboxLocations = async (query: string) => {
-    if (!query.trim() || !MAPBOX_ACCESS_TOKEN) {
-      setLocationSearchResults([]);
-      return;
-    }
-
-    setLocationSearchLoading(true);
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_ACCESS_TOKEN}&limit=5&types=place,address,poi`
-      );
-
-      if (!response.ok) {
-        throw new Error('Mapbox API error');
-      }
-
-      const data = await response.json();
-      
-      const results = data.features.map((feature: any, index: number) => ({
-        id: feature.id || `mapbox-${index}`,
-        name: feature.text || feature.place_name?.split(',')[0] || 'Unknown',
-        address: feature.place_name || feature.text,
-        coordinates: feature.geometry.coordinates, // [longitude, latitude]
-        context: feature.context || []
-      }));
-
-      setLocationSearchResults(results);
-    } catch (error) {
-      console.error('Error searching locations:', error);
-      setLocationSearchResults([]);
-    } finally {
-      setLocationSearchLoading(false);
-    }
-  };
-
+  // Reverse geocoding function (kept for other uses if needed)
   const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
+    const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiY29ubmVjdC1sb2NhdGlvbiIsImEiOiJjbWkzdG5pcDgxNGh6MmlvZWdtbWxmMnVmIn0.9aWRKS5gofTwZCSSdRAX9g';
+    
     if (!MAPBOX_ACCESS_TOKEN) {
       return `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
     }
@@ -196,20 +159,6 @@ function CreateListingPageContent() {
       return `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
     }
   };
-
-
-  // Debounced search for Mapbox locations
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (locationSearchQuery.trim()) {
-        searchMapboxLocations(locationSearchQuery);
-      } else {
-        setLocationSearchResults([]);
-      }
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [locationSearchQuery]);
   
   // Format date as "Mon, Nov 17 at 7:00pm"
   const formatDateTime = (date: Date): string => {
@@ -1065,66 +1014,88 @@ function CreateListingPageContent() {
                 </div>
               </div>
 
-              {/* Location Card with Floating Label */}
-              <div className="relative">
-              <button
+              {/* Location Card - Display like search modal with Edit button */}
+              {location ? (
+                <button
                   onClick={() => setShowLocationModal(true)}
-                  className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none transition-all bg-white text-left rounded-xl scrollbar-hide ${(locationFocused || location) ? 'pt-6 pb-2' : 'py-5'}`}
+                  className="w-full flex items-center gap-4 transition-all hover:bg-gray-50 rounded-2xl text-left"
+                  style={{
+                    backgroundColor: 'white',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    padding: '16px',
+                    minHeight: '64px',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                >
+                  {/* Location Pin Icon */}
+                  <div className="flex-shrink-0 flex items-center justify-center">
+                    <MapPin size={24} className="text-gray-900" strokeWidth={2.5} />
+                  </div>
+                  {/* Location Info - Two Line Format */}
+                  {(() => {
+                    const parts = location.split(',').map(p => p.trim()).filter(p => p);
+                    const addressTitle = parts[0] || location;
+                    const suburbStateParts = parts.slice(1, 3).filter(p => p && !p.match(/^(Australia|AU)$/i));
+                    const suburbState = suburbStateParts.length > 0 
+                      ? suburbStateParts.join(', ')
+                      : parts.length > 1 ? parts.slice(1).join(', ') : '';
+                    
+                    return (
+                      <div className="flex-1 min-w-0 flex flex-col justify-center" style={{ gap: '4px' }}>
+                        <div 
+                          className="text-base font-semibold text-gray-900 leading-tight"
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title={addressTitle}
+                        >
+                          {addressTitle}
+                        </div>
+                        {suburbState && (
+                          <div 
+                            className="text-sm font-normal text-gray-500 leading-tight"
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={suburbState}
+                          >
+                            {suburbState}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {/* Edit Text on Right */}
+                  <div className="flex-shrink-0 text-base font-normal text-gray-900">
+                    Edit
+                  </div>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowLocationModal(true)}
+                  className="w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none transition-all bg-white text-left rounded-xl"
                   style={{ 
                     borderWidth: '0.4px',
                     borderColor: '#E5E7EB',
                     borderStyle: 'solid',
-                    transform: locationFocused ? 'translateY(-1px)' : 'translateY(0)',
-                    boxShadow: locationFocused
-                      ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
-                      : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow',
-                    color: 'transparent',
-                    overflowX: 'auto',
-                    overflowY: 'hidden',
-                    whiteSpace: 'nowrap',
-                    WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                  } as React.CSSProperties}
-                  onMouseEnter={(e) => {
-                    if (!locationFocused) {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!locationFocused) {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   }}
                 >
-                  {location && (
-                    <span 
-                      className="text-sm font-medium text-gray-700"
-                      style={{ 
-                        display: 'inline-block',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {location}
-                    </span>
-                  )}
+                  <span className="text-base font-medium text-gray-400">Choose Location</span>
                 </button>
-                {/* Floating label when location is selected */}
-                {(locationFocused || location) && (
-                  <label className="absolute left-4 top-1.5 text-xs font-medium text-gray-500 pointer-events-none">
-                    Location
-                  </label>
-                )}
-                {/* Default centered label when empty */}
-                {!locationFocused && !location && (
-                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-medium text-gray-400 pointer-events-none">
-                    Choose Location
-                  </label>
-                )}
-              </div>
+              )}
 
               {/* Visibility - Show group card if group context, otherwise show public/private */}
               {groupChatId && groupChat ? (
@@ -1582,231 +1553,18 @@ function CreateListingPageContent() {
       )}
 
       {/* Location Search Modal */}
-      {showLocationModal && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden"
-          onClick={() => {
-            setShowLocationModal(false);
-            setLocationSearchQuery("");
-            setLocationSearchResults([]);
-          }}
-        >
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          
-          {/* Modal */}
-          <div 
-            className="relative w-full bg-white rounded-t-3xl overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-                style={{
-              height: '92vh',
-              borderTopLeftRadius: '24px',
-              borderTopRightRadius: '24px',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-              borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-3">
-              <div className="w-12 h-1 bg-gray-300 rounded-full" />
-              </div>
-
-            {/* Search Bar */}
-            <div className="px-6 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  {/* Search Icon */}
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M19 19L14.65 14.65" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  <input
-                    ref={locationInputRef}
-                    type="text"
-                    inputMode="text"
-                    value={locationSearchQuery}
-                    onChange={(e) => {
-                      if (!isComposing) {
-                        // Directly use the input value without any transformation
-                        const input = e.target as HTMLInputElement;
-                        setLocationSearchQuery(input.value);
-                      }
-                    }}
-                    onInput={(e) => {
-                      // Catch autofill events and ensure we use the actual typed value
-                      const input = e.target as HTMLInputElement;
-                      // Force sync the value to prevent iOS transformations
-                      if (input.value !== locationSearchQuery) {
-                        setLocationSearchQuery(input.value);
-                      }
-                    }}
-                    onCompositionStart={() => {
-                      setIsComposing(true);
-                    }}
-                    onCompositionEnd={(e) => {
-                      setIsComposing(false);
-                      setLocationSearchQuery(e.currentTarget.value);
-                    }}
-                    onKeyDown={(e) => {
-                      // Only prevent Enter to avoid form submission
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                      }
-                    }}
-                    onKeyPress={(e) => {
-                      // Prevent iOS from applying smart capitalization
-                      // This fires before the character is inserted
-                      const input = e.currentTarget as HTMLInputElement;
-                      // Set autocorrect off but allow shift key to work
-                      input.setAttribute('autocorrect', 'off');
-                      // Remove autocapitalize to allow shift key functionality
-                      input.removeAttribute('autocapitalize');
-                    }}
-                    placeholder="Search Locations..."
-                    className="w-full pl-12 pr-4 rounded-xl focus:outline-none transition-all"
-                    style={{
-                      height: '40px',
-                      backgroundColor: '#FFFFFF',
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      fontSize: '17px',
-                      fontWeight: '400',
-                      caretColor: '#FF6600',
-                      textTransform: 'none',
-                    } as React.CSSProperties}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#D1D5DB';
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25), 0 0 8px rgba(0, 0, 0, 0.08)';
-                      const input = e.currentTarget;
-                      // Set attributes to prevent auto-capitalization but allow shift key
-                      input.setAttribute('autocorrect', 'off');
-                      input.setAttribute('spellcheck', 'false');
-                      input.setAttribute('inputmode', 'text');
-                      input.style.textTransform = 'none';
-                      // Remove autocapitalize to allow shift key to work normally
-                      input.removeAttribute('autocapitalize');
-                      input.autocorrect = false;
-                      // Set autocapitalize to empty string to allow shift while preventing auto-cap
-                      if (input.autocapitalize !== undefined) {
-                        (input as any).autocapitalize = '';
-                      }
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#E5E7EB';
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    autoCorrect="off"
-                    autoComplete="off"
-                    spellCheck={false}
-                    data-lpignore="true"
-                    data-form-type="other"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    setShowLocationModal(false);
-                    setLocationSearchQuery("");
-                    setLocationSearchResults([]);
-                  }}
-                  className="flex items-center justify-center flex-shrink-0"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '100px',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15 5L5 15M5 5L15 15" stroke="#111827" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Search Results */}
-            <div className="flex-1 overflow-y-auto scrollbar-hide"
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-              }}
-            >
-              {locationSearchLoading && (
-                <div className="flex items-center justify-center py-8 px-6">
-                  <div className="text-sm font-medium text-gray-500">Searching...</div>
-                </div>
-              )}
-              {!locationSearchLoading && locationSearchResults.length === 0 && locationSearchQuery && (
-                <div className="flex items-center justify-center py-8 px-6">
-                  <div className="text-sm font-medium text-gray-500">No results found</div>
-                </div>
-              )}
-              {!locationSearchLoading && locationSearchResults.map((result) => (
-                <button
-                  key={result.id}
-                  onClick={() => {
-                    setLocation(result.address || result.name);
-                    setLocationFocused(true);
-                    setShowLocationModal(false);
-                    setLocationSearchQuery("");
-                    setLocationSearchResults([]);
-                  }}
-                  className="w-full text-left px-6 py-4 flex items-start gap-3 transition-all hover:bg-gray-50"
-                >
-                  {/* Circular Map Icon Card */}
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{
-                      backgroundColor: '#F3F4F6',
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      borderStyle: 'solid',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    }}
-                  >
-                    <MapPin size={18} className="text-gray-700" />
-                  </div>
-                  
-                  {/* Address Text */}
-                  <div className="flex-1 min-w-0">
-                    <div style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      <span className="text-sm font-semibold text-gray-900">{result.name}</span>
-                      {result.address && result.address !== result.name && (
-                        <>
-                          <br />
-                          <span className="text-sm font-normal text-gray-600">{result.address}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <LocationSearchModal
+        isOpen={showLocationModal}
+        onClose={() => {
+          setShowLocationModal(false);
+          setLocationFocused(true);
+        }}
+        onSelect={(selectedLocation) => {
+          setLocation(selectedLocation);
+          setLocationFocused(true);
+        }}
+        placeholder="Choose location"
+      />
     </div>
   );
 }

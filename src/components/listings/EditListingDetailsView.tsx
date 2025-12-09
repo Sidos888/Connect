@@ -202,9 +202,34 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
 
     setLocationSearchLoading(true);
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_ACCESS_TOKEN}&limit=5&types=place,address,poi`
-      );
+      // Always try to get user's GPS location for proximity ranking (independent of explore filter)
+      // This ranks local results first but still allows global results
+      const { getUserLocation, LOCATION_CONFIGS } = await import('@/lib/locationConfig');
+      const locationConfig = await Promise.race([
+        getUserLocation(),
+        new Promise<typeof LOCATION_CONFIGS['Adelaide']>((resolve) => {
+          setTimeout(() => {
+            resolve(LOCATION_CONFIGS['Adelaide']);
+          }, 2000); // 2 second timeout
+        })
+      ]);
+
+      // Build API URL - global search with local proximity ranking
+      const baseUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`;
+      const params = new URLSearchParams({
+        access_token: MAPBOX_ACCESS_TOKEN,
+        limit: '5',
+        types: 'place,address,poi',
+        // No country restriction - allow global location search
+        // No bbox restriction - allow global results
+      });
+
+      // Add proximity bias to rank local results first (but still show global results)
+      if (locationConfig.center) {
+        params.append('proximity', `${locationConfig.center[0]},${locationConfig.center[1]}`);
+      }
+
+      const response = await fetch(`${baseUrl}?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Mapbox API error');

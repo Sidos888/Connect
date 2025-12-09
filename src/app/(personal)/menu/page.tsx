@@ -550,12 +550,21 @@ export default function Page() {
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
     const [showFinalConfirm, setShowFinalConfirm] = React.useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
+    const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
 
-    const handleSignOut = async () => {
+    const handleSignOut = () => {
+      setShowSignOutConfirm(true);
+    };
+
+    const confirmSignOut = async () => {
       await signOut();
       const { clearAll } = useAppStore.getState();
       clearAll();
       router.replace("/");
+    };
+
+    const cancelSignOut = () => {
+      setShowSignOutConfirm(false);
     };
 
     const handleDeleteAccount = () => {
@@ -610,6 +619,9 @@ export default function Page() {
               onEditProfile={() => goToView('edit-profile', 'settings')}
               onShareProfile={navigateToQRCode}
               onAccountSettings={() => goToView('account-settings', 'settings')}
+              showSignOutConfirm={showSignOutConfirm}
+              onConfirmSignOut={confirmSignOut}
+              onCancelSignOut={cancelSignOut}
             />
           </div>
           {/* Bottom Blur */}

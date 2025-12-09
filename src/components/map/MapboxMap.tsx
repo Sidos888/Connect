@@ -40,8 +40,7 @@ export default function MapboxMap({
       attributionControl: false, // Hide default attribution, we can add custom if needed
     });
 
-    // Add navigation controls (zoom buttons)
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    // Navigation controls (zoom buttons) removed - users can pinch/scroll to zoom
 
     map.current.on('load', () => {
       setIsLoaded(true);
