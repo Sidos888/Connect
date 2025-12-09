@@ -286,58 +286,58 @@ export default function EventGalleryView({
 
   // Profile card component - Image top center, info card below (matching event chat)
   const profileCard = !loading && listing ? (
-    <div
-      className="absolute left-0 right-0"
-      style={{
+            <div
+              className="absolute left-0 right-0"
+              style={{
         top: "0", // Align with top of leftSection (same as back button)
         height: "44px", // Match leftSection height
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "flex-start", // Align items to top
-      }}
-    >
+              }}
+            >
       {/* Image Component - Top Center - Positioned independently, aligned with back button top */}
-      <button
-        onClick={handleListingCardClick}
-        className="absolute z-10"
-        style={{
+              <button
+                onClick={handleListingCardClick}
+                className="absolute z-10"
+                style={{
           cursor: "pointer",
           top: "0", // Align top with back button top
           left: "50%", // Center horizontally
           transform: "translateX(-50%)", // Center horizontally only
-        }}
-      >
+                }}
+              >
         {/* Square image - 48px to visually match back button */}
-        <div 
-          className="bg-gray-200 flex items-center justify-center overflow-hidden rounded-lg"
-          style={{
-            width: '48px',
-            height: '48px',
-            borderWidth: '0.5px',
-            borderStyle: 'solid',
-            borderColor: 'rgba(0, 0, 0, 0.08)'
-          }}
-        >
-          {mainPhoto ? (
-            <img
-              src={mainPhoto}
-              alt={listing.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="text-gray-400 text-base font-semibold">
-              {listing.title.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
-      </button>
+                <div
+                  className="bg-gray-200 flex items-center justify-center overflow-hidden rounded-lg"
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderWidth: '0.5px',
+                    borderStyle: 'solid',
+                    borderColor: 'rgba(0, 0, 0, 0.08)'
+                  }}
+                >
+                  {mainPhoto ? (
+                    <img
+                      src={mainPhoto}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-gray-400 text-base font-semibold">
+                      {listing.title.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </button>
 
       {/* Info Card - Below Image - Positioned independently like event chat */}
-      <button 
-        onClick={handleListingCardClick}
-        className="absolute z-0"
-        style={{
+              <button
+                onClick={handleListingCardClick}
+                className="absolute z-0"
+                style={{
           height: "44px", // Match back button and chat box height
           borderRadius: "100px", // Match chat input box at bottom of page
           background: "rgba(255, 255, 255, 0.96)",
@@ -357,38 +357,38 @@ export default function EventGalleryView({
           left: "50%", // Center horizontally
           transform: "translateX(-50%)", // Center horizontally only
           cursor: "pointer"
-        }}
-        onMouseEnter={(e) => {
+                }}
+                onMouseEnter={(e) => {
           e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)";
-        }}
-        onMouseLeave={(e) => {
+                }}
+                onMouseLeave={(e) => {
           e.currentTarget.style.boxShadow = "0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)";
-        }}
-      >
+                }}
+              >
         {/* Title - left aligned with ellipsis truncation */}
-        <div 
-          className="font-semibold text-gray-900 text-base flex-1 text-left"
-          style={{
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+                <div
+                  className="font-semibold text-gray-900 text-base flex-1 text-left"
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
             minWidth: 0 // Required for flex truncation to work
-          }}
-        >
-          {listing.title}
-        </div>
+                  }}
+                >
+                  {listing.title}
+                </div>
         {/* Right chevron icon */}
-        <svg 
-          className="w-5 h-5 text-gray-500 flex-shrink-0" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
+                <svg
+                  className="w-5 h-5 text-gray-500 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
           style={{ marginLeft: "4px" }}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-    </div>
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
   ) : null;
 
   return (
@@ -415,7 +415,7 @@ export default function EventGalleryView({
             onClick={handleAddPhotoClick}
             disabled={uploading}
             className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
+          style={{ 
               width: '44px',
               height: '44px',
               borderRadius: '22px',
@@ -455,44 +455,44 @@ export default function EventGalleryView({
         </h3>
         
         {/* Photo Grid - Positioned at same height as first timeline card */}
-        {photos.length === 0 && uploadingPhotos.length === 0 ? (
-          <div className="grid grid-cols-4 gap-4 relative overflow-visible">
-            {/* Empty state - just show empty grid, users can use + button to add photos */}
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-4 relative overflow-visible">
-            {/* Show loading cards FIRST (at the top) for uploading photos (like chat system) */}
-            {uploadingPhotos.map((uploadingPhoto) => (
-              <div
-                key={uploadingPhoto.id}
-                className="aspect-square rounded-xl overflow-hidden"
-              >
-                <LoadingMessageCard fileCount={1} status="uploading" />
-              </div>
-            ))}
-            {/* Then show existing photos */}
-            {photos.map((photo, index) => (
-              <button
-                key={index}
-                onClick={() => handlePhotoClick(index)}
-                className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative"
-                style={{
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                }}
-              >
-                <img
-                  src={photo}
-                  alt={`Gallery photo ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          {photos.length === 0 && uploadingPhotos.length === 0 ? (
+            <div className="grid grid-cols-4 gap-4 relative overflow-visible">
+              {/* Empty state - just show empty grid, users can use + button to add photos */}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-4 relative overflow-visible">
+              {/* Show loading cards FIRST (at the top) for uploading photos (like chat system) */}
+              {uploadingPhotos.map((uploadingPhoto) => (
+                <div
+                  key={uploadingPhoto.id}
+                  className="aspect-square rounded-xl overflow-hidden"
+                >
+                  <LoadingMessageCard fileCount={1} status="uploading" />
+                </div>
+              ))}
+              {/* Then show existing photos */}
+              {photos.map((photo, index) => (
+                <button
+                  key={index}
+                  onClick={() => handlePhotoClick(index)}
+                  className="aspect-square rounded-xl overflow-hidden bg-gray-100 relative"
+                  style={{
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  }}
+                >
+                  <img
+                    src={photo}
+                    alt={`Gallery photo ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
       {selectedPhotoIndex !== null && (
         <PhotoViewer

@@ -7,9 +7,9 @@ set -e  # Exit on error
 
 echo "🚀 Starting iOS sync workflow..."
 
-# Step 1: Build Next.js app
+# Step 1: Build Next.js app (using next build directly to avoid sync loop)
 echo "📦 Building Next.js app..."
-npm run build
+next build
 
 # Step 2: Sync with iOS
 echo "📱 Syncing with iOS..."

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { Search, MapPin, Clock } from "lucide-react";
+import { Search, Clock, MapPin } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { useExplore } from "@/contexts/ExploreContext";
 
 export type TabItem = {
   href: string;
@@ -21,7 +22,7 @@ type Props = {
 export default function TabBar({ items }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const { resetMenuState } = useAppStore();
+  const { resetMenuState, selectedWhen, selectedWhere } = useAppStore();
   
   // Initialize search mode based on current pathname to prevent glitchy transitions
   // Listing category pages should NOT be in search mode - they show the category card instead
@@ -160,12 +161,11 @@ export default function TabBar({ items }: Props) {
                                  pathname.startsWith("/for-you-listings") ||
                                  pathname.startsWith("/casual-listings") ||
                                  pathname.startsWith("/side-quest-listings");
-  // Explore page and listing category pages use small height for cleaner separation
-  const shouldUseSmallHeight = isExplorePage || isListingCategoryPage;
   
-  // Calculate height: 1/4 smaller on explore and listing pages (62px * 3/4 = 46.5px)
-  const navHeight = shouldUseSmallHeight ? '46.5px' : '62px';
-  const searchButtonSize = shouldUseSmallHeight ? '46.5px' : '62px';
+  // Use consistent height across all pages for better visual cohesion
+  // This creates a unified navigation experience and better visual rhythm
+  const navHeight = '62px';
+  const searchButtonSize = '62px';
   
   return (
     <>
@@ -200,22 +200,54 @@ export default function TabBar({ items }: Props) {
           >
             {(isExplorePage || isListingCategoryPage) && !isSearchMode ? (
               /* Category Card - Location & Time filters for Explore page and listing pages */
-              <div 
-                className="flex items-center justify-between w-full h-full px-4 gap-2 cursor-pointer"
-                onClick={() => {
-                  // Handle category card click - could open filter modal
-                  console.log('Category card clicked');
+              <button
+                className="flex items-center w-full h-full px-5 cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  willChange: 'transform, box-shadow',
+                  gap: '20px'
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // Dispatch custom event to open filters modal
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('openFiltersModal'));
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  const container = e.currentTarget.closest('div');
+                  if (container) {
+                    (container as HTMLElement).style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  const container = e.currentTarget.closest('div');
+                  if (container) {
+                    (container as HTMLElement).style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }
                 }}
               >
-                <div className="flex items-center gap-2.5">
-                  <MapPin size={18} className="text-black" strokeWidth={2.5} />
-                  <span className="text-sm font-semibold text-neutral-900">Adelaide</span>
+                {/* When Section */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Clock size={18} className="text-gray-900 flex-shrink-0" strokeWidth={2.5} />
+                  <div className="flex flex-col items-start justify-center min-w-0 flex-1">
+                    <span className="text-xs font-medium text-gray-500 leading-tight whitespace-nowrap">When</span>
+                    <span className="text-xs font-semibold text-gray-900 leading-tight whitespace-nowrap">{selectedWhen || 'Anytime'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <Clock size={18} className="text-black" strokeWidth={2.5} />
-                  <span className="text-sm font-semibold text-neutral-900">Anytime</span>
+                
+                {/* Where Section */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <MapPin size={18} className="text-gray-900 flex-shrink-0" strokeWidth={2.5} />
+                  <div className="flex flex-col items-start justify-center min-w-0 flex-1">
+                    <span className="text-xs font-medium text-gray-500 leading-tight whitespace-nowrap">Where</span>
+                    <span className="text-xs font-semibold text-gray-900 leading-tight whitespace-nowrap">{selectedWhere || 'Adelaide'}</span>
+                  </div>
                 </div>
-              </div>
+              </button>
             ) : isSearchMode ? (
               <div 
                 className="flex items-center w-full h-full px-4 gap-3"
@@ -224,13 +256,13 @@ export default function TabBar({ items }: Props) {
                 <div 
                   className="flex items-center justify-center flex-shrink-0 transition-colors duration-200"
                   style={{ 
-                    width: shouldUseSmallHeight ? '20px' : '24px', 
-                    height: shouldUseSmallHeight ? '20px' : '24px',
+                    width: '24px',
+                    height: '24px',
                     color: '#000000'
                   }}
                 >
                   {React.createElement(searchItem.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string }>, {
-                    size: shouldUseSmallHeight ? 18 : 20, // Reduced from 20/24
+                    size: 20,
                     strokeWidth: 2.5,
                     fill: "none",
                     stroke: "currentColor"
@@ -254,7 +286,7 @@ export default function TabBar({ items }: Props) {
                 onClick={handleSearchClick}
                 className="flex items-center justify-center w-full h-full transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
-                  padding: shouldUseSmallHeight ? '8px' : '12px'
+                  padding: '12px'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -285,7 +317,7 @@ export default function TabBar({ items }: Props) {
                 maxHeight: searchButtonSize,
                 aspectRatio: '1 / 1',
                 borderRadius: '100px',
-                padding: shouldUseSmallHeight ? '8px' : '12px',
+                padding: '12px',
                 boxSizing: 'border-box',
                 background: 'rgba(255, 255, 255, 0.9)',
                 borderWidth: '0.6px', // Slightly bolder border
@@ -304,15 +336,15 @@ export default function TabBar({ items }: Props) {
                 className="flex items-center justify-center flex-shrink-0" 
                 style={{ 
                   width: (lastVisitedItem.href === "/chat" || lastVisitedItem.href === "/chat/") 
-                    ? (shouldUseSmallHeight ? '24px' : '28px') // Reduced from 28/32
-                    : (shouldUseSmallHeight ? '18px' : '22px'), // Reduced from 22/28
-                  height: shouldUseSmallHeight ? '18px' : '22px' // Reduced from 22/28
+                    ? '28px'
+                    : '22px',
+                  height: '22px'
                 }}
               >
                 {React.createElement(lastVisitedItem.icon as React.ComponentType<{ size?: number; strokeWidth?: number; fill?: string; className?: string; active?: boolean }>, {
                   size: (lastVisitedItem.href === "/chat" || lastVisitedItem.href === "/chat/")
-                    ? (shouldUseSmallHeight ? 22 : 26) // Reduced from 26/30
-                    : (shouldUseSmallHeight ? 18 : 22), // Reduced from 22/28
+                    ? 26
+                    : 22,
                   strokeWidth: 0,
                   fill: "currentColor",
                   stroke: "none",
@@ -333,7 +365,7 @@ export default function TabBar({ items }: Props) {
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              padding: shouldUseSmallHeight ? '0 8px' : '0 12px'
+              padding: '0 12px'
             }}
           >
             {otherItems.map((item, index) => {
@@ -343,16 +375,16 @@ export default function TabBar({ items }: Props) {
             const isChatIcon = item.href === "/chat" || item.href === "/chat/";
             const isMyLifeIcon = item.href === "/my-life" || item.href === "/my-life/";
             const iconContainerWidth = isChatIcon 
-              ? (shouldUseSmallHeight ? '36px' : '40px')
+              ? '40px'
               : isMyLifeIcon
-              ? (shouldUseSmallHeight ? '27px' : '31px') // Slightly wider for My Life icon (17:18 aspect ratio)
-              : (shouldUseSmallHeight ? '24px' : '28px');
-            const iconContainerHeight = shouldUseSmallHeight ? '24px' : '28px';
+              ? '31px' // Slightly wider for My Life icon (17:18 aspect ratio)
+              : '28px';
+            const iconContainerHeight = '28px';
             const iconSize = isChatIcon 
-              ? (shouldUseSmallHeight ? 22 : 26) // Reduced from 26/30
+              ? 26
               : isMyLifeIcon
-              ? (shouldUseSmallHeight ? 19 : 23) // My Life icon - slightly bigger than default
-              : (shouldUseSmallHeight ? 18 : 22); // Reduced from 22/26
+              ? 23 // My Life icon - slightly bigger than default
+              : 22;
             
             return (
                 <Link 
@@ -365,9 +397,9 @@ export default function TabBar({ items }: Props) {
                   }`}
                   onClick={item.href === "/menu" ? () => handleMenuClick(item.href) : undefined}
                 style={{
-                  minWidth: shouldUseSmallHeight ? '48px' : '56px',
-                  padding: shouldUseSmallHeight ? '2px 6px' : '4px 8px',
-                  gap: shouldUseSmallHeight ? '2px' : '3px'
+                  minWidth: '56px',
+                  padding: '4px 8px',
+                  gap: '3px'
                 }}
               >
                 <span 
@@ -415,7 +447,7 @@ export default function TabBar({ items }: Props) {
                 </span>
                 <span 
                   className="whitespace-nowrap font-semibold leading-tight"
-                  style={{ fontSize: shouldUseSmallHeight ? '9px' : '10px' }}
+                  style={{ fontSize: '10px' }}
                 >
                       {item.label}
                     </span>

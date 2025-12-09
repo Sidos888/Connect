@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "build:export": "next build",
+    "build": "next build && npx cap sync ios",
+    "build:export": "next build && npx cap sync ios",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
@@ -32,10 +32,12 @@
     "heic2any": "^0.0.4",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.542.0",
+    "mapbox-gl": "^3.17.0",
     "next": "^16.0.7",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-map-gl": "^8.1.0",
     "zustand": "5.0.8"
   },
   "devDependencies": {

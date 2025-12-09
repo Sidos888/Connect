@@ -8,7 +8,9 @@ import { listingsService, Listing } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingsSearchModal from "@/components/listings/ListingsSearchModal";
+import FiltersModal from "@/components/explore/FiltersModal";
 import { SearchIcon, ChevronLeftIcon } from "@/components/icons";
+import MapboxMap from "@/components/map/MapboxMap";
 
 export default function ForYouListingsPage() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function ForYouListingsPage() {
   const [showMap, setShowMap] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const [listStartOffset, setListStartOffset] = useState<number>(269); // Updated to account for 16px increased spacing
@@ -55,6 +58,20 @@ export default function ForYouListingsPage() {
   });
 
   const allListings = listingsData?.listings || [];
+
+  // Listen for filter card click from TabBar
+  useEffect(() => {
+    const handleOpenFiltersModal = () => {
+      setShowFiltersModal(true);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('openFiltersModal', handleOpenFiltersModal);
+      return () => {
+        window.removeEventListener('openFiltersModal', handleOpenFiltersModal);
+      };
+    }
+  }, []);
 
   // For now, show all listings under "New" category
   // TODO: Implement filtering by subcategory (Recommended, Following, etc.)
@@ -222,10 +239,9 @@ export default function ForYouListingsPage() {
               pointerEvents: showMap ? 'auto' : 'none'
             }}
           >
-            <iframe
-              src="https://www.openstreetmap.org/export/embed.html?bbox=138.5686%2C-34.9485%2C138.6286%2C-34.9085&layer=mapnik"
-              className="w-full h-full border-0"
-              title="Adelaide Map"
+            <MapboxMap 
+              initialCenter={[138.6007, -34.9285]} // Adelaide coordinates
+              initialZoom={12}
             />
           </div>
 
@@ -584,10 +600,9 @@ export default function ForYouListingsPage() {
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
             }}
           >
-            <iframe
-              src="https://www.openstreetmap.org/export/embed.html?bbox=138.5686%2C-34.9485%2C138.6286%2C-34.9085&layer=mapnik"
-              className="w-full h-full border-0"
-              title="Adelaide Map"
+            <MapboxMap 
+              initialCenter={[138.6007, -34.9285]} // Adelaide coordinates
+              initialZoom={12}
             />
           </div>
         </div>
@@ -601,6 +616,12 @@ export default function ForYouListingsPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         listings={allListings}
+      />
+
+      {/* Filters Modal */}
+      <FiltersModal
+        isOpen={showFiltersModal}
+        onClose={() => setShowFiltersModal(false)}
       />
     </>
   );

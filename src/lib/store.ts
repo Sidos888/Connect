@@ -52,6 +52,12 @@ interface StoreState {
   isAccountSwitching: boolean;
   setAccountSwitching: (switching: boolean) => void;
   
+  // Filters
+  selectedWhen: string | null;
+  selectedWhere: string | null;
+  setSelectedWhen: (when: string | null) => void;
+  setSelectedWhere: (where: string | null) => void;
+  
   // Removed deprecated chat methods - use React Query + ChatService instead
   clearAll: () => void;
 }
@@ -85,6 +91,12 @@ export const useAppStore = create<StoreState>()(
       isAccountSwitching: false,
       setAccountSwitching: (switching) => set({ isAccountSwitching: switching }),
       
+      // Filters
+      selectedWhen: null,
+      selectedWhere: null,
+      setSelectedWhen: (when) => set({ selectedWhen: when }),
+      setSelectedWhere: (where) => set({ selectedWhere: where }),
+      
       // clearAll - reset entire state
       clearAll: () => {
         set({ personalProfile: null, currentBusiness: null, businesses: [] });
@@ -95,6 +107,8 @@ export const useAppStore = create<StoreState>()(
       partialize: (state) => ({
         personalProfile: state.personalProfile,
         currentBusiness: state.currentBusiness,
+        selectedWhen: state.selectedWhen,
+        selectedWhere: state.selectedWhere,
         // Don't persist isHydrated - it should reset on each session
         // Don't persist chat data - React Query handles this
       }),

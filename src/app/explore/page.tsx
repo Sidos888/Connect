@@ -7,6 +7,7 @@ import { SearchIcon } from "@/components/icons";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import Avatar from "@/components/Avatar";
 import ProfileModal from "@/components/profile/ProfileModal";
+import FiltersModal from "@/components/explore/FiltersModal";
 import { Search, MapPin, Clock } from "lucide-react";
 
 export default function ExplorePage() {
@@ -17,6 +18,21 @@ export default function ExplorePage() {
   const currentBusiness = useCurrentBusiness();
   const [hasError, setHasError] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
+
+  // Listen for filter card click from TabBar
+  useEffect(() => {
+    const handleOpenFiltersModal = () => {
+      setShowFiltersModal(true);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('openFiltersModal', handleOpenFiltersModal);
+      return () => {
+        window.removeEventListener('openFiltersModal', handleOpenFiltersModal);
+      };
+    }
+  }, []);
 
   // Lock body scroll on desktop
   useEffect(() => {
@@ -281,7 +297,8 @@ export default function ExplorePage() {
 
             {/* Filter Card */}
             <div className="mb-6 flex justify-center">
-              <div 
+              <button
+                onClick={() => setShowFiltersModal(true)}
                 className="rounded-2xl bg-white px-8 py-4 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer"
                 style={{
                   minWidth: '400px',
@@ -304,7 +321,7 @@ export default function ExplorePage() {
                   </div>
                   <span className="text-base text-neutral-500">Anytime</span>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Feature Cards - For You & Side Quest */}
@@ -439,6 +456,12 @@ export default function ExplorePage() {
           router.push(`/qr-code${fromParam}`);
         }}
         onAddBusiness={() => router.push('/create-business')}
+      />
+
+      {/* Filters Modal */}
+      <FiltersModal
+        isOpen={showFiltersModal}
+        onClose={() => setShowFiltersModal(false)}
       />
     </>
     );

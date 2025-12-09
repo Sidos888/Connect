@@ -28,7 +28,7 @@ import AddMomentForm from "@/components/profile/AddMomentForm";
 import MomentDetailPage from "@/components/profile/MomentDetailPage";
 import HighlightDetailPage from "@/components/highlights/HighlightDetailPage";
 import EditProfileLanding from "@/components/settings/EditProfileLanding";
-import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
+import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import MenuTopActions from "@/components/layout/MenuTopActions";
 import ThreeDotLoading from "@/components/ThreeDotLoading";
 import ThreeDotLoadingBounce from "@/components/ThreeDotLoadingBounce";
@@ -76,7 +76,7 @@ const dataURLtoBlob = (dataurl: string): Blob => {
     throw error;
   }
 };
-import Achievements from "@/components/achievements/Achievements";
+import Badges from "@/components/badges/Badges";
 import Connections from "@/components/connections/Connections";
 import CenteredConnections from "@/components/connections/CenteredConnections";
 import AddPage from "@/components/connections/AddPage";
@@ -101,7 +101,7 @@ export default function Page() {
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
-  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'achievements' | 'notifications' | 'memories' | 'saved' | 'account-settings' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail' | 'highlight-detail'>('menu');
+  const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'badges' | 'notifications' | 'memories' | 'saved' | 'account-settings' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail' | 'highlight-detail'>('menu');
   const [selectedMomentType, setSelectedMomentType] = React.useState<{ id: string; label: string; category: string } | null>(null);
   const [selectedMomentId, setSelectedMomentId] = React.useState<string | null>(null);
   const [selectedHighlightId, setSelectedHighlightId] = React.useState<string | null>(null);
@@ -166,7 +166,7 @@ export default function Page() {
     if (view === 'profile') setCurrentView('profile');
     else if (view === 'highlights') setCurrentView('highlights');
     else if (view === 'timeline') setCurrentView('timeline');
-    else if (view === 'achievements') setCurrentView('achievements');
+    else if (view === 'badges') setCurrentView('badges');
     else if (view === 'life') {
       setCurrentView('life');
       // If viewing another user's timeline, load their friend data
@@ -229,7 +229,7 @@ export default function Page() {
   }, [currentView]);
 
   // Helper to update URL to a view on /menu (keeps transitions smooth)
-  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'achievements' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail' | 'highlight-detail', from?: string, userId?: string) => {
+  const goToView = (view: 'menu' | 'profile' | 'highlights' | 'timeline' | 'badges' | 'connections' | 'settings' | 'notifications' | 'memories' | 'saved' | 'edit-profile' | 'account-settings' | 'add-person' | 'friend-requests' | 'friend-profile' | 'friend-connections' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail' | 'highlight-detail', from?: string, userId?: string) => {
     console.log('🔷 goToView called:', { view, from, userId });
     
     if (view === 'menu') {
@@ -304,7 +304,7 @@ export default function Page() {
       document.body.style.paddingBottom = '';
     };
     
-    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile' || currentView === 'highlights' || currentView === 'timeline' || currentView === 'achievements' || currentView === 'life' || currentView === 'add-moment' || currentView === 'add-moment-form' || currentView === 'moment-detail' || currentView === 'highlight-detail' || currentView === 'connections' || currentView === 'settings' || currentView === 'notifications' || currentView === 'memories' || currentView === 'saved' || currentView === 'account-settings') {
+    if (currentView === 'edit-profile' || currentView === 'profile' || currentView === 'friend-profile' || currentView === 'highlights' || currentView === 'timeline' || currentView === 'badges' || currentView === 'life' || currentView === 'add-moment' || currentView === 'add-moment-form' || currentView === 'moment-detail' || currentView === 'highlight-detail' || currentView === 'connections' || currentView === 'settings' || currentView === 'notifications' || currentView === 'memories' || currentView === 'saved' || currentView === 'account-settings') {
       hideBottomNav();
     } else {
       showBottomNav();
@@ -468,22 +468,20 @@ export default function Page() {
     );
   };
 
-  // Achievements View Component
-  const AchievementsView = () => {
+  // Badges View Component
+  const BadgesView = () => {
     const from = searchParams?.get('from') || 'menu';
     return (
       <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
           <PageHeader
-            title="Achievements"
+            title="Badges"
             backButton
             onBack={() => goToView(from as any)}
           />
-          <Achievements />
-          {/* Bottom Blur */}
-          <div className="absolute bottom-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
-            <div className="h-32 bg-gradient-to-t from-white via-white/95 to-transparent"></div>
-          </div>
+          <PageContent>
+            <Badges />
+          </PageContent>
         </MobilePage>
       </div>
     );
@@ -1069,7 +1067,7 @@ export default function Page() {
         onShare={navigateToQRCode}
           onOpenTimeline={() => goToView('life', 'profile')}
         onOpenHighlights={() => goToView('highlights', 'profile')}
-        onOpenBadges={() => goToView('achievements', 'profile')}
+        onOpenBadges={() => goToView('badges', 'profile')}
         onOpenFullLife={() => goToView('life', 'profile')}
         onOpenConnections={() => goToView('connections', 'profile')}
         onOpenHighlightDetail={(highlightId) => {
@@ -1398,7 +1396,7 @@ export default function Page() {
 
   return (
     <ProtectedRoute
-      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'life' ? "Timeline" : currentView === 'add-moment' ? "Add" : currentView === 'add-moment-form' ? (selectedMomentType?.label || "Add Moment") : currentView === 'moment-detail' ? "Moment" : currentView === 'highlight-detail' ? "Highlight" : currentView === 'achievements' ? "Achievements" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
+      title={currentView === 'menu' ? "Menu" : currentView === 'add-person' ? "Find Friends" : currentView === 'friend-profile' ? "Profile" : currentView === 'profile' ? "Profile" : currentView === 'highlights' ? "Highlights" : currentView === 'timeline' ? "Timeline" : currentView === 'life' ? "Timeline" : currentView === 'add-moment' ? "Add" : currentView === 'add-moment-form' ? (selectedMomentType?.label || "Add Moment") : currentView === 'moment-detail' ? "Moment" : currentView === 'highlight-detail' ? "Highlight" : currentView === 'badges' ? "Badges" : currentView === 'connections' ? "Connections" : currentView === 'settings' ? "Settings" : currentView === 'notifications' ? "Notifications" : currentView === 'memories' ? "Memories" : currentView === 'saved' ? "Saved" : currentView === 'account-settings' ? "Account Settings" : "Menu"}
       description="Log in / sign up to access your account settings and preferences"
       buttonText="Log in"
     >
@@ -1652,8 +1650,8 @@ export default function Page() {
             goToView(from as any);
           }}
         />
-      ) : currentView === 'achievements' ? (
-        <AchievementsView />
+      ) : currentView === 'badges' ? (
+        <BadgesView />
       ) : currentView === 'connections' ? (
         <ConnectionsView />
       ) : currentView === 'settings' ? (
@@ -1758,7 +1756,7 @@ export default function Page() {
                 // Personal account menu items
                 [
                   { title: "Memories", icon: "🖼️", view: "memories" },
-                  { title: "Achievements", icon: "🏆", view: "achievements" },
+                  { title: "Badges", icon: "🏆", view: "badges" },
                   { title: "Timeline", icon: "🧭", view: "timeline" },
                   { title: "Connections", icon: "👬", view: "connections" },
                 ]
@@ -1855,7 +1853,7 @@ export default function Page() {
                 // Personal account menu items
                 [
                         { title: "Memories", icon: "🖼️", href: "/memories" },
-                  { title: "Achievements", icon: "🏆", view: "achievements" },
+                  { title: "Badges", icon: "🏆", view: "badges" },
                   { title: "Timeline", icon: "🧭", view: "timeline" },
                         { title: "Connections", icon: "👬", view: "connections" },
                 ]

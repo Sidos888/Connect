@@ -2,6 +2,8 @@
 
 import Avatar from "@/components/Avatar";
 import { Pencil, Settings, MoreVertical, Users, UserPlus, Link, Check, MessageCircle, Clock, X, Cake, ChevronRight, Calendar, UserCheck, GraduationCap, Briefcase, Heart, Home, Sparkles, MoreHorizontal, Share } from "lucide-react";
+import { useAuth } from "@/lib/authContext";
+import { getBadges, BadgeGrid } from "@/components/badges/Badges";
 import Image from "next/image";
 import { PageHeader } from "@/components/layout/PageSystem";
 import ProfileTopActions from "@/components/layout/ProfileTopActions";
@@ -214,6 +216,7 @@ export default function ProfilePage({
   const [loadingHighlights, setLoadingHighlights] = useState(true);
   const router = useRouter();
   const chatService = useChatService();
+  const { account: authAccount } = useAuth();
   
   // Determine if full profile should be visible (calculate early to avoid uninitialized variable error)
   // Default to private if undefined (safe fallback)
@@ -858,7 +861,7 @@ export default function ProfilePage({
                   })()
                 },
                 { id: 'highlights' as const, label: 'Highlights', count: highlightsCount },
-                { id: 'badges' as const, label: 'Badges', count: 10 }
+                { id: 'badges' as const, label: 'Badges', count: 1 }
               ].map((pill) => {
                 const isActive = selectedPill === pill.id;
                 return (
@@ -1352,12 +1355,29 @@ export default function ProfilePage({
             </div>
           )}
 
-          {/* Placeholder for badges */}
-          {selectedPill === 'badges' && (
-            <div className="space-y-4">
-              <p className="text-gray-400 text-sm">Content will appear here...</p>
-            </div>
-          )}
+          {/* Badges Section Content */}
+          {selectedPill === 'badges' && (() => {
+            // Get badges using shared function
+            const badges = getBadges(profile);
+            
+            return (
+              <div className="space-y-3">
+                {/* Badges Title */}
+                <button 
+                  onClick={onOpenBadges}
+                  className="flex items-center gap-1 mb-4"
+                >
+                  <h3 className="text-base font-semibold text-gray-900">
+                    {badges.length} Badge{badges.length !== 1 ? 's' : ''}
+                  </h3>
+                  <ChevronRight size={20} className="text-gray-400" strokeWidth={2} />
+                </button>
+
+                {/* Badges Grid - 3 columns like full page, using shared component */}
+                <BadgeGrid badges={badges} columns={3} onClick={onOpenBadges} />
+              </div>
+            );
+          })()}
             </>
           )}
         </div>
