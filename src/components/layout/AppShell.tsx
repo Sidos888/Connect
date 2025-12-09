@@ -114,7 +114,21 @@ function AppShellContent({ children }: AppShellProps) {
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test'];
   const normalizedPath = pathname.replace(/\/$/, '') || '/';
-  const isPublicRoute = publicRoutes.includes(normalizedPath);
+  const isPublicRoute = publicRoutes.includes(normalizedPath) || 
+                       pathname.startsWith('/for-you-listings') ||
+                       pathname.startsWith('/casual-listings') ||
+                       pathname.startsWith('/side-quest-listings') ||
+                       (normalizedPath === '/listing' && searchParams?.get('id') !== null);
+  
+  console.log('🔍 AppShell: Route check', {
+    pathname,
+    normalizedPath,
+    isPublicRoute,
+    isInPublicRoutesList: publicRoutes.includes(normalizedPath),
+    isListingCategory: pathname.startsWith('/for-you-listings') || pathname.startsWith('/casual-listings') || pathname.startsWith('/side-quest-listings'),
+    isListingDetail: normalizedPath === '/listing' && searchParams?.get('id') !== null,
+    hasListingId: searchParams?.get('id') !== null
+  });
 
   // If it's a public route, show without protection
   if (isPublicRoute) {
@@ -142,8 +156,8 @@ function AppShellContent({ children }: AppShellProps) {
           <TopNavigation />
         </div>
         
-        {/* Mobile: Top Navigation Bar */}
-        {!isSettingsPage && !isScanPage && (
+        {/* Mobile: Top Navigation Bar - Hide on explore page (has its own PageHeader) */}
+        {!isSettingsPage && !isScanPage && normalizedPath !== '/explore' && (
           <div className="lg:hidden">
             <MobileTopNavigation />
           </div>

@@ -15,6 +15,7 @@ interface ListingActionButtonsProps {
   onManage?: () => void;
   onJoin?: () => void;
   onLeave?: () => void; // Handler for when user clicks "Attending" (to leave)
+  onMoreClick?: () => boolean | void; // Handler for when user clicks "More" (for login check). Returns false to prevent showing modal.
 }
 
 export default function ListingActionButtons({ 
@@ -25,7 +26,8 @@ export default function ListingActionButtons({
   eventChatEnabled = false,
   onManage,
   onJoin,
-  onLeave
+  onLeave,
+  onMoreClick
 }: ListingActionButtonsProps) {
   const router = useRouter();
   const [showMoreModal, setShowMoreModal] = useState(false);
@@ -161,7 +163,18 @@ export default function ListingActionButtons({
 
         {/* More Button - Opens modal */}
         <button
-          onClick={() => setShowMoreModal(true)}
+          onClick={() => {
+            if (onMoreClick) {
+              // If onMoreClick is provided, call it and check if we should proceed
+              const shouldProceed = onMoreClick();
+              // If onMoreClick returns false, don't show the modal (e.g., user not signed in)
+              if (shouldProceed === false) {
+                return;
+              }
+              // If onMoreClick returns true or undefined, show the modal (user is signed in)
+            }
+            setShowMoreModal(true);
+          }}
           className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
           style={getButtonStyles(true)}
           onMouseEnter={handleMouseEnter}
@@ -269,7 +282,18 @@ export default function ListingActionButtons({
 
       {/* More Button - Opens modal */}
       <button
-        onClick={() => setShowMoreModal(true)}
+        onClick={() => {
+          if (onMoreClick) {
+            // If onMoreClick is provided, call it and check if we should proceed
+            const shouldProceed = onMoreClick();
+            // If onMoreClick returns false, don't show the modal (e.g., user not signed in)
+            if (shouldProceed === false) {
+              return;
+            }
+            // If onMoreClick returns true or undefined, show the modal (user is signed in)
+          }
+          setShowMoreModal(true);
+        }}
         className="flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-[1px] focus:outline-none"
         style={getButtonStyles(true)}
         onMouseEnter={handleMouseEnter}

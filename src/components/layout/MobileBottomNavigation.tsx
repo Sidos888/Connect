@@ -10,15 +10,23 @@ import { useAuth } from "@/lib/authContext";
 import { useChatService } from "@/lib/chatProvider";
 import { useUnreadChatsCount } from "@/lib/chatQueries";
 import { useUnreadNotificationsCount } from "@/lib/notificationsQueries";
+import { usePathname } from "next/navigation";
 
 export default function MobileBottomNavigation() {
   const { context } = useAppStore();
   const { user } = useAuth();
   const chatService = useChatService();
+  const pathname = usePathname();
   
   // Get unread counts for badges
   const { data: unreadChatsCount = 0 } = useUnreadChatsCount(chatService, user?.id || null);
   const { data: unreadNotificationsCount = 0 } = useUnreadNotificationsCount(user?.id || null);
+  
+  // If user is not signed in, only show bottom nav on explore page
+  const isExplorePage = pathname === "/explore" || pathname.startsWith("/explore");
+  if (!user && !isExplorePage) {
+    return null;
+  }
   
   const navigationItems = [
     { href: "/explore", label: "Explore", icon: Search },
@@ -43,5 +51,5 @@ export default function MobileBottomNavigation() {
     },
   ];
 
-  return <TabBar items={navigationItems} />;
+  return <TabBar items={navigationItems} user={user} />;
 }

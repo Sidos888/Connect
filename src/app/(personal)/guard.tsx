@@ -18,9 +18,10 @@ export default function Guard({ children }: { children: React.ReactNode }) {
     if (isAnyModalOpen) return;
     
     try {
-      // If user is not authenticated, redirect to home page (but allow explore)
+      // If user is not authenticated, redirect to explore page (but allow explore and onboarding)
       if (!user && pathname !== "/" && pathname !== "/onboarding" && !pathname.startsWith("/explore")) {
-        router.replace("/");
+        console.log('🛡️ Guard: User not signed in, redirecting to /explore from', pathname);
+        router.replace("/explore");
         return;
       }
       

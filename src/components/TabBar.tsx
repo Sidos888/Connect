@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { Search, Clock, MapPin } from "lucide-react";
+import { Search, Clock, MapPin, UserCircle } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useExplore } from "@/contexts/ExploreContext";
+import { useModal } from "@/lib/modalContext";
 
 export type TabItem = {
   href: string;
@@ -17,12 +18,14 @@ export type TabItem = {
 
 type Props = {
   items: TabItem[];
+  user?: any; // User object from auth context
 };
 
-export default function TabBar({ items }: Props) {
+export default function TabBar({ items, user }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const { resetMenuState, selectedWhen, selectedWhere } = useAppStore();
+  const { showLogin } = useModal();
   
   // Initialize search mode based on current pathname to prevent glitchy transitions
   // Listing category pages should NOT be in search mode - they show the category card instead
@@ -304,7 +307,43 @@ export default function TabBar({ items }: Props) {
         {/* Combined Card - My Life, Chat, Menu / Recent Icon Button */}
         {(isSearchMode || isExplorePage || isListingCategoryPage) ? (
           /* Recent Icon Button - Collapsed State (for search mode and explore page) */
-          lastVisitedItem && (
+          /* When unsigned in on explore page, show UserCircle icon that opens login modal */
+          (!user && isExplorePage) ? (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔐 TabBar: UserCircle clicked, opening login modal');
+                showLogin();
+              }}
+              className="flex items-center justify-center transition-all duration-300 ease-in-out hover:-translate-y-[1px] text-black"
+              style={{
+                width: searchButtonSize,
+                height: searchButtonSize,
+                minWidth: searchButtonSize,
+                minHeight: searchButtonSize,
+                maxWidth: searchButtonSize,
+                maxHeight: searchButtonSize,
+                aspectRatio: '1 / 1',
+                borderRadius: '100px',
+                padding: '12px',
+                boxSizing: 'border-box',
+                background: 'rgba(255, 255, 255, 0.9)',
+                borderWidth: '0.6px',
+                borderColor: '#E5E7EB',
+                borderStyle: 'solid',
+                boxShadow: '0 0 1.5px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1.5px rgba(100, 100, 100, 0.35), inset 0 0 2px rgba(27, 27, 27, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 1.5px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.3)';
+              }}
+            >
+              <UserCircle size={22} className="text-gray-900" strokeWidth={2} />
+            </button>
+          ) : lastVisitedItem ? (
             <button
               onClick={handleRecentIconClick}
               className="flex items-center justify-center transition-all duration-300 ease-in-out hover:-translate-y-[1px] text-black"
@@ -352,7 +391,7 @@ export default function TabBar({ items }: Props) {
                 })}
               </span>
             </button>
-          )
+          ) : null
         ) : (
           /* Normal 3-Button Card */
           <div 

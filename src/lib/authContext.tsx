@@ -5,6 +5,7 @@ import { User, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseClient, clearInvalidSession } from './supabaseClient';
 import { formatNameForDisplay, normalizeEmail, normalizePhoneAU } from './utils';
 import { ChatService } from './chatService';
+import { useAppStore } from './store';
 
 // Account interface (our true user profile)
 interface Account {
@@ -73,7 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('🔍 AuthContext: User state:', user ? { id: user.id, email: user.email, phone: user.phone } : null);
     
     // Sync account with personalProfile in store
-    if (account && typeof window !== 'undefined') {
+    // Only sync when account exists (not during sign out)
+    if (account && user && typeof window !== 'undefined') {
       import('./store').then(({ useAppStore }) => {
         try {
         const store = useAppStore.getState();
@@ -1207,16 +1209,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         realtimeCleanupRef.current = null;
       }
       
+      // Clear Zustand store state completely (before clearing localStorage)
+      if (typeof window !== 'undefined') {
+        try {
+          console.log('🧹 Zustand: Getting store state...');
+          const store = useAppStore.getState();
+          console.log('🧹 Zustand: Store state before clear:', {
+            hasPersonalProfile: !!store.personalProfile,
+            personalProfileId: store.personalProfile?.id,
+            personalProfileName: store.personalProfile?.name,
+            hasClearAll: typeof store.clearAll === 'function',
+            hasSetPersonalProfile: typeof store.setPersonalProfile === 'function'
+          });
+          
+          // First, directly set personalProfile to null
+          if (store.setPersonalProfile) {
+            store.setPersonalProfile(null);
+            console.log('🧹 Zustand: Directly set personalProfile to null');
+          }
+          
+          // Then clear using clearAll function (clears other state too)
+          if (store.clearAll) {
+            store.clearAll();
+            console.log('🧹 Zustand: Called clearAll()');
+          }
+          
+          // Verify it's cleared
+          const afterClear = useAppStore.getState();
+          console.log('🧹 Zustand: Store state after clear:', {
+            hasPersonalProfile: !!afterClear.personalProfile,
+            personalProfileId: afterClear.personalProfile?.id,
+            personalProfileName: afterClear.personalProfile?.name
+          });
+          
+          // Remove Zustand's persisted storage key explicitly BEFORE localStorage.clear()
+          localStorage.removeItem('app-store');
+          console.log('🧹 Zustand: Removed persisted storage key');
+        } catch (storeError) {
+          console.error('⚠️ Error clearing Zustand store:', storeError);
+          console.error('⚠️ Store error details:', JSON.stringify(storeError));
+          // Try direct approach as fallback
+          try {
+            const store = useAppStore.getState();
+            if (store.setPersonalProfile) {
+              store.setPersonalProfile(null);
+              console.log('🧹 Zustand: Fallback - directly cleared personalProfile');
+            }
+            localStorage.removeItem('app-store');
+          } catch (fallbackError) {
+            console.error('⚠️ Fallback clear also failed:', fallbackError);
+          }
+        }
+      }
+      
       // Clear all storage immediately
       if (typeof window !== 'undefined') {
         localStorage.clear();
         sessionStorage.clear();
+        console.log('🧹 Cleared all localStorage and sessionStorage');
       }
-      
-      // Clear store personalProfile
-      const { setPersonalProfile } = useAppStore.getState();
-      setPersonalProfile(null);
-      console.log('🧹 Cleared personalProfile from store');
       
       // Sign out from Supabase and WAIT for it to complete
       console.log('🔐 Signing out from Supabase...');
@@ -1236,9 +1287,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccount(null);
       setLoading(false);
       
-      // Clear store personalProfile even on error
-      const { setPersonalProfile } = useAppStore.getState();
-      setPersonalProfile(null);
+      // Clear Zustand store even on error
+      if (typeof window !== 'undefined') {
+        try {
+          console.log('🧹 Zustand: Clearing store in error handler...');
+          const store = useAppStore.getState();
+          if (store.clearAll) {
+            store.clearAll();
+          }
+          if (store.setPersonalProfile) {
+            store.setPersonalProfile(null);
+          }
+          localStorage.removeItem('app-store');
+          console.log('🧹 Zustand: Store cleared in error handler');
+        } catch (storeError) {
+          console.error('⚠️ Error clearing Zustand store on error:', storeError);
+        }
+      }
       
       // Clear all storage even on error
       if (typeof window !== 'undefined') {

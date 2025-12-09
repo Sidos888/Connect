@@ -926,17 +926,26 @@ export default function ProfileMenu() {
       // Use the auth context signOut which handles everything properly
       await signOut();
       
-      // Navigate to explore page (unsigned-in state) using replace to clear history
+      // Navigate to explore page (unsigned-in state) - use multiple methods for reliability
       console.log('ProfileMenu: Navigating to explore page');
-      router.replace('/explore');
-      
-      // Force a small delay to ensure state is cleared before navigation
-      setTimeout(() => {
-        // Ensure we're on explore page
-        if (window.location.pathname !== '/explore') {
-          router.replace('/explore');
-        }
-      }, 100);
+      try {
+        // Method 1: Next.js router (preferred)
+        router.replace('/explore');
+        console.log('🧭 ProfileMenu: Used router.replace(/explore)');
+        
+        // Method 2: Fallback with window.location after a short delay
+        setTimeout(() => {
+          if (window.location.pathname !== '/explore') {
+            console.log('🧭 ProfileMenu: Fallback - using window.location.replace');
+            window.location.replace('/explore');
+          } else {
+            console.log('🧭 ProfileMenu: Already on /explore, skipping fallback');
+          }
+        }, 100);
+      } catch (navError) {
+        console.error('⚠️ ProfileMenu: Navigation error, using window.location fallback:', navError);
+        window.location.replace('/explore');
+      }
       
     } catch (error) {
       console.error('ProfileMenu: Sign out error:', error);
@@ -946,8 +955,17 @@ export default function ProfileMenu() {
       } catch (signOutError) {
         console.error('ProfileMenu: Sign out error (ignoring):', signOutError);
       }
-      // Force navigate to explore
-      router.replace('/explore');
+      // Force navigate to explore with fallback
+      try {
+        router.replace('/explore');
+        setTimeout(() => {
+          if (window.location.pathname !== '/explore') {
+            window.location.replace('/explore');
+          }
+        }, 100);
+      } catch (navError) {
+        window.location.replace('/explore');
+      }
     } finally {
       setIsLoading(false);
     }

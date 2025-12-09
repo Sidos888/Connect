@@ -345,7 +345,23 @@ export default function ProtectedRoute({ children, fallback, title, description,
 
   // 🚀 BULLETPROOF: Only show login screen if BOTH user AND personalProfile are missing
   // This prevents the flash during client-side navigation when profile is set but user hasn't loaded yet
-  if (!user && !personalProfile) {
+  // BUT: Allow public routes to render content even without user
+  const isPublicRoute = pathname === '/' || 
+                        pathname.startsWith('/explore') ||
+                        pathname.startsWith('/for-you-listings') ||
+                        pathname.startsWith('/casual-listings') ||
+                        pathname.startsWith('/side-quest-listings') ||
+                        (pathname === '/listing' || pathname.startsWith('/listing?'));
+  
+  console.log('🔍 ProtectedRoute: Access check', {
+    pathname,
+    hasUser: !!user,
+    hasPersonalProfile: !!personalProfile,
+    isPublicRoute,
+    willShowLogin: !user && !personalProfile && !isPublicRoute
+  });
+  
+  if (!user && !personalProfile && !isPublicRoute) {
     if (fallback) {
       return <>{fallback}</>;
     }

@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
+import { useModal } from "@/lib/modalContext";
 import { SearchIcon } from "@/components/icons";
 import { MobilePage, PageHeader } from "@/components/layout/PageSystem";
 import Avatar from "@/components/Avatar";
 import ProfileModal from "@/components/profile/ProfileModal";
 import FiltersModal from "@/components/explore/FiltersModal";
-import { Search, MapPin, Clock } from "lucide-react";
+import { Search, MapPin, Clock, UserCircle } from "lucide-react";
 import { listingsService } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingsSearchModal from "@/components/listings/ListingsSearchModal";
@@ -17,7 +18,8 @@ export default function ExplorePage() {
   const router = useRouter();
   const pathname = usePathname();
   const { context, personalProfile } = useAppStore();
-  const { account } = useAuth();
+  const { account, user } = useAuth();
+  const { showLogin } = useModal();
   const currentBusiness = useCurrentBusiness();
   const [hasError, setHasError] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -100,7 +102,15 @@ export default function ExplorePage() {
             title="Explore"
             customBackButton={
               <button
-                onClick={() => setShowProfileModal(true)}
+                onClick={() => {
+                  console.log('🔐 Explore: Button clicked', { user: !!user, userId: user?.id });
+                  if (user) {
+                    setShowProfileModal(true);
+                  } else {
+                    console.log('🔐 Explore: UserCircle clicked, opening login modal');
+                    showLogin();
+                  }
+                }}
                 className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   width: '40px',
@@ -112,7 +122,7 @@ export default function ExplorePage() {
                   borderStyle: 'solid',
                   boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                   willChange: 'transform, box-shadow',
-                  padding: '2px'
+                  padding: user ? '2px' : '0'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -120,15 +130,19 @@ export default function ExplorePage() {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
-                aria-label="Switch account"
+                aria-label={user ? "Switch account" : "Log in or Sign up"}
               >
-                <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
-                  <Avatar 
-                    src={currentAccount?.avatarUrl ?? undefined} 
-                    name={currentAccount?.name ?? ""} 
-                    size={36} 
-                  />
-                </div>
+                {user && currentAccount ? (
+                  <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
+                    <Avatar 
+                      src={currentAccount?.avatarUrl ?? undefined} 
+                      name={currentAccount?.name ?? ""} 
+                      size={36} 
+                    />
+                  </div>
+                ) : (
+                  <UserCircle size={22} className="text-gray-900" strokeWidth={2} />
+                )}
               </button>
             }
             actions={[

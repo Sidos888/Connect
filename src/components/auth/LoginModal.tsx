@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { XMarkIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
+import { EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
+import { X } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/lib/store';
@@ -107,12 +108,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       // Reset to default step based on device type
       if (isMobile) {
         setStep('phone');
-        // Auto-focus phone field on mobile only
-        setTimeout(() => {
-          if (phoneInputRef.current) {
-            phoneInputRef.current.focus();
-          }
-        }, 100);
+        // Don't auto-focus - let user click to activate
       } else {
         setStep('email');
         // Don't auto-focus email field on web - let user click to activate
@@ -260,12 +256,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       console.log('🍎 LoginModal: Reviewer email detected, switching to password mode');
       setStep('reviewer-password');
       setError('');
-      // Auto-focus password field
-      setTimeout(() => {
-        if (passwordInputRef.current) {
-          passwordInputRef.current.focus();
-        }
-      }, 100);
+      // Don't auto-focus - let user click to activate
       return;
     }
     // END REVIEWER OVERRIDE
@@ -532,11 +523,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (step === 'email' && email && isReviewBuild() && isReviewerEmail(email)) {
       console.log('🍎 LoginModal: Reviewer email detected, switching to password mode');
       setStep('reviewer-password');
-      setTimeout(() => {
-        if (passwordInputRef.current) {
-          passwordInputRef.current.focus();
-        }
-      }, 100);
+      // Don't auto-focus - let user click to activate
     } else if (step === 'reviewer-password' && email && !isReviewerEmail(email)) {
       // If they change the email away from reviewer email, go back to normal flow
       setStep('email');
@@ -564,61 +551,85 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           accountRecognized={accountRecognized}
         />
       ) : (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center overflow-hidden">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={handleDismiss}
-          />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
+          {/* Backdrop - removed for full page modal */}
           
-          {/* Modal */}
+          {/* Modal - Full Page */}
           <div 
-            className="relative bg-white rounded-t-3xl md:rounded-2xl w-full max-w-[680px] md:w-[680px] h-[85vh] md:h-[620px] overflow-hidden flex flex-col transform transition-all duration-200 ease-out md:mx-auto"
+            className="relative bg-white w-full h-full overflow-y-auto flex flex-col"
             style={{
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-              transform: `translateY(${scrollY}px)`
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
             }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
             {/* Header */}
-            <div className="flex items-center justify-between pt-8 pb-4 px-8">
-              <div className="w-10" /> {/* Spacer */}
-              <h2 className="text-xl font-semibold text-gray-900">
-                Log in or Sign up
-              </h2>
-              <button
-                onClick={handleDismiss}
-                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '100px',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                aria-label="Close"
-              >
-                <XMarkIcon className="h-5 w-5 text-gray-900" />
-              </button>
+            <div className="px-4" style={{ 
+              paddingTop: typeof window !== 'undefined' && window.innerWidth < 1024 ? 'max(env(safe-area-inset-top), 70px)' : '32px',
+              paddingBottom: '16px',
+              position: 'relative',
+              zIndex: 10
+            }}>
+              {/* Inner container matching PageHeader structure */}
+              <div className="relative w-full" style={{ 
+                width: '100%', 
+                minHeight: '44px',
+                pointerEvents: 'auto'
+              }}>
+                {/* Right: X Button */}
+                <div className="absolute right-0 flex items-center gap-3" style={{ 
+                  top: '0', 
+                  height: '44px' 
+                }}>
+                  <button
+                    onClick={handleDismiss}
+                    className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      borderWidth: '0.4px',
+                      borderColor: '#E5E7EB',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                      willChange: 'transform, box-shadow'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                    }}
+                    aria-label="Close"
+                  >
+                    <X size={18} className="text-gray-900" strokeWidth={2.5} />
+                  </button>
+                </div>
+                
+                {/* Center: Title */}
+                <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ 
+                  top: '0', 
+                  height: '44px', 
+                  justifyContent: 'center' 
+                }}>
+                  <h2 className="font-semibold text-gray-900 text-center" style={{ 
+                    fontSize: '22px',
+                    lineHeight: '28px',
+                    height: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    Log in or Sign up
+                  </h2>
+                </div>
+              </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-6 flex flex-col justify-center relative">
+            <div className="flex-1 p-6 flex flex-col justify-center relative" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
           {step === 'phone' && (
             <form onSubmit={handlePhoneSubmit} className="max-w-md mx-auto w-full">
               {/* Phone Number Input */}
@@ -688,7 +699,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
           {/* Email Button - Absolute positioned at bottom - Only show on phone step */}
           {step === 'phone' && (
-            <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center">
+            <div className="absolute left-0 right-0 flex flex-col items-center" style={{ bottom: 'max(env(safe-area-inset-bottom), 48px)' }}>
               <p className="text-xs text-gray-500 mb-2">or</p>
               <button
                 type="button"
@@ -899,7 +910,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
           {/* Phone Button - Absolute positioned at bottom - Only show on email step */}
           {step === 'email' && (
-            <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center">
+            <div className="absolute left-0 right-0 flex flex-col items-center" style={{ bottom: 'max(env(safe-area-inset-bottom), 48px)' }}>
               <p className="text-xs text-gray-500 mb-2">or</p>
               <button
                 type="button"

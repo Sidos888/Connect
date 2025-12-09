@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { MobilePage, PageHeader, PageContent } from "@/components/layout/PageSystem";
 import { useAuth } from '@/lib/authContext';
+import { useModal } from '@/lib/modalContext';
 import { Listing } from '@/lib/listingsService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListingPhotoCollage from '@/components/listings/ListingPhotoCollage';
@@ -11,7 +12,6 @@ import ListingHeader from '@/components/listings/ListingHeader';
 import ListingActionButtons from '@/components/listings/ListingActionButtons';
 import ListingInfoCards from '@/components/listings/ListingInfoCards';
 import ItineraryViewer from '@/components/listings/ItineraryViewer';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
 import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Image as ImageIcon, Share, ChevronRight, ArrowLeft } from 'lucide-react';
@@ -38,7 +38,8 @@ export default function ListingPage() {
   const from = fromRaw ? decodeURIComponent(fromRaw) : '/explore'; // Default to explore if no from param
   const manageFrom = searchParams.get('manageFrom'); // Track if we came from manage page
   const refreshParam = searchParams.get('_refresh'); // Track refresh param to force query refetch
-  const { account } = useAuth();
+  const { account, user } = useAuth();
+  const { showLogin } = useModal();
   const queryClient = useQueryClient();
 
   // Track changes for edit-details view - declare refs early
@@ -733,8 +734,21 @@ export default function ListingPage() {
                 isCurrentUserParticipant={isCurrentUserParticipant ?? false}
                 eventChatEnabled={eventChatStatus?.enabled ?? false}
                 onManage={() => goToView('manage')}
-                onJoin={() => setShowJoinModal(true)}
+                onJoin={() => {
+                  if (!user) {
+                    showLogin();
+                  } else {
+                    setShowJoinModal(true);
+                  }
+                }}
                 onLeave={() => setShowLeaveModal(true)}
+                onMoreClick={() => {
+                  if (!user) {
+                    showLogin();
+                    return false; // Prevent showing More modal when login is shown
+                  }
+                  return true; // Allow showing More modal when user is signed in
+                }}
               />
 
               {/* Extra spacing between action buttons and info cards */}
@@ -755,13 +769,19 @@ export default function ListingPage() {
                 isCurrentUserParticipant={isCurrentUserParticipant ?? false}
                 attendeeCount={attendeeCount ?? null}
                 onHostClick={() => {
-                  if (hostAccount?.id) {
+                  if (!user) {
+                    showLogin();
+                  } else if (hostAccount?.id) {
                     // Use query parameter route for static export compatibility (no RSC navigation)
                     router.push(`/profile?id=${hostAccount.id}`);
                   }
                 }}
                 onViewingClick={() => {
-                  setShowAttendeesModal(true);
+                  if (!user) {
+                    showLogin();
+                  } else {
+                    setShowAttendeesModal(true);
+                  }
                 }}
                 onItineraryClick={() => {
                   setShowItineraryViewer(true);
@@ -797,11 +817,7 @@ export default function ListingPage() {
   const showShareButton = view === 'detail' && account?.id;
 
   return (
-    <ProtectedRoute 
-      title={getPageTitle() || "Listing Details"} 
-      description="Log in / sign up to view listing details" 
-      buttonText="Log in"
-    >
+    <>
       <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
         <MobilePage>
           {view !== 'gallery' && (
@@ -955,13 +971,13 @@ export default function ListingPage() {
       )}
 
       {/* Attendees Modal */}
-      {listingId && account?.id && listing && (
+      {listingId && user && listing && (
         <AttendeesModal
           isOpen={showAttendeesModal}
           onClose={() => setShowAttendeesModal(false)}
           listingId={listingId}
           listingHostId={listing.host_id}
-          currentUserId={account.id}
+          currentUserId={account?.id || ''}
           isCurrentUserParticipant={isCurrentUserParticipant ?? false}
         />
       )}
@@ -984,7 +1000,7 @@ export default function ListingPage() {
           onClose={() => setSelectedPhotoIndex(null)}
         />
       )}
-    </ProtectedRoute>
+    </>
   );
 }
 

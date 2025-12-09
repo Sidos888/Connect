@@ -638,14 +638,31 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
                   
                   console.log('✅ Logout complete, navigating to explore');
                   
-                  // Use replace to clear history and navigate to explore
-                  router.replace('/explore');
+                  // Force navigation to explore page - use multiple methods for reliability
+                  try {
+                    // Method 1: Next.js router (preferred)
+                    router.replace('/explore');
+                    console.log('🧭 Navigation: Used router.replace(/explore)');
+                    
+                    // Method 2: Fallback with window.location after a short delay
+                    setTimeout(() => {
+                      if (window.location.pathname !== '/explore') {
+                        console.log('🧭 Navigation: Fallback - using window.location.replace');
+                        window.location.replace('/explore');
+                      } else {
+                        console.log('🧭 Navigation: Already on /explore, skipping fallback');
+                      }
+                    }, 100);
+                  } catch (navError) {
+                    console.error('⚠️ Navigation error, using window.location fallback:', navError);
+                    window.location.replace('/explore');
+                  }
                   
                   // Force open login modal after a short delay
                   setTimeout(() => {
                     console.log('🔓 Opening login modal after logout');
                     setIsLoginOpen(true);
-                  }, 300);
+                  }, 500);
                 }}
                 onDeleteAccount={() => {}}
                 showDeleteConfirm={false}
