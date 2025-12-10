@@ -666,7 +666,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
             avatarUrl={storeProfile?.avatarUrl ?? undefined}
             onBack={() => closeProfileModal('editProfile')}
             backIcon={(editProfileFromMyLife || editProfileFromMenu) ? 'close' : 'arrow'}
-            onOpenLinks={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/links'); }}
+            onOpenLinks={() => { setShowCenteredEditLanding(false); router.push('/links'); }}
             onOpenPersonalDetails={() => { setShowCenteredEditLanding(false); setShowCenteredEditPersonal(true); }}
             onOpenTimeline={() => { setShowCenteredEditLanding(false); setTimelineFromEditProfile(true); setShowCenteredTimeline(true); }}
             onOpenHighlights={() => { setShowCenteredEditLanding(false); router.push('/settings/edit/highlights'); }}

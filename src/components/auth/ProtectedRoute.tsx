@@ -363,6 +363,14 @@ export default function ProtectedRoute({ children, fallback, title, description,
     willShowLogin: !user && !personalProfile && !isPublicRoute
   });
   
+  // If user is signed out and on /menu, redirect to /explore
+  if (!user && !personalProfile && pathname.startsWith('/menu')) {
+    if (typeof window !== 'undefined') {
+      window.location.replace('/explore');
+    }
+    return null;
+  }
+  
   if (!user && !personalProfile && !isPublicRoute) {
     if (fallback) {
       return <>{fallback}</>;

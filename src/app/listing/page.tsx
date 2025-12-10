@@ -826,6 +826,7 @@ export default function ListingPage() {
             subtitle={getSubtitle()}
             backButton
             onBack={handleBack}
+            disableBlur={true}
             actions={(() => {
               const actions = [];
               

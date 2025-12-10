@@ -25,6 +25,7 @@ export default function Guard({ children }: { children: React.ReactNode }) {
       
       // If user is not authenticated, redirect to explore page (but allow explore and onboarding)
       // CRITICAL: Also allow public listing routes
+      // CRITICAL: /menu should ALWAYS redirect to /explore when signed out (no menu signed-out display)
       const isPublicRoute = pathname === "/" || 
                            pathname === "/onboarding" || 
                            pathname.startsWith("/explore") ||
@@ -32,6 +33,15 @@ export default function Guard({ children }: { children: React.ReactNode }) {
                            pathname.startsWith("/casual-listings") ||
                            pathname.startsWith("/side-quest-listings") ||
                            (pathname === "/listing" && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('id') !== null);
+      
+      
+      // Special case: /menu should redirect to /explore when signed out
+      if (!user && pathname.startsWith("/menu")) {
+        if (typeof window !== 'undefined') {
+          window.location.replace('/explore');
+        }
+        return;
+      }
       
       if (!user && !isPublicRoute) {
         console.log('🛡️ Guard: User not signed in, redirecting to /explore from', pathname);

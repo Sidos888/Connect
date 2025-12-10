@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
@@ -14,18 +14,191 @@ import { listingsService } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingsSearchModal from "@/components/listings/ListingsSearchModal";
 
-export default function ExplorePage() {
+// Force dynamic rendering - prevent static generation
+export const dynamic = 'force-dynamic';
+
+// MODULE-LEVEL LOG: This should execute when the module is loaded
+console.log('🔍 Explore Page: MODULE LOADED - File is being imported');
+
+// CRITICAL: Force component execution after full page reload
+// This script runs immediately when module loads, before React hydration
+if (typeof window !== 'undefined') {
+  // Check if we're on explore page after a full page reload
+  const isExplorePage = window.location.pathname === '/explore' || window.location.pathname.startsWith('/explore');
+  const hasCacheBusting = window.location.search.includes('t=');
+  
+  if (isExplorePage) {
+    console.log('🔍 Explore Page: Module loaded on explore route, setting execution flag');
+    // Set a flag that component can check
+    (window as any).__explorePageShouldExecute = true;
+    (window as any).__explorePageExecutionTime = Date.now();
+  }
+}
+
+function ExplorePage() {
+  // CRITICAL: Log immediately when component function is called
+  console.log('🔍 Explore Page: FUNCTION CALLED - Component is executing');
+  
+  // Force component to execute by ensuring it's not cached
+  // This helps with Next.js App Router after full page reloads
+  const [forceRemount, setForceRemount] = React.useState(() => {
+    // Initialize with execution flag check
+    if (typeof window !== 'undefined' && (window as any).__explorePageShouldExecute) {
+      console.log('🔍 Explore Page: Execution flag detected, forcing initial render');
+      (window as any).__explorePageShouldExecute = false;
+      return Date.now();
+    }
+    return 0;
+  });
+  
+  React.useEffect(() => {
+    // Force remount on navigation from signing-out page
+    const isFromSigningOut = sessionStorage.getItem('fromSigningOut') === 'true';
+    if (isFromSigningOut) {
+      console.log('🔍 Explore Page: Detected navigation from signing-out page, forcing remount');
+      sessionStorage.removeItem('fromSigningOut');
+      setForceRemount(prev => prev + 1);
+    }
+    
+    // Additional check: if component mounted but didn't render content
+    const checkContent = setTimeout(() => {
+      const mainElement = document.querySelector('[data-app-shell]') || document.body;
+      const exploreContent = mainElement.querySelector('.lg\\:hidden, [class*="Explore"]');
+      if (!exploreContent && window.location.pathname === '/explore') {
+        console.warn('🔍 Explore Page: No content detected after mount, forcing remount');
+        setForceRemount(prev => prev + 1);
+      }
+    }, 100);
+    
+    return () => clearTimeout(checkContent);
+  }, []);
+  
+  if (typeof window !== 'undefined') {
+    // Remove cache-busting query param if present (clean URL)
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('t')) {
+      url.searchParams.delete('t');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+  }
+  
   const router = useRouter();
   const pathname = usePathname();
+  console.log('🔍 Explore Page: After useRouter/usePathname', { pathname });
+  
   const { context, personalProfile } = useAppStore();
+  console.log('🔍 Explore Page: After useAppStore', { 
+    hasContext: !!context, 
+    hasPersonalProfile: !!personalProfile 
+  });
+  
   const { account, user } = useAuth();
+  console.log('🔍 Explore Page: After useAuth', { 
+    hasUser: !!user, 
+    hasAccount: !!account 
+  });
+  
   const { showLogin } = useModal();
+  console.log('🔍 Explore Page: After useModal');
+  
   const currentBusiness = useCurrentBusiness();
+  console.log('🔍 Explore Page: After useCurrentBusiness', { 
+    hasCurrentBusiness: !!currentBusiness 
+  });
+  
   const [hasError, setHasError] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Log after hooks
+  console.log('🔍 Explore Page: After all hooks', {
+    pathname,
+    hasUser: !!user,
+    hasAccount: !!account,
+    hasPersonalProfile: !!personalProfile
+  });
+
+  // Comprehensive logging for explore page rendering
+  useEffect(() => {
+    console.log('🔍 Explore Page: Component mounted/updated', {
+      pathname,
+      hasUser: !!user,
+      hasAccount: !!account,
+      hasPersonalProfile: !!personalProfile,
+      windowHeight: typeof window !== 'undefined' ? window.innerHeight : 'N/A',
+      windowWidth: typeof window !== 'undefined' ? window.innerWidth : 'N/A',
+      scrollY: typeof window !== 'undefined' ? window.scrollY : 'N/A',
+      scrollX: typeof window !== 'undefined' ? window.scrollX : 'N/A',
+      documentHeight: typeof document !== 'undefined' ? document.documentElement.scrollHeight : 'N/A',
+      bodyHeight: typeof document !== 'undefined' ? document.body.scrollHeight : 'N/A',
+      bodyOverflow: typeof document !== 'undefined' ? document.body.style.overflow : 'N/A',
+      htmlOverflow: typeof document !== 'undefined' ? document.documentElement.style.overflow : 'N/A'
+    });
+
+    // Check if content is actually rendered after a delay
+    const checkRenderedContent = setTimeout(() => {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const mobileContainer = document.querySelector('.lg\\:hidden');
+        const desktopContainer = document.querySelector('.hidden.lg\\:block');
+        const pageHeader = document.querySelector('[class*="PageHeader"]');
+        const featureCards = document.querySelectorAll('[class*="grid"]');
+        const contentArea = document.querySelector('[style*="paddingTop"]');
+        
+        console.log('🔍 Explore Page: Post-render DOM check', {
+          hasMobileContainer: !!mobileContainer,
+          hasDesktopContainer: !!desktopContainer,
+          hasPageHeader: !!pageHeader,
+          featureCardsCount: featureCards.length,
+          hasContentArea: !!contentArea,
+          mobileContainerVisible: mobileContainer ? window.getComputedStyle(mobileContainer).display !== 'none' : false,
+          mobileContainerHeight: mobileContainer ? (mobileContainer as HTMLElement).offsetHeight : 0,
+          desktopContainerVisible: desktopContainer ? window.getComputedStyle(desktopContainer).display !== 'none' : false,
+          bodyChildren: document.body.children.length,
+          appShell: document.querySelector('[data-app-shell]') ? 'found' : 'not found'
+        });
+      }
+    }, 100);
+    
+    return () => clearTimeout(checkRenderedContent);
+
+    // Check DOM elements after render
+    const checkDOM = () => {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const mobilePage = document.querySelector('.lg\\:hidden');
+        const contentArea = document.querySelector('[style*="paddingTop"]');
+        const pageHeader = document.querySelector('[class*="PageHeader"]');
+        const featureCards = document.querySelectorAll('[class*="grid"]');
+        
+        console.log('🔍 Explore Page: DOM Check', {
+          hasMobilePage: !!mobilePage,
+          hasContentArea: !!contentArea,
+          hasPageHeader: !!pageHeader,
+          featureCardsCount: featureCards.length,
+          mobilePageVisible: mobilePage ? window.getComputedStyle(mobilePage).display !== 'none' : 'N/A',
+          contentAreaVisible: contentArea ? window.getComputedStyle(contentArea).display !== 'none' : 'N/A',
+          contentAreaHeight: contentArea ? window.getComputedStyle(contentArea).height : 'N/A',
+          contentAreaPaddingTop: contentArea ? window.getComputedStyle(contentArea).paddingTop : 'N/A',
+          bodyScrollHeight: document.body.scrollHeight,
+          windowInnerHeight: window.innerHeight,
+          scrollPosition: window.scrollY
+        });
+      }
+    };
+
+    // Check immediately and after a delay
+    checkDOM();
+    const timeout = setTimeout(checkDOM, 100);
+    const timeout2 = setTimeout(checkDOM, 500);
+    const timeout3 = setTimeout(checkDOM, 1000);
+
+    return () => {
+      clearTimeout(timeout);
+      clearTimeout(timeout2);
+      clearTimeout(timeout3);
+    };
+  }, [pathname, user, account, personalProfile]);
 
   // Listen for filter card click from TabBar
   useEffect(() => {
@@ -39,6 +212,63 @@ export default function ExplorePage() {
         window.removeEventListener('openFiltersModal', handleOpenFiltersModal);
       };
     }
+  }, []);
+
+  // Scroll to top on mount (especially important after window.location.replace)
+  useEffect(() => {
+    console.log('🔍 Explore Page: Scroll to top effect running', {
+      initialScrollY: window.scrollY,
+      initialScrollX: window.scrollX,
+      documentScrollTop: document.documentElement.scrollTop,
+      bodyScrollTop: document.body.scrollTop
+    });
+
+    // Scroll to top immediately when component mounts
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    console.log('🔍 Explore Page: After immediate scroll', {
+      scrollY: window.scrollY,
+      scrollX: window.scrollX,
+      documentScrollTop: document.documentElement.scrollTop,
+      bodyScrollTop: document.body.scrollTop
+    });
+    
+    // Also ensure scroll position is reset after a brief delay (for full page reloads)
+    const timeout = setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      
+      console.log('🔍 Explore Page: After delayed scroll (100ms)', {
+        scrollY: window.scrollY,
+        scrollX: window.scrollX,
+        documentScrollTop: document.documentElement.scrollTop,
+        bodyScrollTop: document.body.scrollTop
+      });
+    }, 100);
+
+    const timeout2 = setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      
+      console.log('🔍 Explore Page: After delayed scroll (500ms)', {
+        scrollY: window.scrollY,
+        scrollX: window.scrollX,
+        documentScrollTop: document.documentElement.scrollTop,
+        bodyScrollTop: document.body.scrollTop,
+        windowHeight: window.innerHeight,
+        documentHeight: document.documentElement.scrollHeight,
+        bodyHeight: document.body.scrollHeight
+      });
+    }, 500);
+    
+    return () => {
+      clearTimeout(timeout);
+      clearTimeout(timeout2);
+    };
   }, []);
 
   // Lock body scroll on desktop
@@ -55,15 +285,40 @@ export default function ExplorePage() {
   }, []);
 
   // Fetch all public listings for search (for-you and casual combined)
-  const { data: listingsData } = useQuery({
+  console.log('🔍 Explore Page: About to call useQuery');
+  
+  // useQuery must be called unconditionally (React Rules of Hooks)
+  const { data: listingsData, error: queryError, isLoading: queryLoading } = useQuery({
     queryKey: ['all-public-listings'],
     queryFn: async () => {
-      const result = await listingsService.getPublicListings(100); // Get more listings for comprehensive search
-      return result;
+      console.log('🔍 Explore Page: Query function executing');
+      try {
+        const result = await listingsService.getPublicListings(100); // Get more listings for comprehensive search
+        console.log('🔍 Explore Page: Query function completed', { 
+          listingsCount: result?.listings?.length || 0 
+        });
+        return result;
+      } catch (error) {
+        console.error('🔍 Explore Page: Query function error', error);
+        throw error;
+      }
     },
     staleTime: 30 * 1000, // 30 seconds
+    retry: 1, // Only retry once
   });
-
+  
+  console.log('🔍 Explore Page: After useQuery', {
+    hasData: !!listingsData,
+    hasError: !!queryError,
+    isLoading: queryLoading,
+    listingsCount: listingsData?.listings?.length || 0
+  });
+  
+  // Handle query errors using the error property (not try-catch)
+  if (queryError) {
+    console.error('🔍 Explore Page: Query error detected', queryError);
+  }
+  
   const allListings = listingsData?.listings || [];
 
   // Get current account info
@@ -73,8 +328,35 @@ export default function ExplorePage() {
       ? { name: account.name, avatarUrl: account.profile_pic }
       : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl };
 
-  // Error boundary fallback
+
+  // Log render state
+  console.log('🔍 Explore Page: Rendering', {
+    hasError,
+    hasUser: !!user,
+    hasAccount: !!account,
+    hasPersonalProfile: !!personalProfile,
+    showProfileModal,
+    showFiltersModal,
+    isSearchOpen,
+    allListingsCount: allListings.length,
+    currentAccount: currentAccount?.name || 'N/A',
+    queryLoading,
+    hasQueryError: !!queryError,
+    hasListingsData: !!listingsData,
+    pathname
+  });
+
+  console.log('🔍 Explore Page: About to render JSX', {
+    willRenderMobile: true,
+    willRenderDesktop: true,
+    hasError,
+    pathname,
+    isClient: typeof window !== 'undefined'
+  });
+
+  // Early return for error state
   if (hasError) {
+    console.log('🔍 Explore Page: Has error, returning error UI');
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -90,14 +372,15 @@ export default function ExplorePage() {
       </div>
     );
   }
-  
 
   try {
-    return (
+    console.log('🔍 Explore Page: Inside try block, starting render');
+    const jsxContent = (
     <>
       {/* Mobile Layout with Design System */}
-      <div className="lg:hidden" style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
-        <MobilePage>
+      <div className="lg:hidden" style={{ minHeight: '100vh' }}>
+        <MobilePage style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+          {console.log('🔍 Explore Page: Rendering MobilePage and PageHeader')}
           <PageHeader
             title="Explore"
             customBackButton={
@@ -156,12 +439,37 @@ export default function ExplorePage() {
             ]}
           />
 
-          <div className="flex-1 overflow-y-auto scrollbar-hide" style={{
-            paddingTop: 'var(--saved-content-padding-top, 140px)',
-            paddingBottom: '56px',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}>
+          <div 
+            className="flex-1 overflow-y-auto scrollbar-hide" 
+            style={{
+              paddingTop: 'var(--saved-content-padding-top, 140px)',
+              paddingBottom: '56px',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              minHeight: '100vh',
+              position: 'relative'
+            }}
+            ref={(el) => {
+              if (el && typeof window !== 'undefined') {
+                console.log('🔍 Explore Page: Content area ref', {
+                  offsetHeight: el.offsetHeight,
+                  offsetTop: el.offsetTop,
+                  scrollHeight: el.scrollHeight,
+                  clientHeight: el.clientHeight,
+                  computedDisplay: window.getComputedStyle(el).display,
+                  computedVisibility: window.getComputedStyle(el).visibility,
+                  computedHeight: window.getComputedStyle(el).height,
+                  computedPaddingTop: window.getComputedStyle(el).paddingTop,
+                  computedPaddingBottom: window.getComputedStyle(el).paddingBottom,
+                  computedOverflow: window.getComputedStyle(el).overflow,
+                  computedPosition: window.getComputedStyle(el).position,
+                  computedMinHeight: window.getComputedStyle(el).minHeight,
+                  parentOffsetHeight: el.parentElement?.offsetHeight,
+                  parentScrollHeight: el.parentElement?.scrollHeight
+                });
+              }
+            }}
+          >
             {/* Top Spacing */}
             <div style={{ height: '12px' }} />
 
@@ -505,9 +813,57 @@ export default function ExplorePage() {
       />
     </>
     );
+    
+    console.log('🔍 Explore Page: JSX created successfully, returning content');
+    console.log('🔍 Explore Page: JSX validation', {
+      jsxType: typeof jsxContent,
+      isObject: typeof jsxContent === 'object',
+      isNotNull: jsxContent !== null,
+      isNotUndefined: jsxContent !== undefined,
+      hasProps: jsxContent && typeof jsxContent === 'object' && 'props' in jsxContent ? 'yes' : 'no'
+    });
+    
+    // Ensure we always return valid content
+    if (!jsxContent) {
+      console.error('❌ Explore Page: JSX content is null/undefined! Returning fallback');
+      return (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600">Loading explore page...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    return jsxContent;
   } catch (error) {
-    console.error('Error rendering explore page:', error);
+    console.error('❌ Explore Page: Error rendering explore page:', error);
+    console.error('❌ Explore Page: Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack',
+      errorType: typeof error,
+      errorString: String(error)
+    });
     setHasError(true);
-    return null;
+    // Return error UI instead of null so user can see something
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold text-gray-900">Something went wrong</h1>
+          <p className="text-gray-600">Please try refreshing the page</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
   }
 }
+
+// MODULE-LEVEL LOG: This should execute after the function is defined
+console.log('🔍 Explore Page: MODULE COMPLETE - Function defined, about to export default');
+
+export default ExplorePage;

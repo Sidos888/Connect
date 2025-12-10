@@ -3,6 +3,7 @@
 import { LogOut, Trash2, MoreVertical, User, UserCircle } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { useState, useRef, useEffect } from "react";
+import SignOutConfirmModal from "./SignOutConfirmModal";
 
 export default function SettingsContent({
   onBack,
@@ -47,40 +48,16 @@ export default function SettingsContent({
 }) {
 
   return (
-    <div className="flex flex-col h-full relative">
-      {showSignOutConfirm ? (
-        <div className="w-full h-full flex flex-col absolute inset-0 bg-white z-50">
-          <div className="flex flex-col h-full px-4 py-6">
-            {/* Title at the top */}
-            <div className="text-center mb-3">
-              <h1 className="text-2xl font-semibold text-gray-900">Log Out</h1>
-            </div>
-            
-            {/* Subtext in the middle - takes up remaining space */}
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-gray-600 leading-relaxed text-center max-w-sm">
-                Are you sure you want to log out?
-              </p>
-            </div>
-            
-            {/* Action buttons at the bottom */}
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={onCancelSignOut}
-                className="flex-1 px-6 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={onConfirmSignOut}
-                className="flex-1 px-6 py-3 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors shadow-sm"
-              >
-                Log Out
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : showDeleteConfirm ? (
+    <>
+      {/* Sign Out Confirmation Modal - Slide-up half-page */}
+      <SignOutConfirmModal
+        isOpen={showSignOutConfirm || false}
+        onClose={onCancelSignOut || (() => {})}
+        onConfirm={onConfirmSignOut || (() => {})}
+      />
+      
+      <div className="flex flex-col h-full relative">
+        {showDeleteConfirm ? (
         <div className="w-full h-full flex flex-col absolute inset-0 bg-white z-50">
           {isDeletingAccount ? (
             <div className="flex-1 flex flex-col justify-center items-center space-y-6">
@@ -263,7 +240,8 @@ export default function SettingsContent({
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

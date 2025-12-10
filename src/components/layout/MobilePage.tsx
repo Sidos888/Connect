@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 
 export interface MobilePageProps {
   children: ReactNode;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -17,13 +18,14 @@ export interface MobilePageProps {
  * 
  * REQUIRED for mobile pages using PageHeader/PageContent!
  */
-export default function MobilePage({ children }: MobilePageProps) {
+export default function MobilePage({ children, style }: MobilePageProps) {
   return (
     <div 
       className="fixed inset-0 z-[60] h-screen bg-white flex flex-col"
       style={{
         overflowX: 'hidden',
         overflowY: 'hidden',
+        ...style,
       }}
     >
       {children}

@@ -8,6 +8,9 @@ import ProfileCard from "@/components/profile/ProfileCard";
 import { useAppStore, useCurrentBusiness } from "@/lib/store";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
+import { createPortal } from "react-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { authService, navigationService } from "@/lib/services";
 import { ChevronDownIcon, BellIcon, ChevronLeftIcon } from "@/components/icons";
 import { LogOut, Trash2, ChevronRightIcon, Eye, Pencil, Settings, MoreVertical, Plus, Share, QrCode } from "lucide-react";
 import { SearchIcon } from "@/components/icons";
@@ -21,6 +24,7 @@ import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
 import HappeningNowBanner from "@/components/HappeningNowBanner";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import Image from "next/image";
 import ProfilePage from "@/components/profile/ProfilePage";
 import LifePage from "@/components/profile/LifePage";
 import AddMomentPage from "@/components/profile/AddMomentPage";
@@ -95,9 +99,11 @@ let connectionsCache: {
   userId: string | null;
 } = { data: null, timestamp: null, userId: null };
 
+
 // FORCE RECOMPILE 2025-09-18
 export default function Page() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
   const currentBusiness = useCurrentBusiness();
@@ -395,7 +401,7 @@ export default function Page() {
           name={currentAccount?.name}
           avatarUrl={currentAccount?.avatarUrl}
           onBack={() => goToView(from as any)}
-          onOpenLinks={() => router.push('/settings/edit/links')}
+          onOpenLinks={() => router.push('/links')}
           onOpenPersonalDetails={() => router.push('/settings/edit/details')}
           onOpenTimeline={() => router.push('/timeline')}
           onOpenHighlights={() => router.push('/highlights')}
@@ -555,36 +561,21 @@ export default function Page() {
       setShowSignOutConfirm(true);
     };
 
-    const confirmSignOut = async () => {
-      console.log('Menu page: confirmSignOut called - starting sign out process');
-      
-      // Close confirmation modal
+    const confirmSignOut = () => {
+      console.log('Menu page: confirmSignOut - Navigating to signing-out page');
       setShowSignOutConfirm(false);
-      
-      // Show loading overlay immediately
+
+      // Show overlay (will be replaced by signing-out page)
       setIsSigningOut(true);
-      
-      try {
-        console.log('Menu page: Calling signOut()');
-        await signOut();
-        console.log('Menu page: Sign out complete');
-        
-        // Wait additional time to ensure everything is cleared (total ~3 seconds)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        console.log('Menu page: Redirecting to /explore');
-        // Redirect to explore page (non-signed-in state)
-        if (typeof window !== 'undefined') {
-          window.location.replace('/explore');
-        }
-      } catch (error) {
-        console.error('Menu page: Sign out error:', error);
-        // Even on error, redirect after delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        if (typeof window !== 'undefined') {
-          window.location.replace('/explore');
-        }
-      }
+
+      // Set router in navigation service (for client-side navigation)
+      // This enables router-based navigation instead of full page reload
+      navigationService.setRouter(router);
+
+      // Navigate to signing-out page immediately
+      // The signing-out page will handle all cleanup and then redirect to explore
+      // This ensures clean state before navigation to explore
+      navigationService.navigateToSigningOut(true); // true = use router
     };
 
     const cancelSignOut = () => {
@@ -622,25 +613,37 @@ export default function Page() {
             backButton
             onBack={() => goToView(from as any)}
           />
-          {/* Full-page signing out overlay - shows immediately when confirm is clicked */}
-          {isSigningOut && (
-            <div className="fixed inset-0 bg-white flex items-center justify-center z-[99999]" style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: '100vw',
-              height: '100vh',
-              zIndex: 99999
-            }}>
-              <div className="flex flex-col items-center space-y-6">
-                <LoadingSpinner size="lg" />
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900">Signing out...</h3>
-                </div>
+          {/* Simple signing out overlay */}
+          {isSigningOut && typeof window !== 'undefined' && createPortal(
+            <div 
+              className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[99999]" 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100vh',
+                zIndex: 99999,
+                backgroundColor: '#ffffff'
+              }}
+            >
+              <div className="flex items-center justify-center animate-pulse">
+                <Image
+                  src="/connect-logo.png"
+                  alt="Connect Logo"
+                  width={240}
+                  height={240}
+                  className="object-contain"
+                  priority
+                />
               </div>
-            </div>
+              <div className="mt-8 text-center">
+                <h3 className="text-lg font-semibold text-gray-900">Signing out...</h3>
+              </div>
+            </div>,
+            document.body
           )}
           
           <div className="flex-1 overflow-y-auto scrollbar-hide" style={{

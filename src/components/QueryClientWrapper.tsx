@@ -11,24 +11,34 @@ import { useState } from 'react';
  */
 export function QueryClientWrapper({ children }: { children: React.ReactNode }) {
   // Create QueryClient on client side only
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        // Cache for 5 minutes by default
-        staleTime: 5 * 60 * 1000,
-        // Keep in cache for 10 minutes
-        gcTime: 10 * 60 * 1000,
-        // Retry failed requests
-        retry: 2,
-        // Refetch on window focus
-        refetchOnWindowFocus: true,
+  const [queryClient] = useState(() => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: {
+          // Cache for 5 minutes by default
+          staleTime: 5 * 60 * 1000,
+          // Keep in cache for 10 minutes
+          gcTime: 10 * 60 * 1000,
+          // Retry failed requests
+          retry: 2,
+          // Refetch on window focus
+          refetchOnWindowFocus: true,
+        },
+        mutations: {
+          // Retry failed mutations
+          retry: 1,
+        },
       },
-      mutations: {
-        // Retry failed mutations
-        retry: 1,
-      },
-    },
-  }));
+    });
+
+    // Expose queryClient globally for services to access
+    // This allows AuthService to clear cache even after component unmounts
+    if (typeof window !== 'undefined') {
+      (window as any).__queryClient = client;
+    }
+
+    return client;
+  });
 
   return (
     <QueryClientProvider client={queryClient}>

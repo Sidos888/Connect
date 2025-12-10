@@ -5,7 +5,9 @@ import { useAuth } from "@/lib/authContext";
 import { formatNameForDisplay } from "@/lib/utils";
 import Avatar from "@/components/Avatar";
 import { PageHeader } from "@/components/layout/PageSystem";
-import { Check } from "lucide-react";
+import { Check, Mail, Phone, Instagram, MessageCircle, Globe, Camera, Twitter, Facebook, Linkedin, MoreHorizontal, GraduationCap, Briefcase, Heart, Home, Sparkles, Calendar, UserCheck, Cake } from "lucide-react";
+import { LinksService, UserLink } from "@/lib/linksService";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function EditProfileLanding({
   name,
@@ -35,6 +37,36 @@ export default function EditProfileLanding({
   const [previewUrl, setPreviewUrl] = useState("");
   const [loading, setLoading] = useState(false);
   
+  // Links state
+  const [links, setLinks] = useState<UserLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(true);
+  
+  // Timeline/Moments state
+  const [momentsCount, setMomentsCount] = useState(0);
+  const [momentsCategories, setMomentsCategories] = useState<string[]>([]);
+  const [momentsLoading, setMomentsLoading] = useState(true);
+  
+  // Highlights state
+  const [highlights, setHighlights] = useState<any[]>([]);
+  const [highlightsCount, setHighlightsCount] = useState(0);
+  const [highlightsLoading, setHighlightsLoading] = useState(true);
+  
+  // Icon mapping for timeline categories (same as ProfilePage)
+  const categoryIcons: Record<string, React.ReactNode> = {
+    'education': <GraduationCap size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'career': <Briefcase size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'relationships': <Heart size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'life-changes': <Home size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'experiences': <Sparkles size={16} className="text-gray-900" strokeWidth={2.5} />,
+  };
+  
+  // Default timeline components icons
+  const defaultTimelineIcons: Record<string, React.ReactNode> = {
+    'today': <Calendar size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'born': <Cake size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'joined-connect': <UserCheck size={16} className="text-gray-900" strokeWidth={2.5} />,
+  };
+  
   // Change detection
   const [hasChanges, setHasChanges] = useState(false);
   
@@ -46,6 +78,20 @@ export default function EditProfileLanding({
   const bioRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Icon mapping for link types (same as LinkCard)
+  const linkIcons: Record<string, React.ReactNode> = {
+    'email': <Mail size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'phone': <Phone size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'instagram': <Instagram size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'whatsapp': <MessageCircle size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'website': <Globe size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'snapchat': <Camera size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'x': <Twitter size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'facebook': <Facebook size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'linkedin': <Linkedin size={16} className="text-gray-900" strokeWidth={2.5} />,
+    'other': <MoreHorizontal size={16} className="text-gray-900" strokeWidth={2.5} />,
+  };
+  
   // Load initial data
   useEffect(() => {
     if (account) {
@@ -54,6 +100,156 @@ export default function EditProfileLanding({
       setPreviewUrl(account.profile_pic || "");
     }
   }, [account]);
+  
+  // Load user links
+  useEffect(() => {
+    const loadLinks = async () => {
+      if (!account?.id) {
+        setLinksLoading(false);
+        return;
+      }
+      
+      setLinksLoading(true);
+      const linksService = new LinksService();
+      const { links: userLinks, error } = await linksService.getUserLinks(account.id);
+      
+      if (error) {
+        console.error('Error loading links:', error);
+      } else {
+        setLinks(userLinks);
+      }
+      
+      setLinksLoading(false);
+    };
+    
+    loadLinks();
+  }, [account?.id]);
+  
+  // Load user moments/timeline
+  useEffect(() => {
+    const loadMoments = async () => {
+      if (!account?.id) {
+        setMomentsLoading(false);
+        return;
+      }
+      
+      setMomentsLoading(true);
+      try {
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+          setMomentsLoading(false);
+          return;
+        }
+        
+        const { data, error, count } = await supabase
+          .from('user_moments')
+          .select('category', { count: 'exact' })
+          .eq('user_id', account.id);
+        
+        if (error) {
+          console.error('Error loading moments:', error);
+        } else {
+          // Calculate total count including default components
+          let totalCount = count || 0;
+          
+          // Always count "today"
+          totalCount += 1;
+          
+          // Count "born" if DOB exists
+          if (account.dob) {
+            totalCount += 1;
+          }
+          
+          // Count "joined-connect" if account has createdAt
+          if (account.created_at) {
+            totalCount += 1;
+          }
+          
+          setMomentsCount(totalCount);
+          
+          // Get unique categories from moments (for icons)
+          const uniqueCategories = Array.from(new Set((data || []).map(m => m.category).filter(Boolean)));
+          
+          // Add default timeline components to the list for icon display
+          const defaultComponents: string[] = [];
+          defaultComponents.push('today'); // Always show today
+          if (account.dob) {
+            defaultComponents.push('born');
+          }
+          if (account.created_at) {
+            defaultComponents.push('joined-connect');
+          }
+          
+          // Combine default components with categories (defaults first, then categories)
+          setMomentsCategories([...defaultComponents, ...uniqueCategories]);
+        }
+      } catch (error) {
+        console.error('Error in loadMoments:', error);
+      }
+      
+      setMomentsLoading(false);
+    };
+    
+    loadMoments();
+  }, [account?.id, account?.dob, account?.created_at]);
+  
+  // Load user highlights
+  useEffect(() => {
+    const loadHighlights = async () => {
+      if (!account?.id) {
+        setHighlightsLoading(false);
+        return;
+      }
+      
+      setHighlightsLoading(true);
+      try {
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+          setHighlightsLoading(false);
+          return;
+        }
+        
+        const { data, error, count } = await supabase
+          .from('user_highlights')
+          .select('id, image_url, photo_urls', { count: 'exact' })
+          .eq('user_id', account.id)
+          .order('created_at', { ascending: false })
+          .limit(5); // Only need first 5 for preview
+        
+        if (error) {
+          console.error('Error loading highlights:', error);
+        } else {
+          // Set total count
+          if (count !== null) {
+            setHighlightsCount(count);
+          }
+          
+          // Process highlights to get first image for each
+          const processedHighlights = (data || []).map((highlight: any) => {
+            // Get first photo - prefer photo_urls array, fallback to image_url
+            const photos = highlight.photo_urls && Array.isArray(highlight.photo_urls) && highlight.photo_urls.length > 0
+              ? highlight.photo_urls
+              : highlight.image_url
+                ? [highlight.image_url]
+                : [];
+            
+            return {
+              id: highlight.id,
+              firstImage: photos[0] || null
+            };
+          });
+          
+          setHighlights(processedHighlights);
+        }
+      } catch (error) {
+        console.error('Error in loadHighlights:', error);
+      }
+      
+      setHighlightsLoading(false);
+    };
+    
+    loadHighlights();
+  }, [account?.id]);
   
   // Detect changes
   useEffect(() => {
@@ -307,55 +503,157 @@ export default function EditProfileLanding({
         {/* Separator Line */}
         <div className="h-[0.4px] bg-gray-300 mb-8" style={{ marginTop: '32px' }} />
 
-        {/* Links Placeholder */}
+        {/* Links Section */}
         <div
-          className="bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] px-5 py-4 mb-3 flex items-center justify-between"
-            style={{ 
-              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+          onClick={onOpenLinks}
+          className="bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] px-5 py-4 mb-3 flex items-center justify-between cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+          style={{ 
+            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
           }}
         >
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-900">Links</span>
-            <span className="text-sm text-gray-400">1</span>
+            <span className="text-sm text-gray-500">{links.length}</span>
           </div>
-          <div className="w-6 h-6 rounded border-[0.4px] border-gray-300" />
+          <div className="flex gap-1.5">
+            {linksLoading ? (
+              <div className="w-6 h-6 rounded border-[0.4px] border-gray-300 bg-gray-100 animate-pulse" />
+            ) : links.length === 0 ? (
+              <div className="w-6 h-6 rounded border-[0.4px] border-gray-300 bg-gray-50" />
+            ) : (
+              links.slice(0, 4).map((link) => (
+                <div
+                  key={link.id}
+                  className="w-6 h-6 rounded flex items-center justify-center bg-white border-[0.4px] border-gray-300 flex-shrink-0"
+                  style={{
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.15), inset 0 0 1px rgba(27, 27, 27, 0.1)'
+                  }}
+                >
+                  {linkIcons[link.type] || linkIcons['other']}
+                </div>
+              ))
+            )}
+            {links.length > 4 && (
+              <div className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 border-[0.4px] border-gray-300 text-xs text-gray-600 font-medium">
+                +{links.length - 4}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Life Placeholder */}
+        {/* Timeline Section */}
         <div
-          className="bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] px-5 py-4 mb-3 flex items-center justify-between"
+          onClick={onOpenTimeline}
+          className="bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] px-5 py-4 mb-3 flex items-center justify-between cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
           style={{
             boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
           }}
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-900">Life</span>
-            <span className="text-sm text-gray-400">4</span>
+            <span className="text-sm font-medium text-gray-900">Timeline</span>
+            <span className="text-sm text-gray-500">{momentsCount}</span>
           </div>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-6 h-6 rounded border-[0.4px] border-gray-300" />
-            ))}
+          <div className="flex gap-1.5">
+            {momentsLoading ? (
+              <div className="w-6 h-6 rounded border-[0.4px] border-gray-300 bg-gray-100 animate-pulse" />
+            ) : momentsCategories.length === 0 ? (
+              <div className="w-6 h-6 rounded border-[0.4px] border-gray-300 bg-gray-50" />
+            ) : (
+              momentsCategories.slice(0, 5).map((item, index) => {
+                // Check if it's a default timeline component or a category
+                const isDefault = defaultTimelineIcons[item] !== undefined;
+                const icon = isDefault 
+                  ? defaultTimelineIcons[item]
+                  : (categoryIcons[item] || <MoreHorizontal size={16} className="text-gray-900" strokeWidth={2.5} />);
+                
+                return (
+                  <div
+                    key={`${item}-${index}`}
+                    className="w-6 h-6 rounded flex items-center justify-center bg-white border-[0.4px] border-gray-300 flex-shrink-0"
+                    style={{
+                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.15), inset 0 0 1px rgba(27, 27, 27, 0.1)'
+                    }}
+                  >
+                    {icon}
+                  </div>
+                );
+              })
+            )}
+            {momentsCategories.length > 5 && (
+              <div className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 border-[0.4px] border-gray-300 text-xs text-gray-600 font-medium">
+                +{momentsCategories.length - 5}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Highlights Placeholder */}
+        {/* Highlights Section */}
         <div
-          className="bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] px-5 py-4 mb-3 flex items-center justify-between"
+          onClick={onOpenHighlights}
+          className="bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] px-5 py-4 mb-3 flex items-center justify-between cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
           style={{
             boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            willChange: 'transform, box-shadow'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
           }}
         >
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-900">Highlights</span>
-            <span className="text-sm text-gray-400">4</span>
+            <span className="text-sm text-gray-500">{highlightsCount}</span>
           </div>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-6 h-6 rounded border-[0.4px] border-gray-300" />
-            ))}
+          <div className="flex gap-1.5">
+            {highlightsLoading ? (
+              <div className="w-6 h-6 rounded border-[0.4px] border-gray-300 bg-gray-100 animate-pulse" />
+            ) : highlights.length === 0 ? (
+              <div className="w-6 h-6 rounded border-[0.4px] border-gray-300 bg-gray-50" />
+            ) : (
+              highlights.slice(0, 5).map((highlight) => (
+                <div
+                  key={highlight.id}
+                  className="w-6 h-6 rounded overflow-hidden bg-white border-[0.4px] border-gray-300 flex-shrink-0"
+                  style={{
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.15), inset 0 0 1px rgba(27, 27, 27, 0.1)'
+                  }}
+                >
+                  {highlight.firstImage ? (
+                    <img
+                      src={highlight.firstImage}
+                      alt="Highlight"
+                      className="w-full h-full object-cover"
+                      style={{ display: 'block' }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100" />
+                  )}
+                </div>
+              ))
+            )}
+            {highlightsCount > 5 && highlights.length >= 5 && (
+              <div className="w-6 h-6 rounded flex items-center justify-center bg-gray-100 border-[0.4px] border-gray-300 text-xs text-gray-600 font-medium">
+                +{highlightsCount - 5}
+              </div>
+            )}
           </div>
-            </div>
+        </div>
         </div>
       </div>
 

@@ -105,12 +105,6 @@ function AppShellContent({ children }: AppShellProps) {
   // This keeps it invisible to regular users
   // END REVIEWER OVERRIDE
   
-  // Show loading screen on mobile during initial load
-  // This conditional return is AFTER all hooks to ensure hooks are always called in the same order
-  if (isMobile && (loading || !isHydrated)) {
-    return <LoadingScreen />;
-  }
-  
   // Routes that are always accessible (no login required)
   const publicRoutes = ['/', '/explore', '/debug-tables', '/migration-test', '/signing-out'];
   const normalizedPath = pathname.replace(/\/$/, '') || '/';
@@ -119,6 +113,14 @@ function AppShellContent({ children }: AppShellProps) {
                        pathname.startsWith('/casual-listings') ||
                        pathname.startsWith('/side-quest-listings') ||
                        (normalizedPath === '/listing' && searchParams?.get('id') !== null);
+  
+  // Show loading screen on mobile during initial load
+  // Show for ALL routes during initial app load (auth loading or store hydrating)
+  // This ensures users see the Connect logo while the app initializes
+  // This conditional return is AFTER all hooks to ensure hooks are always called in the same order
+  if (isMobile && (loading || !isHydrated)) {
+    return <LoadingScreen />;
+  }
   
   console.log('🔍 AppShell: Route check', {
     pathname,
@@ -132,6 +134,14 @@ function AppShellContent({ children }: AppShellProps) {
 
   // If it's a public route, show without protection
   if (isPublicRoute) {
+    console.log('🔍 AppShell: Rendering public route', {
+      pathname,
+      normalizedPath,
+      isChatPage,
+      willRenderChildren: true,
+      childrenType: typeof children
+    });
+    
     if (isChatPage) {
       // Desktop: Show top nav, Mobile: No constraints
       return (
@@ -164,8 +174,28 @@ function AppShellContent({ children }: AppShellProps) {
         )}
         
         {/* Main Content Area with proper mobile safe area */}
-        <main className="w-full pb-24 lg:pb-0 lg:pt-20 pt-32">
+        <main 
+          className="w-full pb-24 lg:pb-0 lg:pt-20 pt-32"
+          style={{ minHeight: '100vh' }}
+          ref={(el) => {
+            if (el && typeof window !== 'undefined' && normalizedPath === '/explore') {
+              console.log('🔍 AppShell: Main element for explore page', {
+                offsetHeight: el.offsetHeight,
+                scrollHeight: el.scrollHeight,
+                clientHeight: el.clientHeight,
+                offsetTop: el.offsetTop,
+                computedHeight: window.getComputedStyle(el).height,
+                computedDisplay: window.getComputedStyle(el).display,
+                computedOverflow: window.getComputedStyle(el).overflow,
+                childrenCount: el.children.length,
+                firstChild: el.firstElementChild?.tagName || 'N/A'
+              });
+            }
+          }}
+        >
+          {normalizedPath === '/explore' && console.log('🔍 AppShell: About to render explore page children')}
           {children}
+          {normalizedPath === '/explore' && console.log('🔍 AppShell: Finished rendering explore page children')}
         </main>
 
         {/* Mobile: Bottom Navigation Bar */}
