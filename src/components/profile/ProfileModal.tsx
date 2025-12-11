@@ -199,8 +199,13 @@ export default function ProfileModal({
           {/* Add Business Card */}
           <button
             onClick={handleAddBusiness}
-            className="w-full max-w-sm mx-auto rounded-2xl bg-white transition-all duration-200 hover:-translate-y-[1px] flex items-center justify-between px-5 py-4"
+            className="w-full max-w-sm mx-auto rounded-2xl bg-white transition-all duration-200 hover:-translate-y-[1px] grid items-center"
             style={{
+              gridTemplateColumns: '40px 1fr 40px',
+              paddingTop: '16px',
+              paddingBottom: '16px',
+              paddingLeft: '20px',
+              paddingRight: '20px',
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
@@ -215,8 +220,21 @@ export default function ProfileModal({
               e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
             }}
           >
-            <span className="text-base font-semibold text-gray-900">Add Business</span>
-            <Plus size={20} className="text-gray-900" />
+            {/* Briefcase Icon - Left side, same position as profile pic */}
+            <div className="flex items-center justify-center">
+              <Briefcase size={20} className="text-gray-900" strokeWidth={2.5} />
+            </div>
+            
+            {/* Add Business Text - Centered */}
+            <div className="flex flex-col items-center justify-center text-center">
+              <span className="text-base font-semibold text-gray-900">Add Business</span>
+              <span className="text-sm text-gray-500 mt-0.5">Coming soon</span>
+            </div>
+            
+            {/* Plus Icon - Right side, same position as QR code */}
+            <div className="flex items-center justify-center">
+              <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
+            </div>
           </button>
         </div>
       </div>
