@@ -7,10 +7,12 @@ import Input from '@/components/Input';
 import TextArea from '@/components/TextArea';
 import ImagePicker from '@/components/ImagePicker';
 import Avatar from '@/components/Avatar';
+import Loading8 from '@/components/Loading8';
 import { useAuth } from '@/lib/authContext';
 import { useAppStore } from '@/lib/store';
 import { createClient } from '@supabase/supabase-js';
 import { generateUniqueConnectId, generateConnectId } from '@/lib/connectId';
+import { compressImage } from '@/lib/imageUtils';
 import { useRouter } from 'next/navigation';
 
 interface AccountCheckModalProps {
@@ -854,7 +856,15 @@ export default function AccountCheckModal({
     console.log('AccountCheckModal: Create Account button clicked!');
     console.log('AccountCheckModal: Creating account with data:', { 
       userId: user?.id, 
-      formData,
+      formData: {
+        ...formData,
+        profilePicture: formData.profilePicture ? {
+          name: formData.profilePicture.name,
+          size: formData.profilePicture.size,
+          type: formData.profilePicture.type,
+          isFile: formData.profilePicture instanceof File
+        } : null
+      },
       hasUser: !!user 
     });
     
@@ -1070,13 +1080,27 @@ export default function AccountCheckModal({
           fileType: formData.profilePicture.type
         });
         try {
-          const fileExt = formData.profilePicture.name.split('.').pop();
+          // Compress image before upload to reduce file size
+          console.log('AccountCheckModal: Compressing image before upload...');
+          const compressedFile = await compressImage(formData.profilePicture, {
+            maxWidth: 1200,
+            maxHeight: 1200,
+            quality: 0.85,
+            mimeType: 'image/jpeg'
+          });
+          console.log('AccountCheckModal: Image compressed', {
+            originalSize: formData.profilePicture.size,
+            compressedSize: compressedFile.size,
+            reduction: `${Math.round((1 - compressedFile.size / formData.profilePicture.size) * 100)}%`
+          });
+
+          const fileExt = 'jpg'; // Always use jpg after compression
           const fileName = `${user.id}.${fileExt}`;
           const filePath = `avatars/${fileName}`;
 
           const { error: storageError } = await supabase.storage
             .from('avatars')
-            .upload(filePath, formData.profilePicture, { upsert: true });
+            .upload(filePath, compressedFile, { upsert: true });
 
           if (storageError) {
             console.error('AccountCheckModal: Storage upload failed:', storageError);
@@ -1508,9 +1532,9 @@ export default function AccountCheckModal({
         {/* Content */}
         <div className="flex-1 p-6 flex flex-col justify-center relative" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
           {accountCheckInProgress ? (
-            // Loading Screen - Simple black loading circle
+            // Loading Screen - Loading8 animation
             <div className="flex flex-col items-center justify-center h-full py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-900 border-t-transparent"></div>
+              <Loading8 />
               <p className="mt-4 text-gray-600 text-center">Setting up your account...</p>
             </div>
           ) : autoRedirectInProgress ? (
