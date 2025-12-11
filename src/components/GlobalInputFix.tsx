@@ -54,27 +54,30 @@ export default function GlobalInputFix() {
         });
         
         if (!hasExisting) {
-          // For textareas, REMOVE autocapitalize entirely to let iOS use its natural default
-          // This prevents iOS from defaulting to caps lock mode
-          // For inputs, use 'off' (prevents unwanted capitalization)
+          // Set autocapitalize="sentences" for normal sentence capitalization
+          // This provides: initial cap at start of sentence, lowercase rest, respects caps lock
           if (input.tagName === 'TEXTAREA') {
-            // Don't set autocapitalize - let iOS use its default behavior
-            // This should prevent caps lock default
-            console.log('🔧 GlobalInputFix: Textarea - NOT setting autocapitalize (using iOS default)');
+            input.setAttribute('autocapitalize', 'sentences');
+            console.log('🔧 GlobalInputFix: Textarea - Set autocapitalize="sentences" for normal capitalization');
           } else {
-            input.setAttribute('autocapitalize', 'off');
-            console.log('🔧 GlobalInputFix: Set autocapitalize="off" for input', { tagName: input.tagName });
+            // For inputs, check if it's a name field (should use "words" instead)
+            // If not explicitly set, use "sentences" for normal behavior
+            input.setAttribute('autocapitalize', 'sentences');
+            console.log('🔧 GlobalInputFix: Input - Set autocapitalize="sentences" for normal capitalization', { tagName: input.tagName });
           }
         } else {
-          // If component set it to "sentences", try removing it for textareas to test
-          if (input.tagName === 'TEXTAREA' && (existingAttr === 'sentences' || existingProp === 'sentences')) {
-            console.log('🔧 GlobalInputFix: Textarea has autocapitalize="sentences" - removing to test iOS default');
-            input.removeAttribute('autocapitalize');
-            if ((input as any).autocapitalize !== undefined) {
-              (input as any).autocapitalize = undefined;
+          // If component already set it, respect that setting (e.g., "words" for name fields)
+          // Only override if it's set to "off" or removed
+          if (existingAttr === 'off' || existingProp === 'off' || existingAttr === '' || existingProp === '') {
+            if (input.tagName === 'TEXTAREA') {
+              input.setAttribute('autocapitalize', 'sentences');
+              console.log('🔧 GlobalInputFix: Textarea - Changed from "off" to "sentences"');
+            } else {
+              input.setAttribute('autocapitalize', 'sentences');
+              console.log('🔧 GlobalInputFix: Input - Changed from "off" to "sentences"');
             }
           } else {
-            console.log('🔧 GlobalInputFix: Skipping - autocapitalize already set', { existingAttr, existingProp });
+            console.log('🔧 GlobalInputFix: Keeping existing autocapitalize setting', { existingAttr, existingProp });
           }
         }
         
@@ -257,21 +260,21 @@ export default function GlobalInputFix() {
           hasExisting
         });
         
-        // For textareas, remove autocapitalize to let iOS use default (prevents caps lock)
-        if (input.tagName === 'TEXTAREA') {
-          if (hasExisting) {
-            console.log('🔧 GlobalInputFix: Removing autocapitalize from textarea on focus to prevent caps lock');
-            input.removeAttribute('autocapitalize');
-            if ((input as any).autocapitalize !== undefined) {
-              (input as any).autocapitalize = undefined;
-            }
+        // Ensure autocapitalize="sentences" is set for normal capitalization
+        // Only override if it's currently "off" or not set
+        const currentAttr = input.getAttribute('autocapitalize');
+        const currentProp = (input as any).autocapitalize;
+        const isOff = currentAttr === 'off' || currentProp === 'off' || currentAttr === '' || currentProp === '';
+        const isNotSet = !currentAttr && currentProp === undefined;
+        
+        if (isOff || isNotSet) {
+          // Don't override if it's explicitly set to "words" (for name fields)
+          if (currentAttr !== 'words' && currentProp !== 'words') {
+            input.setAttribute('autocapitalize', 'sentences');
+            console.log('🔧 GlobalInputFix: Set autocapitalize="sentences" on focus', { tagName: input.tagName });
           }
         } else {
-          // For inputs, set to 'off' if not already set
-          if (!hasExisting) {
-            input.setAttribute('autocapitalize', 'off');
-            console.log('🔧 GlobalInputFix: Set autocapitalize="off" on focus for input');
-          }
+          console.log('🔧 GlobalInputFix: Keeping existing autocapitalize on focus', { currentAttr, currentProp });
         }
         input.setAttribute('autocorrect', 'off');
         input.setAttribute('spellcheck', 'false');
