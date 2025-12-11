@@ -808,7 +808,6 @@ function ExplorePage() {
           const fromParam = `?from=${encodeURIComponent(currentUrl)}`;
           router.push(`/qr-code${fromParam}`);
         }}
-        onAddBusiness={() => router.push('/create-business')}
       />
 
       {/* Filters Modal */}
