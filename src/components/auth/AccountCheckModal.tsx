@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, ArrowLeft, User, ChevronLeft } from 'lucide-react';
+import { X, ArrowLeft, User, ChevronLeft, Check } from 'lucide-react';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import TextArea from '@/components/TextArea';
@@ -100,10 +100,13 @@ export default function AccountCheckModal({
   const [lastNameFocused, setLastNameFocused] = useState(false);
   const [dateOfBirthFocused, setDateOfBirthFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
+  const [bioFocused, setBioFocused] = useState(false);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
   const dateOfBirthRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  const bioRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-populate the verified contact method
   useEffect(() => {
@@ -827,6 +830,14 @@ export default function AccountCheckModal({
     setFormData(prev => ({ ...prev, profilePicture: file }));
   };
 
+  const handleBioFocus = () => {
+    setBioFocused(true);
+  };
+
+  const handleBioBlur = () => {
+    setBioFocused(false);
+  };
+
   // Convert DD/MM/YYYY format to YYYY-MM-DD for Supabase
   const convertDateFormat = (ddmmyyyy: string): string => {
     if (!ddmmyyyy || ddmmyyyy.length !== 10) return '';
@@ -1346,63 +1357,95 @@ export default function AccountCheckModal({
             minHeight: '44px',
             pointerEvents: 'auto'
           }}>
-            {/* Right: X Button */}
-            <div className="absolute right-0 flex items-center gap-3" style={{ 
-              top: '0', 
-              height: '44px' 
-            }}>
-              <button
-                onClick={async () => {
-                  console.log('AccountCheckModal: ❌ X button clicked - FORCE SIGN OUT and go to explore');
-                  
-                  // NUCLEAR APPROACH: Clear everything immediately
-                  clearAll();
-                  localStorage.clear();
-                  sessionStorage.clear();
-                  
-                  // Close modal immediately
-                  onClose();
-                  
-                  try {
-                    // Sign out in background (don't wait)
-                    signOut().catch(err => console.log('Background signout error (ignoring):', err));
-                  } catch (error) {
-                    console.log('Signout error (ignoring):', error);
-                  }
-                  
-                  // Force navigate to explore regardless of signout result
-                  router.push('/explore');
-                  
-                  // Also force page reload as backup
-                  setTimeout(() => {
-                    if (window.location.pathname !== '/explore') {
-                      window.location.href = '/explore';
+            {/* Right: Tick Button (page 2) or X Button (page 1) */}
+            {currentPage === 2 && !userExists ? (
+              <div className="absolute right-0 flex items-center gap-3" style={{ 
+                top: '0', 
+                height: '44px' 
+              }}>
+                <button
+                  onClick={handleCreateAccount}
+                  disabled={isCreating}
+                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: isCreating ? '#9CA3AF' : '#FF6600',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isCreating) {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }
-                  }, 1000);
-                }}
-                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                aria-label="Close"
-              >
-                <X size={18} className="text-gray-900" strokeWidth={2.5} />
-              </button>
-            </div>
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label="Create Account"
+                >
+                  <Check size={18} className="text-white" strokeWidth={2.5} />
+                </button>
+              </div>
+            ) : (
+              <div className="absolute right-0 flex items-center gap-3" style={{ 
+                top: '0', 
+                height: '44px' 
+              }}>
+                <button
+                  onClick={async () => {
+                    console.log('AccountCheckModal: ❌ X button clicked - FORCE SIGN OUT and go to explore');
+                    
+                    // NUCLEAR APPROACH: Clear everything immediately
+                    clearAll();
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    
+                    // Close modal immediately
+                    onClose();
+                    
+                    try {
+                      // Sign out in background (don't wait)
+                      signOut().catch(err => console.log('Background signout error (ignoring):', err));
+                    } catch (error) {
+                      console.log('Signout error (ignoring):', error);
+                    }
+                    
+                    // Force navigate to explore regardless of signout result
+                    router.push('/explore');
+                    
+                    // Also force page reload as backup
+                    setTimeout(() => {
+                      if (window.location.pathname !== '/explore') {
+                        window.location.href = '/explore';
+                      }
+                    }, 1000);
+                  }}
+                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={18} className="text-gray-900" strokeWidth={2.5} />
+                </button>
+              </div>
+            )}
             
             {/* Center: Title */}
             <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ 
@@ -2060,56 +2103,111 @@ export default function AccountCheckModal({
                   </div>
                 </form>
               ) : (
-                // Page 2: Profile Pic + Bio
-                <div className="max-w-md mx-auto w-full space-y-6">
-                  <div>
-                    <div className="flex justify-center mb-2">
-                      <label className="text-sm font-medium text-gray-700">
-                        Profile Picture
-                      </label>
+                // Page 2: Profile Pic + Bio (matching EditProfileLanding design)
+                <div className="max-w-md mx-auto w-full" style={{ padding: '2px' }}>
+                  {/* Profile Photo Card */}
+                  <div className="flex flex-col items-center mb-8">
+                    <div className="mb-3">
+                      <Avatar 
+                        src={formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : undefined} 
+                        name={`${formData.firstName} ${formData.lastName}`.trim() || 'User'} 
+                        size={96} 
+                      />
                     </div>
-                    <ImagePicker
-                      onChange={handleImageChange}
-                      initialPreviewUrl={formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : null}
-                      shape="circle"
-                      size={80}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-sm font-medium text-gray-900"
+                    >
+                      Edit
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        handleImageChange(file);
+                      }}
+                      className="hidden"
                     />
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bio
-                    </label>
-                    <div className="relative">
-                    <TextArea
-                      placeholder="Tell us a bit about yourself..."
-                      value={formData.bio}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.length <= 150) {
-                          handleInputChange('bio', value);
+
+                  {/* General Section */}
+                  <h3 className="text-base font-semibold text-gray-900 mb-4">General</h3>
+
+                  {/* Bio TextArea Card */}
+                  <div className="mb-4" style={{ padding: '2px' }}>
+                    <div
+                      className="relative bg-white rounded-2xl transition-all duration-200"
+                      style={{ 
+                        borderWidth: '0.4px',
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'solid',
+                        transform: bioFocused ? 'translateY(-1px)' : 'translateY(0)',
+                        boxShadow: bioFocused 
+                          ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                          : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                        willChange: 'transform, box-shadow'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!bioFocused) {
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                         }
                       }}
-                      rows={4}
-                      className="w-full pr-16"
-                      maxLength={150}
+                      onMouseLeave={(e) => {
+                        if (!bioFocused) {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                        }
+                      }}
+                    >
+                      <label
+                        htmlFor="bio"
+                        className="absolute left-4 transition-all duration-200 pointer-events-none"
+                        style={{
+                          top: bioFocused || formData.bio ? '10px' : '50%',
+                          transform: bioFocused || formData.bio ? 'translateY(0)' : 'translateY(-50%)',
+                          fontSize: bioFocused || formData.bio ? '11px' : '17px',
+                          color: '#9CA3AF',
+                          fontWeight: bioFocused || formData.bio ? 500 : 400,
+                        }}
+                      >
+                        Bio
+                      </label>
+                      <textarea
+                        ref={bioRef}
+                        id="bio"
+                        value={formData.bio}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value.length <= 150) {
+                            handleInputChange('bio', value);
+                          }
+                        }}
+                        onFocus={handleBioFocus}
+                        onBlur={handleBioBlur}
+                        rows={3}
+                        className="w-full bg-transparent border-none outline-none px-4 text-gray-900 resize-none"
+                        style={{
+                          paddingTop: formData.bio ? '28px' : '14px',
+                          paddingBottom: '10px',
+                          fontSize: '17px',
+                          paddingRight: '60px', // Space for character counter
+                        }}
+                        maxLength={150}
+                        spellCheck={false}
                       />
-                      {/* Character counter inside the textarea */}
-                      <div className="absolute bottom-2 right-2 pointer-events-none">
-                        <span className={`text-xs font-medium ${formData.bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
-                          {formData.bio.length}/150
-                        </span>
-                      </div>
+                      {/* Character counter */}
+                      {formData.bio && (
+                        <div className="absolute bottom-2 right-4 pointer-events-none">
+                          <span className={`text-xs font-medium ${formData.bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
+                            {formData.bio.length}/150
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  
-                  <Button
-                    onClick={handleCreateAccount}
-                    disabled={isCreating}
-                    className="w-full"
-                  >
-                    {isCreating ? 'Creating Account...' : 'Create Account'}
-                  </Button>
                 </div>
               )}
             </>
