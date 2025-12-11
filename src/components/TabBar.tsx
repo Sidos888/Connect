@@ -7,6 +7,7 @@ import { Search, Clock, MapPin, UserCircle } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useExplore } from "@/contexts/ExploreContext";
 import { useModal } from "@/lib/modalContext";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export type TabItem = {
   href: string;
@@ -99,8 +100,14 @@ export default function TabBar({ items, user }: Props) {
   }, [pathname, isSearchMode]); // Include isSearchMode to ensure correct state updates
   
   // Handle explore/search button click
-  const handleSearchClick = (e: React.MouseEvent) => {
+  const handleSearchClick = async (e: React.MouseEvent) => {
     e.preventDefault();
+    // Trigger haptic feedback
+    try {
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } catch (error) {
+      // Haptics not available (web environment), silently fail
+    }
     if (!isSearchMode) {
       // Navigate to explore and enter search mode
       router.push("/explore");
@@ -109,7 +116,13 @@ export default function TabBar({ items, user }: Props) {
   };
   
   // Handle recent icon button click
-  const handleRecentIconClick = () => {
+  const handleRecentIconClick = async () => {
+    // Trigger haptic feedback
+    try {
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } catch (error) {
+      // Haptics not available (web environment), silently fail
+    }
     setIsSearchMode(false);
     setSearchQuery("");
     if (lastVisitedItem) {
@@ -212,9 +225,15 @@ export default function TabBar({ items, user }: Props) {
                   willChange: 'transform, box-shadow',
                   gap: '20px'
                 }}
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  // Trigger haptic feedback
+                  try {
+                    await Haptics.impact({ style: ImpactStyle.Light });
+                  } catch (error) {
+                    // Haptics not available (web environment), silently fail
+                  }
                   // Dispatch custom event to open filters modal
                   if (typeof window !== 'undefined') {
                     window.dispatchEvent(new CustomEvent('openFiltersModal'));
@@ -434,7 +453,17 @@ export default function TabBar({ items, user }: Props) {
                       ? "nav-item-active text-orange-500" 
                       : "nav-item-inactive text-black hover:text-orange-500"
                   }`}
-                  onClick={item.href === "/menu" ? () => handleMenuClick(item.href) : undefined}
+                  onClick={async (e) => {
+                    // Trigger haptic feedback
+                    try {
+                      await Haptics.impact({ style: ImpactStyle.Light });
+                    } catch (error) {
+                      // Haptics not available (web environment), silently fail
+                    }
+                    if (item.href === "/menu") {
+                      handleMenuClick(item.href);
+                    }
+                  }}
                 style={{
                   minWidth: '56px',
                   padding: '4px 8px',
