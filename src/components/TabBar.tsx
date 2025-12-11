@@ -300,6 +300,9 @@ export default function TabBar({ items, user }: Props) {
                   placeholder="Search"
                   className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400"
                   style={{ fontSize: '14px' }}
+                  autoCapitalize="sentences"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </div>
             ) : (

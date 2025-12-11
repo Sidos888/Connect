@@ -1386,11 +1386,9 @@ const EditListingDetailsView = forwardRef<EditListingDetailsViewRef, EditListing
                       input.setAttribute('spellcheck', 'false');
                       input.setAttribute('inputmode', 'text');
                       input.style.textTransform = 'none';
-                      input.removeAttribute('autocapitalize');
+                      // Set autocapitalize="sentences" for normal capitalization
+                      input.setAttribute('autocapitalize', 'sentences');
                       input.autocorrect = false;
-                      if (input.autocapitalize !== undefined) {
-                        (input as any).autocapitalize = '';
-                      }
                     }}
                     onBlur={(e) => {
                       e.currentTarget.style.borderColor = '#E5E7EB';

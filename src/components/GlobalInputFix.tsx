@@ -247,38 +247,42 @@ export default function GlobalInputFix() {
       input.addEventListener('input', handleInput, { passive: true });
       
       // Also handle focus to ensure attributes are set
+      // Use setTimeout to run AFTER component focus handlers, so we can override their changes
       const handleFocus = () => {
-        const existingAttr = input.getAttribute('autocapitalize');
-        const existingProp = (input as any).autocapitalize;
-        const hasExisting = existingAttr !== null || existingProp !== undefined;
-        
-        console.log('🔧 GlobalInputFix: Focus handler', {
-          tagName: input.tagName,
-          hasAttribute: input.hasAttribute('autocapitalize'),
-          existingAttr,
-          existingProp,
-          hasExisting
-        });
-        
-        // Ensure autocapitalize="sentences" is set for normal capitalization
-        // Only override if it's currently "off" or not set
-        const currentAttr = input.getAttribute('autocapitalize');
-        const currentProp = (input as any).autocapitalize;
-        const isOff = currentAttr === 'off' || currentProp === 'off' || currentAttr === '' || currentProp === '';
-        const isNotSet = !currentAttr && currentProp === undefined;
-        
-        if (isOff || isNotSet) {
-          // Don't override if it's explicitly set to "words" (for name fields)
-          if (currentAttr !== 'words' && currentProp !== 'words') {
-            input.setAttribute('autocapitalize', 'sentences');
-            console.log('🔧 GlobalInputFix: Set autocapitalize="sentences" on focus', { tagName: input.tagName });
+        // Run after component handlers have executed
+        setTimeout(() => {
+          const existingAttr = input.getAttribute('autocapitalize');
+          const existingProp = (input as any).autocapitalize;
+          const hasExisting = existingAttr !== null || existingProp !== undefined;
+          
+          console.log('🔧 GlobalInputFix: Focus handler (after component handlers)', {
+            tagName: input.tagName,
+            hasAttribute: input.hasAttribute('autocapitalize'),
+            existingAttr,
+            existingProp,
+            hasExisting
+          });
+          
+          // Ensure autocapitalize="sentences" is set for normal capitalization
+          // Only override if it's currently "off", empty string, or not set
+          const currentAttr = input.getAttribute('autocapitalize');
+          const currentProp = (input as any).autocapitalize;
+          const isOff = currentAttr === 'off' || currentProp === 'off' || currentAttr === '' || currentProp === '';
+          const isNotSet = !currentAttr && currentProp === undefined;
+          
+          if (isOff || isNotSet) {
+            // Don't override if it's explicitly set to "words" (for name fields)
+            if (currentAttr !== 'words' && currentProp !== 'words') {
+              input.setAttribute('autocapitalize', 'sentences');
+              console.log('🔧 GlobalInputFix: Set autocapitalize="sentences" on focus', { tagName: input.tagName });
+            }
+          } else {
+            console.log('🔧 GlobalInputFix: Keeping existing autocapitalize on focus', { currentAttr, currentProp });
           }
-        } else {
-          console.log('🔧 GlobalInputFix: Keeping existing autocapitalize on focus', { currentAttr, currentProp });
-        }
-        input.setAttribute('autocorrect', 'off');
-        input.setAttribute('spellcheck', 'false');
-        input.style.textTransform = 'none';
+          input.setAttribute('autocorrect', 'off');
+          input.setAttribute('spellcheck', 'false');
+          input.style.textTransform = 'none';
+        }, 0);
       };
       
       (input as any)._iosFocusHandler = handleFocus;

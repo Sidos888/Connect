@@ -124,6 +124,9 @@ export default function ChatDetailsSearchModal({
                   WebkitTapHighlightColor: 'transparent',
                   color: '#111827'
                 }}
+                autoCapitalize="sentences"
+                autoCorrect="off"
+                spellCheck={false}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}

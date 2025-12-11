@@ -1649,6 +1649,9 @@ export default function AccountCheckModal({
                             : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                           willChange: 'transform, box-shadow'
                         }}
+                        autoCapitalize="words"
+                        autoCorrect="off"
+                        spellCheck={false}
                         required
                       />
                       
@@ -1690,6 +1693,9 @@ export default function AccountCheckModal({
                             : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                           willChange: 'transform, box-shadow'
                         }}
+                        autoCapitalize="words"
+                        autoCorrect="off"
+                        spellCheck={false}
                         required
                       />
                       
@@ -2225,6 +2231,8 @@ export default function AccountCheckModal({
                           paddingRight: '60px', // Space for character counter
                         }}
                         maxLength={150}
+                        autoCapitalize="sentences"
+                        autoCorrect="off"
                         spellCheck={false}
                       />
                       {/* Character counter */}
