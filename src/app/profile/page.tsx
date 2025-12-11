@@ -77,7 +77,16 @@ export default function ProfileRoute() {
   }, [userId]);
 
   const handleBack = () => {
-    // Always use router.back() to maintain proper history
+    // Check if we came from QR code page - if so, navigate back to it
+    if (from) {
+      const decodedFrom = decodeURIComponent(from);
+      // Check if the 'from' URL is the QR code page
+      if (decodedFrom.includes('/qr-code')) {
+        router.replace(decodedFrom);
+        return;
+      }
+    }
+    // Otherwise, use router.back() to maintain proper history
     // This ensures we go to the actual previous page in browser history
     router.back();
   };

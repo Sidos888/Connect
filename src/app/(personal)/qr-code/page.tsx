@@ -46,15 +46,14 @@ export default function QRCodePage() {
     }
   };
 
-  // Handle profile card click - navigate to share profile page
+  // Handle profile card click - navigate to user's own profile page
   const handleProfileCardClick = () => {
     if (account?.id) {
       const currentUrl = typeof window !== 'undefined' 
         ? `${window.location.pathname}${window.location.search}`
         : '/qr-code';
       const fromParam = `&from=${encodeURIComponent(currentUrl)}`;
-      const connectIdParam = account.connect_id ? `&connectId=${account.connect_id}` : '';
-      router.push(`/profile/share?id=${account.id}${connectIdParam}${fromParam}`);
+      router.push(`/profile?id=${account.id}${fromParam}`);
     }
   };
 
