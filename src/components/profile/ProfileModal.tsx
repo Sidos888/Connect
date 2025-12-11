@@ -164,7 +164,7 @@ export default function ProfileModal({
               e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
             }}
           >
-            <X size={20} className="text-gray-900" />
+            <X size={20} className="text-gray-900" strokeWidth={2.5} />
           </button>
         </div>
 
