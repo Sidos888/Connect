@@ -548,10 +548,10 @@ function ExplorePage() {
               >
                 <div className="flex flex-col items-start h-full p-4 gap-1.5 relative">
                   <div className="text-4xl leading-none">🎲</div>
-                  <span className="text-base font-semibold text-neutral-900 text-left leading-tight">Side Quest</span>
+                  <span className="text-base font-semibold text-gray-500 text-left leading-tight">Side Quest</span>
                   <div className="absolute top-3 right-3 text-right">
-                    <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
-                    <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
+                    <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Coming</div>
+                    <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Soon</div>
                   </div>
                 </div>
               </button>
@@ -615,7 +615,7 @@ function ExplorePage() {
                   >
                     <div className="flex flex-col items-start h-full p-4 gap-2 relative">
                       <div className="text-4xl leading-none">{category.icon}</div>
-                      <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
+                      <span className={`text-base font-semibold text-left leading-tight ${category.href ? 'text-neutral-900' : 'text-gray-500'}`}>
                         {category.title}
                       </span>
                       {!category.href && (
@@ -743,7 +743,7 @@ function ExplorePage() {
                 >
                   <div className="flex flex-col items-center justify-center h-full gap-2 relative">
                     <div className="text-6xl leading-none">🎲</div>
-                    <span className="text-lg font-semibold text-neutral-900">Side Quest</span>
+                    <span className="text-lg font-semibold text-gray-500">Side Quest</span>
                     <div className="absolute top-3 right-3 text-right">
                       <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Coming</div>
                       <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Soon</div>
@@ -793,7 +793,7 @@ function ExplorePage() {
                   >
                     <div className="flex flex-col items-center justify-center h-full gap-3 p-4 relative">
                       <div className="text-6xl leading-none">{category.icon}</div>
-                      <span className="text-lg font-semibold text-neutral-900 text-center leading-tight">
+                      <span className={`text-lg font-semibold text-center leading-tight ${category.href ? 'text-neutral-900' : 'text-gray-500'}`}>
                         {category.title}
                       </span>
                       {!category.href && (
