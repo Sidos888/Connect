@@ -732,10 +732,13 @@ function ExplorePage() {
                     e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
                 >
-                  <div className="flex flex-col items-center justify-center h-full gap-2">
+                  <div className="flex flex-col items-center justify-center h-full gap-2 relative">
                     <div className="text-6xl leading-none">🎲</div>
                     <span className="text-lg font-semibold text-neutral-900">Side Quest</span>
-                    <span className="text-xs font-bold tracking-wide" style={{ color: '#9333EA' }}>COMING SOON</span>
+                    <div className="absolute top-2 right-2 text-right">
+                      <div className="text-[10px] font-medium leading-tight" style={{ color: '#9333EA' }}>Coming</div>
+                      <div className="text-[10px] font-medium leading-tight" style={{ color: '#9333EA' }}>Soon</div>
+                    </div>
                   </div>
                 </button>
               </div>
