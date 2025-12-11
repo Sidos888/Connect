@@ -564,14 +564,14 @@ export default function Page() {
     const confirmSignOut = () => {
       console.log('Menu page: confirmSignOut - Navigating to signing-out page');
       setShowSignOutConfirm(false);
-
+      
       // Show overlay (will be replaced by signing-out page)
       setIsSigningOut(true);
-
+      
       // Set router in navigation service (for client-side navigation)
       // This enables router-based navigation instead of full page reload
       navigationService.setRouter(router);
-
+        
       // Navigate to signing-out page immediately
       // The signing-out page will handle all cleanup and then redirect to explore
       // This ensures clean state before navigation to explore
@@ -618,13 +618,13 @@ export default function Page() {
             <div 
               className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[99999]" 
               style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: '100vw',
-                height: '100vh',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
                 zIndex: 99999,
                 backgroundColor: '#ffffff'
               }}

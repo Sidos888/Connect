@@ -93,9 +93,19 @@ function ExplorePage() {
   });
   
   const { account, user } = useAuth();
+  
+  // Safety net: If coming from sign-out, force signed-out state until AuthContext confirms
+  // This handles race conditions where AuthContext hasn't updated yet
+  const isFromSigningOut = typeof window !== 'undefined' && sessionStorage.getItem('fromSigningOut') === 'true';
+  const effectiveUser = isFromSigningOut ? null : user;
+  const effectiveAccount = isFromSigningOut ? null : account;
+  
   console.log('🔍 Explore Page: After useAuth', { 
     hasUser: !!user, 
-    hasAccount: !!account 
+    hasAccount: !!account,
+    isFromSigningOut,
+    effectiveUser: !!effectiveUser,
+    effectiveAccount: !!effectiveAccount
   });
   
   const { showLogin } = useModal();
@@ -117,7 +127,10 @@ function ExplorePage() {
     pathname,
     hasUser: !!user,
     hasAccount: !!account,
-    hasPersonalProfile: !!personalProfile
+    hasPersonalProfile: !!personalProfile,
+    isFromSigningOut,
+    effectiveUser: !!effectiveUser,
+    effectiveAccount: !!effectiveAccount
   });
 
   // Comprehensive logging for explore page rendering
@@ -127,6 +140,9 @@ function ExplorePage() {
       hasUser: !!user,
       hasAccount: !!account,
       hasPersonalProfile: !!personalProfile,
+      isFromSigningOut,
+      effectiveUser: !!effectiveUser,
+      effectiveAccount: !!effectiveAccount,
       windowHeight: typeof window !== 'undefined' ? window.innerHeight : 'N/A',
       windowWidth: typeof window !== 'undefined' ? window.innerWidth : 'N/A',
       scrollY: typeof window !== 'undefined' ? window.scrollY : 'N/A',
@@ -321,11 +337,11 @@ function ExplorePage() {
   
   const allListings = listingsData?.listings || [];
 
-  // Get current account info
+  // Get current account info (use effective values to handle sign-out race condition)
   const currentAccount = context.type === "business" && currentBusiness 
     ? { name: currentBusiness.name, avatarUrl: currentBusiness.profile_pic }
-    : account 
-      ? { name: account.name, avatarUrl: account.profile_pic }
+    : effectiveAccount 
+      ? { name: effectiveAccount.name, avatarUrl: effectiveAccount.profile_pic }
       : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl };
 
 
@@ -335,6 +351,9 @@ function ExplorePage() {
     hasUser: !!user,
     hasAccount: !!account,
     hasPersonalProfile: !!personalProfile,
+    isFromSigningOut,
+    effectiveUser: !!effectiveUser,
+    effectiveAccount: !!effectiveAccount,
     showProfileModal,
     showFiltersModal,
     isSearchOpen,
@@ -386,8 +405,8 @@ function ExplorePage() {
             customBackButton={
               <button
                 onClick={() => {
-                  console.log('🔐 Explore: Button clicked', { user: !!user, userId: user?.id });
-                  if (user) {
+                  console.log('🔐 Explore: Button clicked', { user: !!effectiveUser, userId: effectiveUser?.id });
+                  if (effectiveUser) {
                     setShowProfileModal(true);
                   } else {
                     console.log('🔐 Explore: UserCircle clicked, opening login modal');
@@ -415,7 +434,7 @@ function ExplorePage() {
                 }}
                 aria-label={user ? "Switch account" : "Log in or Sign up"}
               >
-                {user && currentAccount ? (
+                {effectiveUser && currentAccount ? (
                   <div className="w-[36px] h-[36px] rounded-full overflow-hidden">
                     <Avatar 
                       src={currentAccount?.avatarUrl ?? undefined} 
@@ -784,7 +803,7 @@ function ExplorePage() {
         onClose={() => setShowProfileModal(false)}
         name={currentAccount?.name ?? "User"}
         avatarUrl={currentAccount?.avatarUrl}
-        onViewProfile={() => router.push(`/profile?id=${account?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
+        onViewProfile={() => router.push(`/profile?id=${effectiveAccount?.id || personalProfile?.id}&from=${encodeURIComponent(pathname)}`)}
         onShareProfile={() => {
           // Navigate to QR code page with current URL as 'from' parameter
           const currentUrl = typeof window !== 'undefined' 

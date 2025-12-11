@@ -507,8 +507,8 @@ export default function EditProfileLanding({
         <div
           onClick={onOpenLinks}
           className="bg-white rounded-2xl border-[0.4px] border-[#E5E7EB] px-5 py-4 mb-3 flex items-center justify-between cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
-          style={{ 
-            boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+            style={{ 
+              boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
             willChange: 'transform, box-shadow'
           }}
           onMouseEnter={(e) => {
@@ -653,7 +653,7 @@ export default function EditProfileLanding({
               </div>
             )}
           </div>
-        </div>
+            </div>
         </div>
       </div>
 

@@ -39,11 +39,11 @@ export default function SigningOutPage() {
         
         // Step 6: Redirect to explore
         console.log('🔄 SigningOutPage: Step 6 - Redirecting to /explore');
-        if (typeof window !== 'undefined') {
+          if (typeof window !== 'undefined') {
           // Mark that we're coming from signing-out page (for explore page detection)
           sessionStorage.setItem('fromSigningOut', 'true');
-          window.location.replace('/explore');
-        }
+            window.location.replace('/explore');
+          }
       } catch (error) {
         console.error('🔄 SigningOutPage: Error during sign-out:', error);
         // Even on error, redirect after delay
@@ -91,9 +91,9 @@ export default function SigningOutPage() {
         />
       </div>
       <div className="mt-8 text-center">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {status === 'signing-out' ? 'Signing out...' : 'Redirecting...'}
-        </h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {status === 'signing-out' ? 'Signing out...' : 'Redirecting...'}
+          </h3>
         <p className="text-sm text-gray-500 mt-2">
           {status === 'signing-out' 
             ? 'Please wait while we sign you out' 

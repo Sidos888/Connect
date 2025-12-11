@@ -149,47 +149,47 @@ export default function Notifications() {
             {/* Friend Requests Section - Only show if there are friend requests */}
             {friendRequests.length > 0 && (
               <>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Friend requests</h3>
-                <div className="mb-6">
-                  <div
-                    onClick={handleFriendRequestCardClick}
-                    className="bg-white rounded-2xl border border-gray-200 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer relative"
-                    style={{
-                      borderWidth: '0.4px',
-                      borderColor: '#E5E7EB',
-                      boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                      willChange: 'transform, box-shadow',
-                      backgroundColor: 'white'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                    }}
-                  >
-                    <div className="flex items-center justify-between" style={{ padding: '16px' }}>
-                      <p className="text-sm text-gray-900">
-                        {friendRequests[0]?.sender?.name || 'Unknown'}
-                        {friendRequests.length > 1 && (
-                          <span className="text-gray-500"> +{friendRequests.length - 1} {friendRequests.length === 2 ? 'other' : 'others'}</span>
-                        )}
-                      </p>
-                    </div>
-                    {/* Red dot indicator - always shown if there are friend requests (on the right side) */}
-                    <div
-                      className="absolute rounded-full bg-red-500 flex-shrink-0"
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        top: '12px',
-                        right: '12px',
-                        boxShadow: '0 0 0 1px rgba(255, 255, 255, 1)',
-                        zIndex: 10
-                      }}
-                    />
-                  </div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 px-1">Friend requests</h3>
+            <div className="mb-6">
+              <div
+                onClick={handleFriendRequestCardClick}
+                className="bg-white rounded-2xl border border-gray-200 transition-all duration-200 hover:-translate-y-[1px] cursor-pointer relative"
+                style={{
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow',
+                  backgroundColor: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+              >
+                <div className="flex items-center justify-between" style={{ padding: '16px' }}>
+                    <p className="text-sm text-gray-900">
+                      {friendRequests[0]?.sender?.name || 'Unknown'}
+                      {friendRequests.length > 1 && (
+                        <span className="text-gray-500"> +{friendRequests.length - 1} {friendRequests.length === 2 ? 'other' : 'others'}</span>
+                      )}
+                    </p>
                 </div>
+                {/* Red dot indicator - always shown if there are friend requests (on the right side) */}
+                  <div
+                    className="absolute rounded-full bg-red-500 flex-shrink-0"
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      top: '12px',
+                      right: '12px',
+                      boxShadow: '0 0 0 1px rgba(255, 255, 255, 1)',
+                      zIndex: 10
+                    }}
+                  />
+              </div>
+            </div>
               </>
             )}
 

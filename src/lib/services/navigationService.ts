@@ -58,15 +58,26 @@ export class NavigationService {
     // This avoids hydration issues with static export
     if ((options?.useRouter !== false) && this.router) {
       try {
-        if (options?.replace) {
-          this.router.replace(path);
+        // Check if router methods are still valid (they might become invalid after cleanup)
+        if (typeof this.router.replace === 'function' && typeof this.router.push === 'function') {
+          if (options?.replace) {
+            this.router.replace(path);
+          } else {
+            this.router.push(path);
+          }
+          console.log('✅ NavigationService: Navigation via router (client-side)');
+          return;
         } else {
-          this.router.push(path);
+          console.warn('⚠️ NavigationService: Router methods invalid, falling back to window.location');
         }
-        console.log('✅ NavigationService: Navigation via router (client-side)');
-        return;
       } catch (error) {
         console.warn('⚠️ NavigationService: Router navigation failed, falling back to window.location', error);
+      }
+    } else {
+      if (options?.useRouter === false) {
+        console.log('🧭 NavigationService: Router navigation explicitly disabled');
+      } else if (!this.router) {
+        console.log('🧭 NavigationService: Router not available, using window.location');
       }
     }
 
@@ -85,6 +96,7 @@ export class NavigationService {
    * Uses router navigation by default to avoid hydration issues
    */
   navigateToExplore(useRouter: boolean = true): void {
+    console.log('🧭 NavigationService: navigateToExplore called', { useRouter, hasRouter: !!this.router });
     this.navigate('/explore', { replace: true, useRouter });
   }
 

@@ -60,6 +60,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = getSupabaseClient();
 
+  // Expose setters globally for AuthService to clear state synchronously
+  // This allows service-level sign-out to immediately clear AuthContext state
+  // before router navigation, eliminating race conditions
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__authContextSetters = {
+        setUser,
+        setAccount,
+        setLoading
+      };
+      console.log('🔧 AuthContext: Exposed setters globally for AuthService');
+      
+      return () => {
+        delete (window as any).__authContextSetters;
+      };
+    }
+  }, [setUser, setAccount, setLoading]);
+
   // Debug user state changes
   useEffect(() => {
     console.log('🔍 AuthContext: ========== USER STATE CHANGED ==========');

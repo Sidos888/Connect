@@ -56,7 +56,7 @@ export default function SettingsContent({
         onConfirm={onConfirmSignOut || (() => {})}
       />
       
-      <div className="flex flex-col h-full relative">
+    <div className="flex flex-col h-full relative">
         {showDeleteConfirm ? (
         <div className="w-full h-full flex flex-col absolute inset-0 bg-white z-50">
           {isDeletingAccount ? (
@@ -240,7 +240,7 @@ export default function SettingsContent({
           </div>
         </>
       )}
-      </div>
+    </div>
     </>
   );
 }
