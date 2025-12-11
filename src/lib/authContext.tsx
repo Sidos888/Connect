@@ -433,16 +433,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('📧 AuthContext: ========== SENDING EMAIL OTP ==========');
       
+      // CRITICAL FIX: Wait for auth state to settle after sign-out
+      // This prevents RPC calls from hanging when Supabase client is in transitional state
+      let retries = 0;
+      const maxRetries = 5;
+      let authStateReady = false;
+      
+      while (retries < maxRetries && !authStateReady) {
+        try {
+          const { error: sessionError } = await supabase.auth.getSession();
+          // If we can get session state without error, we're ready
+          if (!sessionError) {
+            authStateReady = true;
+            break;
+          }
+        } catch (err) {
+          // Session check failed, will retry
+        }
+        
+        retries++;
+        if (retries < maxRetries) {
+          console.log(`📧 AuthContext: Waiting for auth state to settle (attempt ${retries}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+        }
+      }
+      
+      if (!authStateReady) {
+        console.warn('⚠️ AuthContext: Auth state not ready after retries - proceeding anyway');
+      }
+      
       // Normalize email (server-side normalization enforced by RPC)
       const normalizedEmail = normalizeEmail(email);
       console.log('📧 AuthContext: Normalized email:', normalizedEmail);
       
-      // Check server-side rate limit
-      const { data: canSend, error: rateLimitError } = await supabase
+      // Check server-side rate limit with timeout protection
+      const rateLimitPromise = supabase
         .rpc('app_can_send_otp', {
           p_identifier: normalizedEmail,
           p_ip: 'client' // In production, get from request headers server-side
         });
+
+      const timeoutPromise = new Promise<{ data: boolean; error: null }>((resolve) => 
+        setTimeout(() => {
+          console.warn('⚠️ AuthContext: Rate limit check timeout - proceeding anyway');
+          resolve({ data: true, error: null }); // Default to allowing
+        }, 10000) // 10 second timeout
+      );
+
+      const rateLimitResult = await Promise.race([
+        rateLimitPromise,
+        timeoutPromise
+      ]).catch(err => {
+        console.warn('⚠️ AuthContext: Rate limit check failed - proceeding anyway:', err);
+        return { data: true, error: null }; // Default to allowing
+      });
+      
+      const { data: canSend, error: rateLimitError } = rateLimitResult as { data: boolean | null; error: any };
       
       console.log('📧 AuthContext: Rate limit check:', { canSend, rateLimitError });
       
@@ -486,6 +532,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('📱 AuthContext: ========== SENDING PHONE OTP ==========');
       
+      // CRITICAL FIX: Wait for auth state to settle after sign-out
+      // This prevents RPC calls from hanging when Supabase client is in transitional state
+      let retries = 0;
+      const maxRetries = 5;
+      let authStateReady = false;
+      
+      while (retries < maxRetries && !authStateReady) {
+        try {
+          const { error: sessionError } = await supabase.auth.getSession();
+          // If we can get session state without error, we're ready
+          if (!sessionError) {
+            authStateReady = true;
+            break;
+          }
+        } catch (err) {
+          // Session check failed, will retry
+        }
+        
+        retries++;
+        if (retries < maxRetries) {
+          console.log(`📱 AuthContext: Waiting for auth state to settle (attempt ${retries}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+        }
+      }
+      
+      if (!authStateReady) {
+        console.warn('⚠️ AuthContext: Auth state not ready after retries - proceeding anyway');
+      }
+      
       // Normalize phone (server-side normalization enforced by RPC)
       let normalizedPhone: string;
       try {
@@ -496,12 +571,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error('Invalid phone number format') };
       }
       
-      // Check server-side rate limit
-      const { data: canSend, error: rateLimitError } = await supabase
+      // Check server-side rate limit with timeout protection
+      const rateLimitPromise = supabase
         .rpc('app_can_send_otp', {
           p_identifier: normalizedPhone,
           p_ip: 'client'
         });
+
+      const timeoutPromise = new Promise<{ data: boolean; error: null }>((resolve) => 
+        setTimeout(() => {
+          console.warn('⚠️ AuthContext: Rate limit check timeout - proceeding anyway');
+          resolve({ data: true, error: null }); // Default to allowing
+        }, 10000) // 10 second timeout
+      );
+
+      const rateLimitResult = await Promise.race([
+        rateLimitPromise,
+        timeoutPromise
+      ]).catch(err => {
+        console.warn('⚠️ AuthContext: Rate limit check failed - proceeding anyway:', err);
+        return { data: true, error: null }; // Default to allowing
+      });
+      
+      const { data: canSend, error: rateLimitError } = rateLimitResult as { data: boolean | null; error: any };
       
       console.log('📱 AuthContext: Rate limit check:', { canSend, rateLimitError });
       
