@@ -292,11 +292,11 @@ export default function FiltersModal({
                 >
                   <span className="text-base font-semibold text-gray-900">Anytime</span>
                   <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${
-                    selectedWhen === 'Anytime'
+                    selectedWhen === 'Anytime' || selectedWhen === null
                       ? 'bg-orange-500 border-orange-500'
                       : 'border-gray-300 bg-white'
                   }`}>
-                    {selectedWhen === 'Anytime' && (
+                    {(selectedWhen === 'Anytime' || selectedWhen === null) && (
                       <Check size={12} className="text-white" strokeWidth={3} />
                     )}
                   </div>
@@ -498,11 +498,11 @@ export default function FiltersModal({
                     <span className="text-sm text-gray-500 leading-tight">Adelaide</span>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${
-                    selectedWhere === 'Near me'
+                    selectedWhere === 'Near me' || selectedWhere === null
                       ? 'bg-orange-500 border-orange-500'
                       : 'border-gray-300 bg-white'
                   }`}>
-                    {selectedWhere === 'Near me' && (
+                    {(selectedWhere === 'Near me' || selectedWhere === null) && (
                       <Check size={12} className="text-white" strokeWidth={3} />
                     )}
                   </div>
