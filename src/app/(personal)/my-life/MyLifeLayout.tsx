@@ -459,7 +459,6 @@ export default function MyLifeLayout(): React.JSX.Element {
           });
           router.push(targetUrl);
         }}
-        onAddBusiness={() => router.push('/create-business')}
       />
     </>
   );

@@ -23,27 +23,13 @@ interface PersonalProfile {
   connectId?: string;
 }
 
-interface Business {
-  id: string;
-  name: string;
-  profile_pic?: string;
-}
-
 interface StoreState {
   // Personal profile
   personalProfile: PersonalProfile | null;
   setPersonalProfile: (profile: PersonalProfile | null) => void;
   
-  // Business
-  currentBusiness: Business | null;
-  setCurrentBusiness: (business: Business | null) => void;
-  businesses: Business[];
-  addBusiness: (business: any) => Business;
-  
-  // Context
-  context: any;
-  switchToPersonal: () => void;
-  switchToBusiness: (businessId: string) => void;
+  // Context (always personal now)
+  context: { type: 'personal' };
   resetMenuState: () => void;
   
   // Hydration
@@ -69,20 +55,8 @@ export const useAppStore = create<StoreState>()(
       personalProfile: null,
       setPersonalProfile: (profile) => set({ personalProfile: profile }),
       
-      // Business
-      currentBusiness: null,
-      setCurrentBusiness: (business) => set({ currentBusiness: business }),
-      businesses: [],
-      addBusiness: (business) => {
-        const newBusiness = { ...business, id: Date.now().toString(), createdAt: new Date().toISOString() };
-        set({ businesses: [...get().businesses, newBusiness] });
-        return newBusiness;
-      },
-      
-      // Context
+      // Context (always personal)
       context: { type: 'personal' },
-      switchToPersonal: () => set({ context: { type: 'personal' } }),
-      switchToBusiness: (businessId) => set({ context: { type: 'business', businessId } }),
       resetMenuState: () => {},
       
       // Hydration
@@ -99,14 +73,13 @@ export const useAppStore = create<StoreState>()(
       
       // clearAll - reset entire state
       clearAll: () => {
-        set({ personalProfile: null, currentBusiness: null, businesses: [] });
+        set({ personalProfile: null });
       },
     }),
     {
       name: 'app-store',
       partialize: (state) => ({
         personalProfile: state.personalProfile,
-        currentBusiness: state.currentBusiness,
         selectedWhen: state.selectedWhen,
         selectedWhere: state.selectedWhere,
         // Don't persist isHydrated - it should reset on each session
@@ -132,6 +105,5 @@ export const useAppStore = create<StoreState>()(
 );
 
 // Export individual hooks for compatibility
-export const useCurrentBusiness = () => useAppStore((state) => state.currentBusiness);
 export const usePersonalProfile = () => useAppStore((state) => state.personalProfile);
 export const useIsHydrated = () => useAppStore((state) => state.isHydrated);

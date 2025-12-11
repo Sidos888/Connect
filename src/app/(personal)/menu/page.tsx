@@ -5,7 +5,7 @@ import Button from "@/components/Button";
 import Link from "next/link";
 import ProfileStrip from "@/components/my-life/ProfileStrip";
 import ProfileCard from "@/components/profile/ProfileCard";
-import { useAppStore, useCurrentBusiness } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -107,7 +107,6 @@ export default function Page() {
   const queryClient = useQueryClient();
   const { personalProfile, context, resetMenuState } = useAppStore();
   const { signOut, deleteAccount, user, updateProfile, uploadAvatar, account, refreshAuthState, loadUserProfile } = useAuth();
-  const currentBusiness = useCurrentBusiness();
   const [currentView, setCurrentView] = React.useState<'menu' | 'settings' | 'connections' | 'add-person' | 'friend-requests' | 'profile' | 'edit-profile' | 'friend-profile' | 'friend-connections' | 'highlights' | 'timeline' | 'badges' | 'notifications' | 'memories' | 'saved' | 'account-settings' | 'life' | 'add-moment' | 'add-moment-form' | 'moment-detail' | 'highlight-detail'>('menu');
   const [selectedMomentType, setSelectedMomentType] = React.useState<{ id: string; label: string; category: string } | null>(null);
   const [selectedMomentId, setSelectedMomentId] = React.useState<string | null>(null);
@@ -340,11 +339,9 @@ export default function Page() {
   }, [user, account, loadUserProfile]);
 
   // Get current account info - prioritize auth context account over local storage
-  const currentAccount = context.type === "business" && currentBusiness 
-    ? { name: currentBusiness.name, avatarUrl: currentBusiness.logoUrl, bio: currentBusiness.bio }
-    : account 
-      ? { name: account.name, avatarUrl: account.profile_pic, bio: account.bio }
-      : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio };
+  const currentAccount = account
+    ? { name: account.name, avatarUrl: account.profile_pic, bio: account.bio }
+    : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio };
 
   // Debug logging for bio and auth context
   console.log('Menu Debug - Auth Context:', {
@@ -1826,22 +1823,12 @@ export default function Page() {
                   gap: '22px',
                   rowGap: '22px'
                 }}>
-                  {(context.type === "business" ? 
-                // Business account menu items
-                [
-                  { title: "Bookings", icon: "📅", href: "/business/bookings" },
-                  { title: "Financials", icon: "💰", href: "/business/financials" },
-                  { title: "Connections", icon: "👬", view: "connections" },
-                  { title: "Settings", icon: "⚙️", view: "settings" },
-                ] :
-                // Personal account menu items
-                [
-                  { title: "Memories", icon: "🖼️", view: "memories" },
-                  { title: "Badges", icon: "🏆", view: "badges" },
-                  { title: "Timeline", icon: "🧭", view: "timeline" },
-                  { title: "Connections", icon: "👬", view: "connections" },
-                ]
-              ).map((item) => (
+                  {[
+                    { title: "Memories", icon: "🖼️", view: "memories" },
+                    { title: "Badges", icon: "🏆", view: "badges" },
+                    { title: "Timeline", icon: "🧭", view: "timeline" },
+                    { title: "Connections", icon: "👬", view: "connections" },
+                  ].map((item) => (
                         <button
                       key={item.title}
                       className="rounded-2xl bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 w-full hover:-translate-y-[1px] active:scale-[0.98]"
@@ -1923,22 +1910,12 @@ export default function Page() {
                 {/* Menu Grid - Desktop layout */}
           <div className="mb-6">
                   <div className="grid grid-cols-6 gap-6">
-              {(context.type === "business" ? 
-                // Business account menu items
-                [
-                  { title: "Bookings", icon: "📅", href: "/business/bookings" },
-                  { title: "Financials", icon: "💰", href: "/business/financials" },
-                        { title: "Connections", icon: "👬", view: "connections" },
-                  { title: "Settings", icon: "⚙️", view: "settings" },
-                ] :
-                // Personal account menu items
-                [
-                        { title: "Memories", icon: "🖼️", href: "/memories" },
-                  { title: "Badges", icon: "🏆", view: "badges" },
-                  { title: "Timeline", icon: "🧭", view: "timeline" },
-                        { title: "Connections", icon: "👬", view: "connections" },
-                ]
-              ).map((item) => (
+              {[
+                { title: "Memories", icon: "🖼️", href: "/memories" },
+                { title: "Badges", icon: "🏆", view: "badges" },
+                { title: "Timeline", icon: "🧭", view: "timeline" },
+                { title: "Connections", icon: "👬", view: "connections" },
+              ].map((item) => (
                 <button
                   key={item.title}
                         className="rounded-2xl bg-white hover:bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 aspect-square hover:-translate-y-[1px]"

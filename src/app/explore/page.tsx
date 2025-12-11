@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useAppStore, useCurrentBusiness } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useModal } from "@/lib/modalContext";
 import { SearchIcon } from "@/components/icons";
@@ -111,10 +111,6 @@ function ExplorePage() {
   const { showLogin } = useModal();
   console.log('🔍 Explore Page: After useModal');
   
-  const currentBusiness = useCurrentBusiness();
-  console.log('🔍 Explore Page: After useCurrentBusiness', { 
-    hasCurrentBusiness: !!currentBusiness 
-  });
   
   const [hasError, setHasError] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -338,11 +334,9 @@ function ExplorePage() {
   const allListings = listingsData?.listings || [];
 
   // Get current account info (use effective values to handle sign-out race condition)
-  const currentAccount = context.type === "business" && currentBusiness 
-    ? { name: currentBusiness.name, avatarUrl: currentBusiness.profile_pic }
-    : effectiveAccount 
-      ? { name: effectiveAccount.name, avatarUrl: effectiveAccount.profile_pic }
-      : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl };
+  const currentAccount = effectiveAccount
+    ? { name: effectiveAccount.name, avatarUrl: effectiveAccount.profile_pic }
+    : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl };
 
 
   // Log render state
