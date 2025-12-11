@@ -91,6 +91,7 @@ import Notifications from "@/components/notifications/Notifications";
 import Memories from "@/components/memories/Memories";
 import Saved from "@/components/saved/Saved";
 import AccountSettings from "@/components/settings/AccountSettings";
+import DeleteAccountConfirmModal from "@/components/settings/DeleteAccountConfirmModal";
 
 // Module-level cache for connections (persists across component mounts)
 let connectionsCache: {
@@ -753,17 +754,31 @@ export default function Page() {
   // Account Settings View Component
   const AccountSettingsView = () => {
     const from = searchParams?.get('from') || 'settings';
+    const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = React.useState(false);
     
-    const handleDeleteAccount = async () => {
-      // TODO: Add delete confirmation flow if needed
+    const handleDeleteAccount = () => {
+      setShowDeleteAccountConfirm(true);
+    };
+
+    const confirmDeleteAccount = async () => {
+      setShowDeleteAccountConfirm(false);
       await deleteAccount();
       const { clearAll } = useAppStore.getState();
       clearAll();
       router.replace('/');
     };
 
+    const cancelDeleteAccount = () => {
+      setShowDeleteAccountConfirm(false);
+    };
+
     return (
       <div style={{ '--saved-content-padding-top': '140px' } as React.CSSProperties}>
+        <DeleteAccountConfirmModal
+          isOpen={showDeleteAccountConfirm}
+          onClose={cancelDeleteAccount}
+          onConfirm={confirmDeleteAccount}
+        />
         <MobilePage>
           <PageHeader
             title="Account Settings"
