@@ -19,6 +19,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/authContext";
 import { supabase as supabaseClient } from "@/lib/supabaseClient";
 import ProfileModal from "@/components/profile/ProfileModal";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import Input from "@/components/Input";
 import TextArea from "@/components/TextArea";
 import ImagePicker from "@/components/ImagePicker";
@@ -1752,7 +1753,15 @@ export default function Page() {
                 backButton={true}
                 customBackButton={
                   <button
-                    onClick={() => setShowProfileModal(true)}
+                    onClick={async () => {
+                      // Trigger haptic feedback
+                      try {
+                        await Haptics.impact({ style: ImpactStyle.Light });
+                      } catch (error) {
+                        // Haptics not available (web environment), silently fail
+                      }
+                      setShowProfileModal(true);
+                    }}
                     className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                       style={{
                       width: '40px',

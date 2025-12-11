@@ -13,6 +13,7 @@ import { Search, MapPin, Clock, UserCircle } from "lucide-react";
 import { listingsService } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingsSearchModal from "@/components/listings/ListingsSearchModal";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 // Force dynamic rendering - prevent static generation
 export const dynamic = 'force-dynamic';
@@ -398,7 +399,14 @@ function ExplorePage() {
             title="Explore"
             customBackButton={
               <button
-                onClick={() => {
+                onClick={async () => {
+                  // Trigger haptic feedback
+                  try {
+                    await Haptics.impact({ style: ImpactStyle.Light });
+                  } catch (error) {
+                    // Haptics not available (web environment), silently fail
+                  }
+                  
                   console.log('🔐 Explore: Button clicked', { user: !!effectiveUser, userId: effectiveUser?.id });
                   if (effectiveUser) {
                     setShowProfileModal(true);

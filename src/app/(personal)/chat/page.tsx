@@ -749,7 +749,15 @@ function MessagesPageContent() {
               title="Chats"
               customBackButton={
                 <button
-                  onClick={() => setShowProfileModal(true)}
+                  onClick={async () => {
+                    // Trigger haptic feedback
+                    try {
+                      await Haptics.impact({ style: ImpactStyle.Light });
+                    } catch (error) {
+                      // Haptics not available (web environment), silently fail
+                    }
+                    setShowProfileModal(true);
+                  }}
                   className="absolute left-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
                     width: '40px',
