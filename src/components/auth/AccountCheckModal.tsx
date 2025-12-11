@@ -1320,37 +1320,37 @@ export default function AccountCheckModal({
   if (!isOpen || !modalVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-end md:items-center justify-center overflow-hidden">
-      {/* Mobile: Bottom Sheet, Desktop: Centered Card */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
+      {/* Backdrop - removed for full page modal */}
+      
+      {/* Modal - Full Page */}
       <div 
-        className="relative bg-white rounded-t-3xl md:rounded-2xl w-full max-w-[680px] md:w-[680px] h-[85vh] md:h-[620px] overflow-hidden flex flex-col transition-transform duration-200 ease-out"
+        className="relative bg-white w-full h-full overflow-y-auto flex flex-col"
         style={{
           borderWidth: '0.4px',
           borderColor: '#E5E7EB',
           borderStyle: 'solid',
-          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-          transform: userExists === true ? `translateY(${scrollY}px)` : 'translateY(0)'
+          boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)'
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
-        {/* Header - Show title for Welcome back, hide for other states */}
-        {userExists === true && !autoRedirectInProgress ? (
-          <div className="px-6 pt-6 pb-4 relative">
-            <button
-              onClick={handleDismiss}
-              className="absolute right-6 top-6 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <h2 className="text-xl font-semibold text-gray-900 text-center">Welcome back!</h2>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            {currentPage === 1 ? (
+        {/* Header */}
+        <div className="px-4" style={{ 
+          paddingTop: typeof window !== 'undefined' && window.innerWidth < 1024 ? 'max(env(safe-area-inset-top), 70px)' : '32px',
+          paddingBottom: '16px',
+          position: 'relative',
+          zIndex: 10
+        }}>
+          {/* Inner container matching PageHeader structure */}
+          <div className="relative w-full" style={{ 
+            width: '100%', 
+            minHeight: '44px',
+            pointerEvents: 'auto'
+          }}>
+            {/* Right: X Button */}
+            <div className="absolute right-0 flex items-center gap-3" style={{ 
+              top: '0', 
+              height: '44px' 
+            }}>
               <button
                 onClick={async () => {
                   console.log('AccountCheckModal: ❌ X button clicked - FORCE SIGN OUT and go to explore');
@@ -1380,30 +1380,85 @@ export default function AccountCheckModal({
                     }
                   }, 1000);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: '0.4px',
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'solid',
+                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                  willChange: 'transform, box-shadow'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                }}
+                aria-label="Close"
               >
-                <X className="w-5 h-5 text-gray-600" />
+                <X size={18} className="text-gray-900" strokeWidth={2.5} />
               </button>
-            ) : currentPage === 2 ? (
-              <button
-                onClick={prevPage}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-            ) : (
-              <div className="w-9" />
+            </div>
+            
+            {/* Center: Title */}
+            <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ 
+              top: '0', 
+              height: '44px', 
+              justifyContent: 'center' 
+            }}>
+              <h2 className="font-semibold text-gray-900 text-center" style={{ 
+                fontSize: '22px',
+                lineHeight: '28px',
+                height: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {userExists === true ? 'Welcome back!' : (currentPage === 1 ? 'Create Account' : 'Complete Profile')}
+              </h2>
+            </div>
+            
+            {/* Left: Back Button (only on page 2) */}
+            {currentPage === 2 && !userExists && (
+              <div className="absolute left-0 flex items-center gap-3" style={{ 
+                top: '0', 
+                height: '44px' 
+              }}>
+                <button
+                  onClick={prevPage}
+                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    borderWidth: '0.4px',
+                    borderColor: '#E5E7EB',
+                    borderStyle: 'solid',
+                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                    willChange: 'transform, box-shadow'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
+                  }}
+                  aria-label="Back"
+                >
+                  <ArrowLeft size={18} className="text-gray-900" strokeWidth={2.5} />
+                </button>
+              </div>
             )}
-            
-            <h2 className="text-xl font-semibold text-gray-900">
-              {currentPage === 1 ? 'Create Account' : 'Complete Profile'}
-            </h2>
-            
-            <div className="w-9" />
           </div>
-        )}
+        </div>
 
-        <div className="p-6 flex-1 overflow-y-auto">
+        {/* Content */}
+        <div className="flex-1 p-6 flex flex-col justify-center relative" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
           {accountCheckInProgress ? (
             // Loading Screen - Simple black loading circle
             <div className="flex flex-col items-center justify-center h-full py-16">
@@ -1495,7 +1550,7 @@ export default function AccountCheckModal({
             <>
               {currentPage === 1 ? (
                 // Page 1: First Name + Last Name + DOB
-                <div className="space-y-6">
+                <form className="max-w-md mx-auto w-full space-y-6">
                   {/* First Name and Last Name - Side by Side */}
                   <div className="grid grid-cols-2 gap-3">
                     {/* First Name */}
@@ -1508,45 +1563,34 @@ export default function AccountCheckModal({
                         onFocus={handleFirstNameFocus}
                         onBlur={handleFirstNameBlur}
                         placeholder=""
-                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(firstNameFocused || formData.firstName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                        className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(firstNameFocused || formData.firstName) ? 'pt-6 pb-2' : 'py-5'}`}
                         style={{ 
-                          caretColor: 'black',
                           fontSize: '16px',
                           lineHeight: '1.2',
-                          fontFamily: 'inherit'
+                          fontFamily: 'inherit',
+                          color: 'black',
+                          border: '0.4px solid #E5E7EB',
+                          borderRadius: '16px',
+                          transform: firstNameFocused ? 'translateY(-1px)' : 'translateY(0)',
+                          boxShadow: firstNameFocused
+                            ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          willChange: 'transform, box-shadow'
                         }}
                         required
                       />
                       
-                      {/* Step 1: Initial state - only "First Name" label */}
+                      {/* Floating label when focused or filled */}
+                      {(firstNameFocused || formData.firstName) && (
+                        <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                          First Name
+                        </label>
+                      )}
+                      {/* Default centered label when empty and unfocused */}
                       {!firstNameFocused && !formData.firstName && (
                         <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                           First Name
                         </label>
-                      )}
-                      
-                      {/* Step 2: Focused state - label moves up, placeholder appears */}
-                      {firstNameFocused && !formData.firstName && (
-                        <>
-                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            First Name
-                          </label>
-                          <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            Your first name
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Step 3: Typing state - actual name replaces placeholder */}
-                      {formData.firstName && (
-                        <>
-                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            First Name
-                          </label>
-                          <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            {formData.firstName}
-                          </div>
-                        </>
                       )}
                     </div>
 
@@ -1560,45 +1604,34 @@ export default function AccountCheckModal({
                         onFocus={handleLastNameFocus}
                         onBlur={handleLastNameBlur}
                         placeholder=""
-                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(lastNameFocused || formData.lastName) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                        className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(lastNameFocused || formData.lastName) ? 'pt-6 pb-2' : 'py-5'}`}
                         style={{ 
-                          caretColor: 'black',
                           fontSize: '16px',
                           lineHeight: '1.2',
-                          fontFamily: 'inherit'
+                          fontFamily: 'inherit',
+                          color: 'black',
+                          border: '0.4px solid #E5E7EB',
+                          borderRadius: '16px',
+                          transform: lastNameFocused ? 'translateY(-1px)' : 'translateY(0)',
+                          boxShadow: lastNameFocused
+                            ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          willChange: 'transform, box-shadow'
                         }}
                         required
                       />
                       
-                      {/* Step 1: Initial state - only "Last Name" label */}
+                      {/* Floating label when focused or filled */}
+                      {(lastNameFocused || formData.lastName) && (
+                        <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                          Last Name
+                        </label>
+                      )}
+                      {/* Default centered label when empty and unfocused */}
                       {!lastNameFocused && !formData.lastName && (
                         <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                           Last Name
                         </label>
-                      )}
-                      
-                      {/* Step 2: Focused state - label moves up, placeholder appears */}
-                      {lastNameFocused && !formData.lastName && (
-                        <>
-                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            Last Name
-                          </label>
-                          <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            Your last name
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Step 3: Typing state - actual name replaces placeholder */}
-                      {formData.lastName && (
-                        <>
-                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            Last Name
-                          </label>
-                          <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            {formData.lastName}
-                          </div>
-                        </>
                       )}
                     </div>
                   </div>
@@ -1607,7 +1640,7 @@ export default function AccountCheckModal({
                     <div className="relative">
                       <input
                         ref={dateOfBirthRef}
-                      type="text"
+                        type="text"
                         value={formData.dateOfBirth}
                         onChange={(e) => {
                           let value = e.target.value;
@@ -1636,47 +1669,34 @@ export default function AccountCheckModal({
                         onFocus={handleDateOfBirthFocus}
                         onBlur={handleDateOfBirthBlur}
                         placeholder=""
-                        className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(dateOfBirthFocused || formData.dateOfBirth) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                        className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(dateOfBirthFocused || formData.dateOfBirth) ? 'pt-6 pb-2' : 'py-5'}`}
                         style={{ 
-                          caretColor: 'black',
                           fontSize: '16px',
                           lineHeight: '1.2',
-                          fontFamily: 'inherit'
+                          fontFamily: 'inherit',
+                          color: 'black',
+                          border: '0.4px solid #E5E7EB',
+                          borderRadius: '16px',
+                          transform: dateOfBirthFocused ? 'translateY(-1px)' : 'translateY(0)',
+                          boxShadow: dateOfBirthFocused
+                            ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          willChange: 'transform, box-shadow'
                         }}
                         required
                       />
                       
-                      {/* Step 1: Initial state - only "Date of birth" label */}
+                      {/* Floating label when focused or filled */}
+                      {(dateOfBirthFocused || formData.dateOfBirth) && (
+                        <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                          Date of birth
+                        </label>
+                      )}
+                      {/* Default centered label when empty and unfocused */}
                       {!dateOfBirthFocused && !formData.dateOfBirth && (
                         <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                           Date of birth
                         </label>
-                      )}
-                      
-                      {/* Step 2: Focused state - label moves up, DD/MM/YYYY appears */}
-                      {dateOfBirthFocused && !formData.dateOfBirth && (
-                        <>
-                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            Date of birth
-                          </label>
-                          {/* DD/MM/YYYY placeholder */}
-                          <div className="absolute left-4 top-6 text-gray-400 pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            DD/MM/YYYY
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Step 3: Typing state - actual date replaces placeholder */}
-                      {formData.dateOfBirth && (
-                        <>
-                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                            Date of birth
-                          </label>
-                          {/* Actual date content */}
-                          <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                            {formData.dateOfBirth}
-                          </div>
-                        </>
                       )}
                     </div>
                   </div>
@@ -1687,7 +1707,16 @@ export default function AccountCheckModal({
                     <>
                       <div>
                         {/* Connected Phone Input - Airbnb Style */}
-                        <div className="relative border border-gray-300 rounded-lg overflow-hidden">
+                        <div className="relative rounded-2xl overflow-hidden" style={{
+                          border: '0.4px solid #E5E7EB',
+                          borderRadius: '16px',
+                          boxShadow: phoneFocused
+                            ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          transform: phoneFocused ? 'translateY(-1px)' : 'translateY(0)',
+                          transition: 'all 0.2s',
+                          willChange: 'transform, box-shadow'
+                        }}>
                           {/* Country/Region Section */}
                           <div className="relative border-b border-gray-200">
                             <select 
@@ -1795,42 +1824,43 @@ export default function AccountCheckModal({
                             onFocus={handleEmailFocus}
                             onBlur={handleEmailBlur}
                             placeholder=""
-                            className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(emailFocused || formData.email) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                            className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(emailFocused || formData.email) ? 'pt-6 pb-2' : 'py-5'}`}
                             style={{ 
-                              caretColor: 'black',
                               fontSize: '16px',
                               lineHeight: '1.2',
-                              fontFamily: 'inherit'
+                              fontFamily: 'inherit',
+                              color: 'black',
+                              border: '0.4px solid #E5E7EB',
+                              borderRadius: '16px',
+                              transform: emailFocused ? 'translateY(-1px)' : 'translateY(0)',
+                              boxShadow: emailFocused
+                                ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                                : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                              willChange: 'transform, box-shadow',
+                              opacity: (verificationMethod as string) === 'email' ? 0.6 : 1
                             }}
                             disabled={(verificationMethod as string) === 'email'}
                             required
                           />
                           
-                          {/* Step 1: Initial state - only "Email" label */}
+                          {/* Floating label when focused or filled */}
+                          {(emailFocused || formData.email) && (
+                            <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                              Email
+                            </label>
+                          )}
+                          {/* Default centered label when empty and unfocused */}
                           {!emailFocused && !formData.email && (
                             <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                               Email
                             </label>
                           )}
-                          
-                          {/* Step 2: Focused state - label moves up */}
-                          {(emailFocused || formData.email) && (
-                            <>
-                              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                                Email
-                              </label>
-                              {/* Text content */}
-                              <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                                {formData.email}
-                              </div>
-                              {/* Verification status */}
-                              {formData.email && (verificationMethod as string) === 'email' && (
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
-                                  <span>✓</span>
-                                  <span>Verified</span>
-                                </div>
-                              )}
-                            </>
+                          {/* Verification status */}
+                          {formData.email && (verificationMethod as string) === 'email' && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                              <span>✓</span>
+                              <span>Verified</span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1848,49 +1878,60 @@ export default function AccountCheckModal({
                             onFocus={handleEmailFocus}
                             onBlur={handleEmailBlur}
                             placeholder=""
-                            className={`w-full h-14 pl-4 pr-4 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-500 focus:outline-none transition-colors bg-white ${(emailFocused || formData.email) ? 'pt-5 pb-3' : 'py-5'} text-transparent`}
+                            className={`w-full h-14 pl-4 pr-4 focus:ring-0 focus:outline-none bg-white rounded-2xl transition-all duration-200 ${(emailFocused || formData.email) ? 'pt-6 pb-2' : 'py-5'}`}
                             style={{ 
-                              caretColor: 'black',
                               fontSize: '16px',
                               lineHeight: '1.2',
-                              fontFamily: 'inherit'
+                              fontFamily: 'inherit',
+                              color: 'black',
+                              border: '0.4px solid #E5E7EB',
+                              borderRadius: '16px',
+                              transform: emailFocused ? 'translateY(-1px)' : 'translateY(0)',
+                              boxShadow: emailFocused
+                                ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                                : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                              willChange: 'transform, box-shadow',
+                              opacity: (verificationMethod as string) === 'email' ? 0.6 : 1
                             }}
                             disabled={(verificationMethod as string) === 'email'}
                             required
                           />
                           
-                          {/* Step 1: Initial state - only "Email" label */}
+                          {/* Floating label when focused or filled */}
+                          {(emailFocused || formData.email) && (
+                            <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                              Email
+                            </label>
+                          )}
+                          {/* Default centered label when empty and unfocused */}
                           {!emailFocused && !formData.email && (
                             <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
                               Email
                             </label>
                           )}
-                          
-                          {/* Step 2: Focused state - label moves up */}
-                          {(emailFocused || formData.email) && (
-                            <>
-                              <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                                Email
-                              </label>
-                              {/* Text content */}
-                              <div className="absolute left-4 top-6 text-black pointer-events-none" style={{ fontSize: '16px', lineHeight: '1.2', fontFamily: 'inherit' }}>
-                                {formData.email}
-                              </div>
-                              {/* Verification status */}
-                              {formData.email && (verificationMethod as string) === 'email' && (
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
-                                  <span>✓</span>
-                                  <span>Verified</span>
-                                </div>
-                              )}
-                            </>
+                          {/* Verification status */}
+                          {formData.email && (verificationMethod as string) === 'email' && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                              <span>✓</span>
+                              <span>Verified</span>
+                            </div>
                           )}
                         </div>
                       </div>
                       
                       <div>
                         {/* Connected Phone Input - Airbnb Style */}
-                        <div className="relative border border-gray-300 rounded-lg overflow-hidden">
+                        <div className="relative rounded-2xl overflow-hidden" style={{
+                          border: '0.4px solid #E5E7EB',
+                          borderRadius: '16px',
+                          boxShadow: phoneFocused
+                            ? '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)'
+                            : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
+                          transform: phoneFocused ? 'translateY(-1px)' : 'translateY(0)',
+                          transition: 'all 0.2s',
+                          willChange: 'transform, box-shadow',
+                          opacity: (verificationMethod as string) === 'phone' ? 0.6 : 1
+                        }}>
                           {/* Country/Region Section */}
                           <div className="relative border-b border-gray-200">
                             <select 
@@ -1990,20 +2031,37 @@ export default function AccountCheckModal({
                     </>
                   )}
                   
-                  <Button
-                    onClick={() => {
-                      console.log('AccountCheckModal: Continue button clicked, form data:', formData);
-                      nextPage();
-                    }}
-                    disabled={!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim()}
-                    className="w-full"
-                  >
-                    Continue
-                  </Button>
-                </div>
+                  {/* Continue Button - Smaller and Centered */}
+                  <div className="flex justify-center mt-8">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('AccountCheckModal: Continue button clicked, form data:', formData);
+                        nextPage();
+                      }}
+                      disabled={!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim()}
+                      className="px-8 py-3 bg-brand text-white rounded-lg font-medium transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                      style={{ 
+                        backgroundColor: '#FF6600',
+                        boxShadow: '0 2px 4px rgba(255, 102, 0, 0.2)',
+                        willChange: 'transform, box-shadow'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!(!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim())) {
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 102, 0, 0.3)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 102, 0, 0.2)';
+                      }}
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </form>
               ) : (
                 // Page 2: Profile Pic + Bio
-                <div className="space-y-6">
+                <div className="max-w-md mx-auto w-full space-y-6">
                   <div>
                     <div className="flex justify-center mb-2">
                       <label className="text-sm font-medium text-gray-700">
