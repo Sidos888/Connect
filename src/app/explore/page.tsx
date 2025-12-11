@@ -620,8 +620,8 @@ function ExplorePage() {
                       </span>
                       {!category.href && (
                         <div className="absolute top-3 right-3 text-right">
-                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
-                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Coming</div>
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Soon</div>
                         </div>
                       )}
                     </div>
@@ -745,8 +745,8 @@ function ExplorePage() {
                     <div className="text-6xl leading-none">🎲</div>
                     <span className="text-lg font-semibold text-neutral-900">Side Quest</span>
                     <div className="absolute top-3 right-3 text-right">
-                      <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
-                      <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
+                      <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Coming</div>
+                      <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Soon</div>
                     </div>
                   </div>
                 </button>
@@ -798,8 +798,8 @@ function ExplorePage() {
                       </span>
                       {!category.href && (
                         <div className="absolute top-3 right-3 text-right">
-                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
-                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Coming</div>
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Soon</div>
                         </div>
                       )}
                     </div>
