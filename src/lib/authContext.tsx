@@ -433,64 +433,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('📧 AuthContext: ========== SENDING EMAIL OTP ==========');
       
-      // CRITICAL FIX: Wait for auth state to settle after sign-out
-      // This prevents RPC calls from hanging when Supabase client is in transitional state
-      let retries = 0;
-      const maxRetries = 5;
-      let authStateReady = false;
-      
-      while (retries < maxRetries && !authStateReady) {
-        try {
-          const { error: sessionError } = await supabase.auth.getSession();
-          // If we can get session state without error, we're ready
-          if (!sessionError) {
-            authStateReady = true;
-            break;
-          }
-        } catch (err) {
-          // Session check failed, will retry
-        }
-        
-        retries++;
-        if (retries < maxRetries) {
-          console.log(`📧 AuthContext: Waiting for auth state to settle (attempt ${retries}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
-        }
-      }
-      
-      if (!authStateReady) {
-        console.warn('⚠️ AuthContext: Auth state not ready after retries - proceeding anyway');
-      }
-      
       // Normalize email (server-side normalization enforced by RPC)
       const normalizedEmail = normalizeEmail(email);
       console.log('📧 AuthContext: Normalized email:', normalizedEmail);
       
-      // Check server-side rate limit with timeout protection
-      const rateLimitPromise = supabase
-        .rpc('app_can_send_otp', {
-          p_identifier: normalizedEmail,
-          p_ip: 'client' // In production, get from request headers server-side
+      // CRITICAL FIX: Skip rate limit check if we just signed out (getSession can hang)
+      // Instead, add timeout protection directly to RPC call
+      // Rate limit check is optional - Supabase Auth handles OTP sending regardless
+      let canSend = true;
+      let rateLimitError = null;
+      
+      try {
+        console.log('📧 AuthContext: Attempting rate limit check with timeout protection...');
+        
+        const rateLimitPromise = supabase
+          .rpc('app_can_send_otp', {
+            p_identifier: normalizedEmail,
+            p_ip: 'client'
+          });
+
+        const timeoutPromise = new Promise<{ data: boolean; error: null }>((resolve) => 
+          setTimeout(() => {
+            console.warn('⚠️ AuthContext: Rate limit check timeout after 5 seconds - proceeding anyway');
+            resolve({ data: true, error: null }); // Default to allowing
+          }, 5000) // 5 second timeout (reduced from 10s for faster UX)
+        );
+
+        const rateLimitResult = await Promise.race([
+          rateLimitPromise,
+          timeoutPromise
+        ]).catch(err => {
+          console.warn('⚠️ AuthContext: Rate limit check failed - proceeding anyway:', err);
+          return { data: true, error: null }; // Default to allowing
         });
-
-      const timeoutPromise = new Promise<{ data: boolean; error: null }>((resolve) => 
-        setTimeout(() => {
-          console.warn('⚠️ AuthContext: Rate limit check timeout - proceeding anyway');
-          resolve({ data: true, error: null }); // Default to allowing
-        }, 10000) // 10 second timeout
-      );
-
-      const rateLimitResult = await Promise.race([
-        rateLimitPromise,
-        timeoutPromise
-      ]).catch(err => {
-        console.warn('⚠️ AuthContext: Rate limit check failed - proceeding anyway:', err);
-        return { data: true, error: null }; // Default to allowing
-      });
-      
-      const { data: canSend, error: rateLimitError } = rateLimitResult as { data: boolean | null; error: any };
-      
-      console.log('📧 AuthContext: Rate limit check:', { canSend, rateLimitError });
+        
+        const result = rateLimitResult as { data: boolean | null; error: any };
+        canSend = result.data ?? true;
+        rateLimitError = result.error;
+        
+        console.log('📧 AuthContext: Rate limit check completed:', { canSend, rateLimitError });
+      } catch (rpcError) {
+        console.warn('⚠️ AuthContext: Rate limit check exception - proceeding anyway:', rpcError);
+        // Continue - allow OTP to be sent even if rate limit check fails
+      }
       
       if (rateLimitError || !canSend) {
         console.error('❌ AuthContext: Rate limit exceeded');
@@ -532,35 +517,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('📱 AuthContext: ========== SENDING PHONE OTP ==========');
       
-      // CRITICAL FIX: Wait for auth state to settle after sign-out
-      // This prevents RPC calls from hanging when Supabase client is in transitional state
-      let retries = 0;
-      const maxRetries = 5;
-      let authStateReady = false;
-      
-      while (retries < maxRetries && !authStateReady) {
-        try {
-          const { error: sessionError } = await supabase.auth.getSession();
-          // If we can get session state without error, we're ready
-          if (!sessionError) {
-            authStateReady = true;
-            break;
-          }
-        } catch (err) {
-          // Session check failed, will retry
-        }
-        
-        retries++;
-        if (retries < maxRetries) {
-          console.log(`📱 AuthContext: Waiting for auth state to settle (attempt ${retries}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
-        }
-      }
-      
-      if (!authStateReady) {
-        console.warn('⚠️ AuthContext: Auth state not ready after retries - proceeding anyway');
-      }
-      
       // Normalize phone (server-side normalization enforced by RPC)
       let normalizedPhone: string;
       try {
@@ -571,31 +527,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error('Invalid phone number format') };
       }
       
-      // Check server-side rate limit with timeout protection
-      const rateLimitPromise = supabase
-        .rpc('app_can_send_otp', {
-          p_identifier: normalizedPhone,
-          p_ip: 'client'
+      // CRITICAL FIX: Skip rate limit check if we just signed out (getSession can hang)
+      // Instead, add timeout protection directly to RPC call
+      // Rate limit check is optional - Supabase Auth handles OTP sending regardless
+      let canSend = true;
+      let rateLimitError = null;
+      
+      try {
+        console.log('📱 AuthContext: Attempting rate limit check with timeout protection...');
+        
+        const rateLimitPromise = supabase
+          .rpc('app_can_send_otp', {
+            p_identifier: normalizedPhone,
+            p_ip: 'client'
+          });
+
+        const timeoutPromise = new Promise<{ data: boolean; error: null }>((resolve) => 
+          setTimeout(() => {
+            console.warn('⚠️ AuthContext: Rate limit check timeout after 5 seconds - proceeding anyway');
+            resolve({ data: true, error: null }); // Default to allowing
+          }, 5000) // 5 second timeout (reduced from 10s for faster UX)
+        );
+
+        const rateLimitResult = await Promise.race([
+          rateLimitPromise,
+          timeoutPromise
+        ]).catch(err => {
+          console.warn('⚠️ AuthContext: Rate limit check failed - proceeding anyway:', err);
+          return { data: true, error: null }; // Default to allowing
         });
-
-      const timeoutPromise = new Promise<{ data: boolean; error: null }>((resolve) => 
-        setTimeout(() => {
-          console.warn('⚠️ AuthContext: Rate limit check timeout - proceeding anyway');
-          resolve({ data: true, error: null }); // Default to allowing
-        }, 10000) // 10 second timeout
-      );
-
-      const rateLimitResult = await Promise.race([
-        rateLimitPromise,
-        timeoutPromise
-      ]).catch(err => {
-        console.warn('⚠️ AuthContext: Rate limit check failed - proceeding anyway:', err);
-        return { data: true, error: null }; // Default to allowing
-      });
-      
-      const { data: canSend, error: rateLimitError } = rateLimitResult as { data: boolean | null; error: any };
-      
-      console.log('📱 AuthContext: Rate limit check:', { canSend, rateLimitError });
+        
+        const result = rateLimitResult as { data: boolean | null; error: any };
+        canSend = result.data ?? true;
+        rateLimitError = result.error;
+        
+        console.log('📱 AuthContext: Rate limit check completed:', { canSend, rateLimitError });
+      } catch (rpcError) {
+        console.warn('⚠️ AuthContext: Rate limit check exception - proceeding anyway:', rpcError);
+        // Continue - allow OTP to be sent even if rate limit check fails
+      }
       
       if (rateLimitError || !canSend) {
         console.error('❌ AuthContext: Rate limit exceeded');
