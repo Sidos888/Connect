@@ -549,9 +549,9 @@ function ExplorePage() {
                 <div className="flex flex-col items-start h-full p-4 gap-1.5 relative">
                   <div className="text-4xl leading-none">🎲</div>
                   <span className="text-base font-semibold text-neutral-900 text-left leading-tight">Side Quest</span>
-                  <div className="absolute top-2 right-2 text-right">
-                    <div className="text-[10px] font-medium leading-tight" style={{ color: '#9333EA' }}>Coming</div>
-                    <div className="text-[10px] font-medium leading-tight" style={{ color: '#9333EA' }}>Soon</div>
+                  <div className="absolute top-3 right-3 text-right">
+                    <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
+                    <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
                   </div>
                 </div>
               </button>
@@ -613,11 +613,17 @@ function ExplorePage() {
                       e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }}
                   >
-                    <div className="flex flex-col items-start h-full p-4 gap-2">
+                    <div className="flex flex-col items-start h-full p-4 gap-2 relative">
                       <div className="text-4xl leading-none">{category.icon}</div>
                       <span className="text-base font-semibold text-neutral-900 text-left leading-tight">
                         {category.title}
                       </span>
+                      {!category.href && (
+                        <div className="absolute top-3 right-3 text-right">
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
+                        </div>
+                      )}
                     </div>
                   </button>
                 ))}
@@ -785,11 +791,17 @@ function ExplorePage() {
                       e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                     }}
                   >
-                    <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
+                    <div className="flex flex-col items-center justify-center h-full gap-3 p-4 relative">
                       <div className="text-6xl leading-none">{category.icon}</div>
                       <span className="text-lg font-semibold text-neutral-900 text-center leading-tight">
                         {category.title}
                       </span>
+                      {!category.href && (
+                        <div className="absolute top-3 right-3 text-right">
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
+                          <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
+                        </div>
+                      )}
                     </div>
                   </button>
                 ))}

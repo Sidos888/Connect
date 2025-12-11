@@ -211,7 +211,10 @@ export default function ProfileModal({
             {/* Add Business Text - Centered */}
             <div className="flex flex-col items-center justify-center text-center">
               <span className="text-base font-semibold text-gray-900">Add Business</span>
-              <span className="text-sm text-gray-500 mt-0.5">Coming soon</span>
+              <div className="mt-0.5">
+                <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Coming</div>
+                <div className="text-[11px] font-semibold leading-[1.2] tracking-wide" style={{ color: '#9333EA' }}>Soon</div>
+              </div>
             </div>
             
             {/* Plus Icon - Right side, same position as QR code */}
