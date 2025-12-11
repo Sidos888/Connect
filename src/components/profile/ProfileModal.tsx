@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, QrCode, Plus } from 'lucide-react';
+import { X, QrCode, Plus, Briefcase } from 'lucide-react';
 import ProfileCard from '@/components/profile/ProfileCard';
 import { useRouter } from 'next/navigation';
 import { getDeviceCornerRadius } from '@/lib/deviceCornerRadius';
