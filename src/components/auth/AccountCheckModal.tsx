@@ -330,6 +330,22 @@ export default function AccountCheckModal({
       }
       
       console.log('AccountCheckModal: ❌ FAST CHECK: No direct match found');
+      
+      // CRITICAL FIX: After OTP verification, if we have a user but no account,
+      // we already know it's a new user. Don't call checkUserExists which incorrectly
+      // checks if email exists in Supabase Auth (it does after OTP verification).
+      // The database checks above already confirmed there's no account record.
+      if (user && !account) {
+        console.log('AccountCheckModal: ✅ User authenticated but no account found - treating as new user');
+        console.log('AccountCheckModal: Skipping checkUserExists (would incorrectly return exists=true after OTP)');
+        clearTimeout(timeoutId);
+        setUserExists(false);
+        setExistingUser(null);
+        setInitialAccountCheck(false);
+        setAccountCheckInProgress(false);
+        return;
+      }
+      
       console.log('AccountCheckModal: FAST CHECK: Falling back to comprehensive check...');
       console.log('AccountCheckModal: Calling checkUserExists with:', {
         verificationMethod,
@@ -386,8 +402,17 @@ export default function AccountCheckModal({
           setTimeout(() => bulletproofAutoRedirect(), 100); // Bulletproof auto-redirect
         }
       } else {
-        setUserExists(exists);
-        setExistingUser(userData || null);
+        // CRITICAL: If checkUserExists says user exists but no userData, it means
+        // the email exists in Supabase Auth but no account record. This happens after OTP.
+        // Treat as new user (needs to complete sign-up).
+        if (exists && !userData) {
+          console.log('AccountCheckModal: ⚠️ Email exists in Auth but no account record - treating as new user');
+          setUserExists(false);
+          setExistingUser(null);
+        } else {
+          setUserExists(exists);
+          setExistingUser(userData || null);
+        }
       }
       
       setInitialAccountCheck(false); // Mark initial check as complete
