@@ -827,6 +827,7 @@ export default function AccountCheckModal({
   };
 
   const handleImageChange = (file: File | null) => {
+    console.log('AccountCheckModal: handleImageChange called with:', file ? { name: file.name, type: file.type, size: file.size } : null);
     setFormData(prev => ({ ...prev, profilePicture: file }));
   };
 
@@ -1062,8 +1063,12 @@ export default function AccountCheckModal({
       
       // Upload avatar AFTER account and identity are created
       let avatarUrl = null;
-      if (formData.profilePicture) {
-        console.log('AccountCheckModal: Uploading avatar after account creation...');
+      if (formData.profilePicture && formData.profilePicture instanceof File && formData.profilePicture.size > 0) {
+        console.log('AccountCheckModal: Uploading avatar after account creation...', {
+          fileName: formData.profilePicture.name,
+          fileSize: formData.profilePicture.size,
+          fileType: formData.profilePicture.type
+        });
         try {
           const fileExt = formData.profilePicture.name.split('.').pop();
           const fileName = `${user.id}.${fileExt}`;
@@ -2118,7 +2123,7 @@ export default function AccountCheckModal({
                       onClick={() => fileInputRef.current?.click()}
                       className="text-sm font-medium text-gray-900"
                     >
-                      Edit
+                      Add
                     </button>
                     <input
                       ref={fileInputRef}

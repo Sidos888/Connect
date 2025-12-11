@@ -25,12 +25,13 @@ export default function Avatar({ src, name = "?", size = 32, className }: Props)
   
   return (
     <div
-      className={`rounded-full ${src && !imageError ? 'bg-neutral-200 text-neutral-700' : 'border-dashed border-gray-400 bg-transparent text-gray-400'} flex items-center justify-center ${className ?? ""}`}
+      className={`rounded-full ${src && !imageError ? 'bg-neutral-200 text-neutral-700' : 'bg-white border-gray-300 text-gray-400'} flex items-center justify-center ${className ?? ""}`}
       style={{ 
         width: size, 
         height: size,
         borderWidth: src && !imageError ? '0' : borderWidth,
-        borderStyle: src && !imageError ? 'none' : 'dashed',
+        borderStyle: src && !imageError ? 'none' : 'solid',
+        borderColor: src && !imageError ? 'transparent' : '#D1D5DB',
         overflow: 'hidden',
         position: 'relative'
       }}
