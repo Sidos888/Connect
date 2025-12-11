@@ -6,6 +6,7 @@ import { getSupabaseClient, clearInvalidSession } from './supabaseClient';
 import { formatNameForDisplay, normalizeEmail, normalizePhoneAU } from './utils';
 import { ChatService } from './chatService';
 import { useAppStore } from './store';
+import { compressImage } from './imageUtils';
 
 // Account interface (our true user profile)
 interface Account {
@@ -1038,7 +1039,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       console.log('✅ Session valid');
       
-      const fileExt = file.name.split('.').pop();
+      // Compress image before upload to reduce file size
+      console.log('📸 Compressing image before upload...');
+      const compressedFile = await compressImage(file, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.85,
+        mimeType: 'image/jpeg'
+      });
+      console.log('📸 Image compressed', {
+        originalSize: file.size,
+        compressedSize: compressedFile.size,
+        reduction: `${Math.round((1 - compressedFile.size / file.size) * 100)}%`
+      });
+      
+      const fileExt = 'jpg'; // Always use jpg after compression
       const fileName = `${account.id}.${fileExt}`;
       
       console.log('📸 Uploading to bucket: avatars');
@@ -1048,7 +1063,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Add timeout to detect hanging uploads
       const uploadPromise = supabase.storage
         .from('avatars')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, compressedFile, { upsert: true });
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
