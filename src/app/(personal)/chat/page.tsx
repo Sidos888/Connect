@@ -27,6 +27,7 @@ import SearchModal from "@/components/chat/SearchModal";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Image from "next/image";
 import Loading8 from "@/components/Loading8";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 function MessagesPageContent() {
   const { isHydrated } = useAppStore();

@@ -32,6 +32,7 @@ import ProfileModal from "@/components/profile/ProfileModal";
 import { listingsService, Listing } from "@/lib/listingsService";
 import { useQuery } from "@tanstack/react-query";
 import ListingCard from "@/components/listings/ListingCard";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 type TabDef = { id: string; label: string; Icon?: React.ComponentType<{ size?: number; className?: string }> };
 
