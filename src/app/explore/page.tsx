@@ -530,7 +530,7 @@ function ExplorePage() {
               </button>
 
               <button
-                className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
+                className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative opacity-75"
                 style={{ 
                   height: '120px',
                   borderWidth: '0.4px',
@@ -548,7 +548,7 @@ function ExplorePage() {
               >
                 <div className="flex flex-col items-start h-full p-4 gap-1.5 relative">
                   <div className="text-4xl leading-none">🎲</div>
-                  <span className="text-base font-semibold text-gray-500 text-left leading-tight">Side Quest</span>
+                  <span className="text-base font-semibold text-gray-900 text-left leading-tight">Side Quest</span>
                   <div className="absolute top-3 right-3 text-right">
                     <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Coming</div>
                     <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Soon</div>
@@ -596,7 +596,7 @@ function ExplorePage() {
                         router.push(category.href);
                       }
                     }}
-                    className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] active:scale-[0.98] relative"
+                    className={`rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] active:scale-[0.98] relative ${!category.href ? 'opacity-75' : ''}`}
                     style={{
                       height: '120px',
                       borderWidth: '0.4px',
@@ -615,7 +615,7 @@ function ExplorePage() {
                   >
                     <div className="flex flex-col items-start h-full p-4 gap-2 relative">
                       <div className="text-4xl leading-none">{category.icon}</div>
-                      <span className={`text-base font-semibold text-left leading-tight ${category.href ? 'text-neutral-900' : 'text-gray-500'}`}>
+                      <span className="text-base font-semibold text-gray-900 text-left leading-tight">
                         {category.title}
                       </span>
                       {!category.href && (
@@ -725,7 +725,7 @@ function ExplorePage() {
 
                 <button
                   aria-disabled={true}
-                  className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative"
+                  className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] relative opacity-75"
                   style={{
                     width: '157px',
                     height: '157px',
@@ -743,7 +743,7 @@ function ExplorePage() {
                 >
                   <div className="flex flex-col items-center justify-center h-full gap-2 relative">
                     <div className="text-6xl leading-none">🎲</div>
-                    <span className="text-lg font-semibold text-gray-500">Side Quest</span>
+                    <span className="text-lg font-semibold text-gray-900">Side Quest</span>
                     <div className="absolute top-3 right-3 text-right">
                       <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Coming</div>
                       <div className="text-[11px] font-semibold leading-[1.2] tracking-wide text-gray-500">Soon</div>
@@ -773,14 +773,13 @@ function ExplorePage() {
                       }
                     }}
                     disabled={!category.href}
-                    className="rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] active:scale-[0.98] relative aspect-square"
+                    className={`rounded-2xl bg-white transition-all duration-200 focus:outline-none hover:-translate-y-[1px] active:scale-[0.98] relative aspect-square ${!category.href ? 'opacity-75' : ''}`}
                     style={{
                       borderWidth: '0.4px',
                       borderColor: '#E5E7EB',
                       boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                       willChange: 'transform, box-shadow',
-                      cursor: category.href ? 'pointer' : 'default',
-                      opacity: category.href ? 1 : 0.6
+                      cursor: category.href ? 'pointer' : 'default'
                     }}
                     onMouseEnter={(e) => {
                       if (category.href) {
@@ -793,7 +792,7 @@ function ExplorePage() {
                   >
                     <div className="flex flex-col items-center justify-center h-full gap-3 p-4 relative">
                       <div className="text-6xl leading-none">{category.icon}</div>
-                      <span className={`text-lg font-semibold text-center leading-tight ${category.href ? 'text-neutral-900' : 'text-gray-500'}`}>
+                      <span className="text-lg font-semibold text-gray-900 text-center leading-tight">
                         {category.title}
                       </span>
                       {!category.href && (
