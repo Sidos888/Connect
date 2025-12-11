@@ -102,13 +102,32 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   // Reset success states when modal opens
   // NOTE: We do NOT reset step when modal closes - this allows VerificationModal to display
   // The step will be reset when modal opens fresh (not in verify step)
+  // CRITICAL: If user is signed out and step is 'verify', we MUST reset because previous session is gone
   useEffect(() => {
     if (isOpen) {
       console.log('🔐 LoginModal: Modal opened, resetting state', {
         currentStep: step,
         isMobile,
-        willResetTo: isMobile ? 'phone' : 'email'
+        willResetTo: isMobile ? 'phone' : 'email',
+        hasUser: !!user
       });
+
+      // CRITICAL FIX: If user is signed out and we're in verify step, reset everything
+      // This prevents showing old verification state after sign out
+      if (!user && step === 'verify') {
+        console.log('🔐 LoginModal: User signed out but step is verify - forcing complete reset');
+        setStep(isMobile ? 'phone' : 'email');
+        setPhoneNumber('');
+        setEmail('');
+        setPassword('');
+        setVerificationMethod('email');
+        setVerificationSuccess(false);
+        setAccountRecognized(false);
+        setIsRedirecting(false);
+        setLoading(false);
+        setError('');
+        return;
+      }
 
       // Only reset step if we're not already in verify step
       // This prevents resetting when modal re-opens during verification flow
@@ -140,7 +159,29 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       // Note: We intentionally do NOT reset step here to allow VerificationModal to display
       // Step will be reset when modal opens fresh (not in verify step) in the if (isOpen) block above
     }
-  }, [isOpen, isMobile]);
+  }, [isOpen, isMobile, user]);
+
+  // Reset state when user signs out (even if modal is closed)
+  // This ensures fresh state when modal opens after sign out
+  useEffect(() => {
+    if (!user && (step === 'verify' || step === 'account-check' || phoneNumber || email)) {
+      console.log('🔐 LoginModal: User signed out - resetting all state', {
+        step,
+        hasPhoneNumber: !!phoneNumber,
+        hasEmail: !!email
+      });
+      setStep(isMobile ? 'phone' : 'email');
+      setPhoneNumber('');
+      setEmail('');
+      setPassword('');
+      setVerificationMethod('email');
+      setVerificationSuccess(false);
+      setAccountRecognized(false);
+      setIsRedirecting(false);
+      setLoading(false);
+      setError('');
+    }
+  }, [user, isMobile]); // Only depend on user and isMobile, not step/phoneNumber/email to avoid loops
 
   // 🚀 BULLETPROOF AUTH: Disabled AccountCheckModal completely
   // No more automatic step switching to account-check
