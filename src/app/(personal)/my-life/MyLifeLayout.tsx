@@ -255,9 +255,15 @@ export default function MyLifeLayout(): React.JSX.Element {
               {/* Add button - positioned at same height as edit button on menu profile page */}
               <div className="absolute" style={{ top: '0', right: '32px', zIndex: 10 }}>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    // Trigger haptic feedback
+                    try {
+                      await Haptics.impact({ style: ImpactStyle.Light });
+                    } catch (error) {
+                      // Haptics not available (web environment), silently fail
+                    }
                     // Add action here
                   }}
                   aria-label="Add activity"

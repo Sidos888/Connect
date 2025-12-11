@@ -4,6 +4,7 @@ import { Settings } from "lucide-react";
 import { BellIcon } from "@/components/icons";
 import { useUnreadNotificationsCount } from "@/lib/notificationsQueries";
 import { useAuth } from "@/lib/authContext";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface MenuTopActionsProps {
   onSettingsClick: () => void;
@@ -38,8 +39,14 @@ export default function MenuTopActions({ onSettingsClick, onNotificationsClick }
     >
       {/* Settings Icon - Left Side */}
       <button
-        onClick={(e) => {
+        onClick={async (e) => {
           e.stopPropagation();
+          // Trigger haptic feedback
+          try {
+            await Haptics.impact({ style: ImpactStyle.Light });
+          } catch (error) {
+            // Haptics not available (web environment), silently fail
+          }
           onSettingsClick();
         }}
         className="flex items-center justify-center flex-1 h-full"
@@ -52,8 +59,14 @@ export default function MenuTopActions({ onSettingsClick, onNotificationsClick }
       </button>
       {/* Notifications Icon - Right Side */}
       <button
-        onClick={(e) => {
+        onClick={async (e) => {
           e.stopPropagation();
+          // Trigger haptic feedback
+          try {
+            await Haptics.impact({ style: ImpactStyle.Light });
+          } catch (error) {
+            // Haptics not available (web environment), silently fail
+          }
           onNotificationsClick();
         }}
         className="flex items-center justify-center flex-1 h-full relative"

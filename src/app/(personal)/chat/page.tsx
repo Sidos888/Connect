@@ -814,8 +814,14 @@ function MessagesPageContent() {
                 >
                   {/* Search Icon - Left Side */}
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
+                      // Trigger haptic feedback
+                      try {
+                        await Haptics.impact({ style: ImpactStyle.Light });
+                      } catch (error) {
+                        // Haptics not available (web environment), silently fail
+                      }
                       setIsSearchOpen(true);
                     }}
                     className="flex items-center justify-center flex-1 h-full"
@@ -824,8 +830,14 @@ function MessagesPageContent() {
                   </button>
                   {/* Plus Icon - Right Side */}
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
+                      // Trigger haptic feedback
+                      try {
+                        await Haptics.impact({ style: ImpactStyle.Light });
+                      } catch (error) {
+                        // Haptics not available (web environment), silently fail
+                      }
                       handleNewMessageClick();
                     }}
                     className="flex items-center justify-center flex-1 h-full"
