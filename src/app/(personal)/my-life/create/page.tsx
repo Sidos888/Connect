@@ -889,9 +889,9 @@ function CreateListingPageContent() {
                   placeholder=""
                   rows={4}
                   className={`w-full pl-4 pr-4 focus:ring-0 focus:outline-none transition-all bg-white text-black resize-none rounded-xl ${(summaryFocused || summary) ? 'pt-6 pb-2' : 'py-5'}`}
-                  style={{ 
-                    fontSize: '17px', 
-                    lineHeight: '1.5', 
+                  style={{
+                    fontSize: '17px',
+                    lineHeight: '1.5',
                     fontFamily: 'inherit',
                     fontWeight: '400',
                     borderWidth: '0.4px',
@@ -902,6 +902,9 @@ function CreateListingPageContent() {
                       : '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
                     willChange: 'box-shadow'
                   }}
+                  autoCapitalize="sentences"
+                  autoCorrect="off"
+                  spellCheck={false}
                   onMouseEnter={(e) => {
                     if (!summaryFocused) {
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
