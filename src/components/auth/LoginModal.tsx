@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/authContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useAppStore } from '@/lib/store';
 import VerificationModal from './VerificationModal';
+import AccountCheckModal from './AccountCheckModal';
 // START REVIEWER OVERRIDE
 import { isReviewBuild, isReviewerEmail, REVIEWER_PASSWORD } from '@/lib/reviewerAuth';
 // END REVIEWER OVERRIDE
@@ -369,20 +370,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       if (isExistingAccount) {
         console.log('🚀 BULLETPROOF AUTH: Existing account detected - CLIENT-SIDE REDIRECT to My Life');
         
-        // Set profile data immediately (no waiting for other systems)
-        const { setPersonalProfile } = useAppStore.getState();
-        setPersonalProfile({
-          id: '4f04235f-d166-48d9-ae07-a97a6421a328', // Your user ID from logs
-          name: 'Sid Farquharson',
-          bio: '',
-          avatarUrl: null,
-          email: email,
-          phone: phoneNumber,
-          dateOfBirth: '',
-          connectId: 'J9UGOD',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+        // Account is already set in auth context (from verifyEmailCode/verifyPhoneCode)
+        // Auth context will automatically sync to store via useEffect
+        // No need to manually set profile data here
         
         // CLIENT-SIDE NAVIGATION - Preserves React state, no page reload
         console.log('🚀 BULLETPROOF AUTH: Closing modal and doing client-side navigation');
@@ -390,13 +380,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         router.push('/my-life');
         
       } else {
-        console.log('🚀 BULLETPROOF AUTH: New account detected - CLIENT-SIDE REDIRECT to signup');
+        console.log('🚀 BULLETPROOF AUTH: New account detected - showing sign-up form');
         
-        // CLIENT-SIDE NAVIGATION - Preserves React state, no page reload
-        console.log('🚀 BULLETPROOF AUTH: Closing modal and doing client-side navigation to signup');
+        // Show AccountCheckModal for new users to complete sign-up
+        setVerificationValue(verificationMethod === 'phone' ? phoneNumber : email);
+        setStep('account-check');
         setLoading(false);
-        onClose();
-        router.push('/onboarding');
       }
       
     } catch (error) {
@@ -622,6 +611,36 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             accountRecognized={accountRecognized}
           />
         </>
+      ) : step === 'account-check' ? (
+        <AccountCheckModal
+          isOpen={isOpen}
+          onClose={async () => {
+            console.log('LoginModal: onClose called for AccountCheckModal');
+            // Check session directly instead of user state to avoid timing issues
+            const { data: { session } } = await supabase.auth.getSession();
+            console.log('LoginModal: Session check in onClose:', { 
+              hasSession: !!session, 
+              userId: session?.user?.id,
+              userEmail: session?.user?.email 
+            });
+            
+            if (!session) {
+              console.log('LoginModal: No session found, but NOT signing out - preserving user state');
+            } else {
+              console.log('LoginModal: Session found, NOT signing out');
+            }
+            
+            // Reset to initial step
+            if (isMobile) {
+              setStep('phone');
+            } else {
+              setStep('email');
+            }
+            onClose();
+          }}
+          verificationMethod={verificationMethod}
+          verificationValue={verificationValue}
+        />
       ) : (
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
           {/* Backdrop - removed for full page modal */}

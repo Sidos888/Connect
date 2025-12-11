@@ -380,9 +380,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, user?.id]);
 
   // Load account for authenticated user - UNIFIED IDENTITY
-  const loadAccountForUser = async (authUserId: string) => {
+  // allowAutoCreate: If true, creates account with name 'User' if it doesn't exist (for backward compatibility)
+  // If false (default), does not create account - user must complete sign-up form
+  const loadAccountForUser = async (authUserId: string, allowAutoCreate: boolean = false) => {
     try {
-      console.log('🔍 AuthContext: Loading account for:', authUserId);
+      console.log('🔍 AuthContext: Loading account for:', authUserId, 'allowAutoCreate:', allowAutoCreate);
       
       // Direct query - accounts.id = auth.uid() now
       const { data, error } = await supabase!
@@ -397,20 +399,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccount(data);
         console.log('✅ AuthContext: Account loaded:', data.name);
       } else {
-        // Create account if doesn't exist (new user signup)
-        console.log('🆕 AuthContext: Creating new account for:', authUserId);
-        const { data: newAccount, error: createError } = await supabase!
-          .from('accounts')
-          .insert({ 
-            id: authUserId, 
-            name: 'User' 
-          })
-          .select()
-          .single();
-        
-        if (createError) throw createError;
-        setAccount(newAccount);
-        console.log('✅ AuthContext: New account created');
+        if (allowAutoCreate) {
+          // Create account if doesn't exist (for backward compatibility only)
+          console.log('🆕 AuthContext: Auto-creating account for:', authUserId, '(backward compatibility)');
+          const { data: newAccount, error: createError } = await supabase!
+            .from('accounts')
+            .insert({ 
+              id: authUserId, 
+              name: 'User' 
+            })
+            .select()
+            .single();
+          
+          if (createError) throw createError;
+          setAccount(newAccount);
+          console.log('✅ AuthContext: New account auto-created (backward compatibility)');
+        } else {
+          // Account doesn't exist - user needs to complete sign-up
+          // DO NOT create account here - let AccountCheckModal handle it
+          console.log('🆕 AuthContext: No account found - user needs to complete sign-up');
+          setAccount(null);
+        }
       }
     } catch (err) {
       console.error('❌ AuthContext: Account load failed:', err);
@@ -569,30 +578,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         account = existingAccount;
         isExistingAccount = true;
         console.log('✅ AuthContext: Existing account found:', account.name);
+        
+        // Step 3: Set account state for existing users
+        setAccount(account);
       } else {
-        // Account doesn't exist, create new one
-        console.log('🆕 AuthContext: Creating new account for user:', data.user.id);
-        const { data: newAccount, error: createError } = await supabase
-          .from('accounts')
-          .insert({ 
-            id: data.user.id,
-            name: 'User'
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('❌ AuthContext: Failed to create new account:', createError);
-          throw createError;
-        }
-
-        account = newAccount;
+        // Account doesn't exist - user needs to complete sign-up
+        // DO NOT create account here - let AccountCheckModal handle it
+        console.log('🆕 AuthContext: No account found - user needs to complete sign-up');
         isExistingAccount = false;
-        console.log('✅ AuthContext: New account created:', account);
+        // Don't set account state - it will be set after user completes sign-up form
       }
-
-      // Step 3: Set account state
-      setAccount(account);
       
       // CRITICAL: Immediately trigger auth state change for instant login
       console.log('🔐 AuthContext: Triggering immediate auth state change...');
@@ -657,30 +652,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         account = existingAccount;
         isExistingAccount = true;
         console.log('✅ AuthContext: Existing account found:', account.name);
+        
+        // Step 3: Set account state for existing users
+        setAccount(account);
       } else {
-        // Account doesn't exist, create new one
-        console.log('🆕 AuthContext: Creating new account for user:', data.user.id);
-        const { data: newAccount, error: createError } = await supabase
-          .from('accounts')
-          .insert({ 
-            id: data.user.id,
-            name: 'User'
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('❌ AuthContext: Failed to create new account:', createError);
-          throw createError;
-        }
-
-        account = newAccount;
+        // Account doesn't exist - user needs to complete sign-up
+        // DO NOT create account here - let AccountCheckModal handle it
+        console.log('🆕 AuthContext: No account found - user needs to complete sign-up');
         isExistingAccount = false;
-        console.log('✅ AuthContext: New account created:', account);
+        // Don't set account state - it will be set after user completes sign-up form
       }
-
-      // Step 3: Set account state
-      setAccount(account);
       
       // CRITICAL: Immediately trigger auth state change for instant login
       console.log('🔐 AuthContext: Triggering immediate auth state change...');
