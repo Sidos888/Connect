@@ -546,9 +546,10 @@ function ExplorePage() {
                   e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                 }}
               >
-                <div className="flex flex-col items-start h-full p-4 gap-2">
+                <div className="flex flex-col items-start h-full p-4 gap-1.5">
                   <div className="text-4xl leading-none">🎲</div>
                   <span className="text-base font-semibold text-neutral-900 text-left leading-tight">Side Quest</span>
+                  <span className="text-xs font-bold tracking-wider" style={{ color: '#9333EA' }}>COMING SOON</span>
                 </div>
               </button>
             </div>
@@ -731,9 +732,10 @@ function ExplorePage() {
                     e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
                 >
-                  <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <div className="flex flex-col items-center justify-center h-full gap-2">
                     <div className="text-6xl leading-none">🎲</div>
                     <span className="text-lg font-semibold text-neutral-900">Side Quest</span>
+                    <span className="text-xs font-bold tracking-wide" style={{ color: '#9333EA' }}>COMING SOON</span>
                   </div>
                 </button>
               </div>
