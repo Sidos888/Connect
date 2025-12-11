@@ -4,6 +4,7 @@ import { LogOut, Trash2, MoreVertical, User, UserCircle } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { useState, useRef, useEffect } from "react";
 import SignOutConfirmModal from "./SignOutConfirmModal";
+import DeleteAccountConfirmModal from "./DeleteAccountConfirmModal";
 
 export default function SettingsContent({
   onBack,
@@ -25,6 +26,9 @@ export default function SettingsContent({
   showSignOutConfirm,
   onConfirmSignOut,
   onCancelSignOut,
+  showDeleteAccountConfirm,
+  onConfirmDeleteAccount,
+  onCancelDeleteAccount,
 }: {
   onBack: () => void;
   onSignOut: () => void;
@@ -45,6 +49,9 @@ export default function SettingsContent({
   showSignOutConfirm?: boolean;
   onConfirmSignOut?: () => void;
   onCancelSignOut?: () => void;
+  showDeleteAccountConfirm?: boolean;
+  onConfirmDeleteAccount?: () => void;
+  onCancelDeleteAccount?: () => void;
 }) {
 
   return (
@@ -54,6 +61,13 @@ export default function SettingsContent({
         isOpen={showSignOutConfirm || false}
         onClose={onCancelSignOut || (() => {})}
         onConfirm={onConfirmSignOut || (() => {})}
+      />
+      
+      {/* Delete Account Confirmation Modal - Slide-up half-page */}
+      <DeleteAccountConfirmModal
+        isOpen={showDeleteAccountConfirm || false}
+        onClose={onCancelDeleteAccount || (() => {})}
+        onConfirm={onConfirmDeleteAccount || (() => {})}
       />
       
     <div className="flex flex-col h-full relative">

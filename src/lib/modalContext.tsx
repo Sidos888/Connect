@@ -725,6 +725,9 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
                 isDeletingAccount={false}
                 personalProfile={storeProfile}
                 showBackButton={false}
+                showDeleteAccountConfirm={false}
+                onConfirmDeleteAccount={async () => {}}
+                onCancelDeleteAccount={() => {}}
                 onViewProfile={() => {
                   setShowCenteredSettings(false);
                   setProfileFromSettings(true);

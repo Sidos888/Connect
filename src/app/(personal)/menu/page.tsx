@@ -556,6 +556,7 @@ export default function Page() {
     const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
     const [showSignOutConfirm, setShowSignOutConfirm] = React.useState(false);
     const [isSigningOut, setIsSigningOut] = React.useState(false);
+    const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = React.useState(false);
 
     const handleSignOut = () => {
       setShowSignOutConfirm(true);
@@ -583,10 +584,11 @@ export default function Page() {
     };
 
     const handleDeleteAccount = () => {
-      setShowDeleteConfirm(true);
+      setShowDeleteAccountConfirm(true);
     };
 
     const confirmDeleteAccount = async () => {
+      setShowDeleteAccountConfirm(false);
       setIsDeletingAccount(true);
       await deleteAccount();
       setIsDeletingAccount(false);
@@ -596,6 +598,7 @@ export default function Page() {
     };
 
     const cancelDeleteAccount = () => {
+      setShowDeleteAccountConfirm(false);
       setShowDeleteConfirm(false);
       setShowFinalConfirm(false);
     };
@@ -670,6 +673,9 @@ export default function Page() {
                 showSignOutConfirm={showSignOutConfirm}
                 onConfirmSignOut={confirmSignOut}
                 onCancelSignOut={cancelSignOut}
+                showDeleteAccountConfirm={showDeleteAccountConfirm}
+                onConfirmDeleteAccount={confirmDeleteAccount}
+                onCancelDeleteAccount={cancelDeleteAccount}
               />
           </div>
           {/* Bottom Blur */}
