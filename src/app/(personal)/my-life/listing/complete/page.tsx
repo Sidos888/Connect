@@ -87,6 +87,27 @@ function CompleteListingContent() {
         }
 
         setListing(data);
+
+        // Mark this listing as shown in database (backup in case hook's insert failed)
+        // This ensures the screen won't show again even if user navigates directly here
+        if (account?.id) {
+          const { error: insertError } = await supabase
+            .from('shown_completion_screens')
+            .insert({
+              user_id: account.id,
+              listing_id: listingId
+            })
+            .select();
+
+          if (insertError) {
+            // Ignore duplicate key errors (already shown) - that's fine
+            if (insertError.code !== '23505') {
+              console.error('Error marking completion screen as shown:', insertError);
+            }
+          } else {
+            console.log('✅ Completion screen marked as shown in database:', listingId);
+          }
+        }
       } catch (error) {
         console.error('Error in loadListing:', error);
         router.push('/my-life');
@@ -96,7 +117,7 @@ function CompleteListingContent() {
     };
 
     loadListing();
-  }, [listingId, supabase, router]);
+  }, [listingId, supabase, router, account?.id]);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
