@@ -347,7 +347,13 @@ export default function MyLifeLayout(): React.JSX.Element {
             actions={[
               {
                 icon: <Plus size={20} className="text-gray-900" strokeWidth={2.5} />,
-                onClick: () => {
+                onClick: async () => {
+                  // Trigger haptic feedback
+                  try {
+                    await Haptics.impact({ style: ImpactStyle.Light });
+                  } catch (error) {
+                    // Haptics not available (web environment), silently fail
+                  }
                   navigate('/my-life/create');
                 },
                 label: "Add"
