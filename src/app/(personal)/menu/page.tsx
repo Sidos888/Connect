@@ -1976,7 +1976,6 @@ export default function Page() {
         avatarUrl={currentAccount?.avatarUrl}
         onViewProfile={() => goToView('profile', 'menu')}
         onShareProfile={navigateToQRCode}
-        onAddBusiness={() => router.push('/create-business')}
       />
       {/* Only show HappeningNowBanner on initial menu page, not subpages */}
       {currentView === 'menu' && <HappeningNowBanner />}
