@@ -881,6 +881,8 @@ export default function AccountCheckModal({
       return;
     }
     
+    // 🚀 SHOW LOADING8 ANIMATION
+    setAccountCheckInProgress(true);
     setIsCreating(true);
     
     // Add timeout to prevent hanging - increased to allow for Connect ID generation
@@ -979,7 +981,7 @@ export default function AccountCheckModal({
 
       console.log('AccountCheckModal: Profile created in Supabase:', data);
       
-      // Create PRIMARY identity link for future sign-ins
+      // Create PRIMARY identity link for future sign-ins - SKIP IF TABLE DOESN'T EXIST
       console.log(`AccountCheckModal: 🔄 Creating PRIMARY identity link for ${verificationMethod}:`, verificationValue);
       try {
         const { error: identityError } = await supabase
@@ -992,7 +994,8 @@ export default function AccountCheckModal({
           });
         
         if (identityError) {
-          console.error('AccountCheckModal: Primary identity link creation failed:', identityError);
+          // Table doesn't exist - this is OK, we're using auth.users for identity now
+          console.warn('AccountCheckModal: Primary identity link creation skipped (table may not exist):', identityError.message);
         } else {
           console.log(`AccountCheckModal: ✅ PRIMARY identity link created successfully for ${verificationMethod}`);
         }
@@ -1073,11 +1076,14 @@ export default function AccountCheckModal({
       
       // Upload avatar AFTER account and identity are created
       let avatarUrl = null;
-      if (formData.profilePicture && formData.profilePicture instanceof File && formData.profilePicture.size > 0) {
+      // 🔧 FIX: Check if file exists (Blob or File), not just File instance
+      if (formData.profilePicture && formData.profilePicture.size > 0) {
         console.log('AccountCheckModal: Uploading avatar after account creation...', {
           fileName: formData.profilePicture.name,
           fileSize: formData.profilePicture.size,
-          fileType: formData.profilePicture.type
+          fileType: formData.profilePicture.type,
+          isFile: formData.profilePicture instanceof File,
+          isBlob: formData.profilePicture instanceof Blob
         });
         try {
           // Compress image before upload to reduce file size
@@ -1189,12 +1195,12 @@ export default function AccountCheckModal({
         }
         
         console.log('AccountCheckModal: Session confirmed, redirecting to /my-life after account creation');
-        setIsCreating(false);
         
-        // Close the modal by hiding it locally
-        console.log('AccountCheckModal: Closing modal after successful account creation');
-        setModalVisible(false);
+        // Keep loading animation visible during redirect
+        // Don't reset states - let the redirect handle cleanup
+        console.log('AccountCheckModal: Keeping loading state during redirect');
         
+        // Redirect immediately - the loading animation is still showing
         router.push('/my-life');
       }, 200);
       
@@ -1203,6 +1209,9 @@ export default function AccountCheckModal({
       
       // Clear timeout
       clearTimeout(timeoutId);
+      
+      // Keep loading animation showing
+      console.log('AccountCheckModal: Error occurred, but attempting redirect anyway');
       
       // Fallback: create local profile if Supabase fails
       console.log('AccountCheckModal: Supabase failed, creating local profile as fallback');
@@ -1239,7 +1248,9 @@ export default function AccountCheckModal({
         });
         
         if (!finalFallbackSession) {
-          console.error('AccountCheckModal: No session found before redirect (fallback), aborting');
+          console.error('AccountCheckModal: No session found before redirect (fallback), resetting');
+          setAccountCheckInProgress(false);
+          setIsCreating(false);
           return;
         }
         
