@@ -129,9 +129,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         return;
       }
 
-      // Only reset step if we're not already in verify step
-      // This prevents resetting when modal re-opens during verification flow
-      if (step !== 'verify') {
+      // Only reset step if we're not already in verify or account-check step
+      // This prevents resetting when modal re-opens during verification or account creation flow
+      if (step !== 'verify' && step !== 'account-check') {
         setVerificationSuccess(false);
         setAccountRecognized(false);
         setIsRedirecting(false);
@@ -146,8 +146,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           // Don't auto-focus email field on web - let user click to activate
         }
       } else {
-        console.log('🔐 LoginModal: Modal opened but step is verify, preserving verify step');
-        // If we're in verify step, clear loading to show the verification modal properly
+        console.log('🔐 LoginModal: Modal opened but step is verify or account-check, preserving current step');
+        // If we're in verify or account-check step, clear loading to show content properly
         setLoading(false);
       }
     } else {
