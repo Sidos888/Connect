@@ -889,9 +889,9 @@ function CreateListingPageContent() {
                   placeholder=""
                   rows={4}
                   className={`w-full pl-4 pr-4 focus:ring-0 focus:outline-none transition-all bg-white text-black resize-none rounded-xl ${(summaryFocused || summary) ? 'pt-6 pb-2' : 'py-5'}`}
-                  style={{
-                    fontSize: '17px',
-                    lineHeight: '1.5',
+                  style={{ 
+                    fontSize: '17px', 
+                    lineHeight: '1.5', 
                     fontFamily: 'inherit',
                     fontWeight: '400',
                     borderWidth: '0.4px',

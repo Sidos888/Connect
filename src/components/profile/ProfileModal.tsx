@@ -210,7 +210,7 @@ export default function ProfileModal({
             
             {/* Add Business Text - Centered */}
             <div className="flex flex-col items-center justify-center text-center">
-              <span className="text-base font-semibold text-gray-900">Add Business</span>
+            <span className="text-base font-semibold text-gray-900">Add Business</span>
               <span className="text-sm text-gray-500 mt-0.5">Coming soon</span>
             </div>
             

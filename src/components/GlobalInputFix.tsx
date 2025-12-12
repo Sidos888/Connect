@@ -251,18 +251,18 @@ export default function GlobalInputFix() {
       const handleFocus = () => {
         // Run after component handlers have executed
         setTimeout(() => {
-          const existingAttr = input.getAttribute('autocapitalize');
-          const existingProp = (input as any).autocapitalize;
-          const hasExisting = existingAttr !== null || existingProp !== undefined;
-          
+        const existingAttr = input.getAttribute('autocapitalize');
+        const existingProp = (input as any).autocapitalize;
+        const hasExisting = existingAttr !== null || existingProp !== undefined;
+        
           console.log('🔧 GlobalInputFix: Focus handler (after component handlers)', {
-            tagName: input.tagName,
-            hasAttribute: input.hasAttribute('autocapitalize'),
-            existingAttr,
-            existingProp,
-            hasExisting
-          });
-          
+          tagName: input.tagName,
+          hasAttribute: input.hasAttribute('autocapitalize'),
+          existingAttr,
+          existingProp,
+          hasExisting
+        });
+        
           // Ensure autocapitalize="sentences" is set for normal capitalization
           // Only override if it's currently "off", empty string, or not set
           const currentAttr = input.getAttribute('autocapitalize');
@@ -275,13 +275,13 @@ export default function GlobalInputFix() {
             if (currentAttr !== 'words' && currentProp !== 'words') {
               input.setAttribute('autocapitalize', 'sentences');
               console.log('🔧 GlobalInputFix: Set autocapitalize="sentences" on focus', { tagName: input.tagName });
-            }
-          } else {
-            console.log('🔧 GlobalInputFix: Keeping existing autocapitalize on focus', { currentAttr, currentProp });
           }
-          input.setAttribute('autocorrect', 'off');
-          input.setAttribute('spellcheck', 'false');
-          input.style.textTransform = 'none';
+        } else {
+            console.log('🔧 GlobalInputFix: Keeping existing autocapitalize on focus', { currentAttr, currentProp });
+        }
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('spellcheck', 'false');
+        input.style.textTransform = 'none';
         }, 0);
       };
       

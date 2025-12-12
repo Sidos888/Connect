@@ -403,17 +403,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (allowAutoCreate) {
           // Create account if doesn't exist (for backward compatibility only)
           console.log('🆕 AuthContext: Auto-creating account for:', authUserId, '(backward compatibility)');
-          const { data: newAccount, error: createError } = await supabase!
-            .from('accounts')
-            .insert({ 
-              id: authUserId, 
-              name: 'User' 
-            })
-            .select()
-            .single();
-          
-          if (createError) throw createError;
-          setAccount(newAccount);
+        const { data: newAccount, error: createError } = await supabase!
+          .from('accounts')
+          .insert({ 
+            id: authUserId, 
+            name: 'User' 
+          })
+          .select()
+          .single();
+        
+        if (createError) throw createError;
+        setAccount(newAccount);
           console.log('✅ AuthContext: New account auto-created (backward compatibility)');
         } else {
           // Account doesn't exist - user needs to complete sign-up
@@ -448,8 +448,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('📧 AuthContext: Attempting rate limit check with timeout protection...');
         
         const rateLimitPromise = supabase
-          .rpc('app_can_send_otp', {
-            p_identifier: normalizedEmail,
+        .rpc('app_can_send_otp', {
+          p_identifier: normalizedEmail,
             p_ip: 'client'
           });
 
@@ -471,7 +471,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const result = rateLimitResult as { data: boolean | null; error: any };
         canSend = result.data ?? true;
         rateLimitError = result.error;
-        
+      
         console.log('📧 AuthContext: Rate limit check completed:', { canSend, rateLimitError });
       } catch (rpcError) {
         console.warn('⚠️ AuthContext: Rate limit check exception - proceeding anyway:', rpcError);
@@ -538,11 +538,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('📱 AuthContext: Attempting rate limit check with timeout protection...');
         
         const rateLimitPromise = supabase
-          .rpc('app_can_send_otp', {
-            p_identifier: normalizedPhone,
-            p_ip: 'client'
-          });
-
+        .rpc('app_can_send_otp', {
+          p_identifier: normalizedPhone,
+          p_ip: 'client'
+        });
+      
         const timeoutPromise = new Promise<{ data: boolean; error: null }>((resolve) => 
           setTimeout(() => {
             console.warn('⚠️ AuthContext: Rate limit check timeout after 5 seconds - proceeding anyway');

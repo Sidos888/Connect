@@ -341,8 +341,8 @@ export default function Page() {
 
   // Get current account info - prioritize auth context account over local storage
   const currentAccount = account
-    ? { name: account.name, avatarUrl: account.profile_pic, bio: account.bio }
-    : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio };
+      ? { name: account.name, avatarUrl: account.profile_pic, bio: account.bio }
+      : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl, bio: personalProfile?.bio };
 
   // Debug logging for bio and auth context
   console.log('Menu Debug - Auth Context:', {
@@ -1833,10 +1833,10 @@ export default function Page() {
                   rowGap: '22px'
                 }}>
                   {[
-                    { title: "Memories", icon: "🖼️", view: "memories" },
-                    { title: "Badges", icon: "🏆", view: "badges" },
-                    { title: "Timeline", icon: "🧭", view: "timeline" },
-                    { title: "Connections", icon: "👬", view: "connections" },
+                  { title: "Memories", icon: "🖼️", view: "memories" },
+                  { title: "Badges", icon: "🏆", view: "badges" },
+                  { title: "Timeline", icon: "🧭", view: "timeline" },
+                  { title: "Connections", icon: "👬", view: "connections" },
                   ].map((item) => (
                         <button
                       key={item.title}
@@ -1920,10 +1920,10 @@ export default function Page() {
           <div className="mb-6">
                   <div className="grid grid-cols-6 gap-6">
               {[
-                { title: "Memories", icon: "🖼️", href: "/memories" },
-                { title: "Badges", icon: "🏆", view: "badges" },
-                { title: "Timeline", icon: "🧭", view: "timeline" },
-                { title: "Connections", icon: "👬", view: "connections" },
+                        { title: "Memories", icon: "🖼️", href: "/memories" },
+                  { title: "Badges", icon: "🏆", view: "badges" },
+                  { title: "Timeline", icon: "🧭", view: "timeline" },
+                        { title: "Connections", icon: "👬", view: "connections" },
               ].map((item) => (
                 <button
                   key={item.title}

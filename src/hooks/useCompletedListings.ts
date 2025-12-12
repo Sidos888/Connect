@@ -62,8 +62,8 @@ export function useCompletedListings() {
 
         // Find the first listing that hasn't been shown yet
         const unshownListing = listings.find(l => !shownListingIds.has(l.id));
-        
-        if (unshownListing) {
+          
+          if (unshownListing) {
           // Mark this listing as shown in database BEFORE redirecting
           // This prevents race conditions if user navigates away quickly
           const { error: insertError } = await supabase
@@ -79,10 +79,10 @@ export function useCompletedListings() {
           } else {
             console.log('✅ Marked completion screen as shown in database:', unshownListing.id);
           }
-          
-          // Redirect to complete page
-          router.push(`/my-life/listing/complete?id=${unshownListing.id}`);
-          return;
+            
+            // Redirect to complete page
+            router.push(`/my-life/listing/complete?id=${unshownListing.id}`);
+            return;
         }
 
         setChecking(false);

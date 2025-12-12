@@ -414,9 +414,9 @@ export default function AccountCheckModal({
           console.log('AccountCheckModal: ⚠️ Email exists in Auth but no account record - treating as new user');
           setUserExists(false);
           setExistingUser(null);
-        } else {
-          setUserExists(exists);
-          setExistingUser(userData || null);
+      } else {
+        setUserExists(exists);
+        setExistingUser(userData || null);
         }
       }
       
@@ -1256,59 +1256,21 @@ export default function AccountCheckModal({
       // Clear timeout
       clearTimeout(timeoutId);
       
-      // Keep loading animation showing
-      console.log('AccountCheckModal: Error occurred, but attempting redirect anyway');
+      // Reset loading states
+      setAccountCheckInProgress(false);
+      setIsCreating(false);
       
-      // Fallback: create local profile if Supabase fails
-      console.log('AccountCheckModal: Supabase failed, creating local profile as fallback');
-      const fallbackConnectId = generateConnectId();
-      const localProfile = {
-        id: user.id,
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
-        bio: formData.bio,
-        avatarUrl: formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : null,
-        email: formData.email,
-        phone: formData.phone,
-        dateOfBirth: convertDateFormat(formData.dateOfBirth),
-        connectId: fallbackConnectId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      // Show user-friendly error message
+      const errorMessage = (error as any)?.message || 'Unknown error';
+      if (errorMessage.includes('out of range') || errorMessage.includes('date')) {
+        alert('Invalid date of birth. Please check your date and try again.');
+      } else if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+        alert('An account with this information already exists. Please try logging in instead.');
+      } else {
+        alert(`Failed to create account: ${errorMessage}. Please try again.`);
+      }
       
-      setPersonalProfile(localProfile);
-      console.log('AccountCheckModal: Local profile created as fallback');
-      
-      // Refresh auth state to ensure it's properly updated
-      await refreshAuthState();
-      
-      // Small delay to ensure auth state is fully updated before redirect
-      setTimeout(async () => {
-        console.log('AccountCheckModal: About to redirect to /my-life after fallback account creation');
-        
-        // Check session one more time before redirect
-        const { data: { session: finalFallbackSession } } = await supabase.auth.getSession();
-        console.log('AccountCheckModal: Final session check before redirect (fallback):', {
-          hasSession: !!finalFallbackSession,
-          userId: finalFallbackSession?.user?.id,
-          userEmail: finalFallbackSession?.user?.email
-        });
-        
-        if (!finalFallbackSession) {
-          console.error('AccountCheckModal: No session found before redirect (fallback), resetting');
-          setAccountCheckInProgress(false);
-          setIsCreating(false);
-          return;
-        }
-        
-        console.log('AccountCheckModal: Session confirmed, redirecting to /my-life after fallback account creation');
-        setIsCreating(false);
-        
-        // Close the modal by hiding it locally
-        console.log('AccountCheckModal: Closing modal after successful fallback account creation');
-        setModalVisible(false);
-        
-        router.push('/my-life');
-      }, 200);
+      console.log('AccountCheckModal: Error handled, user can retry');
     }
   };
 
@@ -1447,7 +1409,7 @@ export default function AccountCheckModal({
                 top: '0', 
                 height: '44px' 
               }}>
-                <button
+            <button
                   onClick={handleCreateAccount}
                   disabled={isCreating}
                   className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1470,9 +1432,9 @@ export default function AccountCheckModal({
                   aria-label="Create Account"
                 >
                   <Check size={18} className="text-white" strokeWidth={2.5} />
-                </button>
-              </div>
-            ) : (
+            </button>
+          </div>
+        ) : (
               // X button removed - user must complete account creation
               <div className="absolute right-0 flex items-center gap-3" style={{ 
                 top: '0', 
@@ -1506,8 +1468,8 @@ export default function AccountCheckModal({
                 top: '0', 
                 height: '44px' 
               }}>
-                <button
-                  onClick={prevPage}
+              <button
+                onClick={prevPage}
                   className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
                   style={{
                     width: '44px',
@@ -1527,11 +1489,11 @@ export default function AccountCheckModal({
                     e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
                   }}
                   aria-label="Back"
-                >
+              >
                   <ArrowLeft size={18} className="text-gray-900" strokeWidth={2.5} />
-                </button>
-              </div>
-            )}
+              </button>
+          </div>
+        )}
           </div>
         </div>
 
@@ -1663,15 +1625,15 @@ export default function AccountCheckModal({
                       
                       {/* Floating label when focused or filled */}
                       {(firstNameFocused || formData.firstName) && (
-                        <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                          First Name
-                        </label>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            First Name
+                          </label>
                       )}
                       {/* Default centered label when empty and unfocused */}
                       {!firstNameFocused && !formData.firstName && (
                         <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                          First Name
-                        </label>
+                            First Name
+                          </label>
                       )}
                     </div>
 
@@ -1707,15 +1669,15 @@ export default function AccountCheckModal({
                       
                       {/* Floating label when focused or filled */}
                       {(lastNameFocused || formData.lastName) && (
-                        <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                          Last Name
-                        </label>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Last Name
+                          </label>
                       )}
                       {/* Default centered label when empty and unfocused */}
                       {!lastNameFocused && !formData.lastName && (
                         <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                          Last Name
-                        </label>
+                            Last Name
+                          </label>
                       )}
                     </div>
                   </div>
@@ -1724,7 +1686,7 @@ export default function AccountCheckModal({
                     <div className="relative">
                       <input
                         ref={dateOfBirthRef}
-                        type="text"
+                      type="text"
                         value={formData.dateOfBirth}
                         onChange={(e) => {
                           let value = e.target.value;
@@ -1772,15 +1734,15 @@ export default function AccountCheckModal({
                       
                       {/* Floating label when focused or filled */}
                       {(dateOfBirthFocused || formData.dateOfBirth) && (
-                        <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
-                          Date of birth
-                        </label>
+                          <label className="absolute left-4 top-1.5 text-xs text-gray-500 pointer-events-none">
+                            Date of birth
+                          </label>
                       )}
                       {/* Default centered label when empty and unfocused */}
                       {!dateOfBirthFocused && !formData.dateOfBirth && (
                         <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                          Date of birth
-                        </label>
+                            Date of birth
+                          </label>
                       )}
                     </div>
                   </div>
@@ -1936,15 +1898,15 @@ export default function AccountCheckModal({
                           {/* Default centered label when empty and unfocused */}
                           {!emailFocused && !formData.email && (
                             <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                              Email
-                            </label>
+                                Email
+                              </label>
                           )}
-                          {/* Verification status */}
-                          {formData.email && (verificationMethod as string) === 'email' && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
-                              <span>✓</span>
-                              <span>Verified</span>
-                            </div>
+                              {/* Verification status */}
+                              {formData.email && (verificationMethod as string) === 'email' && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                                  <span>✓</span>
+                                  <span>Verified</span>
+                                </div>
                           )}
                         </div>
                       </div>
@@ -1990,15 +1952,15 @@ export default function AccountCheckModal({
                           {/* Default centered label when empty and unfocused */}
                           {!emailFocused && !formData.email && (
                             <label className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-500 pointer-events-none">
-                              Email
-                            </label>
+                                Email
+                              </label>
                           )}
-                          {/* Verification status */}
-                          {formData.email && (verificationMethod as string) === 'email' && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
-                              <span>✓</span>
-                              <span>Verified</span>
-                            </div>
+                              {/* Verification status */}
+                              {formData.email && (verificationMethod as string) === 'email' && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-green-600 pointer-events-none flex items-center gap-1">
+                                  <span>✓</span>
+                                  <span>Verified</span>
+                                </div>
                           )}
                         </div>
                       </div>
@@ -2119,11 +2081,11 @@ export default function AccountCheckModal({
                   <div className="flex justify-center mt-8">
                     <button
                       type="button"
-                      onClick={() => {
-                        console.log('AccountCheckModal: Continue button clicked, form data:', formData);
-                        nextPage();
-                      }}
-                      disabled={!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim()}
+                    onClick={() => {
+                      console.log('AccountCheckModal: Continue button clicked, form data:', formData);
+                      nextPage();
+                    }}
+                    disabled={!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.dateOfBirth?.trim() || !formData.email?.trim() || !formData.phone?.trim()}
                       className="px-8 py-3 bg-brand text-white rounded-lg font-medium transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                       style={{ 
                         backgroundColor: '#FF6600',
@@ -2138,10 +2100,10 @@ export default function AccountCheckModal({
                       onMouseLeave={(e) => {
                         e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 102, 0, 0.2)';
                       }}
-                    >
-                      Continue
+                  >
+                    Continue
                     </button>
-                  </div>
+                </div>
                 </form>
               ) : (
                 // Page 2: Profile Pic + Bio (matching EditProfileLanding design)
@@ -2172,7 +2134,7 @@ export default function AccountCheckModal({
                       className="hidden"
                     />
                   </div>
-
+                  
                   {/* General Section */}
                   <h3 className="text-base font-semibold text-gray-900 mb-4">General</h3>
 
@@ -2214,18 +2176,18 @@ export default function AccountCheckModal({
                           fontWeight: bioFocused || formData.bio ? 500 : 400,
                         }}
                       >
-                        Bio
-                      </label>
+                      Bio
+                    </label>
                       <textarea
                         ref={bioRef}
                         id="bio"
-                        value={formData.bio}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value.length <= 150) {
-                            handleInputChange('bio', value);
-                          }
-                        }}
+                      value={formData.bio}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 150) {
+                          handleInputChange('bio', value);
+                        }
+                      }}
                         onFocus={handleBioFocus}
                         onBlur={handleBioBlur}
                         rows={3}
@@ -2236,7 +2198,7 @@ export default function AccountCheckModal({
                           fontSize: '17px',
                           paddingRight: '60px', // Space for character counter
                         }}
-                        maxLength={150}
+                      maxLength={150}
                         autoCapitalize="sentences"
                         autoCorrect="off"
                         spellCheck={false}
@@ -2244,10 +2206,10 @@ export default function AccountCheckModal({
                       {/* Character counter */}
                       {formData.bio && (
                         <div className="absolute bottom-2 right-4 pointer-events-none">
-                          <span className={`text-xs font-medium ${formData.bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
-                            {formData.bio.length}/150
-                          </span>
-                        </div>
+                        <span className={`text-xs font-medium ${formData.bio.length > 135 ? 'text-orange-600' : 'text-gray-500'}`}>
+                          {formData.bio.length}/150
+                        </span>
+                      </div>
                       )}
                     </div>
                   </div>

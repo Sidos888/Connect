@@ -336,8 +336,8 @@ function ExplorePage() {
 
   // Get current account info (use effective values to handle sign-out race condition)
   const currentAccount = effectiveAccount
-    ? { name: effectiveAccount.name, avatarUrl: effectiveAccount.profile_pic }
-    : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl };
+      ? { name: effectiveAccount.name, avatarUrl: effectiveAccount.profile_pic }
+      : { name: personalProfile?.name, avatarUrl: personalProfile?.avatarUrl };
 
 
   // Log render state
