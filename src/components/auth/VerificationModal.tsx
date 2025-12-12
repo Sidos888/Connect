@@ -302,35 +302,12 @@ export default function VerificationModal({
               <h2 className="text-xl font-semibold text-gray-900">Verify</h2>
             </div>
 
-            {/* Right: X Button */}
+            {/* Right: Empty space (X button removed to prevent escape) */}
             <div className="absolute right-0 flex items-center gap-3" style={{ 
               top: '0', 
               height: '44px' 
             }}>
-              <button
-                onClick={onClose}
-                className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  borderWidth: '0.4px',
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'solid',
-                  boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                  willChange: 'transform, box-shadow'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                }}
-                aria-label="Close"
-              >
-                <X size={18} className="text-gray-900" strokeWidth={2.5} />
-              </button>
+              {/* X button removed - user must complete verification flow */}
             </div>
           </div>
         </div>

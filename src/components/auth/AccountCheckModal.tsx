@@ -1418,61 +1418,12 @@ export default function AccountCheckModal({
                 </button>
               </div>
             ) : (
+              // X button removed - user must complete account creation
               <div className="absolute right-0 flex items-center gap-3" style={{ 
                 top: '0', 
                 height: '44px' 
               }}>
-                <button
-                  onClick={async () => {
-                    console.log('AccountCheckModal: ❌ X button clicked - FORCE SIGN OUT and go to explore');
-                    
-                    // NUCLEAR APPROACH: Clear everything immediately
-                    clearAll();
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    
-                    // Close modal immediately
-                    onClose();
-                    
-                    try {
-                      // Sign out in background (don't wait)
-                      signOut().catch(err => console.log('Background signout error (ignoring):', err));
-                    } catch (error) {
-                      console.log('Signout error (ignoring):', error);
-                    }
-                    
-                    // Force navigate to explore regardless of signout result
-                    router.push('/explore');
-                    
-                    // Also force page reload as backup
-                    setTimeout(() => {
-                      if (window.location.pathname !== '/explore') {
-                        window.location.href = '/explore';
-                      }
-                    }, 1000);
-                  }}
-                  className="flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderWidth: '0.4px',
-                    borderColor: '#E5E7EB',
-                    borderStyle: 'solid',
-                    boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
-                    willChange: 'transform, box-shadow'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
-                  }}
-                  aria-label="Close"
-                >
-                  <X size={18} className="text-gray-900" strokeWidth={2.5} />
-                </button>
+                {/* No X button - prevents incomplete signup */}
               </div>
             )}
             

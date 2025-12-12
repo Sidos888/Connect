@@ -110,6 +110,36 @@ export default function ProtectedRoute({ children, fallback, title, description,
     }
   }, []);
 
+  // ORPHANED AUTH USER CHECK: Detect user with auth but no account
+  useEffect(() => {
+    if (user && !loading && isHydrated) {
+      // Check if user has auth but no account record
+      const checkOrphanedAuth = async () => {
+        try {
+          const { data: accountData, error } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (!accountData && !error) {
+            console.log('🚨 ProtectedRoute: ORPHANED AUTH USER DETECTED - has session but no account record');
+            console.log('🚨 ProtectedRoute: Forcing account creation modal');
+            
+            // Show login modal which will detect this and show AccountCheckModal
+            showLogin();
+          }
+        } catch (err) {
+          console.error('ProtectedRoute: Error checking for orphaned auth:', err);
+        }
+      };
+      
+      // Delay check slightly to let normal auth flow complete first
+      const timeoutId = setTimeout(checkOrphanedAuth, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user?.id, loading, isHydrated, supabase, showLogin]);
+
   // Load profile only when user changes or when no profile exists
   useEffect(() => {
     console.log('ProtectedRoute: Profile loading check:', {

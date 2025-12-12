@@ -655,29 +655,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       ) : step === 'account-check' ? (
         <AccountCheckModal
           isOpen={isOpen}
-          onClose={async () => {
-            console.log('LoginModal: onClose called for AccountCheckModal');
-            // Check session directly instead of user state to avoid timing issues
-            const { data: { session } } = await supabase.auth.getSession();
-            console.log('LoginModal: Session check in onClose:', { 
-              hasSession: !!session, 
-              userId: session?.user?.id,
-              userEmail: session?.user?.email 
-            });
-            
-            if (!session) {
-              console.log('LoginModal: No session found, but NOT signing out - preserving user state');
-            } else {
-              console.log('LoginModal: Session found, NOT signing out');
-            }
-            
-            // Reset to initial step
-            if (isMobile) {
-              setStep('phone');
-            } else {
-              setStep('email');
-            }
-            onClose();
+          onClose={() => {
+            // onClose is now a no-op during account creation
+            // User must complete the signup flow - no escape
+            console.log('LoginModal: AccountCheckModal onClose called but ignoring - user must complete signup');
           }}
           verificationMethod={verificationMethod}
           verificationValue={verificationValue}
