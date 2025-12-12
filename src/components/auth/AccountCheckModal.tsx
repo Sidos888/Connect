@@ -841,6 +841,44 @@ export default function AccountCheckModal({
     setBioFocused(false);
   };
 
+  // Validate DOB before conversion
+  const validateDateOfBirth = (ddmmyyyy: string): { isValid: boolean; error?: string } => {
+    if (!ddmmyyyy || ddmmyyyy.length !== 10) {
+      return { isValid: false, error: 'Date of birth is required (DD/MM/YYYY)' };
+    }
+    
+    const parts = ddmmyyyy.split('/');
+    if (parts.length !== 3) {
+      return { isValid: false, error: 'Invalid date format. Use DD/MM/YYYY' };
+    }
+    
+    const [dayStr, monthStr, yearStr] = parts;
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+    
+    // Validate ranges
+    if (month < 1 || month > 12) {
+      return { isValid: false, error: 'Invalid month. Must be between 01 and 12' };
+    }
+    
+    if (day < 1 || day > 31) {
+      return { isValid: false, error: 'Invalid day. Must be between 01 and 31' };
+    }
+    
+    if (year < 1900 || year > new Date().getFullYear()) {
+      return { isValid: false, error: `Invalid year. Must be between 1900 and ${new Date().getFullYear()}` };
+    }
+    
+    // Check if date is valid (e.g., no Feb 31)
+    const dateObj = new Date(year, month - 1, day);
+    if (dateObj.getDate() !== day || dateObj.getMonth() !== month - 1 || dateObj.getFullYear() !== year) {
+      return { isValid: false, error: 'Invalid date. This day does not exist in the specified month' };
+    }
+    
+    return { isValid: true };
+  };
+
   // Convert DD/MM/YYYY format to YYYY-MM-DD for Supabase
   const convertDateFormat = (ddmmyyyy: string): string => {
     if (!ddmmyyyy || ddmmyyyy.length !== 10) return '';
@@ -881,6 +919,13 @@ export default function AccountCheckModal({
       return;
     }
     
+    // 🚀 VALIDATE DOB BEFORE PROCEEDING
+    const dobValidation = validateDateOfBirth(formData.dateOfBirth);
+    if (!dobValidation.isValid) {
+      alert(dobValidation.error || 'Invalid date of birth');
+      return;
+    }
+    
     // 🚀 SHOW LOADING8 ANIMATION
     setAccountCheckInProgress(true);
     setIsCreating(true);
@@ -888,6 +933,7 @@ export default function AccountCheckModal({
     // Add timeout to prevent hanging - increased to allow for Connect ID generation
     const timeoutId = setTimeout(() => {
       console.log('AccountCheckModal: Operation timeout after 30 seconds, using fallback');
+      setAccountCheckInProgress(false);
       setIsCreating(false);
       
       // Create local profile as fallback
@@ -1263,8 +1309,6 @@ export default function AccountCheckModal({
         
         router.push('/my-life');
       }, 200);
-    } finally {
-      setIsCreating(false);
     }
   };
 

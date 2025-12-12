@@ -113,6 +113,12 @@ export default function ProtectedRoute({ children, fallback, title, description,
   // ORPHANED AUTH USER CHECK: Detect user with auth but no account
   useEffect(() => {
     if (user && !loading && isHydrated) {
+      // Skip check if we already have a local profile (even if it's not in DB yet)
+      if (personalProfile?.id === user.id) {
+        console.log('ProtectedRoute: Skipping orphaned check - local profile exists');
+        return;
+      }
+      
       // Check if user has auth but no account record
       const checkOrphanedAuth = async () => {
         try {
@@ -138,7 +144,7 @@ export default function ProtectedRoute({ children, fallback, title, description,
       const timeoutId = setTimeout(checkOrphanedAuth, 2000);
       return () => clearTimeout(timeoutId);
     }
-  }, [user?.id, loading, isHydrated, supabase, showLogin]);
+  }, [user?.id, loading, isHydrated, personalProfile?.id, supabase, showLogin]);
 
   // Load profile only when user changes or when no profile exists
   useEffect(() => {
