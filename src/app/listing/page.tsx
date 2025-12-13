@@ -12,6 +12,7 @@ import ListingHeader from '@/components/listings/ListingHeader';
 import ListingActionButtons from '@/components/listings/ListingActionButtons';
 import ListingInfoCards from '@/components/listings/ListingInfoCards';
 import ItineraryViewer from '@/components/listings/ItineraryViewer';
+import ItineraryListView from '@/components/listings/ItineraryListView';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
 import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Image as ImageIcon, Share, ChevronRight, ArrowLeft } from 'lucide-react';
@@ -71,7 +72,9 @@ export default function ListingPage() {
   const [showAttendeesModal, setShowAttendeesModal] = useState(false);
   
   // Itinerary viewer state
+  const [showItineraryListView, setShowItineraryListView] = useState(false);
   const [showItineraryViewer, setShowItineraryViewer] = useState(false);
+  const [selectedItineraryIndex, setSelectedItineraryIndex] = useState(0);
   
   // Photo viewer state (for viewing listing photos)
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -784,7 +787,7 @@ export default function ListingPage() {
                   }
                 }}
                 onItineraryClick={() => {
-                  setShowItineraryViewer(true);
+                  setShowItineraryListView(true);
                 }}
               />
             </div>
@@ -983,11 +986,26 @@ export default function ListingPage() {
         />
       )}
 
+      {/* Itinerary List View */}
+      {listing && listing.itinerary && (
+        <ItineraryListView
+          isOpen={showItineraryListView}
+          itinerary={listing.itinerary}
+          onClose={() => setShowItineraryListView(false)}
+          onItemClick={(index) => {
+            setSelectedItineraryIndex(index);
+            setShowItineraryListView(false);
+            setShowItineraryViewer(true);
+          }}
+        />
+      )}
+
       {/* Itinerary Viewer */}
       {listing && listing.itinerary && (
         <ItineraryViewer
           isOpen={showItineraryViewer}
           itinerary={listing.itinerary}
+          initialIndex={selectedItineraryIndex}
           onClose={() => setShowItineraryViewer(false)}
         />
       )}

@@ -6,12 +6,25 @@ import { X, MapPin, Image as ImageIcon, Hash } from 'lucide-react';
 interface ItineraryViewerProps {
   isOpen: boolean;
   itinerary: any[];
+  initialIndex?: number;
   onClose: () => void;
 }
 
-export default function ItineraryViewer({ isOpen, itinerary, onClose }: ItineraryViewerProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+export default function ItineraryViewer({ isOpen, itinerary, initialIndex = 0, onClose }: ItineraryViewerProps) {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Update currentIndex when initialIndex changes
+  React.useEffect(() => {
+    if (isOpen) {
+      setCurrentIndex(initialIndex);
+      // Scroll to the initial index
+      if (scrollContainerRef.current) {
+        const cardWidth = scrollContainerRef.current.offsetWidth;
+        scrollContainerRef.current.scrollLeft = initialIndex * cardWidth;
+      }
+    }
+  }, [isOpen, initialIndex]);
 
   if (!isOpen || !itinerary || itinerary.length === 0) return null;
 

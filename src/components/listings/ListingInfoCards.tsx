@@ -136,7 +136,7 @@ export default function ListingInfoCards({
             );
           })()}
           {/* View Text on Right */}
-          <div className="flex-shrink-0 text-base font-normal text-gray-900">
+          <div className="flex-shrink-0 text-xs font-medium text-gray-500">
             View
           </div>
         </div>
@@ -178,7 +178,7 @@ export default function ListingInfoCards({
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-semibold text-gray-900">Itinerary</h3>
-            <p className="text-base font-normal text-gray-900">View {itinerary.length}</p>
+            <p className="text-xs font-medium text-gray-500">View {itinerary.length}</p>
           </div>
           
           <div className="space-y-2">
