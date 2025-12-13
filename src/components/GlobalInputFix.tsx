@@ -98,6 +98,9 @@ export default function GlobalInputFix() {
       // Track the last typed character and caps lock state PER INPUT
       let lastKeyPress: { key: string; reportedCapsLock: boolean; desiredCase: 'upper' | 'lower' } | null = null;
       
+      // Circuit breaker flag to prevent infinite loops when corrections trigger new input events
+      let isApplyingCorrection = false;
+      
       // Intercept keydown to track what was actually pressed
       const handleKeyDown = (e: any) => {
         const target = e.target as HTMLInputElement | HTMLTextAreaElement;
@@ -141,6 +144,13 @@ export default function GlobalInputFix() {
       
       // Intercept input event to correct iOS's inversion and handle sentence capitalization
       const handleInput = (e: Event) => {
+        // Circuit breaker: If we're already applying a correction, skip to prevent infinite loop
+        // This prevents the correction from triggering itself recursively
+        if (isApplyingCorrection) {
+          console.log('🔧 GlobalInputFix: Skipping input event (correction in progress)');
+          return;
+        }
+        
         const target = e.target as HTMLInputElement | HTMLTextAreaElement;
         if (target !== input) {
           lastKeyPress = null;
@@ -210,6 +220,9 @@ export default function GlobalInputFix() {
         
         // Apply corrections if needed
         if (needsCorrection && correctedValue !== currentValue) {
+            // Set circuit breaker flag BEFORE applying correction
+            isApplyingCorrection = true;
+            
             // Use native setter to update value (bypasses React's controlled component)
             const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
               window.HTMLInputElement.prototype,
@@ -232,6 +245,13 @@ export default function GlobalInputFix() {
             // Dispatch input event to notify React of the change
             const inputEvent = new Event('input', { bubbles: true });
             target.dispatchEvent(inputEvent);
+            
+            // Reset circuit breaker flag after a microtask to allow the event to propagate
+            // This ensures the correction completes before we allow new input events to be processed
+            setTimeout(() => {
+              isApplyingCorrection = false;
+              console.log('🔧 GlobalInputFix: Circuit breaker reset, ready for next input');
+            }, 0);
         }
         
         // Update previous value for next comparison
