@@ -178,6 +178,16 @@ function CreateListingPageContent() {
     
     return `${day}, ${month} ${dayNum} at ${hours}:${minutesStr}${ampm}`;
   };
+
+  // Format date for datetime-local input using LOCAL time (not UTC)
+  const formatDateTimeForInput = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const dayNum = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${dayNum}T${hours}:${minutes}`;
+  };
   
   const handleDateTimeClick = () => {
     // Trigger native iOS datetime picker
@@ -960,7 +970,7 @@ function CreateListingPageContent() {
                     <input
                       ref={dateTimeInputRef}
                       type="datetime-local"
-                      value={startDate.toISOString().slice(0, 16)}
+                      value={formatDateTimeForInput(startDate)}
                       onChange={handleDateTimeChange}
                       className="absolute inset-0 opacity-0 cursor-pointer"
                       style={{ 
@@ -999,8 +1009,8 @@ function CreateListingPageContent() {
                     <input
                       ref={endDateTimeInputRef}
                       type="datetime-local"
-                      value={endDate.toISOString().slice(0, 16)}
-                      min={startDate.toISOString().slice(0, 16)}
+                      value={formatDateTimeForInput(endDate)}
+                      min={formatDateTimeForInput(startDate)}
                       onChange={handleEndDateTimeChange}
                       className="absolute inset-0 opacity-0 cursor-pointer"
                       style={{ 
