@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { X, Pencil, Plus } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface ItineraryListViewProps {
@@ -27,7 +27,7 @@ export default function ItineraryListView({ isOpen, itinerary, onClose, onItemCl
       <div
         className="fixed top-0 left-0 right-0 z-10 bg-white"
         style={{
-          paddingTop: 'max(env(safe-area-inset-top), 60px)',
+          paddingTop: 'max(env(safe-area-inset-top), 70px)',
           paddingBottom: '16px',
           paddingLeft: '16px',
           paddingRight: '16px',
@@ -54,21 +54,20 @@ export default function ItineraryListView({ isOpen, itinerary, onClose, onItemCl
           {/* Title - Centered */}
           <h1 className="text-xl font-semibold text-gray-900">Itinerary</h1>
 
-          {/* Double Button - Absolute Right */}
-          <div
-            className="absolute right-0 flex items-center transition-all duration-200 hover:-translate-y-[1px]"
+          {/* Plus Button - Absolute Right */}
+          <button
+            onClick={() => router.push('/my-life/create/itinerary')}
+            className="absolute right-0 flex items-center justify-center transition-all duration-200 hover:-translate-y-[1px]"
             style={{
-              width: '88px', // Double the normal button width (44px * 2)
+              width: '44px',
               height: '44px',
               borderRadius: '100px',
-              background: 'rgba(255, 255, 255, 0.96)',
+              background: 'rgba(255, 255, 255, 0.9)',
               borderWidth: '0.4px',
               borderColor: '#E5E7EB',
               borderStyle: 'solid',
               boxShadow: '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)',
               willChange: 'transform, box-shadow',
-              overflow: 'hidden',
-              cursor: 'pointer'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(27, 27, 27, 0.25)';
@@ -77,41 +76,8 @@ export default function ItineraryListView({ isOpen, itinerary, onClose, onItemCl
               e.currentTarget.style.boxShadow = '0 0 1px rgba(100, 100, 100, 0.25), inset 0 0 2px rgba(27, 27, 27, 0.25)';
             }}
           >
-            {/* Edit Button - Left Side */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                // TODO: Handle edit functionality
-                console.log('Edit itinerary');
-              }}
-              className="flex items-center justify-center h-full transition-all duration-200"
-              style={{
-                width: '44px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              <Pencil size={20} className="text-gray-900" strokeWidth={2.5} />
-            </button>
-
-            {/* Plus Button - Right Side */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push('/my-life/create/itinerary');
-              }}
-              className="flex items-center justify-center h-full transition-all duration-200"
-              style={{
-                width: '44px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
-            </button>
-          </div>
+            <Plus size={20} className="text-gray-900" strokeWidth={2.5} />
+          </button>
         </div>
       </div>
 
@@ -119,7 +85,7 @@ export default function ItineraryListView({ isOpen, itinerary, onClose, onItemCl
       <div
         className="overflow-y-auto"
         style={{
-          paddingTop: 'calc(max(env(safe-area-inset-top), 60px) + 80px)',
+          paddingTop: 'calc(max(env(safe-area-inset-top), 70px) + 80px)',
           paddingBottom: 'max(env(safe-area-inset-bottom), 40px)',
           paddingLeft: '16px',
           paddingRight: '16px',

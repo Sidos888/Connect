@@ -1010,6 +1010,120 @@ export class ListingsService {
       return { success: false, error: error as Error };
     }
   }
+
+  /**
+   * Update a single itinerary item in a listing
+   */
+  async updateItineraryItem(
+    listingId: string, 
+    itemIndex: number, 
+    updatedItem: any,
+    hostId: string
+  ): Promise<{ success: boolean; itinerary: any[] | null; error: Error | null }> {
+    if (!this.supabase) {
+      return { success: false, itinerary: null, error: new Error('Supabase client not available') };
+    }
+
+    try {
+      // Verify the user is the host
+      const { data: listing, error: listingError } = await this.supabase
+        .from('listings')
+        .select('host_id, itinerary')
+        .eq('id', listingId)
+        .single();
+
+      if (listingError || !listing) {
+        return { success: false, itinerary: null, error: new Error('Listing not found') };
+      }
+
+      if (listing.host_id !== hostId) {
+        return { success: false, itinerary: null, error: new Error('Only the host can edit the itinerary') };
+      }
+
+      // Get current itinerary array
+      const currentItinerary = listing.itinerary || [];
+      
+      if (itemIndex < 0 || itemIndex >= currentItinerary.length) {
+        return { success: false, itinerary: null, error: new Error('Invalid itinerary item index') };
+      }
+
+      // Update the specific item
+      const newItinerary = [...currentItinerary];
+      newItinerary[itemIndex] = updatedItem;
+
+      // Save back to database
+      const { error: updateError } = await this.supabase
+        .from('listings')
+        .update({ itinerary: newItinerary })
+        .eq('id', listingId);
+
+      if (updateError) {
+        console.error('Error updating itinerary item:', updateError);
+        return { success: false, itinerary: null, error: updateError };
+      }
+
+      return { success: true, itinerary: newItinerary, error: null };
+    } catch (error) {
+      console.error('Error in updateItineraryItem:', error);
+      return { success: false, itinerary: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Delete a single itinerary item from a listing
+   */
+  async deleteItineraryItem(
+    listingId: string, 
+    itemIndex: number,
+    hostId: string
+  ): Promise<{ success: boolean; itinerary: any[] | null; error: Error | null }> {
+    if (!this.supabase) {
+      return { success: false, itinerary: null, error: new Error('Supabase client not available') };
+    }
+
+    try {
+      // Verify the user is the host
+      const { data: listing, error: listingError } = await this.supabase
+        .from('listings')
+        .select('host_id, itinerary')
+        .eq('id', listingId)
+        .single();
+
+      if (listingError || !listing) {
+        return { success: false, itinerary: null, error: new Error('Listing not found') };
+      }
+
+      if (listing.host_id !== hostId) {
+        return { success: false, itinerary: null, error: new Error('Only the host can delete itinerary items') };
+      }
+
+      // Get current itinerary array
+      const currentItinerary = listing.itinerary || [];
+      
+      if (itemIndex < 0 || itemIndex >= currentItinerary.length) {
+        return { success: false, itinerary: null, error: new Error('Invalid itinerary item index') };
+      }
+
+      // Remove the specific item
+      const newItinerary = currentItinerary.filter((_: any, index: number) => index !== itemIndex);
+
+      // Save back to database
+      const { error: updateError } = await this.supabase
+        .from('listings')
+        .update({ itinerary: newItinerary })
+        .eq('id', listingId);
+
+      if (updateError) {
+        console.error('Error deleting itinerary item:', updateError);
+        return { success: false, itinerary: null, error: updateError };
+      }
+
+      return { success: true, itinerary: newItinerary, error: null };
+    } catch (error) {
+      console.error('Error in deleteItineraryItem:', error);
+      return { success: false, itinerary: null, error: error as Error };
+    }
+  }
 }
 
 export const listingsService = new ListingsService();

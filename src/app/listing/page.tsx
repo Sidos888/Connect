@@ -13,6 +13,7 @@ import ListingActionButtons from '@/components/listings/ListingActionButtons';
 import ListingInfoCards from '@/components/listings/ListingInfoCards';
 import ItineraryViewer from '@/components/listings/ItineraryViewer';
 import ItineraryListView from '@/components/listings/ItineraryListView';
+import EditItineraryModal from '@/components/listings/EditItineraryModal';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { usePathname } from 'next/navigation';
 import { Share2, FileText, Users, UserPlus, MessageCircle, X, Check, Image as ImageIcon, Share, ChevronRight, ArrowLeft } from 'lucide-react';
@@ -75,6 +76,8 @@ export default function ListingPage() {
   const [showItineraryListView, setShowItineraryListView] = useState(false);
   const [showItineraryViewer, setShowItineraryViewer] = useState(false);
   const [selectedItineraryIndex, setSelectedItineraryIndex] = useState(0);
+  const [showEditItineraryModal, setShowEditItineraryModal] = useState(false);
+  const [editingItineraryIndex, setEditingItineraryIndex] = useState(0);
   
   // Photo viewer state (for viewing listing photos)
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -1006,7 +1009,73 @@ export default function ListingPage() {
           isOpen={showItineraryViewer}
           itinerary={listing.itinerary}
           initialIndex={selectedItineraryIndex}
-          onClose={() => setShowItineraryViewer(false)}
+          onClose={() => {
+            setShowItineraryViewer(false);
+            setShowItineraryListView(true);
+          }}
+          onEdit={(index) => {
+            if (userRole === 'host') {
+              setEditingItineraryIndex(index);
+              setShowItineraryViewer(false);
+              setShowEditItineraryModal(true);
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Itinerary Modal */}
+      {listing && listing.itinerary && listing.itinerary[editingItineraryIndex] && listingId && (
+        <EditItineraryModal
+          isOpen={showEditItineraryModal}
+          itineraryItem={listing.itinerary[editingItineraryIndex]}
+          listingId={listingId}
+          itemIndex={editingItineraryIndex}
+          onClose={() => {
+            setShowEditItineraryModal(false);
+            setShowItineraryViewer(true);
+          }}
+          onSave={async (updatedItem) => {
+            if (!account?.id || !listingId) return;
+            
+            const result = await listingsService.updateItineraryItem(
+              listingId,
+              editingItineraryIndex,
+              updatedItem,
+              account.id
+            );
+            
+            if (result.success) {
+              // Refresh listing data
+              queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
+              setShowEditItineraryModal(false);
+              setShowItineraryViewer(true);
+            } else {
+              alert(result.error?.message || 'Failed to update itinerary');
+            }
+          }}
+          onDelete={async () => {
+            if (!account?.id || !listingId) return;
+            
+            const result = await listingsService.deleteItineraryItem(
+              listingId,
+              editingItineraryIndex,
+              account.id
+            );
+            
+            if (result.success) {
+              // Refresh listing data
+              queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
+              setShowEditItineraryModal(false);
+              
+              // If there are remaining items, show the list view
+              // Otherwise close everything
+              if (result.itinerary && result.itinerary.length > 0) {
+                setShowItineraryListView(true);
+              }
+            } else {
+              alert(result.error?.message || 'Failed to delete itinerary');
+            }
+          }}
         />
       )}
 
